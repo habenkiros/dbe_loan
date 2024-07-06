@@ -30,7 +30,6 @@ class CollateralType(models.Model):
 
 class CustomUser(AbstractUser):
     USER_ROLES = [
-        ('admin', 'Admin'),
         ('loan_officer', 'Loan Officer'),
         ('operational_manager', 'Operational Manager'),
         ('manager', 'Manager')

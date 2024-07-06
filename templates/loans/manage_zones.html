@@ -5,10 +5,25 @@
 
 {% block content %}
 <h1>Manage Zones</h1>
-<ul>
-    {% for zone in zones %}
-    <li>{{ zone.name }}</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'admin:loans_zone_add' %}">Add Zone</a>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Zone</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for zone in zones %}
+        <tr>
+            <td>{{ zone.id }}</td>
+            <td>{{ zone.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

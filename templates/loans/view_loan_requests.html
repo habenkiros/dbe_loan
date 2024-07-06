@@ -1,0 +1,53 @@
+<!-- templates/loans/view_loan_requests.html -->
+{% extends "base.html" %}
+
+{% block title %}View Loan Requests{% endblock %}
+
+{% block content %}
+<h1>View Loan Requests</h1>
+<form method="get">
+    <label for="zone">Zone:</label>
+    <select name="zone_id" id="zone">
+        <option value="">All Zones</option>
+        {% for zone in zones %}
+        <option value="{{ zone.id }}">{{ zone.name }}</option>
+        {% endfor %}
+    </select>
+    <label for="branch">Branch:</label>
+    <select name="branch_id" id="branch">
+        <option value="">All Branches</option>
+        {% for branch in branches %}
+        <option value="{{ branch.id }}">{{ branch.name }}</option>
+        {% endfor %}
+    </select>
+    <label for="start_date">Start Date:</label>
+    <input type="date" name="start_date" id="start_date">
+    <label for="end_date">End Date:</label>
+    <input type="date" name="end_date" id="end_date">
+    <button type="submit">Filter</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Applicant Name</th>
+            <th>Amount Requested</th>
+            <th>Status</th>
+            <th>Date Requested</th>
+            <th>Date Reviewed</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for loan_request in loan_requests %}
+        <tr>
+            <td>{{ loan_request.id }}</td>
+            <td>{{ loan_request.applicant_name }}</td>
+            <td>{{ loan_request.amount_requested }}</td>
+            <td>{{ loan_request.status }}</td>
+            <td>{{ loan_request.date_requested }}</td>
+            <td>{{ loan_request.date_reviewed }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

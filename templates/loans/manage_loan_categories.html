@@ -5,10 +5,25 @@
 
 {% block content %}
 <h1>Manage Loan Categories</h1>
-<ul>
-    {% for category in categories %}
-    <li>{{ category.name }}</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'admin:loans_loancategory_add' %}">Add Loan Category</a>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Loan Category</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for category in categories %}
+        <tr>
+            <td>{{ category.id }}</td>
+            <td>{{ category.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

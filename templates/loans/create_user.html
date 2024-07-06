@@ -23,7 +23,11 @@
                     'zone_id': zoneId       // Add the zone id to the GET parameters
                 },
                 success: function (data) {   // `data` is the return of the `load_branches` view function
-                    $('#id_branch').html(data);
+                    $('#id_branch').empty();
+                    $('#id_branch').append('<option value="">--- Select Branch ---</option>');
+                    $.each(data, function(key, value) {
+                        $('#id_branch').append('<option value="' + value.id + '">' + value.name + '</option>');
+                    });
                 }
             });
         });

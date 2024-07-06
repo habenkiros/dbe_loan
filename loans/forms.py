@@ -2,7 +2,7 @@
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from .models import CustomUser, LoanRequest, Zone, Branch
+from .models import CustomUser, LoanRequest, Zone, Branch, LoanCategory, CollateralType
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
@@ -26,3 +26,23 @@ class LoanRequestForm(forms.ModelForm):
     class Meta:
         model = LoanRequest
         fields = ['applicant_name', 'phone_number', 'email', 'category', 'collateral', 'amount_requested', 'reason']
+
+class ZoneForm(forms.ModelForm):
+    class Meta:
+        model = Zone
+        fields = ['name']
+
+class BranchForm(forms.ModelForm):
+    class Meta:
+        model = Branch
+        fields = ['zone', 'name']
+
+class LoanCategoryForm(forms.ModelForm):
+    class Meta:
+        model = LoanCategory
+        fields = ['name']
+
+class CollateralTypeForm(forms.ModelForm):
+    class Meta:
+        model = CollateralType
+        fields = ['name']

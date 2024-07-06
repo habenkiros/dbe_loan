@@ -17,14 +17,27 @@
     </header>
     <nav>
         <a href="{% url 'home' %}">Home</a>
-        {% if user.is_authenticated and user.is_superuser %}
-            <a href="{% url 'create_user' %}">Add User</a>
+        {% if user.is_authenticated %}
+            {% if user.role == 'loan_officer' %}
+                <a href="{% url 'create_loan_request' %}">Add Loan Request</a>
+                <a href="{% url 'view_loan_requests' %}">View Loan Requests</a>
+            {% endif %}
+            {% if user.is_superuser %}
+                <a href="{% url 'create_user' %}">Create User</a>
+                <a href="{% url 'manage_zones' %}">Manage Zones</a>
+                <a href="{% url 'manage_branches' %}">Manage Branches</a>
+                <a href="{% url 'manage_loan_categories' %}">Manage Loan Categories</a>
+                <a href="{% url 'manage_collateral_types' %}">Manage Collateral Types</a>
+                <a href="{% url 'manage_users' %}">Manage Users</a>
+            {% endif %}
         {% endif %}
-        <a href="{% url 'create_loan_request' %}">Create Loan Request</a>
     </nav>
     <div class="container">
         {% block content %}
         {% endblock %}
     </div>
+    <footer>
+        <p>&copy; 2023 Loan System. All rights reserved.</p>
+    </footer>
 </body>
 </html>

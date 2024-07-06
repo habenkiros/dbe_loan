@@ -5,10 +5,27 @@
 
 {% block content %}
 <h1>Manage Branches</h1>
-<ul>
-    {% for branch in branches %}
-    <li>{{ branch.name }} ({{ branch.zone.name }})</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'admin:loans_branch_add' %}">Add Branch</a>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Branch</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Zone</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for branch in branches %}
+        <tr>
+            <td>{{ branch.id }}</td>
+            <td>{{ branch.name }}</td>
+            <td>{{ branch.zone.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

@@ -5,10 +5,25 @@
 
 {% block content %}
 <h1>Manage Collateral Types</h1>
-<ul>
-    {% for collateral_type in collateral_types %}
-    <li>{{ collateral_type.name }}</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'admin:loans_collateraltype_add' %}">Add Collateral Type</a>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Collateral Type</button>
+</form>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for collateral_type in collateral_types %}
+        <tr>
+            <td>{{ collateral_type.id }}</td>
+            <td>{{ collateral_type.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

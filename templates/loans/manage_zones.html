@@ -1,0 +1,14 @@
+<!-- templates/loans/manage_zones.html -->
+{% extends "base.html" %}
+
+{% block title %}Manage Zones{% endblock %}
+
+{% block content %}
+<h1>Manage Zones</h1>
+<ul>
+    {% for zone in zones %}
+    <li>{{ zone.name }}</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'admin:loans_zone_add' %}">Add Zone</a>
+{% endblock %}

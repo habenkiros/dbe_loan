@@ -1,0 +1,14 @@
+<!-- templates/loans/manage_loan_categories.html -->
+{% extends "base.html" %}
+
+{% block title %}Manage Loan Categories{% endblock %}
+
+{% block content %}
+<h1>Manage Loan Categories</h1>
+<ul>
+    {% for category in categories %}
+    <li>{{ category.name }}</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'admin:loans_loancategory_add' %}">Add Loan Category</a>
+{% endblock %}

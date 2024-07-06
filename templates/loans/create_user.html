@@ -1,7 +1,7 @@
 <!-- templates/loans/create_user.html -->
 {% extends "base.html" %}
 
-{% block title %}Create User - Loan System{% endblock %}
+{% block title %}Create User{% endblock %}
 
 {% block content %}
 <h1>Create User</h1>
@@ -10,4 +10,23 @@
     {{ form.as_p }}
     <button type="submit">Create User</button>
 </form>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_zone').change(function() {
+            var url = '{% url "ajax_load_branches" %}';  // Get the url of the `load_branches` view
+            var zoneId = $(this).val();  // Get the selected zone ID from the HTML input
+
+            $.ajax({                       // Initialize the AJAX request
+                url: url,
+                data: {
+                    'zone_id': zoneId       // Add the zone id to the GET parameters
+                },
+                success: function (data) {   // `data` is the return of the `load_branches` view function
+                    $('#id_branch').html(data);
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,14 @@
+<!-- templates/loans/manage_branches.html -->
+{% extends "base.html" %}
+
+{% block title %}Manage Branches{% endblock %}
+
+{% block content %}
+<h1>Manage Branches</h1>
+<ul>
+    {% for branch in branches %}
+    <li>{{ branch.name }} ({{ branch.zone.name }})</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'admin:loans_branch_add' %}">Add Branch</a>
+{% endblock %}

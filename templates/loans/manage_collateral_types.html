@@ -1,0 +1,14 @@
+<!-- templates/loans/manage_collateral_types.html -->
+{% extends "base.html" %}
+
+{% block title %}Manage Collateral Types{% endblock %}
+
+{% block content %}
+<h1>Manage Collateral Types</h1>
+<ul>
+    {% for collateral_type in collateral_types %}
+    <li>{{ collateral_type.name }}</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'admin:loans_collateraltype_add' %}">Add Collateral Type</a>
+{% endblock %}

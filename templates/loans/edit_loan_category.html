@@ -1,0 +1,13 @@
+<!-- templates/loans/edit_loan_category.html -->
+{% extends "base.html" %}
+
+{% block title %}Edit Loan Category{% endblock %}
+
+{% block content %}
+<h1>Edit Loan Category</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+{% endblock %}

@@ -1,7 +1,7 @@
 # loans/forms.py
 
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser, LoanRequest, Zone, Branch, LoanCategory, CollateralType
 
 class CustomUserCreationForm(UserCreationForm):
@@ -21,6 +21,11 @@ class CustomUserCreationForm(UserCreationForm):
                 pass  # Invalid input from the client; ignore and fallback to empty Branch queryset
         elif self.instance.pk and self.instance.zone:
             self.fields['branch'].queryset = self.instance.zone.branch_set.order_by('name')
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'email', 'role', 'phone_number', 'zone', 'branch']
 
 class LoanRequestForm(forms.ModelForm):
     class Meta:

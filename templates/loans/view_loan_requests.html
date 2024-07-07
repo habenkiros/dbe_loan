@@ -26,28 +26,30 @@
     <input type="date" name="end_date" id="end_date">
     <button type="submit">Filter</button>
 </form>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Applicant Name</th>
-            <th>Amount Requested</th>
-            <th>Status</th>
-            <th>Date Requested</th>
-            <th>Date Reviewed</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for loan_request in loan_requests %}
-        <tr>
-            <td>{{ loan_request.id }}</td>
-            <td>{{ loan_request.applicant_name }}</td>
-            <td>{{ loan_request.amount_requested }}</td>
-            <td>{{ loan_request.status }}</td>
-            <td>{{ loan_request.date_requested }}</td>
-            <td>{{ loan_request.date_reviewed }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Applicant Name</th>
+                <th>Amount Requested</th>
+                <th>Status</th>
+                <th>Date Requested</th>
+                <th>Date Reviewed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan_request in loan_requests %}
+            <tr>
+                <td>{{ loan_request.id }}</td>
+                <td>{{ loan_request.applicant_name }}</td>
+                <td>{{ loan_request.amount_requested }}</td>
+                <td>{{ loan_request.status }}</td>
+                <td>{{ loan_request.date_requested }}</td>
+                <td>{{ loan_request.date_reviewed }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

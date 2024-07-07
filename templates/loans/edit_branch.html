@@ -1,0 +1,13 @@
+<!-- templates/loans/edit_branch.html -->
+{% extends "base.html" %}
+
+{% block title %}Edit Branch{% endblock %}
+
+{% block content %}
+<h1>Edit Branch</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+{% endblock %}

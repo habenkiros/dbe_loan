@@ -5,30 +5,34 @@
 
 {% block content %}
 <h1>Manage Users</h1>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Zone</th>
-            <th>Branch</th>
-            <th>Phone Number</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.get_role_display }}</td>
-            <td>{{ user.zone.name if user.zone else '' }}</td>
-            <td>{{ user.branch.name if user.branch else '' }}</td>
-            <td>{{ user.phone_number }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Zone</th>
+                <th>Branch</th>
+                <th>Phone Number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.get_role_display }}</td>
+                <td>{% if user.zone %}{{ user.zone.name }}{% else %}N/A{% endif %}</td>
+                <td>{% if user.branch %}{{ user.branch.name }}{% else %}N/A{% endif %}</td>
+                <td>{{ user.phone_number }}</td>
+                <td><a href="{% url 'edit_user' user.id %}">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

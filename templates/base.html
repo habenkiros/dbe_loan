@@ -5,6 +5,28 @@
     <title>{% block title %}Loan System{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+        footer {
+            text-align: center;
+            padding: 10px 0;
+            background-color: #333;
+            color: white;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -37,7 +59,7 @@
         {% endblock %}
     </div>
     <footer>
-        <p>&copy; 2023 Loan System. All rights reserved.</p>
+        <p>&copy; 2024 HK Automation PLC. All rights reserved.</p>
     </footer>
 </body>
 </html>

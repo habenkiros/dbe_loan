@@ -3,7 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser
-from .forms import CustomUserCreationForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
+from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
 from django.http import JsonResponse
 
 @login_required
@@ -17,10 +17,23 @@ def create_user(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('home')
+            return redirect('manage_users')
     else:
         form = CustomUserCreationForm()
     return render(request, 'loans/create_user.html', {'form': form})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_user(request, user_id):
+    user = get_object_or_404(CustomUser, pk=user_id)
+    if request.method == 'POST':
+        form = CustomUserChangeForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_users')
+    else:
+        form = CustomUserChangeForm(instance=user)
+    return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
@@ -76,6 +89,19 @@ def manage_zones(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
+def edit_zone(request, zone_id):
+    zone = get_object_or_404(Zone, pk=zone_id)
+    if request.method == 'POST':
+        form = ZoneForm(request.POST, instance=zone)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_zones')
+    else:
+        form = ZoneForm(instance=zone)
+    return render(request, 'loans/edit_zone.html', {'form': form, 'zone': zone})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def manage_branches(request):
     branches = Branch.objects.select_related('zone').all()
     if request.method == 'POST':
@@ -86,6 +112,19 @@ def manage_branches(request):
     else:
         form = BranchForm()
     return render(request, 'loans/manage_branches.html', {'branches': branches, 'form': form})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_branch(request, branch_id):
+    branch = get_object_or_404(Branch, pk=branch_id)
+    if request.method == 'POST':
+        form = BranchForm(request.POST, instance=branch)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_branches')
+    else:
+        form = BranchForm(instance=branch)
+    return render(request, 'loans/edit_branch.html', {'form': form, 'branch': branch})
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -102,6 +141,19 @@ def manage_loan_categories(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
+def edit_loan_category(request, category_id):
+    category = get_object_or_404(LoanCategory, pk=category_id)
+    if request.method == 'POST':
+        form = LoanCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_loan_categories')
+    else:
+        form = LoanCategoryForm(instance=category)
+    return render(request, 'loans/edit_loan_category.html', {'form': form, 'category': category})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def manage_collateral_types(request):
     collateral_types = CollateralType.objects.all()
     if request.method == 'POST':
@@ -115,9 +167,16 @@ def manage_collateral_types(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def manage_users(request):
-    users = CustomUser.objects.all()
-    return render(request, 'loans/manage_users.html', {'users': users})
+def edit_collateral_type(request, collateral_type_id):
+    collateral_type = get_object_or_404(CollateralType, pk=collateral_type_id)
+    if request.method == 'POST':
+        form = CollateralTypeForm(request.POST, instance=collateral_type)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_collateral_types')
+    else:
+        form = CollateralTypeForm(instance=collateral_type)
+    return render(request, 'loans/edit_collateral_type.html', {'form': form, 'collateral_type': collateral_type})
 
 @login_required
 def load_branches(request):

@@ -10,20 +10,24 @@
     {{ form.as_p }}
     <button type="submit">Add Zone</button>
 </form>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for zone in zones %}
-        <tr>
-            <td>{{ zone.id }}</td>
-            <td>{{ zone.name }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for zone in zones %}
+            <tr>
+                <td>{{ zone.id }}</td>
+                <td>{{ zone.name }}</td>
+                <td><a href="{% url 'edit_zone' zone.id %}">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

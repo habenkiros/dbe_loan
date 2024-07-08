@@ -9,6 +9,7 @@ urlpatterns = [
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('create_loan_request/', views.create_loan_request, name='create_loan_request'),
     path('view_loan_requests/', views.view_loan_requests, name='view_loan_requests'),
+    path('loan_request_detail/<int:loan_request_id>/', views.loan_request_detail, name='loan_request_detail'),
     path('filter_loan_requests/', views.filter_loan_requests, name='filter_loan_requests'),
     path('manage_zones/', views.manage_zones, name='manage_zones'),
     path('edit_zone/<int:zone_id>/', views.edit_zone, name='edit_zone'),

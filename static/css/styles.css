@@ -114,6 +114,9 @@ form input[type="submit"]:hover {
 .dashboard a:hover {
     background-color: #555;
 }
+/* static/css/styles.css */
+
+/* Existing styles... */
 
 body {
     display: flex;
@@ -174,7 +177,6 @@ tr:hover {
 
 nav {
     display: flex;
-    flex-direction: column;
     background-color: #444;
     overflow: hidden;
 }
@@ -184,6 +186,7 @@ nav a {
     text-align: center;
     color: white;
     text-decoration: none;
+    display: inline-block;
 }
 
 nav a:hover {

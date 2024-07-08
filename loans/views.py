@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser
 from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
 from django.http import JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 @login_required
 def home(request):
@@ -22,10 +24,18 @@ def create_user(request):
         form = CustomUserCreationForm()
     return render(request, 'loans/create_user.html', {'form': form})
 
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def edit_user(request, user_id):
-    user = get_object_or_404(CustomUser, pk=user_id)
+def manage_users(request):
+    users = CustomUser.objects.all()
+    return render(request, 'loans/manage_users.html', {'users': users})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_user(request, id):
+    user = get_object_or_404(CustomUser, pk=id)
     if request.method == 'POST':
         form = CustomUserChangeForm(request.POST, instance=user)
         if form.is_valid():
@@ -35,6 +45,8 @@ def edit_user(request, user_id):
         form = CustomUserChangeForm(instance=user)
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
+# loans/views.py
+
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
 def create_loan_request(request):
@@ -43,17 +55,58 @@ def create_loan_request(request):
         if form.is_valid():
             loan_request = form.save(commit=False)
             loan_request.branch = request.user.branch
+            loan_request.loan_request_id = generate_loan_request_id()
             loan_request.save()
             return redirect('view_loan_requests')
     else:
         form = LoanRequestForm()
     return render(request, 'loans/create_loan_request.html', {'form': form})
 
+def generate_loan_request_id():
+    import random
+    return f"DECSI-{random.randint(1000000000000, 9999999999999)}"
+
+# loans/views.py
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operation_manager', 'finance_manager'])
+def loan_request_detail(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
+
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
 def view_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
-    return render(request, 'loans/view_loan_requests.html', {'loan_requests': loan_requests})
+    
+    # Filtering
+    zone_id = request.GET.get('zone_id')
+    branch_id = request.GET.get('branch_id')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    status = request.GET.get('status')
+
+    if zone_id:
+        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
+    if branch_id:
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+    if start_date and end_date:
+        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+    if status:
+        loan_requests = loan_requests.filter(status=status)
+
+    # Pagination
+    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'zones': Zone.objects.all(),
+        'branches': Branch.objects.filter(zone=request.user.branch.zone),
+    }
+    return render(request, 'loans/view_loan_requests.html', context)
+
 
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')

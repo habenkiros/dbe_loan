@@ -42,9 +42,16 @@ class CustomUser(AbstractUser):
     branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True)
 
 # loans/models.py
+class LatestLoanRequestID(models.Model):
+    latest_id = models.BigIntegerField(default=0)
+
+    def __str__(self):
+        return str(self.latest_id)
+    
+# loans/models.py
 
 class LoanRequest(models.Model):
-    loan_request_id = models.CharField(max_length=20, unique=True)
+    loan_request_id = models.CharField(max_length=22, unique=True)
     applicant_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15)
     email = models.EmailField()
@@ -58,3 +65,10 @@ class LoanRequest(models.Model):
     date_requested = models.DateTimeField(auto_now_add=True)
     date_reviewed = models.DateTimeField(null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        if self.operation_manager_approval and self.finance_approval:
+            self.status = 'approved'
+        else:
+            self.status = 'pending'
+        super(LoanRequest, self).save(*args, **kwargs)

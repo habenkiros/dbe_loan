@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser
+from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
 from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -45,8 +45,6 @@ def edit_user(request, id):
         form = CustomUserChangeForm(instance=user)
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
-# loans/views.py
-
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
 def create_loan_request(request):
@@ -55,16 +53,34 @@ def create_loan_request(request):
         if form.is_valid():
             loan_request = form.save(commit=False)
             loan_request.branch = request.user.branch
-            loan_request.loan_request_id = generate_loan_request_id()
+            loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
             return redirect('view_loan_requests')
     else:
         form = LoanRequestForm()
     return render(request, 'loans/create_loan_request.html', {'form': form})
 
-def generate_loan_request_id():
-    import random
-    return f"DECSI-{random.randint(1000000000000, 9999999999999)}"
+def generate_incremental_loan_request_id():
+    latest_id_instance, created = LatestLoanRequestID.objects.get_or_create(pk=1)
+    latest_id = latest_id_instance.latest_id + 1
+    latest_id_instance.latest_id = latest_id
+    latest_id_instance.save()
+    return f"DECSI-{latest_id:015d}"
+
+# loans/views.py
+
+@login_required
+@user_passes_test(lambda u: u.role in ['operation_manager', 'finance_manager'])
+def update_loan_request_status(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.method == 'POST':
+        if 'operation_manager' in request.POST and request.user.role == 'operation_manager':
+            loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
+        elif 'finance_manager' in request.POST and request.user.role == 'finance_manager':
+            loan_request.finance_approval = request.POST.get('finance_approval') == 'True'
+        loan_request.save()
+        return redirect('view_loan_requests')
+    return render(request, 'loans/update_loan_request_status.html', {'loan_request': loan_request})
 
 # loans/views.py
 

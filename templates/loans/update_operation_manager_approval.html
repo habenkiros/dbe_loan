@@ -1,0 +1,67 @@
+<!-- templates/loans/update_operation_manager_approval.html -->
+{% extends "base.html" %}
+
+{% block title %}Update Operation Manager Approval{% endblock %}
+
+{% block content %}
+<h1>Update Operation Manager Approval</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <td>{{ loan_request.loan_request_id }}</td>
+        </tr>
+        <tr>
+            <th>Applicant Name</th>
+            <td>{{ loan_request.applicant_name }}</td>
+        </tr>
+        <tr>
+            <th>Phone Number</th>
+            <td>{{ loan_request.phone_number }}</td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ loan_request.email }}</td>
+        </tr>
+        <tr>
+            <th>Category</th>
+            <td>{{ loan_request.category.name }}</td>
+        </tr>
+        <tr>
+            <th>Collateral</th>
+            <td>{{ loan_request.collateral.name }}</td>
+        </tr>
+        <tr>
+            <th>Amount Requested</th>
+            <td>{{ loan_request.amount_requested }}</td>
+        </tr>
+        <tr>
+            <th>Reason</th>
+            <td>{{ loan_request.reason }}</td>
+        </tr>
+        <tr>
+            <th>Status</th>
+            <td>{{ loan_request.status }}</td>
+        </tr>
+        <tr>
+            <th>Operation Manager Approval</th>
+            <td>
+                <select name="operation_manager_approval">
+                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approve</option>
+                    <option value="False" {% if not loan_request.operation_manager_approval %}selected{% endif %}>Reject</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th>Finance Approval</th>
+            <td>{{ loan_request.finance_approval }}</td>
+        </tr>
+    </table>
+    <button type="submit">Save Changes</button>
+</form>
+
+<a href="{% url 'view_loan_requests_operation_manager' %}">Back to Loan Requests</a>
+
+{% endblock %}

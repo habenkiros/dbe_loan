@@ -100,7 +100,7 @@ def loan_request_detail_operation_manager(request, loan_request_id):
 @user_passes_test(lambda u: u.role in ['finance'])
 def loan_request_detail_finance(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    return render(request, 'loans/loan_request_detail-finance.html', {'loan_request': loan_request})
+    return render(request, 'loans/loan_request_detail_finance.html', {'loan_request': loan_request})
 
 
 @login_required

@@ -1,5 +1,6 @@
 <!-- templates/home.html -->
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Home{% endblock %}
 
@@ -12,11 +13,11 @@
     </div>
 
     <div class="mySlides fade">
-        <img src="{% static 'images/slide2.jpg' %}" style="width:100%">
+        <img src="{% static 'images/slide2.png' %}" style="width:100%">
     </div>
 
     <div class="mySlides fade">
-        <img src="{% static 'images/slide3.jpg' %}" style="width:100%">
+        <img src="{% static 'images/slide3.png' %}" style="width:100%">
     </div>
 
     <!-- Next and previous buttons -->

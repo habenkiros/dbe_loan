@@ -85,10 +85,23 @@ def update_loan_request_status(request, loan_request_id):
 # loans/views.py
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operation_manager', 'finance_manager'])
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
 def loan_request_detail(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
+
+@login_required
+@user_passes_test(lambda u: u.role in ['operational_manager'])
+def loan_request_detail_operation_manager(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    return render(request, 'loans/loan_request_detail_operation_manager.html', {'loan_request': loan_request})
+
+@login_required
+@user_passes_test(lambda u: u.role in ['finance'])
+def loan_request_detail_finance(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    return render(request, 'loans/loan_request_detail-finance.html', {'loan_request': loan_request})
+
 
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
@@ -145,7 +158,7 @@ def filter_loan_requests(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'operation_manager')
+@user_passes_test(lambda u: u.role == 'operational_manager')
 def view_loan_requests_operation_manager(request):
     loan_requests = LoanRequest.objects.all()  # Operation managers can see all requests
 
@@ -178,7 +191,7 @@ def view_loan_requests_operation_manager(request):
     return render(request, 'loans/view_loan_requests_operation_manager.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.role == 'operation_manager')
+@user_passes_test(lambda u: u.role == 'operational_manager')
 def update_operation_manager_approval(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
@@ -190,7 +203,7 @@ def update_operation_manager_approval(request, loan_request_id):
 # loans/views.py
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance_manager')
+@user_passes_test(lambda u: u.role == 'finance')
 def view_loan_requests_finance_manager(request):
     loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
 
@@ -223,7 +236,7 @@ def view_loan_requests_finance_manager(request):
     return render(request, 'loans/view_loan_requests_finance_manager.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance_manager')
+@user_passes_test(lambda u: u.role == 'finance')
 def update_finance_manager_approval(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':

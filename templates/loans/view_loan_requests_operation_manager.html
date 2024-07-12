@@ -1,4 +1,4 @@
-<!-- templates/loans/view_loan_requests_operation_manager.html -->
+<!-- templates/loans/view_loan_requests.html -->
 {% extends "base.html" %}
 
 {% block title %}View Loan Requests{% endblock %}
@@ -58,8 +58,10 @@
                 <td>{{ loan_request.date_requested }}</td>
                 <td>{{ loan_request.date_reviewed }}</td>
                 <td>
-                    <a href="{% url 'loan_request_detail' loan_request.id %}">Details</a>
-                    <a href="{% url 'update_operation_manager_approval' loan_request.id %}">Update Approval</a>
+                    <a href="{% url 'loan_request_detail_operation_manager' loan_request.id %}">Details</a>
+                    {% if user.role == 'operational_manager' %}
+                        <a href="{% url 'update_operation_manager_approval' loan_request.id %}">Update Status</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

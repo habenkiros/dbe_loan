@@ -58,7 +58,7 @@
                 <td>{{ loan_request.date_requested }}</td>
                 <td>{{ loan_request.date_reviewed }}</td>
                 <td>
-                    <a href="{% url 'loan_request_detail' loan_request.id %}">Details</a>
+                    <a href="{% url 'loan_request_detail-finance' loan_request.id %}">Details</a>
                     <a href="{% url 'update_finance_manager_approval' loan_request.id %}">Update Approval</a>
                 </td>
             </tr>

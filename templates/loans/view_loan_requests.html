@@ -59,7 +59,7 @@
                 <td>{{ loan_request.date_reviewed }}</td>
                 <td>
                     <a href="{% url 'loan_request_detail' loan_request.id %}">Details</a>
-                    {% if user.role == 'operation_manager' or user.role == 'finance_manager' %}
+                    {% if user.role == 'operational_manager' or user.role == 'finance' %}
                         <a href="{% url 'update_loan_request_status' loan_request.id %}">Update Status</a>
                     {% endif %}
                 </td>

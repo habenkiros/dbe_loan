@@ -391,6 +391,6 @@ def generate_report(request):
     return response
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operation_manager', 'finance_manager'])
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')

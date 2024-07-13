@@ -7,6 +7,8 @@ from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import HttpResponse
+import csv
 
 @login_required
 def home(request):
@@ -354,3 +356,41 @@ def load_branches(request):
     zone_id = request.GET.get('zone_id')
     branches = Branch.objects.filter(zone_id=zone_id).all()
     return JsonResponse(list(branches.values('id', 'name')), safe=False)
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+def generate_report(request):
+    status = request.GET.get('status')
+    role = request.user.role
+    branch = request.user.branch if role == 'loan_officer' else None
+
+    loan_requests = LoanRequest.objects.all()
+    
+    if branch:
+        loan_requests = loan_requests.filter(branch=branch)
+    
+    if status:
+        loan_requests = loan_requests.filter(status=status)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{status}_loan_requests.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Applicant Name', 'Amount Requested', 'Status', 'Date Requested', 'Date Reviewed'])
+
+    for loan_request in loan_requests:
+        writer.writerow([
+            loan_request.loan_request_id,
+            loan_request.applicant_name,
+            loan_request.amount_requested,
+            loan_request.status,
+            loan_request.date_requested,
+            loan_request.date_reviewed
+        ])
+
+    return response
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operation_manager', 'finance_manager'])
+def view_report_options(request):
+    return render(request, 'loans/view_report_options.html')

@@ -27,4 +27,6 @@ urlpatterns = [
     path('edit_collateral_type/<int:collateral_type_id>/', views.edit_collateral_type, name='edit_collateral_type'),
     path('manage_users/', views.manage_users, name='manage_users'),
     path('ajax/load-branches/', views.load_branches, name='ajax_load_branches'),
+    path('generate_report/', views.generate_report, name='generate_report'),
+    path('view_report_options/', views.view_report_options, name='view_report_options'),
 ]

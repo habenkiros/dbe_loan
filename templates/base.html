@@ -90,10 +90,13 @@
             {% if user.role == 'loan_officer' %}
                 <a href="{% url 'create_loan_request' %}">Add Loan Request</a>
                 <a href="{% url 'view_loan_requests' %}">View Loan Requests</a>
+                <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% elif user.role == 'operational_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
+                <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% elif user.role == 'finance' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
+                <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% endif %}
             {% if user.is_superuser %}
                 <a href="{% url 'create_user' %}">Create User</a>

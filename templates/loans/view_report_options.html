@@ -1,0 +1,18 @@
+<!-- templates/loans/view_report_options.html -->
+{% extends "base.html" %}
+
+{% block title %}Generate Report{% endblock %}
+
+{% block content %}
+<h1>Generate Report</h1>
+<form method="get" action="{% url 'generate_report' %}">
+    <label for="status">Select Status:</label>
+    <select name="status" id="status" required>
+        <option value="">--Select Status--</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="pending">Pending</option>
+    </select>
+    <button type="submit">Generate Report</button>
+</form>
+{% endblock %}

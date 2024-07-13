@@ -1,0 +1,67 @@
+<!-- templates/loans/view_report.html -->
+{% extends "base.html" %}
+
+{% block title %}View Report{% endblock %}
+
+{% block content %}
+<h1>View Report</h1>
+
+<form method="get" action="{% url 'view_report' %}">
+    <label for="status">Select Status:</label>
+    <select name="status" id="status">
+        <option value="">All</option>
+        <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+    </select>
+    <button type="submit">Filter</button>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Applicant Name</th>
+                <th>Amount Requested</th>
+                <th>Status</th>
+                <th>Date Requested</th>
+                <th>Date Reviewed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan_request in page_obj %}
+            <tr>
+                <td>{{ loan_request.loan_request_id }}</td>
+                <td>{{ loan_request.applicant_name }}</td>
+                <td>{{ loan_request.amount_requested }}</td>
+                <td>{{ loan_request.status }}</td>
+                <td>{{ loan_request.date_requested }}</td>
+                <td>{{ loan_request.date_reviewed }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Previous</a>
+        {% endif %}
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Last</a>
+        {% endif %}
+    </span>
+</div>
+
+<form method="get" action="{% url 'generate_report' %}">
+    <input type="hidden" name="status" value="{{ status }}">
+    <button type="submit">Generate Report</button>
+</form>
+{% endblock %}

@@ -359,6 +359,33 @@ def load_branches(request):
 
 @login_required
 @user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+def view_report(request):
+    status = request.GET.get('status')
+    role = request.user.role
+    branch = request.user.branch if role == 'loan_officer' else None
+
+    loan_requests = LoanRequest.objects.all()
+    
+    if branch:
+        loan_requests = loan_requests.filter(branch=branch)
+    
+    if status:
+        loan_requests = loan_requests.filter(status=status)
+
+    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'status': status,
+        'zones': Zone.objects.all(),
+        'branches': Branch.objects.all(),
+    }
+    return render(request, 'loans/view_report.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
 def generate_report(request):
     status = request.GET.get('status')
     role = request.user.role

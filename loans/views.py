@@ -26,18 +26,24 @@ def create_user(request):
         form = CustomUserCreationForm()
     return render(request, 'loans/create_user.html', {'form': form})
 
-
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def manage_users(request):
     users = CustomUser.objects.all()
-    return render(request, 'loans/manage_users.html', {'users': users})
-
+    
+    paginator = Paginator(users, 10)  # Show 10 users per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj
+    }
+    return render(request, 'loans/manage_users.html', context)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def edit_user(request, id):
-    user = get_object_or_404(CustomUser, pk=id)
+def edit_user(request, user_id):
+    user = get_object_or_404(CustomUser, pk=user_id)
     if request.method == 'POST':
         form = CustomUserChangeForm(request.POST, instance=user)
         if form.is_valid():
@@ -103,7 +109,12 @@ def loan_request_detail_operation_manager(request, loan_request_id):
 def loan_request_detail_finance(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_finance.html', {'loan_request': loan_request})
-
+#manager
+@login_required
+@user_passes_test(lambda u: u.role in ['manager'])
+def loan_request_detail_manager(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    return render(request, 'loans/loan_request_detail_manager.html', {'loan_request': loan_request})
 
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
@@ -261,6 +272,39 @@ def manage_zones(request):
     return render(request, 'loans/manage_zones.html', {'zones': zones, 'form': form})
 
 @login_required
+@user_passes_test(lambda u: u.role == 'manager')
+def view_loan_requests_manager(request):
+    loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
+
+    # Filtering
+    zone_id = request.GET.get('zone_id')
+    branch_id = request.GET.get('branch_id')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    status = request.GET.get('status')
+
+    if zone_id:
+        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
+    if branch_id:
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+    if start_date and end_date:
+        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+    if status:
+        loan_requests = loan_requests.filter(status=status)
+
+    # Pagination
+    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'zones': Zone.objects.all(),
+        'branches': Branch.objects.all(),
+    }
+    return render(request, 'loans/view_loan_requests_manager.html', context)
+
+@login_required
 @user_passes_test(lambda u: u.is_superuser)
 def edit_zone(request, zone_id):
     zone = get_object_or_404(Zone, pk=zone_id)
@@ -277,6 +321,11 @@ def edit_zone(request, zone_id):
 @user_passes_test(lambda u: u.is_superuser)
 def manage_branches(request):
     branches = Branch.objects.select_related('zone').all()
+    
+    paginator = Paginator(branches, 10)  # Show 10 branches per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     if request.method == 'POST':
         form = BranchForm(request.POST)
         if form.is_valid():
@@ -284,7 +333,13 @@ def manage_branches(request):
             return redirect('manage_branches')
     else:
         form = BranchForm()
-    return render(request, 'loans/manage_branches.html', {'branches': branches, 'form': form})
+
+    context = {
+        'form': form,
+        'page_obj': page_obj
+    }
+    return render(request, 'loans/manage_branches.html', context)
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -358,7 +413,7 @@ def load_branches(request):
     return JsonResponse(list(branches.values('id', 'name')), safe=False)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
 def view_report(request):
     status = request.GET.get('status')
     role = request.user.role
@@ -385,7 +440,7 @@ def view_report(request):
     return render(request, 'loans/view_report.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
 def generate_report(request):
     status = request.GET.get('status')
     role = request.user.role
@@ -418,6 +473,6 @@ def generate_report(request):
     return response
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')

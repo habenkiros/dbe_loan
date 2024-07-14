@@ -20,7 +20,7 @@
         footer {
             text-align: center;
             padding: 10px 0;
-            background-color: #333;
+            background-color: #0e0e0e;
             color: white;
             position: relative;
             bottom: 0;
@@ -40,7 +40,7 @@
             border: 1px solid #ddd;
         }
         th, td {
-            padding: 12px;
+            padding: 8px;  /* Adjusted padding */
             text-align: left;
         }
         th {
@@ -53,13 +53,29 @@
         tr:hover {
             background-color: #f1f1f1;
         }
+        header {
+            background-color: #0e0e0e;
+            color: white;
+            /* padding: 10px 20px; Adjusted padding */
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px; /* Adjusted font size */
+        }
+        header p {
+            margin: 0;
+        }
         nav {
             display: flex;
-            background-color: #444;
+            background-color: #34495E;
             overflow: hidden;
         }
         nav a {
-            padding: 10px 20px;
+            padding: 10px 15px; /* Adjusted padding */
             text-align: center;
             color: white;
             text-decoration: none;
@@ -70,18 +86,18 @@
             color: black;
         }
         nav a.selected {
-            background-color: #555;
+            background-color: #777;
             color: white;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Loan System</h1>
+        <h1 style="color: white;">Loan-Request System</h1>
         {% if user.is_authenticated %}
-            <p>Welcome, {{ user.username }} | <a href="{% url 'logout' %}">Logout</a></p>
+            <p>Welcome, {{ user.username }} | <a href="{% url 'logout' %}" style="color: white;">Logout</a></p>
         {% else %}
-            <p><a href="{% url 'login' %}">Login</a></p>
+            <p><a href="{% url 'login' %}" style="color: white;">Login</a></p>
         {% endif %}
     </header>
     <nav>
@@ -96,6 +112,9 @@
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% elif user.role == 'finance' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
+                <a href="{% url 'view_report_options' %}">Generate Report</a>
+            {% elif user.role == 'manager' %}
+                <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% endif %}
             {% if user.is_superuser %}

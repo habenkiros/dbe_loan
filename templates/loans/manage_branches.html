@@ -5,31 +5,55 @@
 
 {% block content %}
 <h1>Manage Branches</h1>
-<form method="post">
+
+<form method="post" action="{% url 'manage_branches' %}">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit">Add Branch</button>
 </form>
+
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Name</th>
+                <th>Branch Name</th>
                 <th>Zone</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            {% for branch in branches %}
+            {% for branch in page_obj %}
             <tr>
                 <td>{{ branch.id }}</td>
                 <td>{{ branch.name }}</td>
                 <td>{{ branch.zone.name }}</td>
-                <td><a href="{% url 'edit_branch' branch.id %}">Edit</a></td>
+                <td>
+                    <a href="{% url 'edit_branch' branch.id %}">Edit</a>
+                    <!-- Add other actions if needed -->
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+
 {% endblock %}

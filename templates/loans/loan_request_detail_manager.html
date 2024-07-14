@@ -1,0 +1,70 @@
+<!-- templates/loans/loan_request_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}Loan Request Details{% endblock %}
+
+{% block content %}
+<h1>Loan Request Details</h1>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <td>{{ loan_request.loan_request_id }}</td>
+    </tr>
+    <tr>
+        <th>Applicant Name</th>
+        <td>{{ loan_request.applicant_name }}</td>
+    </tr>
+    <tr>
+        <th>Phone Number</th>
+        <td>{{ loan_request.phone_number }}</td>
+    </tr>
+    <tr>
+        <th>Email</th>
+        <td>{{ loan_request.email }}</td>
+    </tr>
+    <tr>
+        <th>Category</th>
+        <td>{{ loan_request.category.name }}</td>
+    </tr>
+    <tr>
+        <th>Collateral</th>
+        <td>{{ loan_request.collateral.name }}</td>
+    </tr>
+    <tr>
+        <th>Amount Requested</th>
+        <td>{{ loan_request.amount_requested }}</td>
+    </tr>
+    <tr>
+        <th>Reason</th>
+        <td>{{ loan_request.reason }}</td>
+    </tr>
+    <tr>
+        <th>Status</th>
+        <td>{{ loan_request.status }}</td>
+    </tr>
+    <tr>
+        <th>Operation Manager Approval</th>
+        <td>{{ loan_request.operation_manager_approval }}</td>
+    </tr>
+    <tr>
+        <th>Finance Approval</th>
+        <td>{{ loan_request.finance_approval }}</td>
+    </tr>
+    <tr>
+        <th>Date Requested</th>
+        <td>{{ loan_request.date_requested }}</td>
+    </tr>
+    <tr>
+        <th>Date Reviewed</th>
+        <td>{{ loan_request.date_reviewed }}</td>
+    </tr>
+    <tr>
+        <th>Branch</th>
+        <td>{{ loan_request.branch.name }}</td>
+    </tr>
+</table>
+
+<a href="{% url 'view_loan_requests_manager' %}">Back to Loan Requests</a>
+
+{% endblock %}

@@ -1,6 +1,6 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
-from loans.models import LoanRequest, LoanCategory, Zone, Branch  # Adjust the import based on your app name
+from loans.models import LoanRequest, LoanCategory, Zone, Branch, CollateralType  # Adjust the import based on your app name
 from loans.views import generate_incremental_loan_request_id
 
 class Command(BaseCommand):
@@ -25,9 +25,11 @@ class Command(BaseCommand):
             zone = row['zone']
             branch = row['branch']
             customer_history = row['customer_history']
+            date_requested = row['date_requested']
 
             try:
                 category = LoanCategory.objects.get(name=category)
+                collateral = CollateralType.objects.get(name=collateral)
                 zone = Zone.objects.get(name=zone)
                 branch = Branch.objects.get(name=branch, zone=zone)
                 loan_request, created = LoanRequest.objects.get_or_create(
@@ -42,7 +44,8 @@ class Command(BaseCommand):
                     status=status,
                     # zone=zone,
                     branch=branch,
-                    customer_history=customer_history
+                    customer_history=customer_history,
+                    date_requested=date_requested
                 )
                 if created:
                     self.stdout.write(self.style.SUCCESS(f'Successfully created loan request for: {applicant_name}'))
@@ -50,7 +53,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f'Loan request already exists for: {applicant_name}'))
             except LoanCategory.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f'Loan category does not exist: {category}'))
-            # except Zone.DoesNotExist:
-            #     self.stdout.write(self.style.ERROR(f'Zone does not exist: {zone}'))
+            except CollateralType.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f'Collateral does not exist: {collateral}'))
             except Branch.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f'Branch does not exist: {branch}'))

@@ -37,4 +37,5 @@ urlpatterns = [
     path('upload_loan_categories/', views.upload_loan_categories, name='upload_loan_categories'),
     path('upload_users/', views.upload_users, name='upload_users'),
     path('upload_loan_requests/', views.upload_loan_requests, name='upload_loan_requests'),
+    path('upload_collaterals/', views.upload_collaterals, name='upload_collaterals'),
 ]

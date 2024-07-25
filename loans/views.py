@@ -397,6 +397,11 @@ def edit_loan_category(request, category_id):
 @user_passes_test(lambda u: u.is_superuser)
 def manage_collateral_types(request):
     collateral_types = CollateralType.objects.all()
+    
+    paginator = Paginator(collateral_types, 10)  # Show 10 branches per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     if request.method == 'POST':
         form = CollateralTypeForm(request.POST)
         if form.is_valid():
@@ -404,7 +409,12 @@ def manage_collateral_types(request):
             return redirect('manage_collateral_types')
     else:
         form = CollateralTypeForm()
-    return render(request, 'loans/manage_collateral_types.html', {'collateral_types': collateral_types, 'form': form})
+        
+    context = {
+        'form': form,
+        'page_obj': page_obj
+    }  
+    return render(request, 'loans/manage_collateral_types.html', context)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -623,8 +633,10 @@ def upload_loan_requests(request):
             zone = row['zone']
             branch = row['branch']
             customer_history = row['customer_history']
+            date_requested = row['date_requested']
 
             try:
+                collateral = CollateralType.objects.get(name=collateral)
                 category = LoanCategory.objects.get(name=category)
                 zone = Zone.objects.get(name=zone)
                 branch = Branch.objects.get(name=branch, zone=zone)
@@ -640,7 +652,8 @@ def upload_loan_requests(request):
                     status=status,
                     # zone=zone,
                     branch=branch,
-                    customer_history=customer_history
+                    customer_history=customer_history,
+                    date_requested = date_requested
                 )
                 if created:
                     messages.success(request, f'Successfully created loan request for: {applicant_name}')
@@ -648,11 +661,33 @@ def upload_loan_requests(request):
                     messages.warning(request, f'Loan request already exists for: {applicant_name}')
             except LoanCategory.DoesNotExist:
                 messages.error(request, f'Loan category does not exist: {category}')
-            # except Zone.DoesNotExist:
-            #     messages.error(request, f'Zone does not exist: {zone}')
+            except CollateralType.DoesNotExist:
+                messages.error(request, f'Collateral does not exist: {collateral}')
             except Branch.DoesNotExist:
                 messages.error(request, f'Branch does not exist: {branch}')
 
         return redirect('upload_loan_requests')
 
     return render(request, 'backup/upload_loan_requests.html')
+
+
+def upload_collaterals(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            collateral_name = row['collateral']
+
+            collateral, created = CollateralType.objects.get_or_create(name=collateral_name)
+            if created:
+                messages.success(request, f'Successfully created collateral: {collateral}')
+            else:
+                messages.warning(request, f'Collateral already exists: {collateral}')
+
+        return redirect('upload_collaterals')
+
+    return render(request, 'backup/upload_collaterals.html')

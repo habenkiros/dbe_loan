@@ -11,19 +11,19 @@ class Zone(models.Model):
 
 class Branch(models.Model):
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return f"{self.name} ({self.zone.name})"
 
 class LoanCategory(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
 
 class CollateralType(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
@@ -57,7 +57,6 @@ class LoanRequest(models.Model):
     email = models.EmailField()
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
-    #collateral = models.CharField(max_length=30, null=True, blank=True)
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
     reason = models.TextField()
     status = models.CharField(max_length=20, default='pending')

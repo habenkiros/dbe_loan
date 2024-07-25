@@ -30,7 +30,7 @@ class CustomUserChangeForm(UserChangeForm):
 class LoanRequestForm(forms.ModelForm):
     class Meta:
         model = LoanRequest
-        fields = ['applicant_name', 'phone_number', 'email', 'category', 'collateral', 'amount_requested', 'reason']
+        fields = ['applicant_name', 'phone_number', 'email', 'category', 'collateral', 'amount_requested', 'reason', 'customer_history']
 
 class ZoneForm(forms.ModelForm):
     class Meta:

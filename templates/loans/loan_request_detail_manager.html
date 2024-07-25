@@ -63,6 +63,10 @@
         <th>Branch</th>
         <td>{{ loan_request.branch.name }}</td>
     </tr>
+    <tr>
+        <th>Cutomer History</th>
+        <td>{{ loan_request.customer_history }}</td>
+    </tr>
 </table>
 
 <a href="{% url 'view_loan_requests_manager' %}">Back to Loan Requests</a>

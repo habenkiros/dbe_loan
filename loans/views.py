@@ -9,6 +9,9 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse
 import csv
+from django.core.files.storage import FileSystemStorage
+from django.contrib import messages
+import pandas as pd
 
 @login_required
 def home(request):
@@ -358,6 +361,11 @@ def edit_branch(request, branch_id):
 @user_passes_test(lambda u: u.is_superuser)
 def manage_loan_categories(request):
     categories = LoanCategory.objects.all()
+    
+    paginator = Paginator(categories, 10)  # Show 10 branches per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     if request.method == 'POST':
         form = LoanCategoryForm(request.POST)
         if form.is_valid():
@@ -365,7 +373,12 @@ def manage_loan_categories(request):
             return redirect('manage_loan_categories')
     else:
         form = LoanCategoryForm()
-    return render(request, 'loans/manage_loan_categories.html', {'categories': categories, 'form': form})
+        
+    context = {
+        'form': form,
+        'page_obj': page_obj
+    }   
+    return render(request, 'loans/manage_loan_categories.html', context)
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -476,3 +489,170 @@ def generate_report(request):
 @user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')
+
+# @login_required
+# @user_passes_test(lambda u: u.is_superuser)
+def upload_zones(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            zone, created = Zone.objects.get_or_create(name=row['name'])
+            if created:
+                messages.success(request, f'Successfully created zone: {zone.name}')
+            else:
+                messages.warning(request, f'Zone already exists: {zone.name}')
+
+        return redirect('upload_zones')
+
+    return render(request, 'backup/upload_zones.html')
+
+
+def upload_branches(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            zone_name = row['zone']
+            branch_name = row['name']
+
+            try:
+                zone = Zone.objects.get(name=zone_name)
+                branch, created = Branch.objects.get_or_create(name=branch_name, zone=zone)
+                if created:
+                    messages.success(request, f'Successfully created branch: {branch.name} in zone: {zone.name}')
+                else:
+                    messages.warning(request, f'Branch already exists: {branch.name} in zone: {zone.name}')
+            except Zone.DoesNotExist:
+                messages.error(request, f'Zone does not exist: {zone_name}')
+
+        return redirect('upload_branches')
+
+    return render(request, 'backup/upload_branches.html')
+
+def upload_loan_categories(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            category_name = row['name']
+
+            loan_category, created = LoanCategory.objects.get_or_create(name=category_name)
+            if created:
+                messages.success(request, f'Successfully created loan category: {loan_category.name}')
+            else:
+                messages.warning(request, f'Loan category already exists: {loan_category.name}')
+
+        return redirect('upload_loan_categories')
+
+    return render(request, 'backup/upload_loan_categories.html')
+
+def upload_users(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            username = row['username']
+            email = row['email']
+            phone_number = row['phone_number']
+            role = row['role']
+            zone = row['zone']
+            branch = row['branch']
+
+            try:
+                zone = Zone.objects.get(name=zone)
+                branch = Branch.objects.get(name=branch, zone=zone)
+                user, created = CustomUser.objects.get_or_create(
+                    username=username,
+                    defaults={
+                        'email': email,
+                        'phone_number': phone_number,
+                        'role': role,
+                        'zone': zone,
+                        'branch': branch
+                    }
+                )
+                if created:
+                    user.set_password('Zemeo@zemeo10')  # You may want to set a default password or handle password securely
+                    user.save()
+                    messages.success(request, f'Successfully created user: {username}')
+                else:
+                    messages.warning(request, f'User already exists: {username}')
+            except Zone.DoesNotExist:
+                messages.error(request, f'Zone does not exist: {zone}')
+            except Branch.DoesNotExist:
+                messages.error(request, f'Branch does not exist: {branch}')
+
+        return redirect('upload_users')
+
+    return render(request, 'backup/upload_users.html')
+
+def upload_loan_requests(request):
+    if request.method == 'POST' and request.FILES['file']:
+        file = request.FILES['file']
+        fs = FileSystemStorage(location='backup/')
+        filename = fs.save(file.name, file)
+        file_path = fs.path(filename)
+
+        data = pd.read_excel(file_path, engine='openpyxl')
+        for index, row in data.iterrows():
+            applicant_name = row['applicant_name']
+            email = row['email']
+            phone_number = row['phone_number']
+            category = row['category']
+            collateral = row['collateral']
+            amount_requested = row['amount_requested']
+            reason = row['reason']
+            status = row['status']
+            zone = row['zone']
+            branch = row['branch']
+            customer_history = row['customer_history']
+
+            try:
+                category = LoanCategory.objects.get(name=category)
+                zone = Zone.objects.get(name=zone)
+                branch = Branch.objects.get(name=branch, zone=zone)
+                loan_request, created = LoanRequest.objects.get_or_create(
+                    loan_request_id=generate_incremental_loan_request_id(),
+                    applicant_name=applicant_name,
+                    email=email,
+                    phone_number=phone_number,
+                    category=category,
+                    collateral=collateral,
+                    amount_requested=amount_requested,
+                    reason=reason,
+                    status=status,
+                    # zone=zone,
+                    branch=branch,
+                    customer_history=customer_history
+                )
+                if created:
+                    messages.success(request, f'Successfully created loan request for: {applicant_name}')
+                else:
+                    messages.warning(request, f'Loan request already exists for: {applicant_name}')
+            except LoanCategory.DoesNotExist:
+                messages.error(request, f'Loan category does not exist: {category}')
+            # except Zone.DoesNotExist:
+            #     messages.error(request, f'Zone does not exist: {zone}')
+            except Branch.DoesNotExist:
+                messages.error(request, f'Branch does not exist: {branch}')
+
+        return redirect('upload_loan_requests')
+
+    return render(request, 'backup/upload_loan_requests.html')

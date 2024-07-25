@@ -32,4 +32,9 @@ urlpatterns = [
     path('view_report/', views.view_report, name='view_report'),
     path('generate_report/', views.generate_report, name='generate_report'),
     path('view_report_options/', views.view_report_options, name='view_report_options'),
+    path('upload_zones/', views.upload_zones, name='upload_zones'),
+    path('upload_branches/', views.upload_branches, name='upload_branches'),
+    path('upload_loan_categories/', views.upload_loan_categories, name='upload_loan_categories'),
+    path('upload_users/', views.upload_users, name='upload_users'),
+    path('upload_loan_requests/', views.upload_loan_requests, name='upload_loan_requests'),
 ]

@@ -18,13 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Reading .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='your-secret-key')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
-
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+DEBUG = os.getenv('DEBUG') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
 
 # Application definition
 
@@ -70,28 +66,20 @@ WSGI_APPLICATION = 'decsi_loan.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
+# Database configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('POSTGRES_DB', default='decsi_loan'),
-        'USER': env('POSTGRES_USER', default='postgres'),
-        'PASSWORD': env('POSTGRES_PASSWORD', default='postgres'),
-        'HOST': env('POSTGRES_HOST', default='db'),
-        'PORT': env('POSTGRES_PORT', default=5432),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
 
-# Try to connect to PostgreSQL, fall back to SQLite if connection fails
-try:
-    DATABASES['default'] = dj_database_url.config(default=env.db())
-except ImproperlyConfigured:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if env.str("DATABASE_URL", default=None):
+    DATABASES = {
+        'default': env.db()
     }
-
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 

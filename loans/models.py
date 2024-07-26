@@ -62,7 +62,7 @@ class LoanRequest(models.Model):
     status = models.CharField(max_length=20, default='pending')
     operation_manager_approval = models.BooleanField(default=False)
     finance_approval = models.BooleanField(default=False)
-    date_requested = models.DateTimeField(auto_now_add=True)
+    date_requested = models.DateTimeField()
     date_reviewed = models.DateTimeField(null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])

@@ -7,9 +7,19 @@
 {% block content %}
 <h1>Welcome to the Loan-Request System</h1>
 
+<!-- Popup Container -->
+<div id="promo-popup" class="popup">
+    <div class="popup-content">
+      <span id="close-popup" class="close">&times;</span>
+      <a href="https://play.google.com/store/apps/details?id=com.equb.seqela" target="_blank">
+        <img src="{% static 'images/logose.png' %}" alt="Promo Image">
+      </a>
+    </div>
+  </div>
+
 <div class="slideshow-container">
     <div class="mySlides fade">
-        <img src="{% static 'images/slide1.jpg' %}" style="width:100%">
+        <img src="{% static 'images/slide4.png' %}" style="width:100%">
     </div>
 
     <div class="mySlides fade">
@@ -34,6 +44,33 @@
 </div>
 
 <script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const popup = document.getElementById('promo-popup');
+        const closePopup = document.getElementById('close-popup');
+  
+        function showPopup() {
+          popup.style.display = 'block';
+        }
+  
+        function hidePopup() {
+          popup.style.display = 'none';
+        }
+  
+        // Show popup every 10 seconds
+        setInterval(showPopup, 10000);
+  
+        // Close popup
+        closePopup.addEventListener('click', hidePopup);
+  
+        // Hide popup when clicking outside of the content
+        window.addEventListener('click', function(event) {
+          if (event.target == popup) {
+            hidePopup();
+          }
+        });
+      });
+
 let slideIndex = 0;
 showSlides();
 

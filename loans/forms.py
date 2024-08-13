@@ -51,3 +51,19 @@ class CollateralTypeForm(forms.ModelForm):
     class Meta:
         model = CollateralType
         fields = ['name']
+
+from django import forms
+from .models import Zone, Branch, LoanRequest
+
+class LoanRequestFilterForm(forms.Form):
+    zone = forms.ModelChoiceField(queryset=Zone.objects.all(), required=False, label="Zone")
+    branch = forms.ModelChoiceField(queryset=Branch.objects.none(), required=False, label="Branch")
+    status = forms.ChoiceField(choices=LoanRequest.STATUS_CHOICES, required=False, label="Status")
+    
+    def __init__(self, *args, **kwargs):
+        zone_id = kwargs.pop('zone_id', None)
+        super().__init__(*args, **kwargs)
+        if zone_id:
+            self.fields['branch'].queryset = Branch.objects.filter(zone_id=zone_id)
+        else:
+            self.fields['branch'].queryset = Branch.objects.none()

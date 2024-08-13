@@ -63,6 +63,7 @@ def create_loan_request(request):
         form = LoanRequestForm(request.POST)
         if form.is_valid():
             loan_request = form.save(commit=False)
+            loan_request.zone = request.user.zone
             loan_request.branch = request.user.branch
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
@@ -125,16 +126,10 @@ def view_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
     
     # Filtering
-    zone_id = request.GET.get('zone_id')
-    branch_id = request.GET.get('branch_id')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     status = request.GET.get('status')
 
-    if zone_id:
-        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
-    if branch_id:
-        loan_requests = loan_requests.filter(branch_id=branch_id)
     if start_date and end_date:
         loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
     if status:
@@ -158,15 +153,9 @@ def view_loan_requests(request):
 def filter_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
 
-    zone_id = request.GET.get('zone_id')
-    branch_id = request.GET.get('branch_id')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    if zone_id:
-        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
-    if branch_id:
-        loan_requests = loan_requests.filter(branch_id=branch_id)
     if start_date and end_date:
         loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
 
@@ -179,18 +168,18 @@ def view_loan_requests_operation_manager(request):
     loan_requests = LoanRequest.objects.all()  # Operation managers can see all requests
 
     # Filtering
-    zone_id = request.GET.get('zone_id')
-    branch_id = request.GET.get('branch_id')
+    zone_id = request.GET.get('zone')
+    branch_id = request.GET.get('branch')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     status = request.GET.get('status')
 
     if zone_id:
-        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
+        loan_requests = loan_requests.filter(zone=zone_id)
     if branch_id:
-        loan_requests = loan_requests.filter(branch_id=branch_id)
+        loan_requests = loan_requests.filter(branch=branch_id)
     if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
     if status:
         loan_requests = loan_requests.filter(status=status)
 
@@ -224,18 +213,18 @@ def view_loan_requests_finance_manager(request):
     loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
 
     # Filtering
-    zone_id = request.GET.get('zone_id')
-    branch_id = request.GET.get('branch_id')
+    zone_id = request.GET.get('zone')
+    branch_id = request.GET.get('branch')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     status = request.GET.get('status')
 
     if zone_id:
-        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
+        loan_requests = loan_requests.filter(zone=zone_id)
     if branch_id:
-        loan_requests = loan_requests.filter(branch_id=branch_id)
+        loan_requests = loan_requests.filter(branch=branch_id)
     if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
     if status:
         loan_requests = loan_requests.filter(status=status)
 
@@ -280,18 +269,18 @@ def view_loan_requests_manager(request):
     loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
 
     # Filtering
-    zone_id = request.GET.get('zone_id')
-    branch_id = request.GET.get('branch_id')
+    zone_id = request.GET.get('zone')
+    branch_id = request.GET.get('branch')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     status = request.GET.get('status')
 
     if zone_id:
-        loan_requests = loan_requests.filter(branch__zone_id=zone_id)
+        loan_requests = loan_requests.filter(zone=zone_id)
     if branch_id:
-        loan_requests = loan_requests.filter(branch_id=branch_id)
+        loan_requests = loan_requests.filter(branch=branch_id)
     if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
     if status:
         loan_requests = loan_requests.filter(status=status)
 

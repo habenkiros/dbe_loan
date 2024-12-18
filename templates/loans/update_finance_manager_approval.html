@@ -53,7 +53,7 @@
             <th>Finance Approval</th>
             <td>
                 <select name="finance_approval">
-                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approve</option>
+                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approved</option>
                     <option value="False" {% if not loan_request.finance_approval %}selected{% endif %}>Reject</option>
                 </select>
             </td>

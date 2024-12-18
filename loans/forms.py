@@ -27,10 +27,10 @@ class CustomUserChangeForm(UserChangeForm):
         model = CustomUser
         fields = ['username', 'email', 'role', 'phone_number', 'zone', 'branch']
 
-class LoanRequestForm(forms.ModelForm):
-    class Meta:
-        model = LoanRequest
-        fields = ['applicant_name', 'phone_number', 'email', 'category', 'collateral', 'amount_requested', 'reason', 'customer_history']
+# class LoanRequestForm(forms.ModelForm):
+#     class Meta:
+#         model = LoanRequest
+#         fields = ['applicant_name', 'phone_number', 'email', 'category', 'collateral', 'amount_requested', 'reason', 'customer_history']
 
 class ZoneForm(forms.ModelForm):
     class Meta:
@@ -52,18 +52,35 @@ class CollateralTypeForm(forms.ModelForm):
         model = CollateralType
         fields = ['name']
 
-from django import forms
-from .models import Zone, Branch, LoanRequest
+class LoanRequestForm(forms.ModelForm):
+    class Meta:
+        model = LoanRequest
+        fields = [
+            'applicant_name',
+            'phone_number',
+            'email',
+            'category',
+            'collateral',
+            'amount_requested',
+            'reason',
+            'zone',
+            'branch',
+            'customer_history',
+        ]
+        widgets = {
+            'date_requested': forms.DateInput(attrs={'type': 'date'}),
+        }
 
-class LoanRequestFilterForm(forms.Form):
-    zone = forms.ModelChoiceField(queryset=Zone.objects.all(), required=False, label="Zone")
-    branch = forms.ModelChoiceField(queryset=Branch.objects.none(), required=False, label="Branch")
-    status = forms.ChoiceField(choices=LoanRequest.STATUS_CHOICES, required=False, label="Status")
-    
     def __init__(self, *args, **kwargs):
-        zone_id = kwargs.pop('zone_id', None)
-        super().__init__(*args, **kwargs)
-        if zone_id:
-            self.fields['branch'].queryset = Branch.objects.filter(zone_id=zone_id)
-        else:
-            self.fields['branch'].queryset = Branch.objects.none()
+        super(LoanRequestForm, self).__init__(*args, **kwargs)
+        self.fields['zone'].queryset = Zone.objects.all()
+        self.fields['branch'].queryset = Branch.objects.none()
+
+        if 'zone' in self.data:
+            try:
+                zone_id = int(self.data.get('zone'))
+                self.fields['branch'].queryset = Branch.objects.filter(zone_id=zone_id).order_by('name')
+            except (ValueError, TypeError):
+                pass  # invalid input from the client; ignore and fallback to empty branch queryset
+        elif self.instance.pk and self.instance.zone:
+            self.fields['branch'].queryset = self.instance.zone.branches.order_by('name')

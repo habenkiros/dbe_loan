@@ -20,7 +20,7 @@
             $.ajax({                       // Initialize the AJAX request
                 url: url,
                 data: {
-                    'zone_id': zoneId       // Add the zone id to the GET parameters
+                    'zone': zoneId       // Add the zone id to the GET parameters
                 },
                 success: function (data) {   // `data` is the return of the `load_branches` view function
                     $('#id_branch').empty();

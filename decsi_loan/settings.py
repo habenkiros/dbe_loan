@@ -5,22 +5,20 @@ from pathlib import Path
 import environ
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+from datetime import timedelta
 
-# Initialize environment variables
-env = environ.Env(
-    # Set casting, default value
-    DEBUG=(bool, False)
-)
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Reading .env file
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
-DEBUG = os.getenv('DEBUG') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
+DEBUG = os.getenv('DEBUG', 'Flase') == 'False'
+
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -64,22 +62,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'decsi_loan.wsgi.application'
 
+# Custom User Model
+AUTH_USER_MODEL = 'loans.CustomUser'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-# Database configuration
+# Database configuration for PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'decsiloandb'),
+        'USER': os.getenv('DB_USER', 'decsiloandbuser'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'decsiloandbpassword'),
+        'HOST': 'db',
+        'PORT': '5432',
     }
 }
-
-if env.str("DATABASE_URL", default=None):
-    DATABASES = {
-        'default': env.db()
-    }
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
@@ -98,8 +97,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Custom User Model
-AUTH_USER_MODEL = 'loans.CustomUser'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/

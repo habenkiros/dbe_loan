@@ -50,7 +50,7 @@
             <td>
                 {% if user.role == 'operation_manager' %}
                 <select name="operation_manager_approval">
-                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approve</option>
+                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approved</option>
                     <option value="False" {% if not loan_request.operation_manager_approval %}selected{% endif %}>Reject</option>
                 </select>
                 {% else %}
@@ -63,7 +63,7 @@
             <td>
                 {% if user.role == 'finance_manager' %}
                 <select name="finance_approval">
-                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approve</option>
+                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approved</option>
                     <option value="False" {% if not loan_request.finance_approval %}selected{% endif %}>Reject</option>
                 </select>
                 {% else %}

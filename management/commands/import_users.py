@@ -35,7 +35,7 @@ class Command(BaseCommand):
                     }
                 )
                 if created:
-                    user.set_password('Zemeo@zemeo10')  # You may want to set a default password or handle password securely
+                    user.set_password('Seqelaequb10')  # You may want to set a default password or handle password securely
                     user.save()
                     self.stdout.write(self.style.SUCCESS(f'Successfully created user: {username}'))
                 else:

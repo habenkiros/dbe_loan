@@ -1,84 +1,119 @@
-<!-- templates/loans/view_loan_requests_finance_manager.html -->
-{% extends "base.html" %}
-
-{% block title %}View Loan Requests{% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
-<h1>View Loan Requests</h1>
-
-<form method="get">
-    <label for="zone">Zone:</label>
-    <select name="zone_id" id="zone">
-        <option value="">All Zones</option>
-        {% for zone in zones %}
-        <option value="{{ zone.id }}">{{ zone.name }}</option>
-        {% endfor %}
-    </select>
-    <label for="branch">Branch:</label>
-    <select name="branch_id" id="branch">
-        <option value="">All Branches</option>
-        {% for branch in branches %}
-        <option value="{{ branch.id }}">{{ branch.name }}</option>
-        {% endfor %}
-    </select>
-    <label for="start_date">Start Date:</label>
-    <input type="date" name="start_date" id="start_date">
-    <label for="end_date">End Date:</label>
-    <input type="date" name="end_date" id="end_date">
-    <label for="status">Status:</label>
-    <select name="status" id="status">
-        <option value="">All</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-        <option value="pending">Pending</option>
-    </select>
-    <button type="submit">Filter</button>
-</form>
-
 <div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Applicant Name</th>
-                <th>Amount Requested</th>
-                <th>Status</th>
-                <th>Date Requested</th>
-                <th>Date Reviewed</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for loan_request in page_obj %}
-            <tr>
-                <td>{{ loan_request.loan_request_id }}</td>
-                <td>{{ loan_request.applicant_name }}</td>
-                <td>{{ loan_request.amount_requested }}</td>
-                <td>{{ loan_request.status }}</td>
-                <td>{{ loan_request.date_requested }}</td>
-                <td>{{ loan_request.date_reviewed }}</td>
-                <td>
-                    <a href="{% url 'loan_request_detail_manager' loan_request.id %}">Details</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h2>Loan Requests</h2>
+    
+    <!-- Filter Form -->
+    <form method="get" class="form-inline">
+        <div class="form-group">
+            <label for="id_zone">Zone:</label>
+            <select id="id_zone" name="zone" class="form-control">
+                <option value="">-- Select Zone --</option>
+                {% for zone in zones %}
+                    <option value="{{ zone.id }}" {% if selected_zone == zone.id|stringformat:"s" %}selected{% endif %}>
+                        {{ zone.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="id_branch">Branch:</label>
+            <select id="id_branch" name="branch" class="form-control">
+                <option value="">-- Select Branch --</option>
+                {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                        {{ branch.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="id_date_requested">Date Requested:</label>
+            <input type="date" id="id_date_requested" name="date_requested" value="{{ selected_date_requested }}" class="form-control">
+        </div>
+        <br>
+        <button type="submit">Filter</button>
+    </form>
+    
+    <!-- Loan Requests Table -->
+    <div class="table-container">
+        {% if page_obj.object_list %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Loan Request ID</th>
+                        <th>Applicant Name</th>
+                        <th>Category</th>
+                        <th>Amount Requested</th>
+                        <th>Status</th>
+                        <th>Date Requested</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan_request in page_obj.object_list %}
+                        <tr>
+                            <td>{{ loan_request.loan_request_id }}</td>
+                            <td>{{ loan_request.applicant_name }}</td>
+                            <td>{{ loan_request.category.name }}</td>
+                            <td>{{ loan_request.amount_requested }}</td>
+                            <td>{{ loan_request.status }}</td>
+                            <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
+                            <td>
+                                <a href="{% url 'loan_request_detail_manager' loan_request.id %}">Details</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Pagination -->
+            <div class="pagination">
+                <span class="step-links">
+                    {% if page_obj.has_previous %}
+                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page=1">&laquo; first</a>
+                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.previous_page_number }}">previous</a>
+                    {% endif %}
+                    
+                    <span class="current">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                    </span>
+                    
+                    {% if page_obj.has_next %}
+                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.next_page_number }}">next</a>
+                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                    {% endif %}
+                </span>
+            </div>
+        {% else %}
+            <p>No loan requests found.</p>
+        {% endif %}
+    </div>
 </div>
+{% endblock %}
 
-<div class="pagination">
-    <span class="step-links">
-        {% if page_obj.has_previous %}
-            <a href="?page=1{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">First</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Previous</a>
-        {% endif %}
-        <span class="current">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-        </span>
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Next</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Last</a>
-        {% endif %}
-    </span>
-</div>
+{% block extra_scripts %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_zone').change(function() {
+            var zoneId = $(this).val();
+            $.ajax({
+                url: "{% url 'ajax_load_branches' %}",
+                data: {
+                    'zone': zoneId
+                },
+                success: function(data) {
+                    var branchDropdown = $("#id_branch");
+                    branchDropdown.html('<option value="">-- Select Branch --</option>');
+                    $.each(data, function(index, branch) {
+                        branchDropdown.append('<option value="' + branch.id + '">' + branch.name + '</option>');
+                    });
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

@@ -161,37 +161,59 @@ def filter_loan_requests(request):
 
     return render(request, 'loans/view_loan_requests.html', {'loan_requests': loan_requests})
 
+@login_required
+# @user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
+def load_branches_op(request):
+    zone_id = request.GET.get('zone')
+    user = request.user
+
+    # Ensure that only branches within the user's zone are fetched
+    branches = Branch.objects.filter(zone_id=zone_id, zone=user.zone) if zone_id else Branch.objects.none()
+
+    branch_list = [{"id": branch.id, "name": branch.name} for branch in branches]
+    
+    return JsonResponse(branch_list, safe=False)
 
 @login_required
 @user_passes_test(lambda u: u.role == 'operational_manager')
 def view_loan_requests_operation_manager(request):
-    loan_requests = LoanRequest.objects.all()  # Operation managers can see all requests
-
-    # Filtering
+    user = request.user  # Fetch the logged-in user
     zone_id = request.GET.get('zone')
     branch_id = request.GET.get('branch')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    status = request.GET.get('status')
+    date_requested = request.GET.get('date_requested')
 
+    # Start with all loan requests for the operational manager's zone
+    loan_requests = LoanRequest.objects.all()
+
+    # Filter by zone if selected (should match the manager's zone)
     if zone_id:
-        loan_requests = loan_requests.filter(zone=zone_id)
+        loan_requests = loan_requests.filter(zone_id=zone_id)
+
+    # Filter by branch if selected
     if branch_id:
-        loan_requests = loan_requests.filter(branch=branch_id)
-    if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
-    if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+
+    # Filter by date_requested if selected
+    if date_requested:
+        loan_requests = loan_requests.filter(date_requested__date=date_requested)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Fetch zones and branches for the filters
+    zones = Zone.objects.all()
+    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
+
     context = {
         'page_obj': page_obj,
-        'zones': Zone.objects.all(),
-        'branches': Branch.objects.all(),
+        'loan_requests': loan_requests,
+        'zones': zones,
+        'branches': branches,
+        'selected_zone': zone_id,
+        'selected_branch': branch_id,
+        'selected_date_requested': date_requested,
     }
     return render(request, 'loans/view_loan_requests_operation_manager.html', context)
 
@@ -205,38 +227,46 @@ def update_operation_manager_approval(request, loan_request_id):
         return redirect('view_loan_requests_operation_manager')
     return render(request, 'loans/update_operation_manager_approval.html', {'loan_request': loan_request})
 
-# loans/views.py
-
 @login_required
 @user_passes_test(lambda u: u.role == 'finance')
 def view_loan_requests_finance_manager(request):
-    loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
-
-    # Filtering
+    user = request.user  # Fetch the logged-in user
     zone_id = request.GET.get('zone')
     branch_id = request.GET.get('branch')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    status = request.GET.get('status')
+    date_requested = request.GET.get('date_requested')
 
+    # Start with all loan requests for the operational manager's zone
+    loan_requests = LoanRequest.objects.all()
+
+    # Filter by zone if selected (should match the manager's zone)
     if zone_id:
-        loan_requests = loan_requests.filter(zone=zone_id)
+        loan_requests = loan_requests.filter(zone_id=zone_id)
+
+    # Filter by branch if selected
     if branch_id:
-        loan_requests = loan_requests.filter(branch=branch_id)
-    if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
-    if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+
+    # Filter by date_requested if selected
+    if date_requested:
+        loan_requests = loan_requests.filter(date_requested__date=date_requested)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Fetch zones and branches for the filters
+    zones = Zone.objects.all()
+    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
+
     context = {
         'page_obj': page_obj,
-        'zones': Zone.objects.all(),
-        'branches': Branch.objects.all(),
+        'loan_requests': loan_requests,
+        'zones': zones,
+        'branches': branches,
+        'selected_zone': zone_id,
+        'selected_branch': branch_id,
+        'selected_date_requested': date_requested,
     }
     return render(request, 'loans/view_loan_requests_finance_manager.html', context)
 
@@ -266,33 +296,43 @@ def manage_zones(request):
 @login_required
 @user_passes_test(lambda u: u.role == 'manager')
 def view_loan_requests_manager(request):
-    loan_requests = LoanRequest.objects.all()  # Finance managers can see all requests
-
-    # Filtering
+    user = request.user  # Fetch the logged-in user
     zone_id = request.GET.get('zone')
     branch_id = request.GET.get('branch')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    status = request.GET.get('status')
+    date_requested = request.GET.get('date_requested')
 
+    # Start with all loan requests for the operational manager's zone
+    loan_requests = LoanRequest.objects.all()
+
+    # Filter by zone if selected (should match the manager's zone)
     if zone_id:
-        loan_requests = loan_requests.filter(zone=zone_id)
+        loan_requests = loan_requests.filter(zone_id=zone_id)
+
+    # Filter by branch if selected
     if branch_id:
-        loan_requests = loan_requests.filter(branch=branch_id)
-    if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested=[start_date, end_date])
-    if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+
+    # Filter by date_requested if selected
+    if date_requested:
+        loan_requests = loan_requests.filter(date_requested__date=date_requested)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Fetch zones and branches for the filters
+    zones = Zone.objects.all()
+    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
+
     context = {
         'page_obj': page_obj,
-        'zones': Zone.objects.all(),
-        'branches': Branch.objects.all(),
+        'loan_requests': loan_requests,
+        'zones': zones,
+        'branches': branches,
+        'selected_zone': zone_id,
+        'selected_branch': branch_id,
+        'selected_date_requested': date_requested,
     }
     return render(request, 'loans/view_loan_requests_manager.html', context)
 
@@ -639,7 +679,7 @@ def upload_loan_requests(request):
                     amount_requested=amount_requested,
                     reason=reason,
                     status=status,
-                    # zone=zone,
+                    zone=zone,
                     branch=branch,
                     customer_history=customer_history,
                     date_requested = date_requested
@@ -680,3 +720,52 @@ def upload_collaterals(request):
         return redirect('upload_collaterals')
 
     return render(request, 'backup/upload_collaterals.html')
+
+@login_required
+def load_branches(request):
+    zone_id = request.GET.get('zone')
+    branches = Branch.objects.filter(zone_id=zone_id).order_by('name')
+    return JsonResponse(list(branches.values('id', 'name')), safe=False)
+
+# def view_loan_requests(request):
+#     zone_id = request.GET.get('zone')
+#     branch_id = request.GET.get('branch')
+#     date_requested = request.GET.get('date_requested')
+
+#     # Start with all loan requests
+#     loan_requests = LoanRequest.objects.all()
+
+#     # Filter by zone if selected
+#     if zone_id:
+#         loan_requests = loan_requests.filter(zone_id=zone_id)
+
+#     # Filter by branch if selected
+#     if branch_id:
+#         loan_requests = loan_requests.filter(branch_id=branch_id)
+
+#     # Filter by date_requested if selected
+#     if date_requested:
+#         loan_requests = loan_requests.filter(date_requested__date=date_requested)
+
+#     # Pagination: Show 10 loan requests per page
+#     paginator = Paginator(loan_requests, 10)  # 10 loan requests per page
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+
+#     # Fetch zones and branches for the filters
+#     zones = Zone.objects.all()
+#     branches = Branch.objects.none()
+
+#     if zone_id:
+#         branches = Branch.objects.filter(zone_id=zone_id)
+
+#     context = {
+#         'page_obj': page_obj,
+#         'zones': zones,
+#         'branches': branches,
+#         'selected_zone': zone_id,
+#         'selected_branch': branch_id,
+#         'selected_date_requested': date_requested,
+#     }
+
+#     return render(request, 'view_loan_requests.html', context)

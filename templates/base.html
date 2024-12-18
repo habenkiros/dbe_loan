@@ -5,6 +5,7 @@
     <title>{% block title %}Loan System{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             display: flex;
@@ -40,7 +41,7 @@
             border: 1px solid #ddd;
         }
         th, td {
-            padding: 8px;  /* Adjusted padding */
+            padding: 8px;
             text-align: left;
         }
         th {
@@ -56,7 +57,6 @@
         header {
             background-color: #0e0e0e;
             color: white;
-            /* padding: 10px 20px; Adjusted padding */
             padding: 20px;
             display: flex;
             justify-content: space-between;
@@ -64,7 +64,7 @@
         }
         header h1 {
             margin: 0;
-            font-size: 24px; /* Adjusted font size */
+            font-size: 24px;
         }
         header p {
             margin: 0;
@@ -75,7 +75,7 @@
             overflow: hidden;
         }
         nav a {
-            padding: 10px 15px; /* Adjusted padding */
+            padding: 10px 15px;
             text-align: center;
             color: white;
             text-decoration: none;
@@ -132,7 +132,10 @@
         {% endblock %}
     </div>
     <footer>
-        <p>&copy;  <a href="https://seqela.com">HK Automation PLC</a>. All rights reserved.</p>
+        <p>&copy; <a href="https://seqela.com">HK Automation PLC</a>. All rights reserved.</p>
     </footer>
+
+    {% block extra_scripts %}
+    {% endblock %}
 </body>
 </html>

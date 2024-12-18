@@ -49,7 +49,7 @@
             <th>Operation Manager Approval</th>
             <td>
                 <select name="operation_manager_approval">
-                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approve</option>
+                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approved</option>
                     <option value="False" {% if not loan_request.operation_manager_approval %}selected{% endif %}>Reject</option>
                 </select>
             </td>

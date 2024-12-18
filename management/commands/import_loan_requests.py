@@ -42,7 +42,7 @@ class Command(BaseCommand):
                     amount_requested=amount_requested,
                     reason=reason,
                     status=status,
-                    # zone=zone,
+                    zone=zone,
                     branch=branch,
                     customer_history=customer_history,
                     date_requested=date_requested

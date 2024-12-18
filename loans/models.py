@@ -59,18 +59,18 @@ class LoanRequest(models.Model):
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
     reason = models.TextField()
-    status = models.CharField(max_length=20, default='pending')
+    status = models.CharField(max_length=20, null=True, blank=True)
     operation_manager_approval = models.BooleanField(default=False)
     finance_approval = models.BooleanField(default=False)
     date_requested = models.DateTimeField()
     date_reviewed = models.DateTimeField(null=True, blank=True)
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE)
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])
 
-    def save(self, *args, **kwargs):
-        if self.operation_manager_approval and self.finance_approval:
-            self.status = 'approved'
-        else:
-            self.status = 'pending'
-        super(LoanRequest, self).save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     if self.operation_manager_approval and self.finance_approval:
+    #         self.status = 'Approved'
+    #     else:
+    #         self.status = 'pending'
+    #     super(LoanRequest, self).save(*args, **kwargs)

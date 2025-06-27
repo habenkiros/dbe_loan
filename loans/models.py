@@ -2,6 +2,7 @@
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 class Zone(models.Model):
     name = models.CharField(max_length=255)
@@ -74,3 +75,12 @@ class LoanRequest(models.Model):
     #     else:
     #         self.status = 'pending'
     #     super(LoanRequest, self).save(*args, **kwargs)
+    
+    def update_status_if_approved(self):
+        """
+        Update loan status to 'Approved' if both approvals are True.
+        """
+        if self.finance_approval and self.operation_manager_approval:
+            self.status = 'Approved'
+            self.date_reviewed = timezone.now()
+            self.save()

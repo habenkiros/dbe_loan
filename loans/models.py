@@ -69,18 +69,9 @@ class LoanRequest(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])
 
-    # def save(self, *args, **kwargs):
-    #     if self.operation_manager_approval and self.finance_approval:
-    #         self.status = 'Approved'
-    #     else:
-    #         self.status = 'pending'
-    #     super(LoanRequest, self).save(*args, **kwargs)
-    
-    def update_status_if_approved(self):
-        """
-        Update loan status to 'Approved' if both approvals are True.
-        """
-        if self.finance_approval and self.operation_manager_approval:
+    def save(self, *args, **kwargs):
+        if self.operation_manager_approval and self.finance_approval:
             self.status = 'Approved'
-            self.date_reviewed = timezone.now()
-            self.save()
+        else:
+            self.status = 'pending'
+        super(LoanRequest, self).save(*args, **kwargs)

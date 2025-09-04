@@ -31,10 +31,10 @@ class CollateralType(models.Model):
 
 class CustomUser(AbstractUser):
     USER_ROLES = [
-        ('loan_officer', 'Loan Officer'),
+        ('loan_officer', 'Branch Manager'),
         ('finance', 'Finance'),
         ('operational_manager', 'Operational Manager'),
-        ('manager', 'Manager')
+        ('manager', 'Manager')  
     ]
 
     role = models.CharField(max_length=20, choices=USER_ROLES)

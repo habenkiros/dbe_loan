@@ -77,7 +77,7 @@ def generate_incremental_loan_request_id():
     latest_id = latest_id_instance.latest_id + 1
     latest_id_instance.latest_id = latest_id
     latest_id_instance.save()
-    return f"DECSI-{latest_id:015d}"
+    return f"D-{latest_id:015d}"
 
 # loans/views.py
 

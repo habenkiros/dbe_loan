@@ -6,19 +6,30 @@
 {% block content %}
 <h1>View Loan Requests</h1>
 
-<form method="get">
-    <input type="date" name="start_date" value="{{ selected_start_date }}">
-    <input type="date" name="end_date" value="{{ selected_end_date }}">
-    
-    <select name="status">
-        <option value="">All Statuses</option>
-        <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
-        <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
-        <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
-    </select>
+<!-- Filter Form -->
+    <form method="get" class="form-inline" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
+        <!--<div class="form-group">
+            <label for="id_loan_request_id">Applicant ID:</label>
+            <input type="text" id="id_loan_request_id" name="loan_request_id" value="{{ selected_loan_request_id }}" class="form-control" style="width: 150px;">
+        </div>-->
 
-    <button type="submit">Filter</button>
-</form>
+        <div class="form-group">
+            <label for="id_branch">Status:</label>
+            <select id="id_status" name="status" class="form-control" style="width: 150px;">
+                <option value="">All Statuses</option>
+                <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
+                <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="id_date_requested">Date Requested:</label>
+            <input type="date" id="id_date_requested" name="date_requested" value="{{ selected_date_requested }}" class="form-control" style="width: 150px;">
+        </div>
+        <br>
+        <button type="submit">Filter</button>
+    </form>
 
 <div class="table-container">
     <table>

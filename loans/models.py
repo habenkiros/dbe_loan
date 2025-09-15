@@ -55,7 +55,7 @@ class LoanRequest(models.Model):
     loan_request_id = models.CharField(max_length=22, unique=True)
     applicant_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15, default='0953333311')
-    email = models.EmailField()
+    email = models.EmailField(null=True, blank=True)
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
@@ -63,15 +63,19 @@ class LoanRequest(models.Model):
     status = models.CharField(max_length=20, null=True, blank=True)
     operation_manager_approval = models.BooleanField(default=False)
     finance_approval = models.BooleanField(default=False)
-    date_requested = models.DateTimeField()
+    date_requested = models.DateTimeField(auto_now_add=True)
     date_reviewed = models.DateTimeField(null=True, blank=True)
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])
 
     def save(self, *args, **kwargs):
-        if self.operation_manager_approval and self.finance_approval:
-            self.status = 'Approved'
-        else:
-            self.status = 'pending'
+        # If this is a new record without a status, apply system rules
+        if not self.status:
+            if self.operation_manager_approval and self.finance_approval:
+                self.status = 'Approved'
+            else:
+                self.status = 'pending'
+        # Otherwise, preserve whatever status is already set (e.g., during migration)
         super(LoanRequest, self).save(*args, **kwargs)
+

@@ -153,7 +153,7 @@ def view_loan_requests(request):
     if loan_request_id:
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
@@ -219,7 +219,7 @@ def view_loan_requests_operation_manager(request):
     if loan_request_id:
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
     # Pagination
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
     page_number = request.GET.get('page')
@@ -275,7 +275,7 @@ def view_loan_requests_finance_manager(request):
     if loan_request_id:
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)
@@ -345,7 +345,7 @@ def view_loan_requests_manager(request):
     if loan_request_id:
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
 
     # Pagination
     paginator = Paginator(loan_requests, 10)
@@ -509,7 +509,7 @@ def view_report(request):
         loan_requests = loan_requests.filter(branch=branch)
     
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
 
     paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
     page_number = request.GET.get('page')
@@ -536,7 +536,7 @@ def generate_report(request):
         loan_requests = loan_requests.filter(branch=branch)
     
     if status:
-        loan_requests = loan_requests.filter(status=status)
+        loan_requests = loan_requests.filter(status__iexact=status)
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{status}_loan_requests.csv"'

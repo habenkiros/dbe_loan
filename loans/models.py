@@ -70,13 +70,22 @@ class LoanRequest(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])
 
+    # def save(self, *args, **kwargs):
+    #     # If this is a new record without a status, apply system rules
+    #     if not self.status:
+    #         if self.operation_manager_approval and self.finance_approval:
+    #             self.status = 'Approved'
+    #         else:
+    #             self.status = 'pending'
+    #     # Otherwise, preserve whatever status is already set (e.g., during migration)
+    #     super(LoanRequest, self).save(*args, **kwargs)
+    
     def save(self, *args, **kwargs):
-        # If this is a new record without a status, apply system rules
-        if not self.status:
-            if self.operation_manager_approval and self.finance_approval:
-                self.status = 'Approved'
-            else:
-                self.status = 'pending'
-        # Otherwise, preserve whatever status is already set (e.g., during migration)
+        # Always recalculate status from approvals
+        if self.operation_manager_approval and self.finance_approval:
+            self.status = 'Approved'
+        elif self.status != 'Rejected':  # don’t override rejection
+            self.status = 'Pending'
+        
         super(LoanRequest, self).save(*args, **kwargs)
 

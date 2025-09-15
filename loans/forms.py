@@ -58,8 +58,6 @@ class LoanRequestForm(forms.ModelForm):
             'collateral',
             'amount_requested',
             'reason',
-            # 'zone',
-            # 'branch',
             'customer_history',
         ]
         widgets = {
@@ -68,14 +66,3 @@ class LoanRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
-        # self.fields['zone'].queryset = Zone.objects.all()
-        # self.fields['branch'].queryset = Branch.objects.none()
-
-        # if 'zone' in self.data:
-        #     try:
-        #         zone_id = int(self.data.get('zone'))
-        #         self.fields['branch'].queryset = Branch.objects.filter(zone_id=zone_id).order_by('name')
-        #     except (ValueError, TypeError):
-        #         pass  # invalid input from the client; ignore and fallback to empty branch queryset
-        # elif self.instance.pk and self.instance.zone:
-        #     self.fields['branch'].queryset = self.instance.zone.branches.order_by('name')

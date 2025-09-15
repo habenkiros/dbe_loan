@@ -144,12 +144,14 @@ def view_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
     
     # Filtering
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    date_requested = request.GET.get('date_requested')
     status = request.GET.get('status')
+    loan_request_id = request.GET.get('loan_request_id')
 
-    if start_date and end_date:
-        loan_requests = loan_requests.filter(date_requested__range=[start_date, end_date])
+    if date_requested:
+        loan_requests = loan_requests.filter(date_requested__date=date_requested)
+    if loan_request_id:
+        loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status=status)
 
@@ -160,8 +162,10 @@ def view_loan_requests(request):
     
     context = {
         'page_obj': page_obj,
-        'zones': Zone.objects.all(),
-        'branches': Branch.objects.filter(zone=request.user.branch.zone),
+        'loan_requests': loan_requests,
+        'selected_date_requested': date_requested,
+        'selected_loan_request_id': loan_request_id,
+        'selected_status': status,
     }
     return render(request, 'loans/view_loan_requests.html', context)
 

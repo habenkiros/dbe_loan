@@ -7,3 +7,7 @@ django-import-export>=4.1.0
 openpyxl>=3.1.5
 dj-database-url>=2.1.0
 python-dotenv
+requests==2.25.1
+drf-yasg
+djangorestframework-simplejwt
+djangorestframework

@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from .services import fetch_customer_by_number
 from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
 from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
 from django.http import JsonResponse

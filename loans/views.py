@@ -7,7 +7,7 @@ from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, Cus
 from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpResponse
 import csv
 from django.core.files.storage import FileSystemStorage
@@ -594,6 +594,47 @@ def generate_report(request):
 @user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')
+
+def home(request):
+    user = request.user
+
+    # Default values
+    total_loans = approved_loans = pending_loans = rejected_loans = 0
+    branch_names, branch_counts = [], []
+
+    if user.role == "loan_officer":  # Loan Officer = Branch Manager
+        # Filter by the loan officer's branch
+        loans = LoanRequest.objects.filter(branch=user.branch)
+
+        total_loans = loans.count()
+        approved_loans = loans.filter(status="Approved").count()
+        pending_loans = loans.filter(status="Pending").count()
+        rejected_loans = loans.filter(status="Rejected").count()
+
+        # Branch-level chart (just their branch)
+        branch_names = [user.branch.name]
+        branch_counts = [total_loans]
+
+    else:
+        # Global view for managers/finance/operational_manager/superusers
+        total_loans = LoanRequest.objects.count()
+        approved_loans = LoanRequest.objects.filter(status="Approved").count()
+        pending_loans = LoanRequest.objects.filter(status="Pending").count()
+        rejected_loans = LoanRequest.objects.filter(status="Rejected").count()
+
+        branch_data = LoanRequest.objects.values('branch__name').annotate(total=Count('id'))
+        branch_names = [b['branch__name'] for b in branch_data]
+        branch_counts = [b['total'] for b in branch_data]
+
+    context = {
+        'total_loans': total_loans,
+        'approved_loans': approved_loans,
+        'pending_loans': pending_loans,
+        'rejected_loans': rejected_loans,
+        'branch_names': branch_names,
+        'branch_counts': branch_counts,
+    }
+    return render(request, 'home.html', context)
 
 # @login_required
 # @user_passes_test(lambda u: u.is_superuser)

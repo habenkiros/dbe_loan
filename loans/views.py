@@ -76,7 +76,7 @@ def edit_user(request, user_id):
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(lambda u: u.role == 'branch_manager')
 def create_loan_request(request):
     if request.method == 'POST':
         form = LoanRequestForm(request.POST)
@@ -96,7 +96,7 @@ def generate_incremental_loan_request_id():
     latest_id = latest_id_instance.latest_id + 1
     latest_id_instance.latest_id = latest_id
     latest_id_instance.save()
-    return f"D-{latest_id:015d}"
+    return f"HK-{latest_id:010d}"
 
 # loans/views.py
 
@@ -116,7 +116,7 @@ def update_loan_request_status(request, loan_request_id):
 # loans/views.py
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance'])
 def loan_request_detail(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
@@ -140,14 +140,22 @@ def loan_request_detail_manager(request, loan_request_id):
     return render(request, 'loans/loan_request_detail_manager.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(lambda u: u.role == 'branch_manager')
 def view_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
     
+    query = request.GET.get("q")
     # Filtering
     date_requested = request.GET.get('date_requested')
     status = request.GET.get('status')
     loan_request_id = request.GET.get('loan_request_id')
+    
+    if query:
+        loan_requests = loan_requests.filter(
+            Q(applicant_name__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(loan_request_id__icontains=query)
+        )
 
     if date_requested:
         loan_requests = loan_requests.filter(date_requested__date=date_requested)
@@ -164,6 +172,7 @@ def view_loan_requests(request):
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
+        "query": query or "",
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
         'selected_status': status,
@@ -172,7 +181,7 @@ def view_loan_requests(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(lambda u: u.role == 'branch_manager')
 def filter_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
 
@@ -185,7 +194,7 @@ def filter_loan_requests(request):
     return render(request, 'loans/view_loan_requests.html', {'loan_requests': loan_requests})
 
 @login_required
-# @user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
+# @user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
 def load_branches_op(request):
     zone_id = request.GET.get('zone')
     user = request.user
@@ -209,6 +218,14 @@ def view_loan_requests_operation_manager(request):
 
     # Start with all loan requests for the operational manager's zone
     loan_requests = LoanRequest.objects.all()
+    query = request.GET.get("q")
+    
+    if query:
+        loan_requests = loan_requests.filter(
+            Q(applicant_name__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(loan_request_id__icontains=query)
+        )
 
     # Filter by zone if selected (should match the manager's zone)
     if zone_id:
@@ -233,6 +250,7 @@ def view_loan_requests_operation_manager(request):
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
+        "query": query or "",
         'zones': zones,
         'branches': branches,
         'selected_zone': zone_id,
@@ -256,7 +274,7 @@ def update_operation_manager_approval(request, loan_request_id):
 @login_required
 @user_passes_test(lambda u: u.role == 'finance')
 def view_loan_requests_finance_manager(request):
-    user = request.user
+    query = request.GET.get("q")
     zone_id = request.GET.get('zone')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
@@ -277,6 +295,13 @@ def view_loan_requests_finance_manager(request):
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
+    
+    if query:
+        loan_requests = loan_requests.filter(
+            Q(applicant_name__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(loan_request_id__icontains=query)
+        )
 
     # Pagination
     paginator = Paginator(loan_requests, 10)
@@ -296,6 +321,7 @@ def view_loan_requests_finance_manager(request):
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
         'selected_status': status,
+        "query": query or "",
     }
     return render(request, 'loans/view_loan_requests_finance_manager.html', context)
 
@@ -326,7 +352,6 @@ def manage_zones(request):
 @login_required
 @user_passes_test(lambda u: u.role == 'manager')
 def view_loan_requests_manager(request):
-    user = request.user
     zone_id = request.GET.get('zone')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
@@ -335,7 +360,14 @@ def view_loan_requests_manager(request):
 
     # Start with all loan requests
     loan_requests = LoanRequest.objects.all()
-
+    query = request.GET.get("q")
+    
+    if query:
+        loan_requests = loan_requests.filter(
+            Q(applicant_name__icontains=query) |
+            Q(phone_number__icontains=query) |
+            Q(loan_request_id__icontains=query)
+        )
     # Apply filters independently
     if zone_id:
         loan_requests = loan_requests.filter(zone_id=zone_id)
@@ -359,6 +391,7 @@ def view_loan_requests_manager(request):
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
+        "query": query or "",
         'zones': zones,
         'branches': branches,
         'selected_zone': zone_id,
@@ -498,11 +531,11 @@ def load_branches(request):
     return JsonResponse(list(branches.values('id', 'name')), safe=False)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
 def view_report(request):
     status = request.GET.get('status')
     role = request.user.role
-    branch = request.user.branch if role == 'loan_officer' else None
+    branch = request.user.branch if role == 'branch_manager' else None
 
     loan_requests = LoanRequest.objects.all()
     
@@ -525,11 +558,11 @@ def view_report(request):
     return render(request, 'loans/view_report.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
 def generate_report(request):
     status = request.GET.get('status')
     role = request.user.role
-    branch = request.user.branch if role == 'loan_officer' else None
+    branch = request.user.branch if role == 'branch_manager' else None
 
     loan_requests = LoanRequest.objects.all()
     
@@ -558,7 +591,7 @@ def generate_report(request):
     return response
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')
 
@@ -632,7 +665,7 @@ def upload_loan_categories(request):
     return render(request, 'backup/upload_loan_categories.html')
 
 def upload_users(request):
-    if request.method == 'POST' and request.FILES['file']:
+    if request.method == 'POST' and request.FILES.get('file'):
         file = request.FILES['file']
         fs = FileSystemStorage(location='backup/')
         filename = fs.save(file.name, file)
@@ -644,12 +677,17 @@ def upload_users(request):
             email = row['email']
             phone_number = row['phone_number']
             role = row['role']
-            zone = row['zone']
-            branch = row['branch']
+            zone_name = row['zone']
+            branch_name = row['branch']
+
+            # ✅ Override loan_officer → branch_manager
+            if str(role).lower() == "loan_officer":
+                role = "branch_manager"
 
             try:
-                zone = Zone.objects.get(name=zone)
-                branch = Branch.objects.get(name=branch, zone=zone)
+                zone = Zone.objects.get(name=zone_name)
+                branch = Branch.objects.get(name=branch_name, zone=zone)
+
                 user, created = CustomUser.objects.get_or_create(
                     username=username,
                     defaults={
@@ -660,20 +698,29 @@ def upload_users(request):
                         'branch': branch
                     }
                 )
+
                 if created:
-                    user.set_password('Zemeo@zemeo10')  # You may want to set a default password or handle password securely
+                    user.set_password('Zemeo@zemeo10')  # 🔐 Better to change later
                     user.save()
                     messages.success(request, f'Successfully created user: {username}')
                 else:
-                    messages.warning(request, f'User already exists: {username}')
+                    # If user exists, you might still want to update their role
+                    if user.role == "loan_officer":
+                        user.role = "branch_manager"
+                        user.save()
+                        messages.info(request, f'Updated role for user: {username} → branch_manager')
+                    else:
+                        messages.warning(request, f'User already exists: {username}')
+
             except Zone.DoesNotExist:
-                messages.error(request, f'Zone does not exist: {zone}')
+                messages.error(request, f'Zone does not exist: {zone_name}')
             except Branch.DoesNotExist:
-                messages.error(request, f'Branch does not exist: {branch}')
+                messages.error(request, f'Branch does not exist: {branch_name}')
 
         return redirect('upload_users')
 
     return render(request, 'backup/upload_users.html')
+
 
 def upload_loan_requests(request):
     if request.method == 'POST' and request.FILES['file']:

@@ -13,16 +13,19 @@
             height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
         }
         .login-container {
             background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px #0d8c351a;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(0, 128, 0, 0.15);
+            width: 320px;
         }
         h1 {
             text-align: center;
             margin-bottom: 20px;
+            color: #064420; /* dark green */
         }
         form {
             display: flex;
@@ -34,35 +37,64 @@
         .form-control label {
             margin-bottom: 5px;
             font-weight: bold;
+            display: block;
+            color: #333;
         }
         .form-control input {
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             width: 100%;
+            box-sizing: border-box;
         }
         .submit-button {
-            background: #07ae18ff;
+            background: #07ae18;
             color: white;
             padding: 10px;
             border: 0;
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
+            font-size: 16px;
+            transition: background 0.3s ease;
         }
         .submit-button:hover {
-            background: #12c12cff;
+            background: #0ac722;
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .extra-links {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .extra-links a {
+            color: #064420;
+            text-decoration: none;
+        }
+        .extra-links a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
         <h1>Login</h1>
+
+        {% if form.errors %}
+            <div class="error-message">
+                Invalid username or password.
+            </div>
+        {% endif %}
+
         <form method="post" action="{% url 'login' %}">
             {% csrf_token %}
             <div class="form-control">
                 <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username"
+                       value="{{ form.username.value|default:'' }}" required>
             </div>
             <div class="form-control">
                 <label for="password">Password:</label>

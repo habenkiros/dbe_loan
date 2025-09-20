@@ -113,7 +113,26 @@ def update_loan_request_status(request, loan_request_id):
         return redirect('view_loan_requests')
     return render(request, 'loans/update_loan_request_status.html', {'loan_request': loan_request})
 
-# loans/views.py
+@login_required
+@user_passes_test(lambda u: u.role == 'operational_manager')
+def update_operation_manager_approval(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.method == 'POST':
+        loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
+        loan_request.save()
+        return redirect('view_loan_requests_operation_manager')
+    return render(request, 'loans/update_operation_manager_approval.html', {'loan_request': loan_request})
+
+@login_required
+@user_passes_test(lambda u: u.role == 'finance')
+def update_finance_manager_approval(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.method == 'POST':
+        loan_request.finance_approval = request.POST.get('finance_approval') == 'True'
+        loan_request.save()
+        return redirect('view_loan_requests_finance_manager')
+    return render(request, 'loans/update_finance_manager_approval.html', {'loan_request': loan_request})
+
 
 @login_required
 @user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance'])
@@ -261,15 +280,6 @@ def view_loan_requests_operation_manager(request):
     }
     return render(request, 'loans/view_loan_requests_operation_manager.html', context)
 
-@login_required
-@user_passes_test(lambda u: u.role == 'operational_manager')
-def update_operation_manager_approval(request, loan_request_id):
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    if request.method == 'POST':
-        loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
-        loan_request.save()
-        return redirect('view_loan_requests_operation_manager')
-    return render(request, 'loans/update_operation_manager_approval.html', {'loan_request': loan_request})
 
 @login_required
 @user_passes_test(lambda u: u.role == 'finance')
@@ -325,16 +335,6 @@ def view_loan_requests_finance_manager(request):
     }
     return render(request, 'loans/view_loan_requests_finance_manager.html', context)
 
-
-@login_required
-@user_passes_test(lambda u: u.role == 'finance')
-def update_finance_manager_approval(request, loan_request_id):
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    if request.method == 'POST':
-        loan_request.finance_approval = request.POST.get('finance_approval') == 'True'
-        loan_request.save()
-        return redirect('view_loan_requests_finance_manager')
-    return render(request, 'loans/update_finance_manager_approval.html', {'loan_request': loan_request})
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -602,7 +602,7 @@ def home(request):
     total_loans = approved_loans = pending_loans = rejected_loans = 0
     branch_names, branch_counts = [], []
 
-    if user.role == "loan_officer":  # Loan Officer = Branch Manager
+    if user.role == "branch_manager":  # Loan Officer = Branch Manager
         # Filter by the loan officer's branch
         loans = LoanRequest.objects.filter(branch=user.branch)
 

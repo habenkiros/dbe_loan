@@ -310,4 +310,45 @@ nav a.selected {
     text-decoration: none;
     cursor: pointer;
   }
-  
+
+/* Base button style */
+.btn {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 2px;
+    font-size: 14px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+/* Button colors */
+.btn-blue {
+    background-color: #007bff;
+}
+.btn-blue:hover {
+    background-color: #0056b3;
+}
+
+.btn-green {
+    background-color: #28a745;
+}
+.btn-green:hover {
+    background-color: #1e7e34;
+}
+
+.btn-orange {
+    background-color: #fd7e14;
+}
+.btn-orange:hover {
+    background-color: #c75b08;
+}
+
+.btn-red {
+    background-color: #dc3545;
+}
+.btn-red:hover {
+    background-color: #a71d2a;
+}

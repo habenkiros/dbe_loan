@@ -99,6 +99,111 @@
             background-color: #777;
             color: white;
         }
+        /* Base button style */
+        .btn {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 2px;
+            font-size: 14px;
+            border-radius: 5px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Button colors */
+        .btn-blue {
+            background-color: #007bff;
+        }
+        .btn-blue:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-green {
+            background-color: #28a745;
+        }
+        .btn-green:hover {
+            background-color: #1e7e34;
+        }
+
+        .btn-orange {
+            background-color: #fd7e14;
+        }
+        .btn-orange:hover {
+            background-color: #c75b08;
+        }
+
+        .btn-red {
+            background-color: #dc3545;
+        }
+        .btn-red:hover {
+            background-color: #a71d2a;
+        }
+        /* Dropdown container */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Dropdown button */
+        .dropbtn {
+            background-color: #056c06ff;
+            color: white;
+            padding: 1px 6px;
+            font-size: 12px;
+            border: none;
+            border-radius: 1px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Dropdown content (hidden by default) */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        /* Links inside the dropdown */
+        .dropdown-content a {
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            border-radius: 0;
+        }
+
+        /* Button colors */
+        .dropdown-content .btn-blue { background-color: #007bff; }
+        .dropdown-content .btn-green { background-color: #28a745; }
+        .dropdown-content .btn-orange { background-color: #fd7e14; }
+        .dropdown-content .btn-red { background-color: #dc3545; }
+
+        /* Hover effects */
+        .dropdown-content .btn-blue:hover { background-color: #0056b3; }
+        .dropdown-content .btn-green:hover { background-color: #1e7e34; }
+        .dropdown-content .btn-orange:hover { background-color: #c75b08; }
+        .dropdown-content .btn-red:hover { background-color: #a71d2a; }
+
+        /* Show dropdown on hover */
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Optional: change button color on hover */
+        .dropdown:hover .dropbtn {
+            background-color: #056c06ff;
+        }
+
+
     </style>
 </head>
 <body>
@@ -110,23 +215,29 @@
             <p><a href="{% url 'login' %}" style="color: white;">Login</a></p>
         {% endif %}
     </header>
+
     <nav>
         <a href="{% url 'home' %}">Home</a>
+
         {% if user.is_authenticated %}
-            {% if user.role == 'branch_manager' %}
+            {%if user.is_authenticated and user.role == 'branch_manager' %}
                 <a href="{% url 'create_loan_request' %}">Add Loan Request</a>
                 <a href="{% url 'view_loan_requests' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
+
             {% elif user.role == 'operational_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
+
             {% elif user.role == 'finance' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
+
             {% elif user.role == 'manager' %}
                 <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% endif %}
+
             {% if user.is_superuser %}
                 <a href="{% url 'create_user' %}">Create User</a>
                 <a href="{% url 'manage_zones' %}">Manage Zones</a>
@@ -137,10 +248,12 @@
             {% endif %}
         {% endif %}
     </nav>
+
     <div class="container">
         {% block content %}
         {% endblock %}
     </div>
+
     <footer>
         <p>&copy; <a href="https://seqela.com">Haben Kiros</a>. All rights reserved.</p>
     </footer>
@@ -148,4 +261,5 @@
     {% block extra_scripts %}
     {% endblock %}
 </body>
+
 </html>

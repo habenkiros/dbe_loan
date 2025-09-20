@@ -83,8 +83,13 @@
                             <td>{{ loan_request.status }}</td>
                             <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                             <td>
-                                <a href="{% url 'loan_request_detail_operation_manager' loan_request.id %}">Details</a>
-                                <a href="{% url 'update_operation_manager_approval' loan_request.id %}">Update</a>
+                                <div class="dropdown">
+                                    <button class="dropbtn">Actions ▾</button>
+                                    <div class="dropdown-content">
+                                        <a href="{% url 'loan_request_detail_operation_manager' loan_request.id %}" class="btn btn-blue">Details</a>
+                                        <a href="{% url 'update_operation_manager_approval' loan_request.id %}" class="btn btn-orange">Update</a>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

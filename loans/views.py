@@ -96,7 +96,7 @@ def generate_incremental_loan_request_id():
     latest_id = latest_id_instance.latest_id + 1
     latest_id_instance.latest_id = latest_id
     latest_id_instance.save()
-    return f"HK-{latest_id:010d}"
+    return f"HK-{latest_id:09d}"
 
 # loans/views.py
 
@@ -595,6 +595,7 @@ def generate_report(request):
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')
 
+@login_required(login_url='login')  # redirect to login page if not logged in
 def home(request):
     user = request.user
 
@@ -603,7 +604,6 @@ def home(request):
     branch_names, branch_counts = [], []
 
     if user.role == "branch_manager":  # Loan Officer = Branch Manager
-        # Filter by the loan officer's branch
         loans = LoanRequest.objects.filter(branch=user.branch)
 
         total_loans = loans.count()
@@ -611,12 +611,10 @@ def home(request):
         pending_loans = loans.filter(status="Pending").count()
         rejected_loans = loans.filter(status="Rejected").count()
 
-        # Branch-level chart (just their branch)
         branch_names = [user.branch.name]
         branch_counts = [total_loans]
 
     else:
-        # Global view for managers/finance/operational_manager/superusers
         total_loans = LoanRequest.objects.count()
         approved_loans = LoanRequest.objects.filter(status="Approved").count()
         pending_loans = LoanRequest.objects.filter(status="Pending").count()

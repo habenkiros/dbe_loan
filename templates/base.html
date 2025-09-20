@@ -225,20 +225,20 @@
                 <a href="{% url 'view_loan_requests' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.role == 'operational_manager' %}
+            {% elif user.is_authenticated and user.role == 'operational_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.role == 'finance' %}
+            {% elif user.is_authenticated and user.role == 'finance' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.role == 'manager' %}
+            {% elif user.is_authenticated and user.role == 'manager' %}
                 <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% endif %}
 
-            {% if user.is_superuser %}
+            {% if user.is_authenticated and user.is_superuser %}
                 <a href="{% url 'create_user' %}">Create User</a>
                 <a href="{% url 'manage_zones' %}">Manage Zones</a>
                 <a href="{% url 'manage_branches' %}">Manage Branches</a>

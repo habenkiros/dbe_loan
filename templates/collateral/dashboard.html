@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Collateral – Queue-approved loans{% endblock %}
+{% block content %}
+<h2>Collateral – Queue-approved loans</h2>
+<p>Loan requests with queue approved. Use <strong>Buildings</strong> for building collateral (valuation, መጠቃለሊ); <strong>Land</strong> for land; <strong>Other</strong> for non-building types (vehicle, machinery, equipment, etc.) — add items with name and estimated value. <strong>Summary</strong> shows the total for each loan.</p>
+
+<form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
+    <label for="id_q">Search:</label>
+    <input type="text" id="id_q" name="q" placeholder="ID, name, phone" value="{{ query }}" style="width: 200px;">
+    <button type="submit">Search</button>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Loan ID</th>
+                <th>Applicant</th>
+                <th>Collateral type</th>
+                <th>Amount</th>
+                <th>Branch</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lr in loan_requests %}
+            <tr>
+                <td>{{ lr.loan_request_id }}</td>
+                <td>{{ lr.applicant_name }}</td>
+                <td>{{ lr.collateral.name }}</td>
+                <td>{{ lr.amount_requested }}</td>
+                <td>{{ lr.branch.name }}</td>
+                <td>
+                    <a href="{% url 'collateral:building_list' lr.id %}">Buildings</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:land_valuation' lr.id %}">Land</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:other_collateral_list' lr.id %}">Other</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:summary' lr.id %}">Summary</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No queue-approved loan requests found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

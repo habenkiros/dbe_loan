@@ -13,14 +13,14 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#id_zone').change(function() {
-            var url = '{% url "ajax_load_branches" %}';  // Get the url of the `load_branches` view
-            var zoneId = $(this).val();  // Get the selected zone ID from the HTML input
+        $('#id_district').change(function() {
+            var url = '{% url "ajax_load_branches" %}';
+            var districtId = $(this).val();
 
             $.ajax({                       // Initialize the AJAX request
                 url: url,
                 data: {
-                    'zone': zoneId       // Add the zone id to the GET parameters
+                    'district': districtId
                 },
                 success: function (data) {   // `data` is the return of the `load_branches` view function
                     $('#id_branch').empty();

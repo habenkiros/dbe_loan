@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit valuation{% else %}Add valuation row{% endif %} – {{ building.name }}{% endblock %}
+{% block content %}
+<h2>{% if is_edit %}Edit valuation row{% else %}Add valuation row{% endif %}</h2>
+<p>Building: <strong>{{ building.name }}</strong> ({{ building.loan_request.loan_request_id }})</p>
+<p><a href="{% url 'collateral:valuation_list' building.id %}">← Back to valuation</a></p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        {{ form.as_table }}
+    </table>
+    {% if not can_edit_unit_price %}
+    <p><em>You enter only quantity. Unit price is taken from the catalog (building's woreda); total is calculated automatically.</em></p>
+    {% endif %}
+    {% if is_edit and row and not can_edit_unit_price %}
+    <p>Current unit price (from catalog): <strong>{{ row.unit_price }}</strong> &nbsp; Total: <strong>{{ row.total }}</strong></p>
+    {% endif %}
+    <button type="submit">{% if is_edit %}Save{% else %}Add row{% endif %}</button>
+</form>
+{% endblock %}

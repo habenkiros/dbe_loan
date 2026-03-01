@@ -65,8 +65,7 @@
         header {
             background-color: #064420;
             color: white;
-            padding: 20px;
-            padding-left: 40px;
+            padding: 20px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -80,9 +79,13 @@
         }
         nav {
             display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0;
+            align-items: center;
             background-color: #056c06ff;
-            overflow: hidden;
-            padding-left: 40px;
+            overflow: visible;
+            padding: 0 20px;
         }
         nav a {
             padding: 10px 15px;
@@ -146,39 +149,59 @@
             display: inline-block;
         }
 
-        /* Dropdown button */
+        /* Dropdown button (matches nav links) */
         .dropbtn {
             background-color: #056c06ff;
             color: white;
-            padding: 1px 6px;
-            font-size: 12px;
+            padding: 10px 15px;
+            font-size: inherit;
             border: none;
-            border-radius: 1px;
+            border-radius: 0;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: inherit;
+        }
+        .dropbtn:hover {
+            background-color: #ddd;
+            color: black;
         }
 
-        /* Dropdown content (hidden by default) */
+        /* Dropdown content (hidden by default) – vertical list */
         .dropdown-content {
             display: none;
             position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0;
             background-color: #fff;
-            min-width: 160px;
+            min-width: 200px;
+            box-sizing: border-box;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             border-radius: 5px;
-            z-index: 1;
-            overflow: hidden;
+            z-index: 1000;
+            border: 1px solid #ddd;
         }
 
-        /* Links inside the dropdown */
+        /* Links inside the dropdown – one per line, full width */
         .dropdown-content a {
             display: block;
-            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 14px;
             text-decoration: none;
             font-size: 14px;
             font-weight: bold;
-            color: white;
+            color: #333;
+            background-color: #f9f9f9;
             border-radius: 0;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+        .dropdown-content a:last-child {
+            border-bottom: none;
+        }
+        .dropdown-content a:hover {
+            background-color: #e0e0e0;
+            color: #000;
         }
 
         /* Button colors */
@@ -194,7 +217,8 @@
         .dropdown-content .btn-red:hover { background-color: #a71d2a; }
 
         /* Show dropdown on hover */
-        .dropdown:hover .dropdown-content {
+        .dropdown:hover .dropdown-content,
+        .dropdown.show .dropdown-content {
             display: block;
         }
 
@@ -202,8 +226,6 @@
         .dropdown:hover .dropbtn {
             background-color: #056c06ff;
         }
-
-
     </style>
 </head>
 <body>
@@ -220,31 +242,59 @@
         <a href="{% url 'home' %}">Home</a>
 
         {% if user.is_authenticated %}
-            {%if user.is_authenticated and user.role == 'branch_manager' %}
-                <a href="{% url 'create_loan_request' %}">Add Loan Request</a>
-                <a href="{% url 'view_loan_requests' %}">View Loan Requests</a>
+            {% if user.role == 'branch_manager' or user.role == 'loan_officer' %}
+                <div class="dropdown">
+                    <button class="dropbtn">Loan requests ▾</button>
+                    <div class="dropdown-content">
+                        <a href="{% url 'view_loan_requests' %}">View loan requests</a>
+                        <a href="{% url 'create_loan_request' %}">Add loan request</a>
+                    </div>
+                </div>
+                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.is_authenticated and user.role == 'operational_manager' %}
+            {% elif user.role == 'operation_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
+                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.is_authenticated and user.role == 'finance' %}
+            {% elif user.role == 'finance_manager' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.is_authenticated and user.role == 'manager' %}
+            {% elif user.role == 'credit_committee' %}
                 <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
+                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
+            {% elif user.role == 'engineer' or user.role == 'engineering_head' or user.role == 'Engineering Head' %}
+                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
+                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
+                <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+            {% elif user.role == 'admin' or user.role == 'superadmin' %}
+                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
+                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
+                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
             {% endif %}
 
             {% if user.is_authenticated and user.is_superuser %}
-                <a href="{% url 'create_user' %}">Create User</a>
-                <a href="{% url 'manage_zones' %}">Manage Zones</a>
-                <a href="{% url 'manage_branches' %}">Manage Branches</a>
-                <a href="{% url 'manage_loan_categories' %}">Manage Loan Categories</a>
-                <a href="{% url 'manage_collateral_types' %}">Manage Collateral Types</a>
-                <a href="{% url 'manage_users' %}">Manage Users</a>
+                <a href="{% url 'manage_users' %}">Users</a>
+                <a href="{% url 'manage_districts' %}">Districts</a>
+                <a href="{% url 'manage_branches' %}">Branches</a>
+                <div class="dropdown">
+                    <button class="dropbtn">Area ▾</button>
+                    <div class="dropdown-content">
+                        <a href="{% url 'manage_regions' %}">Regions</a>
+                        <a href="{% url 'manage_geo_zones' %}">Zones</a>
+                        <a href="{% url 'manage_cities' %}">Cities (Woredas)</a>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="dropbtn">Settings ▾</button>
+                    <div class="dropdown-content">
+                        <a href="{% url 'manage_loan_categories' %}">Loan categories</a>
+                        <a href="{% url 'manage_collateral_types' %}">Collateral types</a>
+                    </div>
+                </div>
             {% endif %}
         {% endif %}
     </nav>
@@ -260,6 +310,25 @@
 
     {% block extra_scripts %}
     {% endblock %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var dropbtns = document.querySelectorAll('.dropbtn');
+        dropbtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var drop = this.closest('.dropdown');
+                var open = document.querySelector('.dropdown.show');
+                if (open && open !== drop) open.classList.remove('show');
+                drop.classList.toggle('show');
+            });
+        });
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown.show').forEach(function(d) { d.classList.remove('show'); });
+            }
+        });
+    });
+    </script>
 </body>
 
 </html>

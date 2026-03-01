@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Land valuation – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Land valuation</h2>
+<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
+<p>
+    <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery)</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        {{ form.as_table }}
+    </table>
+    <button type="submit">Save land valuation</button>
+</form>
+{% if land.total_value is not None %}
+<p><strong>Land total value: {{ land.total_value }}</strong></p>
+{% endif %}
+{% endblock %}

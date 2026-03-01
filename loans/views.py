@@ -3,8 +3,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .services import fetch_customer_by_number
-from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
-from .forms import CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, ZoneForm, BranchForm, LoanCategoryForm, CollateralTypeForm
+from .models import Region, Zone, City, District, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
+from .forms import (
+    CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm,
+    DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
+    LoanCategoryForm, CollateralTypeForm,
+)
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
@@ -56,7 +60,7 @@ def manage_users(request):
 
     context = {
         "page_obj": page_obj,
-        "roles": CustomUser.USER_ROLES,
+        "roles": CustomUser.ROLE_CHOICES,
         "query": query or "",
         "selected_role": role or "",
     }
@@ -76,13 +80,13 @@ def edit_user(request, user_id):
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'branch_manager')
+@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
 def create_loan_request(request):
     if request.method == 'POST':
         form = LoanRequestForm(request.POST)
         if form.is_valid():
             loan_request = form.save(commit=False)
-            loan_request.zone = request.user.zone
+            loan_request.district = request.user.district
             loan_request.branch = request.user.branch
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
@@ -101,7 +105,7 @@ def generate_incremental_loan_request_id():
 # loans/views.py
 
 @login_required
-@user_passes_test(lambda u: u.role in ['operation_manager', 'finance_manager'])
+@user_passes_test(lambda u: u.role in ['operation_manager', 'finance_manager'])  # approval roles
 def update_loan_request_status(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
@@ -114,7 +118,7 @@ def update_loan_request_status(request, loan_request_id):
     return render(request, 'loans/update_loan_request_status.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'operational_manager')
+@user_passes_test(lambda u: u.role == 'operation_manager')
 def update_operation_manager_approval(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
@@ -124,7 +128,7 @@ def update_operation_manager_approval(request, loan_request_id):
     return render(request, 'loans/update_operation_manager_approval.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance')
+@user_passes_test(lambda u: u.role == 'finance_manager')
 def update_finance_manager_approval(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
@@ -135,31 +139,31 @@ def update_finance_manager_approval(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer'])
 def loan_request_detail(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role in ['operational_manager'])
+@user_passes_test(lambda u: u.role == 'operation_manager')
 def loan_request_detail_operation_manager(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_operation_manager.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role in ['finance'])
+@user_passes_test(lambda u: u.role == 'finance_manager')
 def loan_request_detail_finance(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_finance.html', {'loan_request': loan_request})
 #manager
 @login_required
-@user_passes_test(lambda u: u.role in ['manager'])
+@user_passes_test(lambda u: u.role == 'credit_committee')
 def loan_request_detail_manager(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_manager.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'branch_manager')
+@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
 def view_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
     
@@ -200,7 +204,7 @@ def view_loan_requests(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'branch_manager')
+@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
 def filter_loan_requests(request):
     loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
 
@@ -213,42 +217,35 @@ def filter_loan_requests(request):
     return render(request, 'loans/view_loan_requests.html', {'loan_requests': loan_requests})
 
 @login_required
-# @user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
+# @user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
 def load_branches_op(request):
-    zone_id = request.GET.get('zone')
+    district_id = request.GET.get('district')
     user = request.user
 
-    # Ensure that only branches within the user's zone are fetched
-    branches = Branch.objects.filter(zone_id=zone_id, zone=user.zone) if zone_id else Branch.objects.none()
-
+    branches = Branch.objects.filter(district_id=district_id, district=user.district) if district_id else Branch.objects.none()
     branch_list = [{"id": branch.id, "name": branch.name} for branch in branches]
-    
     return JsonResponse(branch_list, safe=False)
 
 @login_required
-@user_passes_test(lambda u: u.role == 'operational_manager')
+@user_passes_test(lambda u: u.role == 'operation_manager')
 def view_loan_requests_operation_manager(request):
     user = request.user  # Fetch the logged-in user
-    zone_id = request.GET.get('zone')
+    district_id = request.GET.get('district')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
     loan_request_id = request.GET.get('loan_request_id')
     status = request.GET.get('status')
 
-    # Start with all loan requests for the operational manager's zone
     loan_requests = LoanRequest.objects.all()
     query = request.GET.get("q")
-    
     if query:
         loan_requests = loan_requests.filter(
             Q(applicant_name__icontains=query) |
             Q(phone_number__icontains=query) |
             Q(loan_request_id__icontains=query)
         )
-
-    # Filter by zone if selected (should match the manager's zone)
-    if zone_id:
-        loan_requests = loan_requests.filter(zone_id=zone_id)
+    if district_id:
+        loan_requests = loan_requests.filter(district_id=district_id)
     if branch_id:
         loan_requests = loan_requests.filter(branch_id=branch_id)
     if date_requested:
@@ -257,22 +254,18 @@ def view_loan_requests_operation_manager(request):
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
-    # Pagination
-    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
+    paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    # Fetch zones and branches for the filters
-    zones = Zone.objects.all()
-    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
-
+    districts = District.objects.all()
+    branches = Branch.objects.filter(district_id=district_id) if district_id else Branch.objects.none()
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
         "query": query or "",
-        'zones': zones,
+        'districts': districts,
         'branches': branches,
-        'selected_zone': zone_id,
+        'selected_district': district_id,
         'selected_branch': branch_id,
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
@@ -282,21 +275,17 @@ def view_loan_requests_operation_manager(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance')
+@user_passes_test(lambda u: u.role == 'finance_manager')
 def view_loan_requests_finance_manager(request):
     query = request.GET.get("q")
-    zone_id = request.GET.get('zone')
+    district_id = request.GET.get('district')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
     loan_request_id = request.GET.get('loan_request_id')
     status = request.GET.get('status')
-
-    # Start with all loan requests
     loan_requests = LoanRequest.objects.all()
-
-    # Apply filters independently
-    if zone_id:
-        loan_requests = loan_requests.filter(zone_id=zone_id)
+    if district_id:
+        loan_requests = loan_requests.filter(district_id=district_id)
     if branch_id:
         loan_requests = loan_requests.filter(branch_id=branch_id)
     if date_requested:
@@ -305,28 +294,23 @@ def view_loan_requests_finance_manager(request):
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
-    
     if query:
         loan_requests = loan_requests.filter(
             Q(applicant_name__icontains=query) |
             Q(phone_number__icontains=query) |
             Q(loan_request_id__icontains=query)
         )
-
-    # Pagination
     paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
-    zones = Zone.objects.all()
-    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
-
+    districts = District.objects.all()
+    branches = Branch.objects.filter(district_id=district_id) if district_id else Branch.objects.none()
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
-        'zones': zones,
+        'districts': districts,
         'branches': branches,
-        'selected_zone': zone_id,
+        'selected_district': district_id,
         'selected_branch': branch_id,
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
@@ -338,39 +322,35 @@ def view_loan_requests_finance_manager(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def manage_zones(request):
-    zones = Zone.objects.all()
+def manage_districts(request):
+    districts = District.objects.all()
     if request.method == 'POST':
-        form = ZoneForm(request.POST)
+        form = DistrictForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('manage_zones')
+            return redirect('manage_districts')
     else:
-        form = ZoneForm()
-    return render(request, 'loans/manage_zones.html', {'zones': zones, 'form': form})
+        form = DistrictForm()
+    return render(request, 'loans/manage_districts.html', {'districts': districts, 'form': form})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'manager')
+@user_passes_test(lambda u: u.role == 'credit_committee')
 def view_loan_requests_manager(request):
-    zone_id = request.GET.get('zone')
+    district_id = request.GET.get('district')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
     loan_request_id = request.GET.get('loan_request_id')
     status = request.GET.get('status')
-
-    # Start with all loan requests
     loan_requests = LoanRequest.objects.all()
     query = request.GET.get("q")
-    
     if query:
         loan_requests = loan_requests.filter(
             Q(applicant_name__icontains=query) |
             Q(phone_number__icontains=query) |
             Q(loan_request_id__icontains=query)
         )
-    # Apply filters independently
-    if zone_id:
-        loan_requests = loan_requests.filter(zone_id=zone_id)
+    if district_id:
+        loan_requests = loan_requests.filter(district_id=district_id)
     if branch_id:
         loan_requests = loan_requests.filter(branch_id=branch_id)
     if date_requested:
@@ -379,22 +359,18 @@ def view_loan_requests_manager(request):
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
-
-    # Pagination
     paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
-    zones = Zone.objects.all()
-    branches = Branch.objects.filter(zone_id=zone_id) if zone_id else Branch.objects.none()
-
+    districts = District.objects.all()
+    branches = Branch.objects.filter(district_id=district_id) if district_id else Branch.objects.none()
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
         "query": query or "",
-        'zones': zones,
+        'districts': districts,
         'branches': branches,
-        'selected_zone': zone_id,
+        'selected_district': district_id,
         'selected_branch': branch_id,
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
@@ -402,23 +378,129 @@ def view_loan_requests_manager(request):
     }
     return render(request, 'loans/view_loan_requests_manager.html', context)
 
+
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def edit_zone(request, zone_id):
+def edit_district(request, district_id):
+    district = get_object_or_404(District, pk=district_id)
+    if request.method == 'POST':
+        form = DistrictForm(request.POST, instance=district)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_districts')
+    else:
+        form = DistrictForm(instance=district)
+    return render(request, 'loans/edit_district.html', {'form': form, 'district': district})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_regions(request):
+    regions = Region.objects.all()
+    if request.method == 'POST':
+        form = RegionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_regions')
+    else:
+        form = RegionForm()
+    return render(request, 'loans/manage_regions.html', {'regions': regions, 'form': form})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_region(request, region_id):
+    region = get_object_or_404(Region, pk=region_id)
+    if request.method == 'POST':
+        form = RegionForm(request.POST, instance=region)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_regions')
+    else:
+        form = RegionForm(instance=region)
+    return render(request, 'loans/edit_region.html', {'form': form, 'region': region})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_geo_zones(request):
+    zones = Zone.objects.select_related('region').all()
+    if request.method == 'POST':
+        form = ZoneForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_geo_zones')
+    else:
+        form = ZoneForm()
+    return render(request, 'loans/manage_geo_zones.html', {'zones': zones, 'form': form})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_geo_zone(request, zone_id):
     zone = get_object_or_404(Zone, pk=zone_id)
     if request.method == 'POST':
         form = ZoneForm(request.POST, instance=zone)
         if form.is_valid():
             form.save()
-            return redirect('manage_zones')
+            return redirect('manage_geo_zones')
     else:
         form = ZoneForm(instance=zone)
-    return render(request, 'loans/edit_zone.html', {'form': form, 'zone': zone})
+    return render(request, 'loans/edit_geo_zone.html', {'form': form, 'zone': zone})
+
+
+@login_required
+def load_zones_by_region(request):
+    """AJAX: return zones for a region (for Region → Zone → City cascade)."""
+    region_id = request.GET.get('region_id')
+    zones = Zone.objects.filter(region_id=region_id).order_by('name') if region_id else []
+    return JsonResponse(list(zones.values('id', 'name')), safe=False)
+
+
+@login_required
+def load_cities_by_zone(request):
+    """AJAX: return cities (woredas) for a zone (for Region → Zone → City cascade)."""
+    zone_id = request.GET.get('zone_id')
+    cities = City.objects.filter(zone_id=zone_id).order_by('name') if zone_id else []
+    return JsonResponse(list(cities.values('id', 'name')), safe=False)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_cities(request):
+    cities = City.objects.select_related('zone', 'zone__region').all()
+    if request.method == 'POST':
+        form = CityForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_cities')
+    else:
+        form = CityForm()
+        form.fields['zone'].queryset = Zone.objects.none()
+    regions = Region.objects.all().order_by('name')
+    return render(request, 'loans/manage_cities.html', {'cities': cities, 'form': form, 'regions': regions})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_city(request, city_id):
+    city = get_object_or_404(City, pk=city_id)
+    if request.method == 'POST':
+        form = CityForm(request.POST, instance=city)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_cities')
+    else:
+        form = CityForm(instance=city)
+        form.fields['zone'].queryset = Zone.objects.filter(region=city.zone.region).order_by('name')
+    regions = Region.objects.all().order_by('name')
+    return render(request, 'loans/edit_city.html', {'form': form, 'city': city, 'regions': regions})
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def manage_branches(request):
-    branches = Branch.objects.select_related('zone').all()
+    branches = Branch.objects.select_related('district').all()
     
     paginator = Paginator(branches, 10)  # Show 10 branches per page
     page_number = request.GET.get('page')
@@ -526,12 +608,12 @@ def edit_collateral_type(request, collateral_type_id):
 
 @login_required
 def load_branches(request):
-    zone_id = request.GET.get('zone_id')
-    branches = Branch.objects.filter(zone_id=zone_id).all()
+    district_id = request.GET.get('district') or request.GET.get('district_id')
+    branches = Branch.objects.filter(district_id=district_id).order_by('name') if district_id else Branch.objects.none()
     return JsonResponse(list(branches.values('id', 'name')), safe=False)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
 def view_report(request):
     status = request.GET.get('status')
     role = request.user.role
@@ -552,13 +634,13 @@ def view_report(request):
     context = {
         'page_obj': page_obj,
         'status': status,
-        'zones': Zone.objects.all(),
+        'districts': District.objects.all(),
         'branches': Branch.objects.all(),
     }
     return render(request, 'loans/view_report.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
 def generate_report(request):
     status = request.GET.get('status')
     role = request.user.role
@@ -591,7 +673,7 @@ def generate_report(request):
     return response
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operational_manager', 'finance', 'manager'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
 def view_report_options(request):
     return render(request, 'loans/view_report_options.html')
 
@@ -603,15 +685,16 @@ def home(request):
     total_loans = approved_loans = pending_loans = rejected_loans = 0
     branch_names, branch_counts = [], []
 
-    if user.role == "branch_manager":  # Loan Officer = Branch Manager
-        loans = LoanRequest.objects.filter(branch=user.branch)
+    if user.role in ("branch_manager", "loan_officer"):
+        branch = getattr(user, 'branch', None)
+        loans = LoanRequest.objects.filter(branch=branch) if branch else LoanRequest.objects.none()
 
         total_loans = loans.count()
         approved_loans = loans.filter(status="Approved").count()
         pending_loans = loans.filter(status="Pending").count()
         rejected_loans = loans.filter(status="Rejected").count()
 
-        branch_names = [user.branch.name]
+        branch_names = [branch.name] if branch else ['No branch assigned']
         branch_counts = [total_loans]
 
     else:
@@ -634,52 +717,44 @@ def home(request):
     }
     return render(request, 'home.html', context)
 
-# @login_required
-# @user_passes_test(lambda u: u.is_superuser)
 def upload_zones(request):
-    if request.method == 'POST' and request.FILES['file']:
+    """Upload districts (Excel column 'name'). Kept URL name for backward compatibility."""
+    if request.method == 'POST' and request.FILES.get('file'):
         file = request.FILES['file']
         fs = FileSystemStorage(location='backup/')
         filename = fs.save(file.name, file)
         file_path = fs.path(filename)
-
         data = pd.read_excel(file_path, engine='openpyxl')
         for index, row in data.iterrows():
-            zone, created = Zone.objects.get_or_create(name=row['name'])
+            district, created = District.objects.get_or_create(name=row['name'])
             if created:
-                messages.success(request, f'Successfully created zone: {zone.name}')
+                messages.success(request, f'Successfully created district: {district.name}')
             else:
-                messages.warning(request, f'Zone already exists: {zone.name}')
-
+                messages.warning(request, f'District already exists: {district.name}')
         return redirect('upload_zones')
-
     return render(request, 'backup/upload_zones.html')
 
 
 def upload_branches(request):
-    if request.method == 'POST' and request.FILES['file']:
+    if request.method == 'POST' and request.FILES.get('file'):
         file = request.FILES['file']
         fs = FileSystemStorage(location='backup/')
         filename = fs.save(file.name, file)
         file_path = fs.path(filename)
-
         data = pd.read_excel(file_path, engine='openpyxl')
         for index, row in data.iterrows():
-            zone_name = row['zone']
+            district_name = row.get('district', row.get('zone'))
             branch_name = row['name']
-
             try:
-                zone = Zone.objects.get(name=zone_name)
-                branch, created = Branch.objects.get_or_create(name=branch_name, zone=zone)
+                district = District.objects.get(name=district_name)
+                branch, created = Branch.objects.get_or_create(name=branch_name, district=district)
                 if created:
-                    messages.success(request, f'Successfully created branch: {branch.name} in zone: {zone.name}')
+                    messages.success(request, f'Successfully created branch: {branch.name} in district: {district.name}')
                 else:
-                    messages.warning(request, f'Branch already exists: {branch.name} in zone: {zone.name}')
-            except Zone.DoesNotExist:
-                messages.error(request, f'Zone does not exist: {zone_name}')
-
+                    messages.warning(request, f'Branch already exists: {branch.name} in district: {district.name}')
+            except District.DoesNotExist:
+                messages.error(request, f'District does not exist: {district_name}')
         return redirect('upload_branches')
-
     return render(request, 'backup/upload_branches.html')
 
 def upload_loan_categories(request):
@@ -716,43 +791,36 @@ def upload_users(request):
             email = row['email']
             phone_number = row['phone_number']
             role = row['role']
-            zone_name = row['zone']
+            district_name = row.get('district', row.get('zone'))
             branch_name = row['branch']
-
-            # ✅ Override loan_officer → branch_manager
             if str(role).lower() == "loan_officer":
                 role = "branch_manager"
-
             try:
-                zone = Zone.objects.get(name=zone_name)
-                branch = Branch.objects.get(name=branch_name, zone=zone)
-
+                district = District.objects.get(name=district_name)
+                branch = Branch.objects.get(name=branch_name, district=district)
                 user, created = CustomUser.objects.get_or_create(
                     username=username,
                     defaults={
                         'email': email,
                         'phone_number': phone_number,
                         'role': role,
-                        'zone': zone,
+                        'district': district,
                         'branch': branch
                     }
                 )
-
                 if created:
-                    user.set_password('Zemeo@zemeo10')  # 🔐 Better to change later
+                    user.set_password('Zemeo@zemeo10')
                     user.save()
                     messages.success(request, f'Successfully created user: {username}')
                 else:
-                    # If user exists, you might still want to update their role
-                    if user.role == "loan_officer":
+                    if getattr(user, 'role', None) == "loan_officer":
                         user.role = "branch_manager"
                         user.save()
                         messages.info(request, f'Updated role for user: {username} → branch_manager')
                     else:
                         messages.warning(request, f'User already exists: {username}')
-
-            except Zone.DoesNotExist:
-                messages.error(request, f'Zone does not exist: {zone_name}')
+            except District.DoesNotExist:
+                messages.error(request, f'District does not exist: {district_name}')
             except Branch.DoesNotExist:
                 messages.error(request, f'Branch does not exist: {branch_name}')
 
@@ -779,8 +847,8 @@ def upload_loan_requests(request):
                 amount_requested = row['amount_requested']
                 reason = row['reason']
                 status = str(row['status']).strip().lower()  # normalize
-                zone = Zone.objects.get(name=row['zone'])
-                branch = Branch.objects.get(name=row['branch'], zone=zone)
+                district = District.objects.get(name=row.get('district', row.get('zone')))
+                branch = Branch.objects.get(name=row['branch'], district=district)
                 customer_history = row['customer_history']
                 date_requested = row['date_requested']
 
@@ -803,7 +871,7 @@ def upload_loan_requests(request):
                     amount_requested=amount_requested,
                     reason=reason,
                     status=status.capitalize(),   # keep proper case
-                    zone=zone,
+                    district=district,
                     branch=branch,
                     customer_history=customer_history,
                     date_requested=date_requested,
@@ -845,9 +913,3 @@ def upload_collaterals(request):
         return redirect('upload_collaterals')
 
     return render(request, 'backup/upload_collaterals.html')
-
-@login_required
-def load_branches(request):
-    zone_id = request.GET.get('zone')
-    branches = Branch.objects.filter(zone_id=zone_id).order_by('name')
-    return JsonResponse(list(branches.values('id', 'name')), safe=False)

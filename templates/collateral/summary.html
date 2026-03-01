@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Collateral summary – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Collateral summary</h2>
+<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
+<p>
+    <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery, etc.)</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Building</th>
+                <th>Total value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bt in building_totals %}
+            <tr>
+                <td>{{ bt.building.name }} &nbsp; <a href="{% url 'collateral:building_estimation_summary' bt.building.id %}">መጠቃለሊ</a></td>
+                <td>{{ bt.total }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2">No buildings.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p><strong>Total (buildings): {{ total_buildings }}</strong></p>
+<p><strong>Land value: {{ land_value }}</strong></p>
+
+{% if other_items %}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Other collateral (name)</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in other_items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.estimated_value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+<p><strong>Total (other collateral): {{ total_other }}</strong></p>
+
+<p><strong>Grand total (collateral): {{ grand_total }}</strong></p>
+{% endblock %}

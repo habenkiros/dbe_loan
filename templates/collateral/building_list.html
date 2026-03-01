@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Buildings – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Buildings – {{ loan_request.loan_request_id }}</h2>
+<p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
+<p>
+    <a href="{% url 'collateral:building_add' loan_request.id %}">Add building</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery)</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Floors</th>
+                <th>City (Woreda)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in buildings %}
+            <tr>
+                <td>{{ b.name }}</td>
+                <td>{{ b.construction_type|default:"—" }}</td>
+                <td>{{ b.floors|default:"—" }}</td>
+                <td>{{ b.city.name|default:"—" }}</td>
+                <td>
+                    <a href="{% url 'collateral:valuation_list' b.id %}">Valuation</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:building_images' b.id %}">Images</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:building_edit' b.id %}">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No buildings yet. <a href="{% url 'collateral:building_add' loan_request.id %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
-from loans.models import CustomUser, Zone, Branch  # Adjust the import based on your app name
+from loans.models import CustomUser, District, Branch
 from django.contrib.auth.models import User
 
 class Command(BaseCommand):
@@ -18,29 +18,28 @@ class Command(BaseCommand):
             email = row['email']
             phone_number = row['phone_number']
             role = row['role']
-            zone = row['zone']
-            branch = row['branch']
-
+            district_name = row.get('district', row.get('zone'))
+            branch_name = row['branch']
             try:
-                zone = Zone.objects.get(name=zone)
-                branch = Branch.objects.get(name=branch, zone=zone)
+                district = District.objects.get(name=district_name)
+                branch = Branch.objects.get(name=branch_name, district=district)
                 user, created = CustomUser.objects.get_or_create(
                     username=username,
                     defaults={
                         'email': email,
                         'phone_number': phone_number,
                         'role': role,
-                        'zone': zone,
+                        'district': district,
                         'branch': branch
                     }
                 )
                 if created:
-                    user.set_password('decsiloan10')  # You may want to set a default password or handle password securely
+                    user.set_password('decsiloan10')
                     user.save()
                     self.stdout.write(self.style.SUCCESS(f'Successfully created user: {username}'))
                 else:
                     self.stdout.write(self.style.WARNING(f'User already exists: {username}'))
-            except Zone.DoesNotExist:
-                self.stdout.write(self.style.ERROR(f'Zone does not exist: {zone}'))
+            except District.DoesNotExist:
+                self.stdout.write(self.style.ERROR(f'District does not exist: {district_name}'))
             except Branch.DoesNotExist:
-                self.stdout.write(self.style.ERROR(f'Branch does not exist: {branch}'))
+                self.stdout.write(self.style.ERROR(f'Branch does not exist: {branch_name}'))

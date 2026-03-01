@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Other collateral – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Other collateral (Vehicle, Machinery, Equipment, etc.)</h2>
+<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
+<p>
+    <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+</p>
+
+<h3>Add item</h3>
+<form method="post" style="max-width: 500px;">
+    {% csrf_token %}
+    <table>
+        {{ form.as_table }}
+    </table>
+    <button type="submit">Add item</button>
+</form>
+
+<h3>Items</h3>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Name / description</th>
+                <th>Estimated value</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}{% if item.notes %} <span title="{{ item.notes }}">(...)</span>{% endif %}</td>
+                <td>{{ item.estimated_value }}</td>
+                <td>
+                    <a href="{% url 'collateral:other_collateral_edit' item.id %}">Edit</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:other_collateral_delete' item.id %}" onclick="return confirm('Remove this item?');">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No items yet. Add one above.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p><strong>Total (other collateral): {{ total_other }}</strong></p>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Edit City / Woreda{% endblock %}
+{% block content %}
+<h1>Edit City / Woreda</h1>
+<form method="post">
+    {% csrf_token %}
+    <p>Region → Zone → City name.</p>
+    <table>
+        <tr>
+            <th><label for="id_region">Region:</label></th>
+            <td>
+                <select id="id_region" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Region ——</option>
+                    {% for r in regions %}
+                    <option value="{{ r.id }}" {% if r.id == city.zone.region_id %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_zone">Zone:</label></th>
+            <td>
+                <select name="zone" id="id_zone" class="form-control" style="width: 250px;" required>
+                    {% for z in form.fields.zone.queryset %}
+                    <option value="{{ z.id }}" {% if z.id == city.zone_id %}selected{% endif %}>{{ z.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.zone.errors %}<div class="error">{{ form.zone.errors }}</div>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_name">City / Woreda name:</label></th>
+            <td>
+                <input type="text" name="name" id="id_name" maxlength="255" class="form-control" style="width: 250px;" required value="{{ form.name.value|default:'' }}">
+                {% if form.name.errors %}<div class="error">{{ form.name.errors }}</div>{% endif %}
+            </td>
+        </tr>
+    </table>
+    <button type="submit">Save Changes</button>
+</form>
+<p><a href="{% url 'manage_cities' %}">← Back to Cities</a></p>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var regionSelect = document.getElementById('id_region');
+    var zoneSelect = document.getElementById('id_zone');
+    if (!regionSelect || !zoneSelect) return;
+
+    var currentZoneId = {{ city.zone_id|default:0 }};
+
+    regionSelect.addEventListener('change', function() {
+        var regionId = this.value;
+        zoneSelect.innerHTML = '<option value="">—— Select Zone ——</option>';
+        if (!regionId) return;
+
+        var url = "{% url 'ajax_load_zones_by_region' %}?region_id=" + encodeURIComponent(regionId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(zones) {
+                zones.forEach(function(z) {
+                    var opt = document.createElement('option');
+                    opt.value = z.id;
+                    opt.textContent = z.name;
+                    if (z.id === currentZoneId) opt.selected = true;
+                    zoneSelect.appendChild(opt);
+                });
+                currentZoneId = null;
+            })
+            .catch(function() { zoneSelect.innerHTML = '<option value="">Error loading zones</option>'; });
+    });
+});
+</script>
+{% endblock %}

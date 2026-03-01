@@ -12,12 +12,12 @@
         </div>-->
 
         <div class="form-group">
-            <label for="id_zone">Zone:</label>
-            <select id="id_zone" name="zone" class="form-control" style="width: 150px;">
-                <option value="">-- Select Zone --</option>
-                {% for zone in zones %}
-                    <option value="{{ zone.id }}" {% if selected_zone == zone.id|stringformat:"s" %}selected{% endif %}>
-                        {{ zone.name }}
+            <label for="id_district">District:</label>
+            <select id="id_district" name="district" class="form-control" style="width: 150px;">
+                <option value="">-- Select District --</option>
+                {% for district in districts %}
+                    <option value="{{ district.id }}" {% if selected_district == district.id|stringformat:"s" %}selected{% endif %}>
+                        {{ district.name }}
                     </option>
                 {% endfor %}
             </select>
@@ -100,8 +100,8 @@
             <div class="pagination">
                 <span class="step-links">
                     {% if page_obj.has_previous %}
-                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page=1">&laquo; first</a>
-                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.previous_page_number }}">previous</a>
+                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page=1">&laquo; first</a>
+                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.previous_page_number }}">previous</a>
                     {% endif %}
                     
                     <span class="current">
@@ -109,8 +109,8 @@
                     </span>
                     
                     {% if page_obj.has_next %}
-                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.next_page_number }}">next</a>
-                        <a href="?{% if request.GET.zone %}zone={{ request.GET.zone }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.next_page_number }}">next</a>
+                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
                     {% endif %}
                 </span>
             </div>
@@ -124,12 +124,12 @@
 {% block extra_scripts %}
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#id_zone').change(function() {
-            var zoneId = $(this).val();
+        $('#id_district').change(function() {
+            var districtId = $(this).val();
             $.ajax({
                 url: "{% url 'ajax_load_branches' %}",
                 data: {
-                    'zone': zoneId
+                    'district': districtId
                 },
                 success: function(data) {
                     var branchDropdown = $("#id_branch");

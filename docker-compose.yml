@@ -29,8 +29,6 @@
 #   postgres_data:
 
 #pro
-version: '3'
-
 services:
   web:
     build: .
@@ -43,7 +41,7 @@ services:
       - db
 
   db:
-    image: postgres
+    image: postgres:16
     environment:
       POSTGRES_DB: decsiloandb
       POSTGRES_USER: decsiloandbuser

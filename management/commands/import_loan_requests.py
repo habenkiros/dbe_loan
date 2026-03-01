@@ -1,6 +1,6 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
-from loans.models import LoanRequest, LoanCategory, Zone, Branch, CollateralType  # Adjust the import based on your app name
+from loans.models import LoanRequest, LoanCategory, District, Branch, CollateralType
 from loans.views import generate_incremental_loan_request_id
 
 class Command(BaseCommand):
@@ -22,16 +22,16 @@ class Command(BaseCommand):
             amount_requested = row['amount_requested']
             reason = row['reason']
             status = row['status']
-            zone = row['zone']
-            branch = row['branch']
+            zone_name = row.get('zone', row.get('district'))
+            branch_name = row['branch']
             customer_history = row['customer_history']
             date_requested = row['date_requested']
 
             try:
                 category = LoanCategory.objects.get(name=category)
                 collateral = CollateralType.objects.get(name=collateral)
-                zone = Zone.objects.get(name=zone)
-                branch = Branch.objects.get(name=branch, zone=zone)
+                district = District.objects.get(name=zone_name)
+                branch = Branch.objects.get(name=branch_name, district=district)
                 loan_request, created = LoanRequest.objects.get_or_create(
                     loan_request_id=generate_incremental_loan_request_id(),
                     applicant_name=applicant_name,
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                     amount_requested=amount_requested,
                     reason=reason,
                     status=status,
-                    zone=zone,
+                    district=district,
                     branch=branch,
                     customer_history=customer_history,
                     date_requested=date_requested

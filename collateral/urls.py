@@ -1,0 +1,36 @@
+from django.urls import path
+from . import views
+
+app_name = 'collateral'
+urlpatterns = [
+    path('', views.dashboard, name='dashboard'),
+    path('catalog/', views.catalog_index, name='catalog_index'),
+    path('catalog/main-work/', views.main_work_list, name='main_work_list'),
+    path('catalog/main-work/add/', views.main_work_add, name='main_work_add'),
+    path('catalog/main-work/<int:main_work_id>/edit/', views.main_work_edit, name='main_work_edit'),
+    path('catalog/sub-work/', views.sub_work_list, name='sub_work_list'),
+    path('catalog/sub-work/add/', views.sub_work_add, name='sub_work_add'),
+    path('catalog/sub-work/<int:sub_work_id>/edit/', views.sub_work_edit, name='sub_work_edit'),
+    path('catalog/sub-sub-work/', views.sub_sub_work_list, name='sub_sub_work_list'),
+    path('catalog/sub-sub-work/add/', views.sub_sub_work_add, name='sub_sub_work_add'),
+    path('catalog/sub-sub-work/<int:sub_sub_work_id>/edit/', views.sub_sub_work_edit, name='sub_sub_work_edit'),
+    path('ajax/load-sub-works/', views.ajax_load_sub_works, name='ajax_load_sub_works'),
+    path('ajax/load-sub-sub-works/', views.ajax_load_sub_sub_works, name='ajax_load_sub_sub_works'),
+    path('unit-prices/', views.unit_price_list, name='unit_price_list'),
+    path('unit-prices/add/', views.unit_price_add, name='unit_price_add'),
+    path('unit-prices/<int:price_id>/edit/', views.unit_price_edit, name='unit_price_edit'),
+    path('loan/<int:loan_request_id>/buildings/', views.building_list, name='building_list'),
+    path('loan/<int:loan_request_id>/building/add/', views.building_add, name='building_add'),
+    path('building/<int:building_id>/edit/', views.building_edit, name='building_edit'),
+    path('building/<int:building_id>/valuation/', views.valuation_list, name='valuation_list'),
+    path('building/<int:building_id>/valuation/add/', views.valuation_add, name='valuation_add'),
+    path('valuation/<int:valuation_id>/edit/', views.valuation_edit, name='valuation_edit'),
+    path('valuation/<int:valuation_id>/delete/', views.valuation_delete, name='valuation_delete'),
+    path('building/<int:building_id>/images/', views.building_images, name='building_images'),
+    path('building/<int:building_id>/estimation-summary/', views.building_estimation_summary, name='building_estimation_summary'),
+    path('loan/<int:loan_request_id>/land/', views.land_valuation, name='land_valuation'),
+    path('loan/<int:loan_request_id>/other-collateral/', views.other_collateral_list, name='other_collateral_list'),
+    path('other-collateral/<int:item_id>/edit/', views.other_collateral_edit, name='other_collateral_edit'),
+    path('other-collateral/<int:item_id>/delete/', views.other_collateral_delete, name='other_collateral_delete'),
+    path('loan/<int:loan_request_id>/summary/', views.summary, name='summary'),
+]

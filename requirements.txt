@@ -11,3 +11,4 @@ requests==2.25.1
 drf-yasg
 djangorestframework-simplejwt
 djangorestframework
+Pillow>=10.0.0

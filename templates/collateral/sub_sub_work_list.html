@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Sub-sub work – Catalog{% endblock %}
+{% block content %}
+<h2>Sub-sub work</h2>
+<p>
+    <a href="{% url 'collateral:sub_sub_work_add' %}">Add sub-sub work</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+</p>
+
+<form method="get" style="margin-bottom: 16px;">
+    <label for="id_sub_work">Filter by sub work:</label>
+    <select name="sub_work_id" id="id_sub_work" onchange="this.form.submit()">
+        <option value="">—— All ——</option>
+        {% for sw in sub_works %}
+        <option value="{{ sw.id }}" {% if selected_sub_work_id == sw.id %}selected{% endif %}>{{ sw.main_work.name }} → {{ sw.name }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Main work</th>
+                <th>Sub work</th>
+                <th>Order</th>
+                <th>Name</th>
+                <th>Unit measure</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.sub_work.main_work.name }}</td>
+                <td>{{ item.sub_work.name }}</td>
+                <td>{{ item.order }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.unit_measure|default:"—" }}</td>
+                <td><a href="{% url 'collateral:sub_sub_work_edit' item.id %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No sub-sub work yet. <a href="{% url 'collateral:sub_sub_work_add' %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

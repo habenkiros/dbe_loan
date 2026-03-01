@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}መጠቃለሊ – {{ building.name }}{% endblock %}
+{% block content %}
+<h2>መጠቃለሊ</h2>
+<p><strong>LOCATION – {{ location_label }}</strong></p>
+<p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong> – {{ building.loan_request.applicant_name }} &nbsp;|&nbsp; Building: {{ building.name }}</p>
+<p>
+    <a href="{% url 'collateral:valuation_list' building.id %}">Valuation</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:summary' building.loan_request.id %}">Collateral summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:building_list' building.loan_request.id %}">Buildings</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ተ.ቁ</th>
+                <th>ዝርዝር ስራሕ</th>
+                <th>ዋጋ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for section in section_list %}
+            <tr>
+                <td></td>
+                <td><strong>{{ section.main_work.name }}</strong></td>
+                <td></td>
+            </tr>
+            {% for num, desc, val in section.rows %}
+            <tr>
+                <td>{{ num }}</td>
+                <td>{{ desc }}</td>
+                <td>{{ val }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td></td>
+                <td>{% if section_list|length == 2 %}{% if forloop.first %}ጠቅላላ ድምር "ሀ"{% else %}ጠቅላላ ድምር "ለ"{% endif %}{% else %}ጠቅላላ ድምር ({{ section.main_work.name }}){% endif %}</td>
+                <td><strong>{{ section.subtotal }}</strong></td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            {% if section_list|length == 2 %}
+            <tr>
+                <td></td>
+                <td>ጠቅላላ ድምር "ሀ + ለ"</td>
+                <td><strong>{{ grand_total }}</strong></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td></td>
+                <td>ጠቅላላ ድምር</td>
+                <td><strong>{{ grand_total }}</strong></td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

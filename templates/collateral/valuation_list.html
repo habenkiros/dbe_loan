@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Valuation – {{ building.name }}{% endblock %}
+{% block content %}
+<h2>Valuation – {{ building.name }}</h2>
+<p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong></p>
+<p>
+    <a href="{% url 'collateral:valuation_add' building.id %}">Add row</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:building_estimation_summary' building.id %}">መጠቃለሊ (estimation summary)</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:building_list' building.loan_request.id %}">Back to buildings</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Main work</th>
+                <th>Sub work</th>
+                <th>Sub-sub work</th>
+                <th>Quantity</th>
+                <th>Unit price</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in rows %}
+            <tr>
+                <td>{{ r.sub_sub_work.sub_work.main_work.name }}</td>
+                <td>{{ r.sub_sub_work.sub_work.name }}</td>
+                <td>{{ r.sub_sub_work.name }}</td>
+                <td>{{ r.quantity }}</td>
+                <td>{{ r.unit_price }}</td>
+                <td>{{ r.total }}</td>
+                <td>
+                    <a href="{% url 'collateral:valuation_edit' r.id %}">Edit</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:valuation_delete' r.id %}" onclick="return confirm('Remove this row?');">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p><strong>Building total: {{ building_total }}</strong></p>
+{% endblock %}

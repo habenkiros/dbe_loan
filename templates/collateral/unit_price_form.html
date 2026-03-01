@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit unit price{% else %}Add unit price per woreda{% endif %}{% endblock %}
+{% block content %}
+<h2>{% if is_edit %}Edit unit price{% else %}Add unit price per woreda{% endif %}</h2>
+<p>Select Region → Zone → City (woreda), then Main work → Sub work → Sub-sub work, and enter unit price.</p>
+<p><a href="{% url 'collateral:unit_price_list' %}">← Back to unit prices</a></p>
+
+<form method="post" id="unit-price-form">
+    {% csrf_token %}
+    <table>
+        <tr>
+            <th><label for="id_region">Region:</label></th>
+            <td>
+                <select id="id_region" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Region ——</option>
+                    {% for r in regions %}
+                    <option value="{{ r.id }}" {% if price and price.city.zone.region_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_zone">Zone:</label></th>
+            <td>
+                <select id="id_zone" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Zone ——</option>
+                    {% if price %}
+                    <option value="{{ price.city.zone_id }}" selected>{{ price.city.zone.name }}</option>
+                    {% endif %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_city">City / Woreda:</label></th>
+            <td>
+                <select name="city" id="id_city" class="form-control" style="width: 250px;" required>
+                    <option value="">—— Select City (choose zone first) ——</option>
+                    {% if price %}
+                    <option value="{{ price.city_id }}" selected>{{ price.city.name }}</option>
+                    {% endif %}
+                </select>
+                {% if form.city.errors %}<div class="error">{{ form.city.errors }}</div>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_main_work">Main work:</label></th>
+            <td>
+                <select id="id_main_work" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Main work ——</option>
+                    {% for mw in main_works %}
+                    <option value="{{ mw.id }}" {% if price and price.sub_sub_work.sub_work.main_work_id == mw.id %}selected{% endif %}>{{ mw.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_sub_work">Sub work:</label></th>
+            <td>
+                <select id="id_sub_work" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Sub work (choose main work first) ——</option>
+                    {% if price %}
+                    <option value="{{ price.sub_sub_work.sub_work_id }}" selected>{{ price.sub_sub_work.sub_work.name }}</option>
+                    {% endif %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_sub_sub_work">Sub-sub work:</label></th>
+            <td>
+                <select name="sub_sub_work" id="id_sub_sub_work" class="form-control" style="width: 250px;" required>
+                    <option value="">—— Select Sub-sub work (choose sub work first) ——</option>
+                    {% if price %}
+                    <option value="{{ price.sub_sub_work_id }}" selected>{{ price.sub_sub_work.name }}</option>
+                    {% endif %}
+                </select>
+                {% if form.sub_sub_work.errors %}<div class="error">{{ form.sub_sub_work.errors }}</div>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_unit_price">Unit price:</label></th>
+            <td>{{ form.unit_price }}{% if form.unit_price.errors %}<div class="error">{{ form.unit_price.errors }}</div>{% endif %}</td>
+        </tr>
+    </table>
+    <button type="submit">{% if is_edit %}Save changes{% else %}Add unit price{% endif %}</button>
+</form>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var regionSelect = document.getElementById('id_region');
+    var zoneSelect = document.getElementById('id_zone');
+    var citySelect = document.getElementById('id_city');
+    var mainWorkSelect = document.getElementById('id_main_work');
+    var subWorkSelect = document.getElementById('id_sub_work');
+    var subSubWorkSelect = document.getElementById('id_sub_sub_work');
+
+    var zonesUrl = "{{ zones_url|default:''|escapejs }}";
+    var citiesUrl = "{{ cities_url|default:''|escapejs }}";
+    var subWorksUrl = "{{ sub_works_url|default:''|escapejs }}";
+    var subSubWorksUrl = "{{ sub_sub_works_url|default:''|escapejs }}";
+
+    var currentZoneId = {% if price %}{{ price.city.zone_id }}{% else %}null{% endif %};
+    var currentCityId = {% if price %}{{ price.city_id }}{% else %}null{% endif %};
+    var currentSubWorkId = {% if price %}{{ price.sub_sub_work.sub_work_id }}{% else %}null{% endif %};
+    var currentSubSubWorkId = {% if price %}{{ price.sub_sub_work_id }}{% else %}null{% endif %};
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function loadZones(regionId) {
+        if (!zoneSelect || !citySelect) return;
+        zoneSelect.innerHTML = '<option value="">—— Select Zone ——</option>';
+        citySelect.innerHTML = '<option value="">—— Select City ——</option>';
+        if (!regionId) return;
+        var url = zonesUrl + (zonesUrl.indexOf('?') >= 0 ? '&' : '?') + 'region_id=' + encodeURIComponent(regionId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(zones) {
+                var seen = {};
+                var html = '<option value="">—— Select Zone ——</option>';
+                (zones || []).forEach(function(z) {
+                    var id = z.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentZoneId && parseInt(id, 10) === currentZoneId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(z.name) + '</option>';
+                });
+                zoneSelect.innerHTML = html;
+                if (currentZoneId) { loadCities(currentZoneId); currentZoneId = null; }
+            })
+            .catch(function() { zoneSelect.innerHTML = '<option value="">—— Error loading zones ——</option>'; });
+    }
+
+    function loadCities(zoneId) {
+        if (!citySelect) return;
+        citySelect.innerHTML = '<option value="">—— Select City ——</option>';
+        if (!zoneId) return;
+        var url = citiesUrl + (citiesUrl.indexOf('?') >= 0 ? '&' : '?') + 'zone_id=' + encodeURIComponent(zoneId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(cities) {
+                var seen = {};
+                var html = '<option value="">—— Select City ——</option>';
+                (cities || []).forEach(function(c) {
+                    var id = c.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentCityId && parseInt(id, 10) === currentCityId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
+                });
+                citySelect.innerHTML = html;
+                currentCityId = null;
+            })
+            .catch(function() { citySelect.innerHTML = '<option value="">—— Error loading cities ——</option>'; });
+    }
+
+    function loadSubWorks(mainWorkId) {
+        if (!subWorkSelect || !subSubWorkSelect) return;
+        subWorkSelect.innerHTML = '<option value="">—— Select Sub work ——</option>';
+        subSubWorkSelect.innerHTML = '<option value="">—— Select Sub-sub work ——</option>';
+        if (!mainWorkId) return;
+        var url = subWorksUrl + (subWorksUrl.indexOf('?') >= 0 ? '&' : '?') + 'main_work_id=' + encodeURIComponent(mainWorkId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(items) {
+                var seen = {};
+                var html = '<option value="">—— Select Sub work ——</option>';
+                (items || []).forEach(function(z) {
+                    var id = z.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentSubWorkId && parseInt(id, 10) === currentSubWorkId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(z.name) + '</option>';
+                });
+                subWorkSelect.innerHTML = html;
+                if (currentSubWorkId) { loadSubSubWorks(currentSubWorkId); currentSubWorkId = null; }
+            })
+            .catch(function() { subWorkSelect.innerHTML = '<option value="">—— Error loading ——</option>'; });
+    }
+
+    function loadSubSubWorks(subWorkId) {
+        if (!subSubWorkSelect) return;
+        subSubWorkSelect.innerHTML = '<option value="">—— Select Sub-sub work ——</option>';
+        if (!subWorkId) return;
+        var url = subSubWorksUrl + (subSubWorksUrl.indexOf('?') >= 0 ? '&' : '?') + 'sub_work_id=' + encodeURIComponent(subWorkId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(items) {
+                var seen = {};
+                var html = '<option value="">—— Select Sub-sub work ——</option>';
+                (items || []).forEach(function(z) {
+                    var id = z.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentSubSubWorkId && parseInt(id, 10) === currentSubSubWorkId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(z.name) + '</option>';
+                });
+                subSubWorkSelect.innerHTML = html;
+                currentSubSubWorkId = null;
+            })
+            .catch(function() { subSubWorkSelect.innerHTML = '<option value="">—— Error loading ——</option>'; });
+    }
+
+    if (regionSelect) regionSelect.addEventListener('change', function() { loadZones(this.value); });
+    if (zoneSelect) zoneSelect.addEventListener('change', function() { loadCities(this.value); });
+    if (mainWorkSelect) mainWorkSelect.addEventListener('change', function() { loadSubWorks(this.value); });
+    if (subWorkSelect) subWorkSelect.addEventListener('change', function() { loadSubSubWorks(this.value); });
+
+    if (regionSelect && regionSelect.value) loadZones(regionSelect.value);
+    if (mainWorkSelect && mainWorkSelect.value) loadSubWorks(mainWorkSelect.value);
+});
+</script>
+{% endblock %}
+{% endblock %}

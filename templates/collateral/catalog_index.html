@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Collateral catalog{% endblock %}
+{% block content %}
+<h2>Collateral catalog (ዝርዝር ስራሕ)</h2>
+<p>Manage the construction work breakdown and unit prices. Engineering team only.</p>
+<ul>
+    <li><a href="{% url 'collateral:main_work_list' %}">Main work (ጠቅላላ ስራሕ)</a> – Level 1</li>
+    <li><a href="{% url 'collateral:sub_work_list' %}">Sub work</a> – Level 2 (under Main work)</li>
+    <li><a href="{% url 'collateral:sub_sub_work_list' %}">Sub-sub work</a> – Level 3 (under Sub work)</li>
+    <li><a href="{% url 'collateral:unit_price_list' %}">Unit prices per woreda (ነፀላ ዋጋ)</a> – Sub work × City</li>
+</ul>
+<p><a href="{% url 'collateral:dashboard' %}">← Collateral (loans)</a></p>
+{% endblock %}

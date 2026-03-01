@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Edit collateral item – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Edit collateral item</h2>
+<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong></p>
+<p><a href="{% url 'collateral:other_collateral_list' loan_request.id %}">← Back to other collateral</a></p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        {{ form.as_table }}
+    </table>
+    <button type="submit">Save changes</button>
+</form>
+{% endblock %}

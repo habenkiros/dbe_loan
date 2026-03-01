@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Main work – Catalog{% endblock %}
+{% block content %}
+<h2>Main work (ጠቅላላ ስራሕ)</h2>
+<p>
+    <a href="{% url 'collateral:main_work_add' %}">Add main work</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.order }}</td>
+                <td>{{ item.name }}</td>
+                <td><a href="{% url 'collateral:main_work_edit' item.id %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No main work yet. <a href="{% url 'collateral:main_work_add' %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit sub work{% else %}Add sub work{% endif %}{% endblock %}
+{% block content %}
+<h2>{% if is_edit %}Edit sub work{% else %}Add sub work{% endif %}</h2>
+<p><a href="{% url 'collateral:sub_work_list' %}">← Back to sub work</a></p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        {{ form.as_table }}
+    </table>
+    <button type="submit">{% if is_edit %}Save changes{% else %}Add sub work{% endif %}</button>
+</form>
+{% endblock %}

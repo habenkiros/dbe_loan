@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Unit prices per woreda{% endblock %}
+{% block content %}
+<h2>Unit prices per woreda (ነፀላ ዋጋ)</h2>
+<p>Construction unit prices by woreda/city. Set by the engineering team. Not tied to any loan.</p>
+<p>
+    <a href="{% url 'collateral:unit_price_add' %}">Add unit price</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Collateral (loan valuations)</a>
+</p>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Region</th>
+                <th>Zone</th>
+                <th>City / Woreda</th>
+                <th>Main work</th>
+                <th>Sub work</th>
+                <th>Sub-sub work</th>
+                <th>Unit price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in prices %}
+            <tr>
+                <td>{{ p.city.zone.region.name }}</td>
+                <td>{{ p.city.zone.name }}</td>
+                <td>{{ p.city.name }}</td>
+                <td>{{ p.sub_sub_work.sub_work.main_work.name }}</td>
+                <td>{{ p.sub_sub_work.sub_work.name }}</td>
+                <td>{{ p.sub_sub_work.name }}</td>
+                <td>{{ p.unit_price }}</td>
+                <td><a href="{% url 'collateral:unit_price_edit' p.id %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">No unit prices yet. <a href="{% url 'collateral:unit_price_add' %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

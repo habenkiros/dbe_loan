@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Manage Zones (Region → Zone){% endblock %}
+{% block content %}
+<h1>Manage Zones (under Region)</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add Zone</button>
+</form>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Region</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for zone in zones %}
+            <tr>
+                <td>{{ zone.id }}</td>
+                <td>{{ zone.region.name }}</td>
+                <td>{{ zone.name }}</td>
+                <td><a href="{% url 'edit_geo_zone' zone.id %}">Edit</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

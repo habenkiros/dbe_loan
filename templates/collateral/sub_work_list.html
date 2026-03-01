@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Sub work – Catalog{% endblock %}
+{% block content %}
+<h2>Sub work</h2>
+<p>
+    <a href="{% url 'collateral:sub_work_add' %}">Add sub work</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+</p>
+
+<form method="get" style="margin-bottom: 16px;">
+    <label for="id_main_work">Filter by main work:</label>
+    <select name="main_work_id" id="id_main_work" onchange="this.form.submit()">
+        <option value="">—— All ——</option>
+        {% for mw in main_works %}
+        <option value="{{ mw.id }}" {% if selected_main_work_id == mw.id %}selected{% endif %}>{{ mw.name }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Main work</th>
+                <th>Order</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.main_work.name }}</td>
+                <td>{{ item.order }}</td>
+                <td>{{ item.name }}</td>
+                <td><a href="{% url 'collateral:sub_work_edit' item.id %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No sub work yet. <a href="{% url 'collateral:sub_work_add' %}">Add one</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

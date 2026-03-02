@@ -170,6 +170,10 @@ class SubWorkUnitPriceForm(forms.ModelForm):
         data = super().clean()
         sub_work = data.get('sub_work')
         sub_sub_work = data.get('sub_sub_work')
+        # When both are set (user picked sub work then sub-sub work), prefer sub_sub_work
+        if sub_work and sub_sub_work:
+            data['sub_work'] = None
+            return data
         if bool(sub_work) == bool(sub_sub_work):
             from django import forms as django_forms
             raise django_forms.ValidationError('Set exactly one of Sub work or Sub-sub work.')

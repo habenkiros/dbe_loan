@@ -31,13 +31,21 @@
                 <td>{{ lr.amount_requested }}</td>
                 <td>{{ lr.branch.name }}</td>
                 <td>
+                    {% with ct=lr.collateral.name|lower %}
+                    {% if "building" in ct or "house" in ct or "construction" in ct %}
                     <a href="{% url 'collateral:building_list' lr.id %}">Buildings</a>
-                    &nbsp;|&nbsp;
+                    {% endif %}
+                    {% if "land" in ct or "building" in ct or "house" in ct or "construction" in ct %}
+                    {% if "building" in ct or "house" in ct or "construction" in ct %}&nbsp;|&nbsp;{% endif %}
                     <a href="{% url 'collateral:land_valuation' lr.id %}">Land</a>
-                    &nbsp;|&nbsp;
+                    {% endif %}
+                    {% if "vehicle" in ct or "machinery" in ct or "equipment" in ct or "other" in ct %}
+                    {% if "land" in ct or "building" in ct or "house" in ct or "construction" in ct %}&nbsp;|&nbsp;{% endif %}
                     <a href="{% url 'collateral:other_collateral_list' lr.id %}">Other</a>
-                    &nbsp;|&nbsp;
+                    {% endif %}
+                    {% if "building" in ct or "house" in ct or "construction" in ct or "land" in ct or "vehicle" in ct or "machinery" in ct or "equipment" in ct or "other" in ct %}&nbsp;|&nbsp;{% endif %}
                     <a href="{% url 'collateral:summary' lr.id %}">Summary</a>
+                    {% endwith %}
                 </td>
             </tr>
             {% empty %}

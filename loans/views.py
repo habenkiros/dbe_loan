@@ -80,7 +80,7 @@ def edit_user(request, user_id):
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
+@user_passes_test(lambda u: u.role == 'branch_manager')
 def create_loan_request(request):
     if request.method == 'POST':
         form = LoanRequestForm(request.POST)
@@ -154,6 +154,9 @@ def assign_loan_officer(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
         return redirect('view_loan_requests')
+    if loan_request.status and loan_request.status.strip().lower() != 'approved':
+        messages.warning(request, 'You can assign a loan officer only when the loan request status is Approved.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
     form = AssignLoanOfficerForm(branch=loan_request.branch)
     if request.method == 'POST':
         form = AssignLoanOfficerForm(request.POST, branch=loan_request.branch)

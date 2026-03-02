@@ -30,18 +30,25 @@ def _can_access_collateral(user):
     )
 
 
-def _collateral_eligible_loans():
-    """Loan requests eligible for collateral: queue_approved or status=Approved."""
-    return LoanRequest.objects.filter(
+def _collateral_eligible_loans(user=None):
+    """Loan requests eligible for collateral: queue_approved or status=Approved. Branch managers see only their branch; loan officers only loans assigned to them."""
+    qs = LoanRequest.objects.filter(
         Q(queue_approved=True) | Q(status__iexact='Approved')
     )
+    if user:
+        role = getattr(user, 'role', None)
+        if role == 'branch_manager' and getattr(user, 'branch_id', None):
+            qs = qs.filter(branch=user.branch)
+        elif role == 'loan_officer':
+            qs = qs.filter(assigned_loan_officer=user)
+    return qs
 
 
 @login_required
 @user_passes_test(_can_access_collateral)
 def dashboard(request):
-    """List loan requests eligible for collateral (queue_approved or Approved); link to their collateral."""
-    loan_requests = _collateral_eligible_loans().select_related(
+    """List loan requests eligible for collateral (queue_approved or Approved); link to their collateral. Branch managers see only their branch."""
+    loan_requests = _collateral_eligible_loans(request.user).select_related(
         'branch', 'district'
     ).order_by('-date_requested')
     q = request.GET.get('q')
@@ -61,7 +68,7 @@ def dashboard(request):
 @user_passes_test(_can_access_collateral)
 def building_list(request, loan_request_id):
     """List buildings for a loan request; add building."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).select_related('city')
     return render(request, 'collateral/building_list.html', {
         'loan_request': loan_request,
@@ -73,7 +80,7 @@ def building_list(request, loan_request_id):
 @user_passes_test(_can_access_collateral)
 def building_add(request, loan_request_id):
     """Add a building to a loan request."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     if request.method == 'POST':
         form = BuildingForm(request.POST)
         if form.is_valid():
@@ -330,7 +337,7 @@ def building_images(request, building_id):
 @user_passes_test(_can_access_collateral)
 def land_valuation(request, loan_request_id):
     """View/edit land valuation for a loan request."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     land, _ = LandValuation.objects.get_or_create(loan_request=loan_request)
     if request.method == 'POST':
         form = LandValuationForm(request.POST, instance=land)
@@ -353,7 +360,7 @@ def land_valuation(request, loan_request_id):
 @user_passes_test(_can_access_collateral)
 def other_collateral_list(request, loan_request_id):
     """List and add other collateral items (vehicle, machinery, etc.) for a loan."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     items = OtherCollateralItem.objects.filter(loan_request=loan_request).order_by('name')
     total_other = sum(item.estimated_value for item in items)
     if request.method == 'POST':
@@ -409,7 +416,7 @@ def other_collateral_delete(request, item_id):
 @user_passes_test(_can_access_collateral)
 def summary(request, loan_request_id):
     """Collateral summary: building totals + land + other collateral = total collateral value."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).prefetch_related(
         'buildingvaluation_set__sub_work', 'buildingvaluation_set__sub_sub_work'
     )

@@ -70,7 +70,9 @@
                         <div class="dropdown-content">
                             <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-blue">Details</a>
                             {% if user.role == 'branch_manager' or user.is_superuser %}
+                            {% if loan_request.status|default:''|lower == 'approved' %}
                             <a href="{% url 'assign_loan_officer' loan_request.id %}" class="btn btn-green">Assign Officer</a>
+                            {% endif %}
                             {% endif %}
                             {% if user.role == 'operation_manager' or user.role == 'finance_manager' %}
                                 <a href="{% url 'update_loan_request_status' loan_request.id %}" class="btn btn-orange">Update Status</a>

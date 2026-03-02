@@ -79,7 +79,9 @@
 
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>
 {% if user.role == 'branch_manager' or user.is_superuser %}
+{% if loan_request.status|default:''|lower == 'approved' %}
  | <a href="{% url 'assign_loan_officer' loan_request.id %}">Assign loan officer</a>
+{% endif %}
 {% endif %}
 
 {% endblock %}

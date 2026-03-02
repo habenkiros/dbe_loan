@@ -247,7 +247,7 @@
                     <button class="dropbtn">Loan requests ▾</button>
                     <div class="dropdown-content">
                         <a href="{% url 'view_loan_requests' %}">View loan requests</a>
-                        {% if not user.is_superuser %}
+                        {% if user.role == 'branch_manager' and not user.is_superuser %}
                         <a href="{% url 'create_loan_request' %}">Add loan request</a>
                         {% endif %}
                     </div>

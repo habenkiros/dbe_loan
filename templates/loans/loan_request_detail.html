@@ -60,12 +60,16 @@
         <td>{{ loan_request.date_reviewed }}</td>
     </tr>
     <tr>
-        <th>Zone</th>
-        <td>{{ loan_request.branch.district }}</td>
+        <th>District</th>
+        <td>{{ loan_request.branch.district.name }}</td>
     </tr>
     <tr>
         <th>Branch</th>
         <td>{{ loan_request.branch.name }}</td>
+    </tr>
+    <tr>
+        <th>Assigned loan officer</th>
+        <td>{% if loan_request.assigned_loan_officer %}{{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}{% else %}— Not assigned —{% endif %}</td>
     </tr>
     <tr>
         <th>Cutomer History</th>
@@ -74,5 +78,8 @@
 </table>
 
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>
+{% if user.role == 'branch_manager' or user.is_superuser %}
+ | <a href="{% url 'assign_loan_officer' loan_request.id %}">Assign loan officer</a>
+{% endif %}
 
 {% endblock %}

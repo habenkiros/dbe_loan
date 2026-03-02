@@ -69,9 +69,10 @@ def _user_can_edit_unit_price(user):
 
 
 class BuildingValuationForm(forms.ModelForm):
+    """Valuation row: exactly one of sub_work or sub_sub_work; quantity and optional unit_price."""
     class Meta:
         model = BuildingValuation
-        fields = ['sub_sub_work', 'quantity', 'unit_price']
+        fields = ['sub_work', 'sub_sub_work', 'quantity', 'unit_price']
         widgets = {
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'min': 0}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
@@ -79,12 +80,34 @@ class BuildingValuationForm(forms.ModelForm):
 
     def __init__(self, *args, can_edit_unit_price=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['sub_work'].required = False
+        self.fields['sub_work'].widget.attrs['class'] = 'form-control'
+        self.fields['sub_sub_work'].required = False
         self.fields['sub_sub_work'].widget.attrs['class'] = 'form-control'
         self.fields['sub_sub_work'].queryset = self.fields['sub_sub_work'].queryset.select_related(
             'sub_work', 'sub_work__main_work'
         ).order_by('sub_work__main_work', 'sub_work', 'order', 'name')
         if not can_edit_unit_price:
             self.fields.pop('unit_price', None)
+
+    def clean(self):
+        data = super().clean()
+        sub_work = data.get('sub_work')
+        sub_sub_work = data.get('sub_sub_work')
+        if bool(sub_work) == bool(sub_sub_work):
+            from django import forms as django_forms
+            raise django_forms.ValidationError('Set exactly one of Sub work or Sub-sub work.')
+        return data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if instance.sub_sub_work_id:
+            instance.sub_work_id = None
+        else:
+            instance.sub_sub_work_id = None
+        if commit:
+            instance.save()
+        return instance
 
 
 class BuildingImageForm(forms.ModelForm):
@@ -123,10 +146,10 @@ class LandValuationForm(forms.ModelForm):
 
 
 class SubWorkUnitPriceForm(forms.ModelForm):
-    """Unit price per SubSubWork per woreda (City). Used by engineering team."""
+    """Unit price per SubWork or SubSubWork per woreda (City). Used by engineering team. Set exactly one of sub_work or sub_sub_work."""
     class Meta:
         model = SubWorkUnitPrice
-        fields = ['city', 'sub_sub_work', 'unit_price']
+        fields = ['city', 'sub_work', 'sub_sub_work', 'unit_price']
         widgets = {
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
         }
@@ -134,7 +157,30 @@ class SubWorkUnitPriceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['city'].widget.attrs['class'] = 'form-control'
+        self.fields['sub_work'].required = False
+        self.fields['sub_work'].widget.attrs['class'] = 'form-control'
+        self.fields['sub_work'].queryset = SubWork.objects.all().select_related('main_work').order_by('main_work__order', 'main_work__name', 'order', 'name')
+        self.fields['sub_sub_work'].required = False
         self.fields['sub_sub_work'].widget.attrs['class'] = 'form-control'
-        self.fields['sub_sub_work'].queryset = self.fields['sub_sub_work'].queryset.select_related(
+        self.fields['sub_sub_work'].queryset = SubSubWork.objects.all().select_related(
             'sub_work', 'sub_work__main_work'
         ).order_by('sub_work__main_work__order', 'sub_work__main_work__name', 'sub_work__order', 'sub_work__name', 'order', 'name')
+
+    def clean(self):
+        data = super().clean()
+        sub_work = data.get('sub_work')
+        sub_sub_work = data.get('sub_sub_work')
+        if bool(sub_work) == bool(sub_sub_work):
+            from django import forms as django_forms
+            raise django_forms.ValidationError('Set exactly one of Sub work or Sub-sub work.')
+        return data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if instance.sub_sub_work_id:
+            instance.sub_work_id = None
+        else:
+            instance.sub_sub_work_id = None
+        if commit:
+            instance.save()
+        return instance

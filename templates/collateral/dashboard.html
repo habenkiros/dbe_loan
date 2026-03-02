@@ -2,7 +2,7 @@
 {% block title %}Collateral – Queue-approved loans{% endblock %}
 {% block content %}
 <h2>Collateral – Queue-approved loans</h2>
-<p>Loan requests with queue approved. Use <strong>Buildings</strong> for building collateral (valuation, መጠቃለሊ); <strong>Land</strong> for land; <strong>Other</strong> for non-building types (vehicle, machinery, equipment, etc.) — add items with name and estimated value. <strong>Summary</strong> shows the total for each loan.</p>
+<p>Loan requests that are queue-approved or <strong>Approved</strong>. Use <strong>Buildings</strong> for building collateral (valuation, መጠቃለሊ); <strong>Land</strong> for land; <strong>Other</strong> for non-building types (vehicle, machinery, equipment, etc.) — add items with name and estimated value. <strong>Summary</strong> shows the total for each loan.</p>
 
 <form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
     <label for="id_q">Search:</label>
@@ -42,7 +42,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">No queue-approved loan requests found.</td>
+                <td colspan="6">No queue-approved or Approved loan requests found.</td>
             </tr>
             {% endfor %}
         </tbody>

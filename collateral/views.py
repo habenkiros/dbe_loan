@@ -30,11 +30,18 @@ def _can_access_collateral(user):
     )
 
 
+def _collateral_eligible_loans():
+    """Loan requests eligible for collateral: queue_approved or status=Approved."""
+    return LoanRequest.objects.filter(
+        Q(queue_approved=True) | Q(status__iexact='Approved')
+    )
+
+
 @login_required
 @user_passes_test(_can_access_collateral)
 def dashboard(request):
-    """List loan requests with queue_approved=True; link to their collateral."""
-    loan_requests = LoanRequest.objects.filter(queue_approved=True).select_related(
+    """List loan requests eligible for collateral (queue_approved or Approved); link to their collateral."""
+    loan_requests = _collateral_eligible_loans().select_related(
         'branch', 'district'
     ).order_by('-date_requested')
     q = request.GET.get('q')
@@ -54,7 +61,7 @@ def dashboard(request):
 @user_passes_test(_can_access_collateral)
 def building_list(request, loan_request_id):
     """List buildings for a loan request; add building."""
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, queue_approved=True)
+    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).select_related('city')
     return render(request, 'collateral/building_list.html', {
         'loan_request': loan_request,
@@ -66,7 +73,7 @@ def building_list(request, loan_request_id):
 @user_passes_test(_can_access_collateral)
 def building_add(request, loan_request_id):
     """Add a building to a loan request."""
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, queue_approved=True)
+    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
     if request.method == 'POST':
         form = BuildingForm(request.POST)
         if form.is_valid():
@@ -112,8 +119,9 @@ def valuation_list(request, building_id):
     """List valuation rows for a building; show total; add row."""
     building = get_object_or_404(Building, pk=building_id)
     rows = BuildingValuation.objects.filter(building=building).select_related(
+        'sub_work', 'sub_work__main_work',
         'sub_sub_work', 'sub_sub_work__sub_work', 'sub_sub_work__sub_work__main_work'
-    ).order_by('sub_sub_work__sub_work__main_work', 'sub_sub_work__sub_work', 'sub_sub_work')
+    ).order_by('sub_work__main_work__order', 'sub_work__order', 'sub_sub_work__order')
     total = sum(r.total for r in rows)
     return render(request, 'collateral/valuation_list.html', {
         'building': building,
@@ -122,18 +130,57 @@ def valuation_list(request, building_id):
     })
 
 
-def _get_unit_price_for_building(building, sub_sub_work):
-    """Get unit price from SubWorkUnitPrice for building's city and sub_sub_work."""
+def _get_unit_price_for_building(building, sub_work=None, sub_sub_work=None):
+    """Get unit price from SubWorkUnitPrice for building's city and sub_work or sub_sub_work."""
     if not building.city_id:
         return None
+    if sub_sub_work:
+        try:
+            up = SubWorkUnitPrice.objects.get(sub_sub_work=sub_sub_work, city=building.city)
+            return up.unit_price
+        except SubWorkUnitPrice.DoesNotExist:
+            return None
+    if sub_work:
+        try:
+            up = SubWorkUnitPrice.objects.get(sub_work=sub_work, city=building.city)
+            return up.unit_price
+        except SubWorkUnitPrice.DoesNotExist:
+            return None
+    return None
+
+
+def _build_work_choices(existing_sub_work_ids, existing_sub_sub_work_ids):
+    """Build optgroup choices for work item dropdown: (group_label, [(value, label), ...])."""
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for mw in MainWork.objects.all().order_by('order', 'name'):
+        for sw in SubWork.objects.filter(main_work=mw).order_by('order', 'name'):
+            key = f"{mw.name} → {sw.name}"
+            options = []
+            if sw.id not in existing_sub_work_ids:
+                options.append((f"sub_work:{sw.id}", f"{sw.name} (sub work only)"))
+            for ssw in SubSubWork.objects.filter(sub_work=sw).order_by('order', 'name'):
+                if ssw.id not in existing_sub_sub_work_ids:
+                    options.append((f"sub_sub_work:{ssw.id}", ssw.name))
+            if options:
+                groups[key] = options
+    return list(groups.items())
+
+
+def _parse_work_item(work_item):
+    """Return (sub_work_id, sub_sub_work_id) from work_item value 'sub_work:5' or 'sub_sub_work:10'."""
+    if not work_item or ':' not in work_item:
+        return None, None
+    kind, pk = work_item.split(':', 1)
     try:
-        up = SubWorkUnitPrice.objects.get(
-            sub_sub_work=sub_sub_work,
-            city=building.city,
-        )
-        return up.unit_price
-    except SubWorkUnitPrice.DoesNotExist:
-        return None
+        pk = int(pk)
+    except ValueError:
+        return None, None
+    if kind == 'sub_work':
+        return pk, None
+    if kind == 'sub_sub_work':
+        return None, pk
+    return None, None
 
 
 @login_required
@@ -142,31 +189,47 @@ def valuation_add(request, building_id):
     """Add a valuation row. Loan officers enter only quantity; unit price comes from catalog. Engineers can override."""
     building = get_object_or_404(Building, pk=building_id)
     can_edit_unit_price = _user_can_edit_unit_price(request.user)
-    existing_ids = set(
-        BuildingValuation.objects.filter(building=building).values_list('sub_sub_work_id', flat=True)
+    existing_sub_work_ids = set(
+        BuildingValuation.objects.filter(building=building).exclude(sub_work__isnull=True).values_list('sub_work_id', flat=True)
     )
+    existing_sub_sub_work_ids = set(
+        BuildingValuation.objects.filter(building=building).exclude(sub_sub_work__isnull=True).values_list('sub_sub_work_id', flat=True)
+    )
+    work_choices = _build_work_choices(existing_sub_work_ids, existing_sub_sub_work_ids)
     if request.method == 'POST':
-        form = BuildingValuationForm(request.POST, can_edit_unit_price=can_edit_unit_price)
+        work_item = request.POST.get('work_item')
+        sub_work_id, sub_sub_work_id = _parse_work_item(work_item)
+        data = request.POST.copy()
+        data.setdefault('sub_work', sub_work_id or '')
+        data.setdefault('sub_sub_work', sub_sub_work_id or '')
+        form = BuildingValuationForm(data, can_edit_unit_price=can_edit_unit_price)
         if form.is_valid():
-            sub_sub_work = form.cleaned_data['sub_sub_work']
-            if sub_sub_work.id in existing_ids:
+            sub_work = form.cleaned_data.get('sub_work')
+            sub_sub_work = form.cleaned_data.get('sub_sub_work')
+            if sub_work and sub_work.id in existing_sub_work_ids:
                 messages.error(request, 'This item is already added for this building.')
-                return redirect('collateral:valuation_add', building_id=building_id)
-            unit_price = form.cleaned_data.get('unit_price') or _get_unit_price_for_building(building, sub_sub_work)
+                return render(request, 'collateral/valuation_form.html', {
+                    'building': building, 'form': form, 'work_choices': work_choices,
+                    'is_edit': False, 'can_edit_unit_price': can_edit_unit_price, 'selected_work_item': work_item,
+                })
+            if sub_sub_work and sub_sub_work.id in existing_sub_sub_work_ids:
+                messages.error(request, 'This item is already added for this building.')
+                return render(request, 'collateral/valuation_form.html', {
+                    'building': building, 'form': form, 'work_choices': work_choices,
+                    'is_edit': False, 'can_edit_unit_price': can_edit_unit_price, 'selected_work_item': work_item,
+                })
+            unit_price = form.cleaned_data.get('unit_price') or _get_unit_price_for_building(
+                building, sub_work=sub_work, sub_sub_work=sub_sub_work
+            )
             if unit_price is None and not can_edit_unit_price:
                 messages.error(
                     request,
                     'No unit price in catalog for this woreda and work item. '
                     'Set the building\'s city (woreda), or ask the engineering team to add the unit price.',
                 )
-                form.fields['sub_sub_work'].queryset = SubSubWork.objects.exclude(
-                    id__in=existing_ids
-                ).select_related('sub_work', 'sub_work__main_work').order_by('sub_work__main_work', 'sub_work', 'order', 'name')
                 return render(request, 'collateral/valuation_form.html', {
-                    'building': building,
-                    'form': form,
-                    'is_edit': False,
-                    'can_edit_unit_price': can_edit_unit_price,
+                    'building': building, 'form': form, 'work_choices': work_choices,
+                    'is_edit': False, 'can_edit_unit_price': can_edit_unit_price, 'selected_work_item': work_item,
                 })
             if unit_price is None:
                 unit_price = Decimal('0')
@@ -180,12 +243,12 @@ def valuation_add(request, building_id):
             return redirect('collateral:valuation_list', building_id=building_id)
     else:
         form = BuildingValuationForm(can_edit_unit_price=can_edit_unit_price)
-        form.fields['sub_sub_work'].queryset = SubSubWork.objects.exclude(
-            id__in=existing_ids
-        ).select_related('sub_work', 'sub_work__main_work').order_by('sub_work__main_work', 'sub_work', 'order', 'name')
+    form.fields.pop('sub_work', None)
+    form.fields.pop('sub_sub_work', None)
     return render(request, 'collateral/valuation_form.html', {
         'building': building,
         'form': form,
+        'work_choices': work_choices,
         'is_edit': False,
         'can_edit_unit_price': can_edit_unit_price,
     })
@@ -199,19 +262,26 @@ def valuation_edit(request, valuation_id):
     building = row.building
     can_edit_unit_price = _user_can_edit_unit_price(request.user)
     if request.method == 'POST':
-        form = BuildingValuationForm(request.POST, instance=row, can_edit_unit_price=can_edit_unit_price)
+        data = request.POST.copy()
+        data.setdefault('sub_work', row.sub_work_id or '')
+        data.setdefault('sub_sub_work', row.sub_sub_work_id or '')
+        form = BuildingValuationForm(data, instance=row, can_edit_unit_price=can_edit_unit_price)
         if form.is_valid():
             obj = form.save(commit=False)
             if not can_edit_unit_price:
-                catalog_price = _get_unit_price_for_building(building, row.sub_sub_work)
+                catalog_price = _get_unit_price_for_building(
+                    building, sub_work=row.sub_work, sub_sub_work=row.sub_sub_work
+                )
                 if catalog_price is not None:
                     obj.unit_price = catalog_price
-                # else keep existing unit_price
             obj.save()
             messages.success(request, 'Valuation row updated.')
             return redirect('collateral:valuation_list', building_id=building.id)
     else:
         form = BuildingValuationForm(instance=row, can_edit_unit_price=can_edit_unit_price)
+    # Hide work item fields on edit (user only changes quantity / unit price)
+    form.fields.pop('sub_work', None)
+    form.fields.pop('sub_sub_work', None)
     return render(request, 'collateral/valuation_form.html', {
         'building': building,
         'form': form,
@@ -260,7 +330,7 @@ def building_images(request, building_id):
 @user_passes_test(_can_access_collateral)
 def land_valuation(request, loan_request_id):
     """View/edit land valuation for a loan request."""
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, queue_approved=True)
+    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
     land, _ = LandValuation.objects.get_or_create(loan_request=loan_request)
     if request.method == 'POST':
         form = LandValuationForm(request.POST, instance=land)
@@ -283,7 +353,7 @@ def land_valuation(request, loan_request_id):
 @user_passes_test(_can_access_collateral)
 def other_collateral_list(request, loan_request_id):
     """List and add other collateral items (vehicle, machinery, etc.) for a loan."""
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, queue_approved=True)
+    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
     items = OtherCollateralItem.objects.filter(loan_request=loan_request).order_by('name')
     total_other = sum(item.estimated_value for item in items)
     if request.method == 'POST':
@@ -339,9 +409,9 @@ def other_collateral_delete(request, item_id):
 @user_passes_test(_can_access_collateral)
 def summary(request, loan_request_id):
     """Collateral summary: building totals + land + other collateral = total collateral value."""
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, queue_approved=True)
+    loan_request = get_object_or_404(_collateral_eligible_loans(), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).prefetch_related(
-        'buildingvaluation_set__sub_sub_work'
+        'buildingvaluation_set__sub_work', 'buildingvaluation_set__sub_sub_work'
     )
     building_totals = []
     for b in buildings:
@@ -375,23 +445,16 @@ def building_estimation_summary(request, building_id):
     building = get_object_or_404(Building, pk=building_id)
     rows = (
         BuildingValuation.objects.filter(building=building)
-        .select_related('sub_sub_work', 'sub_sub_work__sub_work', 'sub_sub_work__sub_work__main_work')
-        .order_by(
-            'sub_sub_work__sub_work__main_work__order',
-            'sub_sub_work__sub_work__main_work',
-            'sub_sub_work__sub_work__order',
-            'sub_sub_work__sub_work',
-            'sub_sub_work__order',
-            'sub_sub_work',
-        )
+        .select_related('sub_work', 'sub_work__main_work', 'sub_sub_work', 'sub_sub_work__sub_work', 'sub_sub_work__sub_work__main_work')
+        .order_by('sub_work__main_work__order', 'sub_work__order', 'sub_sub_work__order')
     )
     # Group by MainWork: list of (row_num, description, value), subtotal
     groups = OrderedDict()
     for r in rows:
-        mw = r.sub_sub_work.sub_work.main_work
+        mw = r.sub_work.main_work if r.sub_work_id else r.sub_sub_work.sub_work.main_work
         if mw not in groups:
             groups[mw] = {'main_work': mw, 'rows': [], 'subtotal': Decimal('0')}
-        desc = r.sub_sub_work.name  # or sub_work name for shorter label
+        desc = r.sub_work.name if r.sub_work_id else r.sub_sub_work.name
         groups[mw]['rows'].append((len(groups[mw]['rows']) + 1, desc, r.total))
         groups[mw]['subtotal'] += r.total
     section_list = list(groups.values())
@@ -589,11 +652,12 @@ def ajax_load_sub_sub_works(request):
 @login_required
 @user_passes_test(_can_manage_unit_prices)
 def unit_price_list(request):
-    """List unit prices per woreda (SubSubWork × City). No loan involved."""
+    """List unit prices per woreda (SubWork or SubSubWork × City). No loan involved."""
     prices = SubWorkUnitPrice.objects.select_related(
+        'sub_work', 'sub_work__main_work',
         'sub_sub_work', 'sub_sub_work__sub_work', 'sub_sub_work__sub_work__main_work',
         'city', 'city__zone', 'city__zone__region'
-    ).order_by('city__zone__region', 'city__zone', 'city', 'sub_sub_work__sub_work__main_work', 'sub_sub_work__sub_work', 'sub_sub_work')
+    ).order_by('city__zone__region', 'city__zone', 'city', 'sub_work', 'sub_sub_work')
     city_id = request.GET.get('city_id')
     if city_id:
         prices = prices.filter(city_id=city_id)
@@ -616,6 +680,7 @@ def unit_price_add(request):
     else:
         form = SubWorkUnitPriceForm()
         form.fields['city'].queryset = form.fields['city'].queryset.none()
+        form.fields['sub_work'].queryset = SubWork.objects.none()
         form.fields['sub_sub_work'].queryset = SubSubWork.objects.none()
     regions = Region.objects.all().order_by('name')
     main_works = MainWork.objects.all().order_by('order', 'name')
@@ -648,9 +713,14 @@ def unit_price_edit(request, price_id):
         form.fields['city'].queryset = form.fields['city'].queryset.filter(
             zone=price.city.zone
         ).order_by('name')
-        form.fields['sub_sub_work'].queryset = SubSubWork.objects.filter(
-            sub_work=price.sub_sub_work.sub_work
-        ).select_related('sub_work', 'sub_work__main_work').order_by('order', 'name')
+        if price.sub_sub_work_id:
+            form.fields['sub_work'].queryset = SubWork.objects.filter(pk=price.sub_sub_work.sub_work_id).order_by('order', 'name')
+            form.fields['sub_sub_work'].queryset = SubSubWork.objects.filter(
+                sub_work=price.sub_sub_work.sub_work
+            ).select_related('sub_work', 'sub_work__main_work').order_by('order', 'name')
+        else:
+            form.fields['sub_work'].queryset = SubWork.objects.filter(pk=price.sub_work_id).order_by('order', 'name')
+            form.fields['sub_sub_work'].queryset = SubSubWork.objects.none()
     regions = Region.objects.all().order_by('name')
     main_works = MainWork.objects.all().order_by('order', 'name')
     return render(request, 'collateral/unit_price_form.html', {

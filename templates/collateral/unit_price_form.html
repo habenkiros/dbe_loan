@@ -2,7 +2,7 @@
 {% block title %}{% if is_edit %}Edit unit price{% else %}Add unit price per woreda{% endif %}{% endblock %}
 {% block content %}
 <h2>{% if is_edit %}Edit unit price{% else %}Add unit price per woreda{% endif %}</h2>
-<p>Select Region → Zone → City (woreda), then Main work → Sub work → Sub-sub work, and enter unit price.</p>
+<p>Select Region → Zone → City (woreda), then Main work → Sub work. Optionally select Sub-sub work, or leave as “Use sub work only” for items without sub-sub work.</p>
 <p><a href="{% url 'collateral:unit_price_list' %}">← Back to unit prices</a></p>
 
 <form method="post" id="unit-price-form">
@@ -48,7 +48,7 @@
                 <select id="id_main_work" class="form-control" style="width: 250px;">
                     <option value="">—— Select Main work ——</option>
                     {% for mw in main_works %}
-                    <option value="{{ mw.id }}" {% if price and price.sub_sub_work.sub_work.main_work_id == mw.id %}selected{% endif %}>{{ mw.name }}</option>
+                    <option value="{{ mw.id }}" {% if price %}{% if price.sub_work_id and price.sub_work.main_work_id == mw.id %}selected{% endif %}{% if price.sub_sub_work_id and price.sub_sub_work.sub_work.main_work_id == mw.id %}selected{% endif %}{% endif %}>{{ mw.name }}</option>
                     {% endfor %}
                 </select>
             </td>
@@ -56,20 +56,25 @@
         <tr>
             <th><label for="id_sub_work">Sub work:</label></th>
             <td>
-                <select id="id_sub_work" class="form-control" style="width: 250px;">
+                <select name="sub_work" id="id_sub_work" class="form-control" style="width: 250px;">
                     <option value="">—— Select Sub work (choose main work first) ——</option>
                     {% if price %}
+                    {% if price.sub_work_id %}
+                    <option value="{{ price.sub_work_id }}" selected>{{ price.sub_work.name }}</option>
+                    {% else %}
                     <option value="{{ price.sub_sub_work.sub_work_id }}" selected>{{ price.sub_sub_work.sub_work.name }}</option>
                     {% endif %}
+                    {% endif %}
                 </select>
+                {% if form.sub_work.errors %}<div class="error">{{ form.sub_work.errors }}</div>{% endif %}
             </td>
         </tr>
         <tr>
-            <th><label for="id_sub_sub_work">Sub-sub work:</label></th>
+            <th><label for="id_sub_sub_work">Sub-sub work (optional):</label></th>
             <td>
-                <select name="sub_sub_work" id="id_sub_sub_work" class="form-control" style="width: 250px;" required>
-                    <option value="">—— Select Sub-sub work (choose sub work first) ——</option>
-                    {% if price %}
+                <select name="sub_sub_work" id="id_sub_sub_work" class="form-control" style="width: 250px;">
+                    <option value="">—— Use sub work only (no sub-sub) ——</option>
+                    {% if price and price.sub_sub_work_id %}
                     <option value="{{ price.sub_sub_work_id }}" selected>{{ price.sub_sub_work.name }}</option>
                     {% endif %}
                 </select>
@@ -101,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var currentZoneId = {% if price %}{{ price.city.zone_id }}{% else %}null{% endif %};
     var currentCityId = {% if price %}{{ price.city_id }}{% else %}null{% endif %};
-    var currentSubWorkId = {% if price %}{{ price.sub_sub_work.sub_work_id }}{% else %}null{% endif %};
-    var currentSubSubWorkId = {% if price %}{{ price.sub_sub_work_id }}{% else %}null{% endif %};
+    var currentSubWorkId = {% if price %}{% if price.sub_work_id %}{{ price.sub_work_id }}{% else %}{{ price.sub_sub_work.sub_work_id }}{% endif %}{% else %}null{% endif %};
+    var currentSubSubWorkId = {% if price %}{% if price.sub_sub_work_id %}{{ price.sub_sub_work_id }}{% else %}null{% endif %}{% else %}null{% endif %};
 
     function escapeHtml(s) {
         if (!s) return '';

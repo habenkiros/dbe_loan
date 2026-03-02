@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Loan Officer{% endblock %}
+
+{% block content %}
+<h1>Assign Loan Officer</h1>
+
+<p><strong>Loan request:</strong> {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}</p>
+<p>Assign a loan officer from this branch to perform loan analysis and collateral estimation.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        <tr>
+            <th><label for="id_assigned_loan_officer">Loan officer</label></th>
+            <td>{{ form.assigned_loan_officer }}</td>
+        </tr>
+    </table>
+    <button type="submit">Save</button>
+</form>
+
+<p><a href="{% url 'loan_request_detail' loan_request.id %}">Back to loan request</a></p>
+{% endblock %}

@@ -31,9 +31,9 @@
                 <td>{{ p.city.zone.region.name }}</td>
                 <td>{{ p.city.zone.name }}</td>
                 <td>{{ p.city.name }}</td>
-                <td>{{ p.sub_sub_work.sub_work.main_work.name }}</td>
-                <td>{{ p.sub_sub_work.sub_work.name }}</td>
-                <td>{{ p.sub_sub_work.name }}</td>
+                <td>{% if p.sub_work_id %}{{ p.sub_work.main_work.name }}{% else %}{{ p.sub_sub_work.sub_work.main_work.name }}{% endif %}</td>
+                <td>{% if p.sub_work_id %}{{ p.sub_work.name }}{% else %}{{ p.sub_sub_work.sub_work.name }}{% endif %}</td>
+                <td>{% if p.sub_sub_work_id %}{{ p.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
                 <td>{{ p.unit_price }}</td>
                 <td><a href="{% url 'collateral:unit_price_edit' p.id %}">Edit</a></td>
             </tr>

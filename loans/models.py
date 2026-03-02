@@ -114,6 +114,15 @@ class LoanRequest(models.Model):
         help_text="When True, loan is eligible for collateral valuation workflow.",
     )
     customer_history = models.CharField(null=True, blank=True, max_length=50, choices=[('new', 'New'), ('existing', 'Existing')])
+    assigned_loan_officer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_loan_requests',
+        limit_choices_to={'role': 'loan_officer'},
+        help_text='Loan officer assigned by branch manager for analysis and collateral estimation.',
+    )
 
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules
@@ -129,6 +138,7 @@ class LoanRequest(models.Model):
         # Always recalculate status from approvals
         if self.operation_manager_approval and self.finance_approval:
             self.status = 'Approved'
+            self.queue_approved = True  # Approved loans are eligible for collateral
         elif self.status != 'Rejected':  # don’t override rejection
             self.status = 'Pending'
         

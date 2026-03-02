@@ -43,6 +43,9 @@
                 <th>Applicant Name</th>
                 <th>Amount Requested</th>
                 <th>Status</th>
+                {% if user.role == 'branch_manager' or user.is_superuser %}
+                <th>Assigned to</th>
+                {% endif %}
                 <th>Date Requested</th>
                 <th>Date Reviewed</th>
                 <th>Actions</th>
@@ -55,6 +58,9 @@
                 <td>{{ loan_request.applicant_name }}</td>
                 <td>{{ loan_request.amount_requested }}</td>
                 <td>{{ loan_request.status }}</td>
+                {% if user.role == 'branch_manager' or user.is_superuser %}
+                <td>{% if loan_request.assigned_loan_officer %}{{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}{% else %}—{% endif %}</td>
+                {% endif %}
                 <td>{{ loan_request.date_requested }}</td>
                 <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                 
@@ -63,7 +69,9 @@
                         <button class="dropbtn">Actions ▾</button>
                         <div class="dropdown-content">
                             <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-blue">Details</a>
-                            <a href="" class="btn btn-green">Assign Officer</a>
+                            {% if user.role == 'branch_manager' or user.is_superuser %}
+                            <a href="{% url 'assign_loan_officer' loan_request.id %}" class="btn btn-green">Assign Officer</a>
+                            {% endif %}
                             {% if user.role == 'operation_manager' or user.role == 'finance_manager' %}
                                 <a href="{% url 'update_loan_request_status' loan_request.id %}" class="btn btn-orange">Update Status</a>
                                 <a href="{% url 'delete_loan_request' loan_request.id %}" class="btn btn-red">Delete</a>

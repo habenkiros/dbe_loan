@@ -27,9 +27,9 @@
         <tbody>
             {% for r in rows %}
             <tr>
-                <td>{{ r.sub_sub_work.sub_work.main_work.name }}</td>
-                <td>{{ r.sub_sub_work.sub_work.name }}</td>
-                <td>{{ r.sub_sub_work.name }}</td>
+                <td>{% if r.sub_work_id %}{{ r.sub_work.main_work.name }}{% else %}{{ r.sub_sub_work.sub_work.main_work.name }}{% endif %}</td>
+                <td>{% if r.sub_work_id %}{{ r.sub_work.name }}{% else %}{{ r.sub_sub_work.sub_work.name }}{% endif %}</td>
+                <td>{% if r.sub_sub_work_id %}{{ r.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
                 <td>{{ r.quantity }}</td>
                 <td>{{ r.unit_price }}</td>
                 <td>{{ r.total }}</td>

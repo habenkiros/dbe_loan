@@ -247,7 +247,9 @@
                     <button class="dropbtn">Loan requests ▾</button>
                     <div class="dropdown-content">
                         <a href="{% url 'view_loan_requests' %}">View loan requests</a>
+                        {% if not user.is_superuser %}
                         <a href="{% url 'create_loan_request' %}">Add loan request</a>
+                        {% endif %}
                     </div>
                 </div>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
@@ -271,6 +273,7 @@
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
             {% elif user.role == 'admin' or user.role == 'superadmin' %}
+                <a href="{% url 'view_loan_requests' %}">View loan requests</a>
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>

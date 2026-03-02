@@ -73,7 +73,6 @@ class LoanRequestForm(forms.ModelForm):
         fields = [
             'applicant_name',
             'phone_number',
-            'email',
             'category',
             'collateral',
             'amount_requested',
@@ -86,3 +85,22 @@ class LoanRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
+
+
+class AssignLoanOfficerForm(forms.Form):
+    """Branch manager assigns a loan officer to a loan request (analysis and collateral)."""
+    assigned_loan_officer = forms.ModelChoiceField(
+        queryset=CustomUser.objects.none(),
+        required=False,
+        empty_label='— Unassigned —',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    def __init__(self, *args, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if branch:
+            self.fields['assigned_loan_officer'].queryset = CustomUser.objects.filter(
+                role='loan_officer',
+                branch=branch,
+                is_active=True,
+            ).order_by('username')

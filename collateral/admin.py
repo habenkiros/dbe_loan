@@ -25,8 +25,12 @@ class SubSubWorkAdmin(admin.ModelAdmin):
 
 @admin.register(SubWorkUnitPrice)
 class SubWorkUnitPriceAdmin(admin.ModelAdmin):
-    list_display = ('sub_sub_work', 'city', 'unit_price', 'effective_from', 'effective_to')
-    list_filter = ('city', 'sub_sub_work__sub_work__main_work')
+    list_display = ('work_display', 'city', 'unit_price', 'effective_from', 'effective_to')
+    list_filter = ('city',)
+
+    def work_display(self, obj):
+        return obj.sub_sub_work if obj.sub_sub_work_id else obj.sub_work
+    work_display.short_description = 'Sub work / Sub-sub work'
 
 
 class BuildingValuationInline(admin.TabularInline):
@@ -48,8 +52,12 @@ class BuildingAdmin(admin.ModelAdmin):
 
 @admin.register(BuildingValuation)
 class BuildingValuationAdmin(admin.ModelAdmin):
-    list_display = ('building', 'sub_sub_work', 'quantity', 'unit_price', 'total')
+    list_display = ('building', 'work_display', 'quantity', 'unit_price', 'total')
     list_filter = ('building__loan_request',)
+
+    def work_display(self, obj):
+        return obj.sub_sub_work if obj.sub_sub_work_id else obj.sub_work
+    work_display.short_description = 'Sub work / Sub-sub work'
 
 
 @admin.register(BuildingImage)

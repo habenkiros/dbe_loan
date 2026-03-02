@@ -56,22 +56,36 @@ class SubSubWork(models.Model):
         return f"{self.sub_work} → {self.name}"
 
 
-# ---------- Unit price per woreda (City): per SubSubWork ----------
+# ---------- Unit price per woreda (City): per SubWork or SubSubWork ----------
 
 class SubWorkUnitPrice(models.Model):
-    """Unit price per SubSubWork per City (woreda). Set by engineering team."""
-    sub_sub_work = models.ForeignKey(SubSubWork, on_delete=models.CASCADE)
+    """Unit price per SubWork or SubSubWork per City (woreda). Set by engineering team. Exactly one of sub_work or sub_sub_work must be set."""
+    sub_work = models.ForeignKey(
+        SubWork, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Set when there is no sub-sub work; leave blank if sub_sub_work is set.",
+    )
+    sub_sub_work = models.ForeignKey(
+        SubSubWork, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Set for sub-sub work level; leave blank to use sub_work only.",
+    )
     city = models.ForeignKey('loans.City', on_delete=models.CASCADE)
     unit_price = models.DecimalField(max_digits=20, decimal_places=2)
     effective_from = models.DateField(null=True, blank=True)
     effective_to = models.DateField(null=True, blank=True)
 
     class Meta:
-        unique_together = [('sub_sub_work', 'city')]
-        verbose_name_plural = "SubSubWork unit prices"
+        unique_together = [('city', 'sub_work', 'sub_sub_work')]
+        verbose_name_plural = "SubWork / SubSubWork unit prices"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if bool(self.sub_work_id) == bool(self.sub_sub_work_id):
+            raise ValidationError("Set exactly one of Sub work or Sub-sub work.")
 
     def __str__(self):
-        return f"{self.sub_sub_work.name} @ {self.city.name}: {self.unit_price}"
+        if self.sub_sub_work_id:
+            return f"{self.sub_sub_work.name} @ {self.city.name}: {self.unit_price}"
+        return f"{self.sub_work} @ {self.city.name}: {self.unit_price}"
 
 
 # ---------- Building & valuation ----------
@@ -98,9 +112,16 @@ class Building(models.Model):
 
 
 class BuildingValuation(models.Model):
-    """One valuation row per SubSubWork per building. Quantity × Unit price = Total."""
+    """One valuation row per SubWork or SubSubWork per building. Quantity × Unit price = Total. Exactly one of sub_work or sub_sub_work must be set."""
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
-    sub_sub_work = models.ForeignKey(SubSubWork, on_delete=models.CASCADE)
+    sub_work = models.ForeignKey(
+        SubWork, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Set when there is no sub-sub work; leave blank if sub_sub_work is set.",
+    )
+    sub_sub_work = models.ForeignKey(
+        SubSubWork, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Set for sub-sub work level; leave blank to use sub_work only.",
+    )
     quantity = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal('0'))
     unit_price = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal('0'))
     # Audit: who entered quantity / unit price (optional until roles are defined)
@@ -116,7 +137,12 @@ class BuildingValuation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [('building', 'sub_sub_work')]
+        unique_together = [('building', 'sub_work', 'sub_sub_work')]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if bool(self.sub_work_id) == bool(self.sub_sub_work_id):
+            raise ValidationError("Set exactly one of Sub work or Sub-sub work.")
 
     @property
     def total(self):
@@ -127,7 +153,8 @@ class BuildingValuation(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.building.name}: {self.sub_sub_work} qty={self.quantity}"
+        item = self.sub_sub_work if self.sub_sub_work_id else self.sub_work
+        return f"{self.building.name}: {item} qty={self.quantity}"
 
 
 class BuildingImage(models.Model):

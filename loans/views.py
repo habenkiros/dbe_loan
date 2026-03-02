@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from .services import fetch_customer_by_number
 from .models import Region, Zone, City, District, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
 from .forms import (
-    CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm,
+    CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm,
     DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
     LoanCategoryForm, CollateralTypeForm,
 )
@@ -139,10 +139,36 @@ def update_finance_manager_approval(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer', 'superadmin', 'admin'])
 def loan_request_detail(request, loan_request_id):
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.user.role == 'loan_officer':
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    else:
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['branch_manager', 'admin', 'superadmin'])
+def assign_loan_officer(request, loan_request_id):
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
+        return redirect('view_loan_requests')
+    form = AssignLoanOfficerForm(branch=loan_request.branch)
+    if request.method == 'POST':
+        form = AssignLoanOfficerForm(request.POST, branch=loan_request.branch)
+        if form.is_valid():
+            loan_request.assigned_loan_officer_id = form.cleaned_data.get('assigned_loan_officer') or None
+            loan_request.save()
+            messages.success(request, 'Assigned loan officer updated.')
+            return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    else:
+        form = AssignLoanOfficerForm(
+            initial={'assigned_loan_officer': loan_request.assigned_loan_officer},
+            branch=loan_request.branch,
+        )
+    return render(request, 'loans/assign_loan_officer.html', {'loan_request': loan_request, 'form': form})
+
 
 @login_required
 @user_passes_test(lambda u: u.role == 'operation_manager')
@@ -162,10 +188,25 @@ def loan_request_detail_manager(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_manager.html', {'loan_request': loan_request})
 
+def _loan_requests_queryset_for_user(user):
+    """Base queryset: all for superadmin/admin/superuser; by branch for branch_manager; only assigned for loan_officer."""
+    if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
+        return LoanRequest.objects.all()
+    if getattr(user, 'role', None) == 'loan_officer':
+        return LoanRequest.objects.filter(assigned_loan_officer=user)
+    if getattr(user, 'role', None) == 'branch_manager':
+        if getattr(user, 'branch_id', None):
+            return LoanRequest.objects.filter(branch=user.branch)
+        if getattr(user, 'district_id', None):
+            return LoanRequest.objects.filter(branch__district=user.district)
+        return LoanRequest.objects.none()
+    return LoanRequest.objects.none()
+
+
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or u.role in ['branch_manager', 'loan_officer', 'superadmin', 'admin'])
 def view_loan_requests(request):
-    loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
+    loan_requests = _loan_requests_queryset_for_user(request.user)
     
     query = request.GET.get("q")
     # Filtering
@@ -204,9 +245,9 @@ def view_loan_requests(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'loan_officer'])
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or u.role in ['branch_manager', 'loan_officer', 'superadmin', 'admin'])
 def filter_loan_requests(request):
-    loan_requests = LoanRequest.objects.filter(branch=request.user.branch)
+    loan_requests = _loan_requests_queryset_for_user(request.user)
 
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -685,24 +726,39 @@ def home(request):
     total_loans = approved_loans = pending_loans = rejected_loans = 0
     branch_names, branch_counts = [], []
 
-    if user.role in ("branch_manager", "loan_officer"):
-        branch = getattr(user, 'branch', None)
-        loans = LoanRequest.objects.filter(branch=branch) if branch else LoanRequest.objects.none()
-
+    # Superadmin / admin / superuser see all loans on dashboard
+    if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
+        total_loans = LoanRequest.objects.count()
+        approved_loans = LoanRequest.objects.filter(status="Approved").count()
+        pending_loans = LoanRequest.objects.filter(status="Pending").count()
+        rejected_loans = LoanRequest.objects.filter(status="Rejected").count()
+        branch_data = LoanRequest.objects.values('branch__name').annotate(total=Count('id'))
+        branch_names = [b['branch__name'] for b in branch_data]
+        branch_counts = [b['total'] for b in branch_data]
+    elif user.role == "loan_officer":
+        loans = LoanRequest.objects.filter(assigned_loan_officer=user)
         total_loans = loans.count()
         approved_loans = loans.filter(status="Approved").count()
         pending_loans = loans.filter(status="Pending").count()
         rejected_loans = loans.filter(status="Rejected").count()
-
+        branch_names = ['Assigned to me']
+        branch_counts = [total_loans]
+    elif user.role == "branch_manager":
+        branch = getattr(user, 'branch', None)
+        loans = LoanRequest.objects.filter(branch=branch) if branch else LoanRequest.objects.none()
+        if not branch and getattr(user, 'district_id', None):
+            loans = LoanRequest.objects.filter(branch__district=user.district)
+        total_loans = loans.count()
+        approved_loans = loans.filter(status="Approved").count()
+        pending_loans = loans.filter(status="Pending").count()
+        rejected_loans = loans.filter(status="Rejected").count()
         branch_names = [branch.name] if branch else ['No branch assigned']
         branch_counts = [total_loans]
-
     else:
         total_loans = LoanRequest.objects.count()
         approved_loans = LoanRequest.objects.filter(status="Approved").count()
         pending_loans = LoanRequest.objects.filter(status="Pending").count()
         rejected_loans = LoanRequest.objects.filter(status="Rejected").count()
-
         branch_data = LoanRequest.objects.values('branch__name').annotate(total=Count('id'))
         branch_names = [b['branch__name'] for b in branch_data]
         branch_counts = [b['total'] for b in branch_data]

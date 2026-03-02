@@ -13,6 +13,7 @@ urlpatterns = [
     path('view_loan_requests_finance_manager/', views.view_loan_requests_finance_manager, name='view_loan_requests_finance_manager'),
     path('view_loan_requests_manager/', views.view_loan_requests_manager, name='view_loan_requests_manager'),
     path('loan_request_detail/<int:loan_request_id>/', views.loan_request_detail, name='loan_request_detail'),
+    path('assign_loan_officer/<int:loan_request_id>/', views.assign_loan_officer, name='assign_loan_officer'),
     path('loan_request_detail_operation_manager/<int:loan_request_id>/', views.loan_request_detail_operation_manager, name='loan_request_detail_operation_manager'),
     path('loan_request_detail_finance/<int:loan_request_id>/', views.loan_request_detail_finance, name='loan_request_detail_finance'),
     path('loan_request_detail_manager/<int:loan_request_id>/', views.loan_request_detail_manager, name='loan_request_detail_manager'),

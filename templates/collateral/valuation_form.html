@@ -8,6 +8,29 @@
 <form method="post">
     {% csrf_token %}
     <table>
+        {% if is_edit and row %}
+        <tr>
+            <th>Work item</th>
+            <td>{% if row.sub_work_id %}{{ row.sub_work.main_work.name }} → {{ row.sub_work.name }} (sub work only){% else %}{{ row.sub_sub_work.sub_work.main_work.name }} → {{ row.sub_sub_work.sub_work.name }} → {{ row.sub_sub_work.name }}{% endif %}</td>
+        </tr>
+        {% elif work_choices %}
+        <tr>
+            <th><label for="id_work_item">Work item</label></th>
+            <td>
+                <select name="work_item" id="id_work_item" class="form-control" required style="min-width: 280px;">
+                    <option value="">—— Select work item ——</option>
+                    {% for group_label, options in work_choices %}
+                    <optgroup label="{{ group_label }}">
+                        {% for value, label in options %}
+                        <option value="{{ value }}" {% if selected_work_item == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <p><em>Choose “(sub work only)” for items that have no sub-sub work.</em></p>
+            </td>
+        </tr>
+        {% endif %}
         {{ form.as_table }}
     </table>
     {% if not can_edit_unit_price %}

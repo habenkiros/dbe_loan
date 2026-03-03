@@ -87,16 +87,24 @@ class BuildingValuationForm(forms.ModelForm):
         self.fields['sub_sub_work'].queryset = self.fields['sub_sub_work'].queryset.select_related(
             'sub_work', 'sub_work__main_work'
         ).order_by('sub_work__main_work', 'sub_work', 'order', 'name')
+        self.fields['quantity'].required = False
+        self.fields['quantity'].widget.attrs['class'] = 'form-control'
         if not can_edit_unit_price:
             self.fields.pop('unit_price', None)
 
     def clean(self):
+        from decimal import Decimal
         data = super().clean()
         sub_work = data.get('sub_work')
         sub_sub_work = data.get('sub_sub_work')
+        if sub_work and sub_sub_work:
+            data['sub_work'] = None
+            return data
         if bool(sub_work) == bool(sub_sub_work):
             from django import forms as django_forms
-            raise django_forms.ValidationError('Set exactly one of Sub work or Sub-sub work.')
+            raise django_forms.ValidationError('Please select one work item from the list above.')
+        if data.get('quantity') in (None, ''):
+            data['quantity'] = Decimal('0')
         return data
 
     def save(self, commit=True):

@@ -6,6 +6,8 @@
 <p>
     <a href="{% url 'collateral:valuation_add' building.id %}">Add row</a>
     &nbsp;|&nbsp;
+    <a href="{% url 'collateral:valuation_add_multiple' building.id %}">Add multiple rows</a>
+    &nbsp;|&nbsp;
     <a href="{% url 'collateral:building_estimation_summary' building.id %}">መጠቃለሊ (estimation summary)</a>
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:building_list' building.loan_request.id %}">Back to buildings</a>

@@ -5,11 +5,123 @@
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
 <p><a href="{% url 'collateral:building_list' loan_request.id %}">← Back to buildings</a></p>
 
-<form method="post">
+{% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post" id="building-form">
     {% csrf_token %}
     <table>
-        {{ form.as_table }}
+        {% for field in form %}
+        {% if field.name != 'city' %}
+        <tr>
+            <th>{{ field.label_tag }}</th>
+            <td>{{ field }}{% if field.errors %} <span class="error">{{ field.errors }}</span>{% endif %}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        <tr>
+            <th><label for="id_region">Region</label></th>
+            <td>
+                <select id="id_region" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Region ——</option>
+                    {% for r in regions %}
+                    <option value="{{ r.id }}" {% if building and building.city and building.city.zone.region_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_zone">Zone</label></th>
+            <td>
+                <select id="id_zone" class="form-control" style="width: 250px;">
+                    <option value="">—— Select Zone ——</option>
+                    {% if building and building.city %}
+                    <option value="{{ building.city.zone_id }}" selected>{{ building.city.zone.name }}</option>
+                    {% endif %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="id_city">City / Woreda</label></th>
+            <td>
+                <select name="city" id="id_city" class="form-control" style="width: 250px;">
+                    <option value="">—— Select City (choose zone first) ——</option>
+                    {% if building and building.city %}
+                    <option value="{{ building.city_id }}" selected>{{ building.city.name }}</option>
+                    {% endif %}
+                </select>
+                {% if form.city.errors %}<span class="error">{{ form.city.errors }}</span>{% endif %}
+            </td>
+        </tr>
     </table>
     <button type="submit">{% if is_edit %}Save{% else %}Add building{% endif %}</button>
 </form>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var regionSelect = document.getElementById('id_region');
+    var zoneSelect = document.getElementById('id_zone');
+    var citySelect = document.getElementById('id_city');
+    var zonesUrl = "{{ zones_url|default:''|escapejs }}";
+    var citiesUrl = "{{ cities_url|default:''|escapejs }}";
+    var currentZoneId = {% if building and building.city %}{{ building.city.zone_id }}{% else %}null{% endif %};
+    var currentCityId = {% if building and building.city %}{{ building.city_id }}{% else %}null{% endif %};
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function loadZones(regionId) {
+        if (!zoneSelect || !citySelect) return;
+        zoneSelect.innerHTML = '<option value="">—— Select Zone ——</option>';
+        citySelect.innerHTML = '<option value="">—— Select City ——</option>';
+        if (!regionId) return;
+        var url = zonesUrl + (zonesUrl.indexOf('?') >= 0 ? '&' : '?') + 'region_id=' + encodeURIComponent(regionId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(zones) {
+                var seen = {};
+                var html = '<option value="">—— Select Zone ——</option>';
+                (zones || []).forEach(function(z) {
+                    var id = z.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentZoneId && parseInt(id, 10) === currentZoneId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(z.name) + '</option>';
+                });
+                zoneSelect.innerHTML = html;
+                if (currentZoneId) { loadCities(currentZoneId); currentZoneId = null; }
+            })
+            .catch(function() { zoneSelect.innerHTML = '<option value="">—— Error loading zones ——</option>'; });
+    }
+
+    function loadCities(zoneId) {
+        if (!citySelect) return;
+        citySelect.innerHTML = '<option value="">—— Select City ——</option>';
+        if (!zoneId) return;
+        var url = citiesUrl + (citiesUrl.indexOf('?') >= 0 ? '&' : '?') + 'zone_id=' + encodeURIComponent(zoneId);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(cities) {
+                var seen = {};
+                var html = '<option value="">—— Select City ——</option>';
+                (cities || []).forEach(function(c) {
+                    var id = c.id;
+                    if (seen[id]) return;
+                    seen[id] = true;
+                    var sel = (currentCityId && parseInt(id, 10) === currentCityId) ? ' selected' : '';
+                    html += '<option value="' + id + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
+                });
+                citySelect.innerHTML = html;
+                currentCityId = null;
+            })
+            .catch(function() { citySelect.innerHTML = '<option value="">—— Error loading cities ——</option>'; });
+    }
+
+    if (regionSelect) regionSelect.addEventListener('change', function() { loadZones(this.value); });
+    if (zoneSelect) zoneSelect.addEventListener('change', function() { loadCities(this.value); });
+    if (regionSelect && regionSelect.value) loadZones(regionSelect.value);
+});
+</script>
+{% endblock %}
 {% endblock %}

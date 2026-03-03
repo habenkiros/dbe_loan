@@ -24,6 +24,7 @@ urlpatterns = [
     path('building/<int:building_id>/edit/', views.building_edit, name='building_edit'),
     path('building/<int:building_id>/valuation/', views.valuation_list, name='valuation_list'),
     path('building/<int:building_id>/valuation/add/', views.valuation_add, name='valuation_add'),
+    path('building/<int:building_id>/valuation/add-multiple/', views.valuation_add_multiple, name='valuation_add_multiple'),
     path('valuation/<int:valuation_id>/edit/', views.valuation_edit, name='valuation_edit'),
     path('valuation/<int:valuation_id>/delete/', views.valuation_delete, name='valuation_delete'),
     path('building/<int:building_id>/images/', views.building_images, name='building_images'),
@@ -33,4 +34,5 @@ urlpatterns = [
     path('other-collateral/<int:item_id>/edit/', views.other_collateral_edit, name='other_collateral_edit'),
     path('other-collateral/<int:item_id>/delete/', views.other_collateral_delete, name='other_collateral_delete'),
     path('loan/<int:loan_request_id>/summary/', views.summary, name='summary'),
+    path('loan/<int:loan_request_id>/collateral-submit/', views.collateral_submit, name='collateral_submit'),
 ]

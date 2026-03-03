@@ -5,10 +5,14 @@
 <p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
 <p>
     <a href="{% url 'collateral:building_add' loan_request.id %}">Add building</a>
+    {% if "land" in collateral_type_lower %}
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    {% endif %}
+    {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery)</a>
+    {% endif %}
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
     &nbsp;|&nbsp;

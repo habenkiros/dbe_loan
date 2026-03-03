@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Add multiple valuation rows – {{ building.name }}{% endblock %}
+{% block content %}
+<h2>Add multiple valuation rows</h2>
+<p>Building: <strong>{{ building.name }}</strong> ({{ building.loan_request.loan_request_id }})</p>
+<p><a href="{% url 'collateral:valuation_list' building.id %}">← Back to valuation</a></p>
+{% if not building_has_city %}
+<p class="notice">Set the building's <strong>city (woreda)</strong> first. Only sub works / sub-sub works that have a unit price for that woreda are shown. <a href="{% url 'collateral:building_edit' building.id %}">Edit building</a> to set Region → Zone → City.</p>
+{% else %}
+<p>Only sub works / sub-sub works with a <strong>unit price for this building's woreda ({{ building.city.name }})</strong> are listed. Enter quantity for each; leave blank to skip. One valuation row per item with quantity &gt; 0.</p>
+{% if can_edit_unit_price %}
+<p><em>You can optionally set unit price per row; otherwise catalog unit price for this woreda is used.</em></p>
+{% else %}
+<p><em>Unit price is taken from the catalog for this woreda.</em></p>
+{% endif %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Work item</th>
+                    <th>Quantity</th>
+                    {% if can_edit_unit_price %}<th>Unit price (optional)</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, label in work_items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ label }}</td>
+                    <td><input type="text" name="quantity_{{ forloop.counter0 }}" value="" placeholder="0" style="width: 6em;" inputmode="decimal"></td>
+                    {% if can_edit_unit_price %}
+                    <td><input type="text" name="unit_price_{{ forloop.counter0 }}" value="" placeholder="catalog" style="width: 8em;" inputmode="decimal"></td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">{% if not building_has_city %}Set the building's city (woreda) first.{% else %}No work items left to add for this woreda, or all are already on this building. Add unit prices in the catalog for this woreda to see more items.{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if work_items %}
+    <p><button type="submit">Add rows</button></p>
+    {% endif %}
+</form>
+{% endblock %}

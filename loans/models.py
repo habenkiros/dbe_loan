@@ -123,6 +123,19 @@ class LoanRequest(models.Model):
         limit_choices_to={'role': 'loan_officer'},
         help_text='Loan officer assigned by branch manager for analysis and collateral estimation.',
     )
+    collateral_submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the loan officer submitted the collateral estimation (summary). All building valuations, land, other collateral are saved when submitted.',
+    )
+    collateral_submitted_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collateral_submissions',
+        help_text='User (e.g. loan officer) who submitted the collateral estimation.',
+    )
 
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules

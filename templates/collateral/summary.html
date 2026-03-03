@@ -3,16 +3,24 @@
 {% block content %}
 <h2>Collateral summary</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
+<p><em>Summary</em> shows the total collateral value for this loan. <em>መጠቃለሊ (Estimation summary)</em> is the detailed work breakdown for a single building (from the link next to each building below).</p>
 <p>
+    {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
     <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
     &nbsp;|&nbsp;
+    {% endif %}
+    {% if "land" in collateral_type_lower %}
     <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
     &nbsp;|&nbsp;
+    {% endif %}
+    {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
     <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery, etc.)</a>
     &nbsp;|&nbsp;
+    {% endif %}
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
 
+{% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
 <div class="table-container">
     <table>
         <thead>
@@ -24,7 +32,7 @@
         <tbody>
             {% for bt in building_totals %}
             <tr>
-                <td>{{ bt.building.name }} &nbsp; <a href="{% url 'collateral:building_estimation_summary' bt.building.id %}">መጠቃለሊ</a></td>
+                <td>{{ bt.building.name }} &nbsp; <a href="{% url 'collateral:building_estimation_summary' bt.building.id %}">መጠቃለሊ (estimation summary)</a></td>
                 <td>{{ bt.total }}</td>
             </tr>
             {% empty %}
@@ -35,10 +43,14 @@
         </tbody>
     </table>
 </div>
-
 <p><strong>Total (buildings): {{ total_buildings }}</strong></p>
-<p><strong>Land value: {{ land_value }}</strong></p>
+{% endif %}
 
+{% if "land" in collateral_type_lower %}
+<p><strong>Land value: {{ land_value }}</strong></p>
+{% endif %}
+
+{% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
 {% if other_items %}
 <div class="table-container">
     <table>
@@ -60,6 +72,19 @@
 </div>
 {% endif %}
 <p><strong>Total (other collateral): {{ total_other }}</strong></p>
+{% endif %}
 
 <p><strong>Grand total (collateral): {{ grand_total }}</strong></p>
+
+<p>
+    {% if loan_request.collateral_submitted_at %}
+    <strong>Submitted</strong> on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}.
+    {% else %}
+    All collateral data (buildings, valuations, land, other) is saved in the system as you add or edit. When you are done, submit the collateral estimation:
+    <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit">Submit collateral</button>
+    </form>
+    {% endif %}
+</p>
 {% endblock %}

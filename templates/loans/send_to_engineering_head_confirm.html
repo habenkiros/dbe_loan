@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Send to engineering head{% endblock %}
+
+{% block content %}
+<h1>Send to engineering head</h1>
+
+<p><strong>Loan request:</strong> {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}</p>
+<p>Send this approved loan to the engineering head so they can assign an engineer for collateral estimation.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Send to engineering head</button>
+</form>
+
+<p><a href="{% url 'loan_request_detail' loan_request.id %}">Cancel</a></p>
+{% endblock %}

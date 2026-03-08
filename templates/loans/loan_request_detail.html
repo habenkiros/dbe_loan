@@ -33,7 +33,7 @@
     </tr>
     <tr>
         <th>Amount Requested</th>
-        <td>{{ loan_request.amount_requested }}</td>
+        <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
     </tr>
     <tr>
         <th>Reason</th>
@@ -77,10 +77,53 @@
     </tr>
 </table>
 
+<h3>Application documents</h3>
+{% if document_types %}
+<p>Required document types: {% for dt in document_types %}{{ dt.name }}{% if dt.is_required %} (required){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+{% if application_documents %}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr><th>Document type</th><th>File</th><th>Uploaded</th></tr>
+        </thead>
+        <tbody>
+            {% for doc in application_documents %}
+            <tr>
+                <td>{{ doc.document_type.name }}</td>
+                <td><a href="{{ doc.file.url }}" target="_blank" rel="noopener">Download</a></td>
+                <td>{{ doc.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No documents uploaded yet.</p>
+{% endif %}
+{% if user.role == 'branch_manager' or user.role == 'admin' or user.is_superuser %}
+<p><a href="{% url 'upload_loan_request_documents' loan_request.id %}">Upload / manage application documents</a></p>
+{% endif %}
+{% else %}
+<p>No document types configured. Add them in <a href="{% url 'manage_loan_application_document_types' %}">Settings → Application document types</a>.</p>
+{% endif %}
+
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>
 {% if user.role == 'branch_manager' or user.is_superuser %}
 {% if loan_request.status|default:''|lower == 'approved' %}
+{% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
+ {% if not loan_request.assigned_loan_officer %}
  | <a href="{% url 'assign_loan_officer' loan_request.id %}">Assign loan officer</a>
+ {% else %}
+ | Assigned: {{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}
+ {% endif %}
+{% endif %}
+{% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
+ {% if not loan_request.sent_to_engineering_at %}
+ | <a href="{% url 'send_to_engineering_head' loan_request.id %}">Send to engineering head</a>
+ {% else %}
+ | Sent to engineering on {{ loan_request.sent_to_engineering_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.assigned_engineer %} — Assigned: {{ loan_request.assigned_engineer.get_full_name|default:loan_request.assigned_engineer.username }}{% endif %}
+ {% endif %}
+{% endif %}
 {% endif %}
 {% endif %}
 

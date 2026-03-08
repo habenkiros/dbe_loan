@@ -32,13 +32,13 @@
             <tr>
                 <td>{{ num }}</td>
                 <td>{{ desc }}</td>
-                <td>{{ val }}</td>
+                <td>{{ val|floatformat:2 }}</td>
             </tr>
             {% endfor %}
             <tr>
                 <td></td>
                 <td>{% if section_list|length == 2 %}{% if forloop.first %}ጠቅላላ ድምር "ሀ"{% else %}ጠቅላላ ድምር "ለ"{% endif %}{% else %}ጠቅላላ ድምር ({{ section.main_work.name }}){% endif %}</td>
-                <td><strong>{{ section.subtotal }}</strong></td>
+                <td><strong>{{ section.subtotal|floatformat:2 }}</strong></td>
             </tr>
             {% endfor %}
             <tr>
@@ -50,13 +50,13 @@
             <tr>
                 <td></td>
                 <td>ጠቅላላ ድምር "ሀ + ለ"</td>
-                <td><strong>{{ grand_total }}</strong></td>
+                <td><strong>{{ grand_total|floatformat:2 }}</strong></td>
             </tr>
             {% else %}
             <tr>
                 <td></td>
                 <td>ጠቅላላ ድምር</td>
-                <td><strong>{{ grand_total }}</strong></td>
+                <td><strong>{{ grand_total|floatformat:2 }}</strong></td>
             </tr>
             {% endif %}
         </tbody>

@@ -34,7 +34,7 @@
             <tr>
                 <td>{{ loan_request.loan_request_id }}</td>
                 <td>{{ loan_request.applicant_name }}</td>
-                <td>{{ loan_request.amount_requested }}</td>
+                <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
                 <td>{{ loan_request.status }}</td>
                 <td>{{ loan_request.date_requested }}</td>
                 <td>{{ loan_request.date_reviewed }}</td>

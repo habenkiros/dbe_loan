@@ -62,7 +62,7 @@
     <p><em>You enter only quantity. Unit price is taken from the catalog (building's woreda); total is calculated automatically.</em></p>
     {% endif %}
     {% if is_edit and row and not can_edit_unit_price %}
-    <p>Current unit price (from catalog): <strong>{{ row.unit_price }}</strong> &nbsp; Total: <strong>{{ row.total }}</strong></p>
+    <p>Current unit price (from catalog): <strong>{{ row.unit_price|floatformat:2 }}</strong> &nbsp; Total: <strong>{{ row.total|floatformat:2 }}</strong></p>
     {% endif %}
     {% if is_edit or work_choices %}
     <button type="submit">{% if is_edit %}Save{% else %}Add row{% endif %}</button>

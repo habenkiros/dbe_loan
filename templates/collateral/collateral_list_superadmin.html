@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Collateral – List (Superadmin){% endblock %}
+{% block content %}
+<h2>Collateral – List</h2>
+<p>All queue-approved or Approved loan requests. Use this list to open Buildings, Land, Other collateral, or Summary for any loan.</p>
+
+<form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
+    <label for="id_q">Search:</label>
+    <input type="text" id="id_q" name="q" placeholder="ID, name, phone" value="{{ query }}" style="width: 200px;">
+    <label for="id_status">Status:</label>
+    <select id="id_status" name="status" style="width: 120px;">
+        <option value="">All</option>
+        <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
+        <option value="Pending" {% if selected_status == "Pending" %}selected{% endif %}>Pending</option>
+    </select>
+    <button type="submit">Filter</button>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Loan ID</th>
+                <th>Applicant</th>
+                <th>Collateral type</th>
+                <th>Amount</th>
+                <th>Branch</th>
+                <th>Status</th>
+                <th>Assigned to</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lr in loan_requests %}
+            <tr>
+                <td>{{ lr.loan_request_id }}</td>
+                <td>{{ lr.applicant_name }}</td>
+                <td>{{ lr.collateral.name }}</td>
+                <td>{{ lr.amount_requested|floatformat:2 }}</td>
+                <td>{{ lr.branch.name }}</td>
+                <td>{{ lr.status|default:"—" }}</td>
+                <td>
+                    {% if lr.assigned_loan_officer %}
+                        {{ lr.assigned_loan_officer.get_full_name|default:lr.assigned_loan_officer.username }} (LO)
+                    {% elif lr.assigned_engineer %}
+                        {{ lr.assigned_engineer.get_full_name|default:lr.assigned_engineer.username }} (Eng)
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{% if lr.collateral_submitted_at %}✓ {{ lr.collateral_submitted_at|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                <td>
+                    {% with ct=lr.collateral.name|lower %}
+                    {% if "building" in ct or "house" in ct or "construction" in ct %}
+                    <a href="{% url 'collateral:building_list' lr.id %}">Buildings</a>
+                    &nbsp;|&nbsp;
+                    {% elif "land" in ct %}
+                    <a href="{% url 'collateral:land_valuation' lr.id %}">Land</a>
+                    &nbsp;|&nbsp;
+                    {% elif "vehicle" in ct or "machinery" in ct or "equipment" in ct or "other" in ct %}
+                    <a href="{% url 'collateral:other_collateral_list' lr.id %}">Other</a>
+                    &nbsp;|&nbsp;
+                    {% endif %}
+                    <a href="{% url 'collateral:summary' lr.id %}">Summary</a>
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'loan_request_detail' lr.id %}">Detail</a>
+                    {% endwith %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9">No loan requests found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination" style="margin-top: 1em;">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">Previous</a>
+        {% endif %}
+        <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">Last</a>
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+
+<p><a href="{% url 'collateral:dashboard' %}">Collateral dashboard</a> | <a href="{% url 'view_loan_requests' %}">View loan requests</a></p>
+{% endblock %}

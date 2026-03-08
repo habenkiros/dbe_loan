@@ -1,7 +1,19 @@
 # loans/admin.py
 
 from django.contrib import admin
-from .models import Zone, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser
+from django.shortcuts import redirect
+from django.urls import reverse
+from .models import (
+    Zone, Branch, LoanCategory, CollateralType,
+    LoanApplicationDocumentType, LoanRequestDocument,
+    LoanRequest, CustomUser, CollateralEstimationConfig,
+)
+
+
+class LoanRequestDocumentInline(admin.TabularInline):
+    model = LoanRequestDocument
+    extra = 0
+    readonly_fields = ('uploaded_at',)
 
 
 @admin.register(LoanRequest)
@@ -14,6 +26,7 @@ class LoanRequestAdmin(admin.ModelAdmin):
     search_fields = ('loan_request_id', 'applicant_name', 'phone_number')
     readonly_fields = ('loan_request_id',)
     list_per_page = 20
+    inlines = [LoanRequestDocumentInline]
 
     def has_add_permission(self, request):
         """Loan requests are created from the main app, not from admin."""
@@ -24,4 +37,33 @@ admin.site.register(Zone)
 admin.site.register(Branch)
 admin.site.register(LoanCategory)
 admin.site.register(CollateralType)
+
+
+@admin.register(LoanApplicationDocumentType)
+class LoanApplicationDocumentTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'order', 'is_required')
+    list_editable = ('order', 'is_required')
+    ordering = ['order', 'name']
+
+
+admin.site.register(LoanRequestDocument)
 admin.site.register(CustomUser)
+
+
+@admin.register(CollateralEstimationConfig)
+class CollateralEstimationConfigAdmin(admin.ModelAdmin):
+    """Singleton: one row. Who does collateral estimation – loan officer or engineering team."""
+    list_display = ('mode',)
+    fields = ('mode',)
+
+    def has_add_permission(self, request):
+        return not CollateralEstimationConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        obj = CollateralEstimationConfig.objects.first()
+        if obj:
+            return redirect(reverse('admin:loans_collateralestimationconfig_change', args=[obj.pk]))
+        return super().changelist_view(request, extra_context)

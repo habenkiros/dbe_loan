@@ -2,7 +2,10 @@
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser, LoanRequest, District, Branch, Region, Zone, City, LoanCategory, CollateralType
+from .models import (
+    CustomUser, LoanRequest, District, Branch, Region, Zone, City,
+    LoanCategory, CollateralType, LoanApplicationDocumentType, CollateralEstimationConfig,
+)
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
@@ -67,6 +70,28 @@ class CollateralTypeForm(forms.ModelForm):
         model = CollateralType
         fields = ['name']
 
+
+class LoanApplicationDocumentTypeForm(forms.ModelForm):
+    """Superadmin: add/edit document types required for loan application."""
+    class Meta:
+        model = LoanApplicationDocumentType
+        fields = ['name', 'order', 'is_required']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'is_required': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class CollateralEstimationConfigForm(forms.ModelForm):
+    """Superadmin: who does collateral estimation – loan officer or engineering team."""
+    class Meta:
+        model = CollateralEstimationConfig
+        fields = ['mode']
+        widgets = {
+            'mode': forms.Select(attrs={'class': 'form-control'}),
+        }
+
 class LoanRequestForm(forms.ModelForm):
     class Meta:
         model = LoanRequest
@@ -104,3 +129,19 @@ class AssignLoanOfficerForm(forms.Form):
                 branch=branch,
                 is_active=True,
             ).order_by('username')
+
+
+class AssignEngineerForm(forms.Form):
+    """Engineering head assigns an engineer to a loan sent for collateral estimation."""
+    assigned_engineer = forms.ModelChoiceField(
+        queryset=CustomUser.objects.none(),
+        required=False,
+        empty_label='— Unassigned —',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['assigned_engineer'].queryset = CustomUser.objects.filter(
+            role='engineer', is_active=True
+        ).order_by('username')

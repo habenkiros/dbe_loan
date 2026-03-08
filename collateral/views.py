@@ -6,9 +6,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
 from django.utils import timezone
 from loans.models import LoanRequest, Region
+from loans.collateral_config import get_collateral_estimation_mode, allows_engineering_team
 from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
     Building, BuildingValuation, BuildingImage, LandValuation,
@@ -32,16 +34,30 @@ def _can_access_collateral(user):
 
 
 def _collateral_eligible_loans(user=None):
-    """Loan requests eligible for collateral: queue_approved or status=Approved. Branch managers see only their branch; loan officers only loans assigned to them."""
+    """Loan requests eligible for collateral: queue_approved or status=Approved. By role and config (loan_officer / engineering_team / both)."""
     qs = LoanRequest.objects.filter(
         Q(queue_approved=True) | Q(status__iexact='Approved')
     )
     if user:
         role = getattr(user, 'role', None)
+        mode = get_collateral_estimation_mode()
         if role == 'branch_manager' and getattr(user, 'branch_id', None):
             qs = qs.filter(branch=user.branch)
         elif role == 'loan_officer':
-            qs = qs.filter(assigned_loan_officer=user)
+            if mode in ('loan_officer', 'both'):
+                qs = qs.filter(assigned_loan_officer=user)
+            else:
+                qs = qs.none()
+        elif role == 'engineer':
+            if mode in ('engineering_team', 'both'):
+                qs = qs.filter(assigned_engineer=user)
+            else:
+                qs = qs.none()
+        elif role == 'engineering_head':
+            if mode in ('engineering_team', 'both'):
+                qs = qs.filter(sent_to_engineering_at__isnull=False)
+            else:
+                qs = qs.none()
     return qs
 
 
@@ -49,6 +65,8 @@ def _collateral_eligible_loans(user=None):
 @user_passes_test(_can_access_collateral)
 def dashboard(request):
     """List loan requests eligible for collateral (queue_approved or Approved); link to their collateral. Branch managers see only their branch."""
+    if getattr(request.user, 'role', None) == 'engineering_head' and allows_engineering_team():
+        return redirect(reverse('loans_sent_for_collateral'))
     loan_requests = _collateral_eligible_loans(request.user).select_related(
         'branch', 'district', 'collateral', 'collateral_submitted_by'
     ).order_by('-date_requested')
@@ -59,9 +77,42 @@ def dashboard(request):
             Q(applicant_name__icontains=q) |
             Q(phone_number__icontains=q)
         )
+    is_engineer = getattr(request.user, 'role', None) == 'engineer'
     return render(request, 'collateral/dashboard.html', {
         'loan_requests': loan_requests,
         'query': q or '',
+        'is_engineer': is_engineer,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: getattr(u, 'role', None) == 'superadmin')
+def collateral_list_superadmin(request):
+    """Superadmin only: list all collateral-eligible loans (like other list pages) with search, filters, pagination."""
+    qs = LoanRequest.objects.filter(
+        Q(queue_approved=True) | Q(status__iexact='Approved')
+    ).select_related(
+        'branch', 'collateral', 'collateral_submitted_by',
+        'assigned_loan_officer', 'assigned_engineer',
+    ).order_by('-date_requested')
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(
+            Q(loan_request_id__icontains=q) |
+            Q(applicant_name__icontains=q) |
+            Q(phone_number__icontains=q)
+        )
+    status_filter = request.GET.get('status')
+    if status_filter:
+        qs = qs.filter(status__iexact=status_filter)
+    paginator = Paginator(qs, 15)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'collateral/collateral_list_superadmin.html', {
+        'page_obj': page_obj,
+        'loan_requests': page_obj,
+        'query': q or '',
+        'selected_status': status_filter or '',
     })
 
 
@@ -341,39 +392,10 @@ def valuation_add(request, building_id):
 @login_required
 @user_passes_test(_can_access_collateral)
 def valuation_edit(request, valuation_id):
-    """Edit quantity (and unit price only for engineers). Loan officers: quantity only; unit price from catalog."""
+    """Editing estimation results is disabled."""
     row = get_object_or_404(BuildingValuation, pk=valuation_id)
-    building = row.building
-    can_edit_unit_price = _user_can_edit_unit_price(request.user)
-    if request.method == 'POST':
-        data = request.POST.copy()
-        data['sub_work'] = str(row.sub_work_id) if row.sub_work_id else ''
-        data['sub_sub_work'] = str(row.sub_sub_work_id) if row.sub_sub_work_id else ''
-        form = BuildingValuationForm(data, instance=row, can_edit_unit_price=can_edit_unit_price)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            if not can_edit_unit_price:
-                catalog_price = _get_unit_price_for_building(
-                    building, sub_work=row.sub_work, sub_sub_work=row.sub_sub_work
-                )
-                if catalog_price is not None:
-                    obj.unit_price = catalog_price
-            obj.save()
-            messages.success(request, 'Valuation row updated.')
-            return redirect('collateral:valuation_list', building_id=building.id)
-    else:
-        form = BuildingValuationForm(instance=row, can_edit_unit_price=can_edit_unit_price)
-    # Hide work item fields on edit (user only changes quantity / unit price)
-    form.fields.pop('sub_work', None)
-    form.fields.pop('sub_sub_work', None)
-    return render(request, 'collateral/valuation_form.html', {
-        'building': building,
-        'form': form,
-        'row': row,
-        'is_edit': True,
-        'can_edit_unit_price': can_edit_unit_price,
-        'building_has_city': bool(building.city_id),
-    })
+    messages.info(request, 'Editing estimation results is disabled.')
+    return redirect('collateral:valuation_list', building_id=row.building_id)
 
 
 @login_required
@@ -460,12 +482,10 @@ def valuation_add_multiple(request, building_id):
 @login_required
 @user_passes_test(_can_access_collateral)
 def valuation_delete(request, valuation_id):
-    """Delete a valuation row."""
+    """Deleting estimation results is disabled."""
     row = get_object_or_404(BuildingValuation, pk=valuation_id)
-    building_id = row.building_id
-    row.delete()
-    messages.success(request, 'Valuation row removed.')
-    return redirect('collateral:valuation_list', building_id=building_id)
+    messages.info(request, 'Editing and deleting estimation results is disabled.')
+    return redirect('collateral:valuation_list', building_id=row.building_id)
 
 
 @login_required
@@ -485,10 +505,14 @@ def building_images(request, building_id):
             return redirect('collateral:building_images', building_id=building_id)
     else:
         form = BuildingImageForm()
+    image_count = images.count()
+    min_images_required = 5
     return render(request, 'collateral/building_images.html', {
         'building': building,
         'images': images,
         'form': form,
+        'image_count': image_count,
+        'min_images_required': min_images_required,
     })
 
 
@@ -605,6 +629,16 @@ def summary(request, loan_request_id):
         grand_total = total_other
     else:
         grand_total = total_buildings + land_value + total_other
+    # For building collateral: require at least 5 images per building before submit
+    MIN_IMAGES_PER_BUILDING = 5
+    buildings_below_image_min = []
+    if 'building' in ct or 'house' in ct or 'construction' in ct:
+        buildings_below_image_min = list(
+            Building.objects.filter(loan_request=loan_request)
+            .annotate(image_count=Count('buildingimage'))
+            .filter(image_count__lt=MIN_IMAGES_PER_BUILDING)
+        )
+    can_submit_collateral = len(buildings_below_image_min) == 0
     return render(request, 'collateral/summary.html', {
         'loan_request': loan_request,
         'collateral_type_lower': ct,
@@ -614,16 +648,36 @@ def summary(request, loan_request_id):
         'total_other': total_other,
         'total_buildings': total_buildings,
         'grand_total': grand_total,
+        'buildings_below_image_min': buildings_below_image_min,
+        'min_images_per_building': MIN_IMAGES_PER_BUILDING,
+        'can_submit_collateral': can_submit_collateral,
     })
 
 
 @login_required
 @user_passes_test(_can_access_collateral)
 def collateral_submit(request, loan_request_id):
-    """Submit collateral estimation for this loan. Saves the fact that all collateral work (buildings, valuations, land, other) is submitted."""
+    """Submit collateral estimation for this loan. Requires at least one image per building (for building collateral)."""
     if request.method != 'POST':
         return redirect('collateral:summary', loan_request_id=loan_request_id)
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
+    ct = (loan_request.collateral.name or '').lower()
+    MIN_IMAGES_PER_BUILDING = 5
+    # For building-type collateral: require at least 5 images per building
+    if 'building' in ct or 'house' in ct or 'construction' in ct:
+        buildings_below_min = list(
+            Building.objects.filter(loan_request=loan_request)
+            .annotate(image_count=Count('buildingimage'))
+            .filter(image_count__lt=MIN_IMAGES_PER_BUILDING)
+        )
+        if buildings_below_min:
+            names = ', '.join(b.name for b in buildings_below_min)
+            messages.error(
+                request,
+                'At least %d images are required for each building before submitting. '
+                'Add more images for: %s.' % (MIN_IMAGES_PER_BUILDING, names),
+            )
+            return redirect('collateral:summary', loan_request_id=loan_request_id)
     loan_request.collateral_submitted_at = timezone.now()
     loan_request.collateral_submitted_by = request.user
     loan_request.save(update_fields=['collateral_submitted_at', 'collateral_submitted_by'])

@@ -268,15 +268,24 @@
                 <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
-            {% elif user.role == 'engineer' or user.role == 'engineering_head' or user.role == 'Engineering Head' %}
+            {% elif user.role == 'engineering_head' or user.role == 'Engineering Head' %}
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
-                <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+                <a href="{% url 'loans_sent_for_collateral' %}">Loans sent for collateral</a>
+            {% elif user.role == 'engineer' %}
+                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
+                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
+                <a href="{% url 'collateral:dashboard' %}">Collateral (loans assigned to you)</a>
             {% elif user.role == 'admin' or user.role == 'superadmin' %}
-                <a href="{% url 'view_loan_requests' %}">View loan requests</a>
+                <a href="{% url 'view_loan_requests' %}">loan requests</a>
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
+                {% if user.role == 'superadmin' %}
+                <a href="{% url 'collateral:collateral_list_superadmin' %}">Collateral</a>
+                <a href="{% url 'collateral_estimation_config' %}">Estimation config</a>
+                {% else %}
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
+                {% endif %}
             {% endif %}
 
             {% if user.is_authenticated and user.is_superuser %}
@@ -296,6 +305,7 @@
                     <div class="dropdown-content">
                         <a href="{% url 'manage_loan_categories' %}">Loan categories</a>
                         <a href="{% url 'manage_collateral_types' %}">Collateral types</a>
+                        <a href="{% url 'manage_loan_application_document_types' %}">Application document types</a>
                     </div>
                 </div>
             {% endif %}

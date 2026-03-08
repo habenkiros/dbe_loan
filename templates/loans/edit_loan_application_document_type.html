@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Edit document type – {{ doc_type.name }}{% endblock %}
+
+{% block content %}
+<h1>Edit document type</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save changes</button>
+</form>
+<p><a href="{% url 'manage_loan_application_document_types' %}">Back to document types</a></p>
+{% endblock %}

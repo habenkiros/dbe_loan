@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Collateral estimation config{% endblock %}
+
+{% block content %}
+<h1>Collateral estimation config</h1>
+<p>Choose who performs collateral estimation for approved loans. Only <strong>Super Administrator</strong> can change this.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <table>
+        <tr>
+            <th><label for="id_mode">Who performs collateral estimation</label></th>
+            <td>{{ form.mode }}{% if form.mode.errors %} <span class="error">{{ form.mode.errors }}</span>{% endif %}</td>
+        </tr>
+    </table>
+    <p>
+        <strong>Loan Officer:</strong> Branch manager assigns a loan officer to each loan; the loan officer does collateral (buildings, valuation, summary).<br>
+        <strong>Engineering Team:</strong> Branch manager sends the loan to the engineering head; the engineering head assigns an engineer who does the collateral.
+    </p>
+    <button type="submit">Save</button>
+</form>
+
+<p><a href="{% url 'view_loan_requests' %}">Back to loan requests</a></p>
+{% endblock %}

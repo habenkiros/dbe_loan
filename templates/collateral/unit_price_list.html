@@ -34,7 +34,7 @@
                 <td>{% if p.sub_work_id %}{{ p.sub_work.main_work.name }}{% else %}{{ p.sub_sub_work.sub_work.main_work.name }}{% endif %}</td>
                 <td>{% if p.sub_work_id %}{{ p.sub_work.name }}{% else %}{{ p.sub_sub_work.sub_work.name }}{% endif %}</td>
                 <td>{% if p.sub_sub_work_id %}{{ p.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
-                <td>{{ p.unit_price }}</td>
+                <td>{{ p.unit_price|floatformat:2 }}</td>
                 <td><a href="{% url 'collateral:unit_price_edit' p.id %}">Edit</a></td>
             </tr>
             {% empty %}

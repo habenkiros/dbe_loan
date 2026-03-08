@@ -4,6 +4,7 @@ from . import views
 app_name = 'collateral'
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
+    path('list/', views.collateral_list_superadmin, name='collateral_list_superadmin'),
     path('catalog/', views.catalog_index, name='catalog_index'),
     path('catalog/main-work/', views.main_work_list, name='main_work_list'),
     path('catalog/main-work/add/', views.main_work_add, name='main_work_add'),

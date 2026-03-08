@@ -1,14 +1,21 @@
 # loans/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .services import fetch_customer_by_number
-from .models import Region, Zone, City, District, Branch, LoanCategory, CollateralType, LoanRequest, CustomUser, LatestLoanRequestID
-from .forms import (
-    CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm,
-    DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
-    LoanCategoryForm, CollateralTypeForm,
+from django.utils import timezone
+from .models import (
+    Region, Zone, City, District, Branch, LoanCategory, CollateralType,
+    LoanApplicationDocumentType, LoanRequestDocument,
+    LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
 )
+from .forms import (
+    CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm, AssignEngineerForm,
+    DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
+    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm, CollateralEstimationConfigForm,
+)
+from .collateral_config import get_collateral_estimation_mode, allows_loan_officer, allows_engineering_team
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
@@ -90,10 +97,47 @@ def create_loan_request(request):
             loan_request.branch = request.user.branch
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
-            return redirect('view_loan_requests')
+            messages.success(request, 'Loan request created. You can now add application documents.')
+            return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
     else:
         form = LoanRequestForm()
     return render(request, 'loans/create_loan_request.html', {'form': form})
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['branch_manager', 'admin', 'superadmin'])
+def upload_loan_request_documents(request, loan_request_id):
+    """Upload or view application documents for a loan request. Branch manager: own branch only."""
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
+        messages.warning(request, 'You can only manage documents for loans in your branch.')
+        return redirect('view_loan_requests')
+    document_types = LoanApplicationDocumentType.objects.all()
+    existing = loan_request.application_documents.select_related('document_type').all()
+    if request.method == 'POST':
+        uploaded = 0
+        for key, f in request.FILES.items():
+            if key.startswith('doc_type_') and f:
+                try:
+                    doc_type_id = int(key.replace('doc_type_', ''))
+                    doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
+                    LoanRequestDocument.objects.create(
+                        loan_request=loan_request,
+                        document_type=doc_type,
+                        file=f,
+                    )
+                    uploaded += 1
+                except (ValueError, LoanApplicationDocumentType.DoesNotExist):
+                    pass
+        if uploaded:
+            messages.success(request, f'{uploaded} document(s) uploaded.')
+        return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
+    return render(request, 'loans/upload_loan_request_documents.html', {
+        'loan_request': loan_request,
+        'document_types': document_types,
+        'existing_documents': existing,
+    })
+
 
 def generate_incremental_loan_request_id():
     latest_id_instance, created = LatestLoanRequestID.objects.get_or_create(pk=1)
@@ -139,13 +183,24 @@ def update_finance_manager_approval(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer', 'superadmin', 'admin'])
+@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer', 'engineer', 'engineering_head', 'superadmin', 'admin'])
 def loan_request_detail(request, loan_request_id):
-    if request.user.role == 'loan_officer':
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    user = request.user
+    if user.role == 'loan_officer':
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=user)
+    elif user.role == 'engineer':
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=user)
     else:
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    return render(request, 'loans/loan_request_detail.html', {'loan_request': loan_request})
+    collateral_mode = get_collateral_estimation_mode()
+    document_types = LoanApplicationDocumentType.objects.all()
+    application_documents = loan_request.application_documents.select_related('document_type').all()
+    return render(request, 'loans/loan_request_detail.html', {
+        'loan_request': loan_request,
+        'collateral_estimation_mode': collateral_mode,
+        'document_types': document_types,
+        'application_documents': application_documents,
+    })
 
 
 @login_required
@@ -174,6 +229,89 @@ def assign_loan_officer(request, loan_request_id):
 
 
 @login_required
+@user_passes_test(lambda u: u.role in ['branch_manager', 'admin', 'superadmin'])
+def send_to_engineering_head(request, loan_request_id):
+    """Branch manager sends approved loan to engineering head for collateral estimation (when mode is Engineering Team)."""
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
+        return redirect('view_loan_requests')
+    if not allows_engineering_team():
+        messages.warning(request, 'Collateral estimation is not using engineering team. Change config in Admin if needed.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    if loan_request.status and loan_request.status.strip().lower() != 'approved':
+        messages.warning(request, 'You can send to engineering only when the loan request status is Approved.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    if request.method == 'POST':
+        loan_request.sent_to_engineering_at = timezone.now()
+        loan_request.save(update_fields=['sent_to_engineering_at'])
+        messages.success(request, 'Loan sent to engineering head for collateral estimation.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    return render(request, 'loans/send_to_engineering_head_confirm.html', {'loan_request': loan_request})
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['engineering_head', 'admin', 'superadmin'])
+def loans_sent_for_collateral(request):
+    """Engineering head: list loans sent for collateral (to assign engineer)."""
+    if not allows_engineering_team():
+        return redirect('view_loan_requests')
+    qs = LoanRequest.objects.filter(
+        sent_to_engineering_at__isnull=False
+    ).filter(
+        Q(queue_approved=True) | Q(status__iexact='Approved')
+    ).select_related('branch', 'collateral', 'assigned_engineer').order_by('-sent_to_engineering_at')
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(
+            Q(loan_request_id__icontains=q) | Q(applicant_name__icontains=q) | Q(phone_number__icontains=q)
+        )
+    return render(request, 'loans/loans_sent_for_collateral.html', {
+        'loan_requests': qs,
+        'query': q or '',
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['engineering_head', 'admin', 'superadmin'])
+def assign_engineer(request, loan_request_id):
+    """Engineering head assigns an engineer to a loan sent for collateral."""
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not loan_request.sent_to_engineering_at:
+        messages.warning(request, 'This loan was not sent for collateral estimation.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    if not allows_engineering_team():
+        messages.warning(request, 'Collateral estimation is not using engineering team.')
+        return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    form = AssignEngineerForm()
+    if request.method == 'POST':
+        form = AssignEngineerForm(request.POST)
+        if form.is_valid():
+            loan_request.assigned_engineer_id = form.cleaned_data.get('assigned_engineer') or None
+            loan_request.save(update_fields=['assigned_engineer_id'])
+            messages.success(request, 'Assigned engineer updated.')
+            return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    else:
+        form = AssignEngineerForm(initial={'assigned_engineer': loan_request.assigned_engineer})
+    return render(request, 'loans/assign_engineer.html', {'loan_request': loan_request, 'form': form})
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'superadmin')
+def collateral_estimation_config(request):
+    """Superadmin only: set who performs collateral estimation (loan officer vs engineering team)."""
+    config, _ = CollateralEstimationConfig.objects.get_or_create(defaults={'mode': CollateralEstimationConfig.MODE_LOAN_OFFICER})
+    if request.method == 'POST':
+        form = CollateralEstimationConfigForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Collateral estimation config saved.')
+            return redirect('collateral_estimation_config')
+    else:
+        form = CollateralEstimationConfigForm(instance=config)
+    return render(request, 'loans/collateral_estimation_config.html', {'form': form, 'config': config})
+
+
+@login_required
 @user_passes_test(lambda u: u.role == 'operation_manager')
 def loan_request_detail_operation_manager(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
@@ -192,11 +330,21 @@ def loan_request_detail_manager(request, loan_request_id):
     return render(request, 'loans/loan_request_detail_manager.html', {'loan_request': loan_request})
 
 def _loan_requests_queryset_for_user(user):
-    """Base queryset: all for superadmin/admin/superuser; by branch for branch_manager; only assigned for loan_officer."""
+    """Base queryset: all for superadmin/admin/superuser; by branch for branch_manager; assigned for loan_officer or engineer (by config)."""
     if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
         return LoanRequest.objects.all()
+    if getattr(user, 'role', None) == 'engineering_head':
+        if allows_engineering_team():
+            return LoanRequest.objects.filter(sent_to_engineering_at__isnull=False)
+        return LoanRequest.objects.none()
     if getattr(user, 'role', None) == 'loan_officer':
-        return LoanRequest.objects.filter(assigned_loan_officer=user)
+        if allows_loan_officer():
+            return LoanRequest.objects.filter(assigned_loan_officer=user)
+        return LoanRequest.objects.none()
+    if getattr(user, 'role', None) == 'engineer':
+        if allows_engineering_team():
+            return LoanRequest.objects.filter(assigned_engineer=user)
+        return LoanRequest.objects.none()
     if getattr(user, 'role', None) == 'branch_manager':
         if getattr(user, 'branch_id', None):
             return LoanRequest.objects.filter(branch=user.branch)
@@ -207,8 +355,12 @@ def _loan_requests_queryset_for_user(user):
 
 
 @login_required
-@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or u.role in ['branch_manager', 'loan_officer', 'superadmin', 'admin'])
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or u.role in ['branch_manager', 'loan_officer', 'engineer', 'engineering_head', 'superadmin', 'admin'])
 def view_loan_requests(request):
+    if getattr(request.user, 'role', None) == 'engineering_head' and allows_engineering_team():
+        return redirect('loans_sent_for_collateral')
+    if getattr(request.user, 'role', None) == 'engineer' and allows_engineering_team():
+        return redirect(reverse('collateral:dashboard'))
     loan_requests = _loan_requests_queryset_for_user(request.user)
     
     query = request.GET.get("q")
@@ -243,6 +395,7 @@ def view_loan_requests(request):
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
         'selected_status': status,
+        'collateral_estimation_mode': get_collateral_estimation_mode(),
     }
     return render(request, 'loans/view_loan_requests.html', context)
 
@@ -649,6 +802,44 @@ def edit_collateral_type(request, collateral_type_id):
     else:
         form = CollateralTypeForm(instance=collateral_type)
     return render(request, 'loans/edit_collateral_type.html', {'form': form, 'collateral_type': collateral_type})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def manage_loan_application_document_types(request):
+    """Superadmin: list and add loan application document types (e.g. National ID, Proof of income)."""
+    document_types = LoanApplicationDocumentType.objects.all()
+    paginator = Paginator(document_types, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    if request.method == 'POST':
+        form = LoanApplicationDocumentTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Document type added.')
+            return redirect('manage_loan_application_document_types')
+    else:
+        form = LoanApplicationDocumentTypeForm()
+    return render(request, 'loans/manage_loan_application_document_types.html', {
+        'form': form,
+        'page_obj': page_obj,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def edit_loan_application_document_type(request, document_type_id):
+    doc_type = get_object_or_404(LoanApplicationDocumentType, pk=document_type_id)
+    if request.method == 'POST':
+        form = LoanApplicationDocumentTypeForm(request.POST, instance=doc_type)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Document type updated.')
+            return redirect('manage_loan_application_document_types')
+    else:
+        form = LoanApplicationDocumentTypeForm(instance=doc_type)
+    return render(request, 'loans/edit_loan_application_document_type.html', {'form': form, 'doc_type': doc_type})
+
 
 @login_required
 def load_branches(request):

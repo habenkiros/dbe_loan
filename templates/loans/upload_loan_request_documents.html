@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Application documents – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Application documents – {{ loan_request.loan_request_id }}</h2>
+<p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
+
+<h3>Required document types</h3>
+<p>Upload the following documents for this loan application. You can add documents now or later from the loan request detail page.</p>
+
+{% if existing_documents %}
+<h3>Uploaded documents</h3>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Document type</th>
+                <th>Required</th>
+                <th>File</th>
+                <th>Uploaded</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in existing_documents %}
+            <tr>
+                <td>{{ doc.document_type.name }}</td>
+                <td>{% if doc.document_type.is_required %}Yes{% else %}Optional{% endif %}</td>
+                <td><a href="{{ doc.file.url }}" target="_blank" rel="noopener">Download</a></td>
+                <td>{{ doc.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <table>
+        <thead>
+            <tr>
+                <th>Document type</th>
+                <th>Required</th>
+                <th>Upload file</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc_type in document_types %}
+            <tr>
+                <td>{{ doc_type.name }}</td>
+                <td>{% if doc_type.is_required %}Yes{% else %}Optional{% endif %}</td>
+                <td><input type="file" name="doc_type_{{ doc_type.id }}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3">No document types defined. Add them in <a href="{% url 'manage_loan_application_document_types' %}">Settings → Application document types</a>.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if document_types %}
+    <p>
+        <button type="submit">Upload selected files</button>
+    </p>
+    {% endif %}
+</form>
+
+<p>
+    <a href="{% url 'loan_request_detail' loan_request.id %}">Back to loan request</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'view_loan_requests' %}">View all loan requests</a>
+</p>
+{% endblock %}

@@ -21,6 +21,6 @@
     <button type="submit">Save land valuation</button>
 </form>
 {% if land.total_value is not None %}
-<p><strong>Land total value: {{ land.total_value }}</strong></p>
+<p><strong>Land total value: {{ land.total_value|floatformat:2 }}</strong></p>
 {% endif %}
 {% endblock %}

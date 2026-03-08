@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Application document types{% endblock %}
+
+{% block content %}
+<h1>Application document types</h1>
+<p>Document types required or optional when registering a loan application (e.g. National ID, Proof of income).</p>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add document type</button>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Name</th>
+                <th>Required</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dt in page_obj %}
+            <tr>
+                <td>{{ dt.order }}</td>
+                <td>{{ dt.name }}</td>
+                <td>{% if dt.is_required %}Yes{% else %}Optional{% endif %}</td>
+                <td><a href="{% url 'edit_loan_application_document_type' dt.id %}">Edit</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No document types yet. Add one above.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
+        {% endif %}
+        <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}

@@ -36,7 +36,7 @@
             {% for item in items %}
             <tr>
                 <td>{{ item.name }}{% if item.notes %} <span title="{{ item.notes }}">(...)</span>{% endif %}</td>
-                <td>{{ item.estimated_value }}</td>
+                <td>{{ item.estimated_value|floatformat:2 }}</td>
                 <td>
                     <a href="{% url 'collateral:other_collateral_edit' item.id %}">Edit</a>
                     &nbsp;|&nbsp;
@@ -51,5 +51,5 @@
         </tbody>
     </table>
 </div>
-<p><strong>Total (other collateral): {{ total_other }}</strong></p>
+<p><strong>Total (other collateral): {{ total_other|floatformat:2 }}</strong></p>
 {% endblock %}

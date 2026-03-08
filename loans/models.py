@@ -64,6 +64,54 @@ class CollateralType(models.Model):
     def __str__(self):
         return self.name
 
+
+class LoanApplicationDocumentType(models.Model):
+    """Configurable document type required or optional for loan application (e.g. National ID, Proof of income)."""
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0, help_text='Display order (lower first).')
+    is_required = models.BooleanField(
+        default=True,
+        help_text='If True, this document type is required for loan application.',
+    )
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = 'Loan application document type'
+        verbose_name_plural = 'Loan application document types'
+
+    def __str__(self):
+        return self.name
+
+
+class CollateralEstimationConfig(models.Model):
+    """
+    Bank-wide config: who does collateral estimation.
+    One row only (managed in admin). When 'loan_officer', branch manager assigns loan officer.
+    When 'engineering_team', branch manager sends to engineering head who then assigns an engineer.
+    When 'both', either can be used: loan officers see their assigned loans, engineers see theirs.
+    """
+    MODE_LOAN_OFFICER = 'loan_officer'
+    MODE_ENGINEERING_TEAM = 'engineering_team'
+    MODE_BOTH = 'both'
+    MODE_CHOICES = [
+        (MODE_LOAN_OFFICER, 'Loan Officer (branch manager assigns loan officer)'),
+        (MODE_ENGINEERING_TEAM, 'Engineering Team (branch manager sends to engineering head; engineering head assigns engineer)'),
+        (MODE_BOTH, 'Both (loan officers and engineering team can both be used)'),
+    ]
+    mode = models.CharField(
+        max_length=20,
+        choices=MODE_CHOICES,
+        default=MODE_LOAN_OFFICER,
+        help_text='Who performs collateral estimation: loan officer, engineering team, or both.',
+    )
+
+    class Meta:
+        verbose_name = 'Collateral estimation config'
+        verbose_name_plural = 'Collateral estimation config'
+
+    def __str__(self):
+        return dict(self.MODE_CHOICES).get(self.mode, self.mode)
+
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('superadmin', 'Super Administrator'),
@@ -136,6 +184,20 @@ class LoanRequest(models.Model):
         related_name='collateral_submissions',
         help_text='User (e.g. loan officer) who submitted the collateral estimation.',
     )
+    sent_to_engineering_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When branch manager sent this loan to engineering head for collateral estimation.',
+    )
+    assigned_engineer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_engineer_loan_requests',
+        limit_choices_to={'role': 'engineer'},
+        help_text='Engineer assigned by engineering head for collateral estimation (when mode is Engineering Team).',
+    )
 
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules
@@ -156,4 +218,28 @@ class LoanRequest(models.Model):
             self.status = 'Pending'
         
         super(LoanRequest, self).save(*args, **kwargs)
+
+
+class LoanRequestDocument(models.Model):
+    """An uploaded document attached to a loan request (e.g. ID, proof of income)."""
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='application_documents',
+    )
+    document_type = models.ForeignKey(
+        LoanApplicationDocumentType,
+        on_delete=models.CASCADE,
+        related_name='documents',
+    )
+    file = models.FileField(upload_to='loan_application_docs/%Y/%m/')
+    uploaded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['document_type__order', 'document_type__name', 'uploaded_at']
+        verbose_name = 'Loan request document'
+        verbose_name_plural = 'Loan request documents'
+
+    def __str__(self):
+        return f'{self.document_type.name} – {self.loan_request.loan_request_id}'
 

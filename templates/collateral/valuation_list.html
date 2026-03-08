@@ -23,7 +23,6 @@
                 <th>Quantity</th>
                 <th>Unit price</th>
                 <th>Total</th>
-                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -32,22 +31,17 @@
                 <td>{% if r.sub_work_id %}{{ r.sub_work.main_work.name }}{% else %}{{ r.sub_sub_work.sub_work.main_work.name }}{% endif %}</td>
                 <td>{% if r.sub_work_id %}{{ r.sub_work.name }}{% else %}{{ r.sub_sub_work.sub_work.name }}{% endif %}</td>
                 <td>{% if r.sub_sub_work_id %}{{ r.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
-                <td>{{ r.quantity }}</td>
-                <td>{{ r.unit_price }}</td>
-                <td>{{ r.total }}</td>
-                <td>
-                    <a href="{% url 'collateral:valuation_edit' r.id %}">Edit</a>
-                    &nbsp;|&nbsp;
-                    <a href="{% url 'collateral:valuation_delete' r.id %}" onclick="return confirm('Remove this row?');">Delete</a>
-                </td>
+                <td>{{ r.quantity|floatformat:2 }}</td>
+                <td>{{ r.unit_price|floatformat:2 }}</td>
+                <td>{{ r.total|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
+                <td colspan="6">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-<p><strong>Building total: {{ building_total }}</strong></p>
+<p><strong>Building total: {{ building_total|floatformat:2 }}</strong></p>
 {% endblock %}

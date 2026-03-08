@@ -62,10 +62,8 @@ class BuildingForm(forms.ModelForm):
 
 
 def _user_can_edit_unit_price(user):
-    """Only engineering team (and admin) can enter or override unit price; others use catalog."""
-    return user and getattr(user, 'role', None) in (
-        'engineering_head', 'engineer', 'admin', 'superadmin',
-    )
+    """Only admin/superadmin can enter or override unit price; others (including engineering team) use catalog."""
+    return user and getattr(user, 'role', None) in ('admin', 'superadmin')
 
 
 class BuildingValuationForm(forms.ModelForm):

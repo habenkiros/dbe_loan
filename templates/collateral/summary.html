@@ -33,7 +33,7 @@
             {% for bt in building_totals %}
             <tr>
                 <td>{{ bt.building.name }} &nbsp; <a href="{% url 'collateral:building_estimation_summary' bt.building.id %}">መጠቃለሊ (estimation summary)</a></td>
-                <td>{{ bt.total }}</td>
+                <td>{{ bt.total|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>
@@ -43,11 +43,11 @@
         </tbody>
     </table>
 </div>
-<p><strong>Total (buildings): {{ total_buildings }}</strong></p>
+<p><strong>Total (buildings): {{ total_buildings|floatformat:2 }}</strong></p>
 {% endif %}
 
 {% if "land" in collateral_type_lower %}
-<p><strong>Land value: {{ land_value }}</strong></p>
+<p><strong>Land value: {{ land_value|floatformat:2 }}</strong></p>
 {% endif %}
 
 {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
@@ -64,27 +64,37 @@
             {% for item in other_items %}
             <tr>
                 <td>{{ item.name }}</td>
-                <td>{{ item.estimated_value }}</td>
+                <td>{{ item.estimated_value|floatformat:2 }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% endif %}
-<p><strong>Total (other collateral): {{ total_other }}</strong></p>
+<p><strong>Total (other collateral): {{ total_other|floatformat:2 }}</strong></p>
 {% endif %}
 
-<p><strong>Grand total (collateral): {{ grand_total }}</strong></p>
+<p><strong>Grand total (collateral): {{ grand_total|floatformat:2 }}</strong></p>
 
 <p>
     {% if loan_request.collateral_submitted_at %}
     <strong>Submitted</strong> on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}.
     {% else %}
-    All collateral data (buildings, valuations, land, other) is saved in the system as you add or edit. When you are done, submit the collateral estimation:
+    All collateral data (buildings, valuations, land, other) is saved in the system as you add or edit.
+    {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
+    <strong>At least {{ min_images_per_building }} images per building are required</strong> before you can submit.
+    {% if buildings_below_image_min %}
+    <span class="error">Add more images for: {% for b in buildings_below_image_min %}<a href="{% url 'collateral:building_images' b.id %}">{{ b.name }}</a> ({{ b.image_count }}/{{ min_images_per_building }}){% if not forloop.last %}, {% endif %}{% endfor %}.</span>
+    {% endif %}
+    {% endif %}
+    When you are done, submit the collateral estimation:
     <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display: inline;">
         {% csrf_token %}
-        <button type="submit">Submit collateral</button>
+        <button type="submit" {% if not can_submit_collateral %}disabled title="Add at least {{ min_images_per_building }} images to each building first"{% endif %}>Submit collateral</button>
     </form>
+    {% if not can_submit_collateral %}
+    <em>(Add at least {{ min_images_per_building }} images to each building to enable submit.)</em>
+    {% endif %}
     {% endif %}
 </p>
 {% endblock %}

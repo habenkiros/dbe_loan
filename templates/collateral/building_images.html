@@ -4,13 +4,18 @@
 <h2>Images – {{ building.name }}</h2>
 <p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong></p>
 <p><a href="{% url 'collateral:building_list' building.loan_request.id %}">← Back to buildings</a></p>
+<p><strong>{{ image_count }} / {{ min_images_required }} images</strong> (minimum {{ min_images_required }} required per building before submitting collateral).</p>
 
 <h3>Upload image</h3>
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" id="upload-form">
     {% csrf_token %}
     <table>
         {{ form.as_table }}
     </table>
+    <div id="image-preview-wrap" style="margin: 10px 0; display: none;">
+        <p>Preview:</p>
+        <img id="image-preview" alt="Preview" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;">
+    </div>
     <button type="submit">Upload</button>
 </form>
 
@@ -45,4 +50,24 @@
         </tbody>
     </table>
 </div>
+
+<script>
+(function() {
+    var input = document.getElementById('id_image');
+    var wrap = document.getElementById('image-preview-wrap');
+    var img = document.getElementById('image-preview');
+    if (!input || !wrap || !img) return;
+    input.addEventListener('change', function() {
+        if (img.src && img.src.indexOf('blob:') === 0) URL.revokeObjectURL(img.src);
+        var file = this.files && this.files[0];
+        if (file && file.type.indexOf('image/') === 0) {
+            img.src = URL.createObjectURL(file);
+            wrap.style.display = 'block';
+        } else {
+            img.src = '';
+            wrap.style.display = 'none';
+        }
+    });
+})();
+</script>
 {% endblock %}

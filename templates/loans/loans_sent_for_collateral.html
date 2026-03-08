@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Loans sent for collateral{% endblock %}
+
+{% block content %}
+<h1>Loans sent for collateral</h1>
+<p>Assign an engineer to each loan for collateral estimation.</p>
+
+<form method="get" style="margin-bottom: 1em;">
+    <input type="text" name="q" placeholder="Search ID, name, phone" value="{{ query }}" style="width: 220px;">
+    <button type="submit">Search</button>
+</form>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Loan ID</th>
+                <th>Applicant</th>
+                <th>Collateral</th>
+                <th>Branch</th>
+                <th>Sent at</th>
+                <th>Assigned engineer</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lr in loan_requests %}
+            <tr>
+                <td>{{ lr.loan_request_id }}</td>
+                <td>{{ lr.applicant_name }}</td>
+                <td>{{ lr.collateral.name }}</td>
+                <td>{{ lr.branch.name }}</td>
+                <td>{{ lr.sent_to_engineering_at|date:"Y-m-d H:i" }}</td>
+                <td>{% if lr.assigned_engineer %}{{ lr.assigned_engineer.get_full_name|default:lr.assigned_engineer.username }}{% else %}—{% endif %}</td>
+                <td>
+                    {% if not lr.assigned_engineer %}
+                    <a href="{% url 'assign_engineer' lr.id %}">Assign engineer</a>
+                    |
+                    {% endif %}
+                    <a href="{% url 'loan_request_detail' lr.id %}">Detail</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No loans sent for collateral.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p><a href="{% url 'view_loan_requests' %}">Back to loan requests</a></p>
+{% endblock %}

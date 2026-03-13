@@ -78,10 +78,12 @@ def dashboard(request):
             Q(phone_number__icontains=q)
         )
     is_engineer = getattr(request.user, 'role', None) == 'engineer'
+    is_loan_officer = getattr(request.user, 'role', None) == 'loan_officer'
     return render(request, 'collateral/dashboard.html', {
         'loan_requests': loan_requests,
         'query': q or '',
         'is_engineer': is_engineer,
+        'is_loan_officer': is_loan_officer,
     })
 
 

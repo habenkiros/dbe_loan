@@ -100,11 +100,58 @@
 {% else %}
 <p>No documents uploaded yet.</p>
 {% endif %}
-{% if user.role == 'branch_manager' or user.role == 'admin' or user.is_superuser %}
+{% if can_request_documents %}
+<h4>Document review (assigned officer/engineer)</h4>
+{% if pending_document_requests %}
+<p><strong>Pending requests</strong> (branch manager will upload):</p>
+<ul>
+    {% for req in pending_document_requests %}
+    <li>{{ req.document_type.name }} — requested {{ req.requested_at|date:"SHORT_DATETIME_FORMAT" }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% if document_types_missing %}
+<p><strong>Request a document:</strong></p>
+<ul>
+    {% for dt in document_types_missing %}
+    <li>
+        {{ dt.name }}{% if dt.is_required %} (required){% endif %}
+        {% if dt.id in requested_type_ids %}
+        — <em>Requested</em>
+        {% else %}
+        <form method="post" action="{% url 'request_loan_document' loan_request.id %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="document_type_id" value="{{ dt.id }}">
+            <button type="submit">Request this document</button>
+        </form>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+{% if loan_request.documents_reviewed_at %}
+<p>Documents reviewed on {{ loan_request.documents_reviewed_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.documents_reviewed_by %} by {{ loan_request.documents_reviewed_by.get_full_name|default:loan_request.documents_reviewed_by.username }}{% endif %}.</p>
+{% else %}
+<form method="post" action="{% url 'proceed_to_collateral' loan_request.id %}">
+    {% csrf_token %}
+    <button type="submit">Proceed to collateral estimation</button>
+</form>
+<p class="help">Use this when you have reviewed the documents (or requested missing ones) and are ready to do collateral estimation.</p>
+{% endif %}
+{% endif %}
+{% if user.role == 'branch_manager' %}
 <p><a href="{% url 'upload_loan_request_documents' loan_request.id %}">Upload / manage application documents</a></p>
 {% endif %}
 {% else %}
 <p>No document types configured. Add them in <a href="{% url 'manage_loan_application_document_types' %}">Settings → Application document types</a>.</p>
+{% endif %}
+
+{% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
+<h3>Loan officer steps</h3>
+<p>
+    <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green" title="Open loan appraisal form">Loan appraisal</a>
+    <span class="help-inline">Fill the cashflow-based MSME loan appraisal (V1.8.3). Steps available on the next page.</span>
+</p>
 {% endif %}
 
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>

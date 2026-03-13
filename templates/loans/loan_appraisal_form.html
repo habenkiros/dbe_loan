@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Loan appraisal – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h1>Loan appraisal – {{ loan_request.loan_request_id }}</h1>
+<p class="sub">Applicant: <strong>{{ loan_request.applicant_name }}</strong> — Amount requested: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong></p>
+
+<p>Based on: <strong>Cashflow based MSME loan appraisal tool – V1.8.3 Generic (14092022-formatted)</strong>.</p>
+<p>Sections: Applicant info (from loan), Financial / cashflow, Business & character, Collateral, Summary & decision.</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <h3>1. Financial / cashflow analysis</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="{{ form.monthly_business_income.id_for_label }}">Monthly business income</label>
+      {{ form.monthly_business_income }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.monthly_business_expenses.id_for_label }}">Monthly business expenses</label>
+      {{ form.monthly_business_expenses }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.other_monthly_income.id_for_label }}">Other monthly income</label>
+      {{ form.other_monthly_income }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.other_monthly_expenses.id_for_label }}">Other monthly expenses</label>
+      {{ form.other_monthly_expenses }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.proposed_monthly_installment.id_for_label }}">Proposed monthly installment</label>
+      {{ form.proposed_monthly_installment }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.net_monthly_cashflow.id_for_label }}">Net monthly cashflow</label>
+      {{ form.net_monthly_cashflow }}
+      <small>Calculated by the form from income and expenses; you can adjust if needed.</small>
+    </div>
+    <div class="form-field">
+      <label for="{{ form.dscr.id_for_label }}">DSCR (net cashflow / installment)</label>
+      {{ form.dscr }}
+    </div>
+  </div>
+
+  <h3>2. Business &amp; character assessment</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="{{ form.business_assessment.id_for_label }}">Business assessment</label>
+      {{ form.business_assessment }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.character_assessment.id_for_label }}">Character / E&amp;S assessment</label>
+      {{ form.character_assessment }}
+    </div>
+  </div>
+
+  <h3>3. Collateral worksheet (summary)</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="{{ form.collateral_total_value.id_for_label }}">Total collateral value (snapshot)</label>
+      {{ form.collateral_total_value }}
+      <small>Use the total from the Collateral Estimation summary.</small>
+    </div>
+  </div>
+
+  <h3>4. Summary &amp; decision</h3>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="{{ form.recommendation.id_for_label }}">Recommendation</label>
+      {{ form.recommendation }}
+    </div>
+    <div class="form-field">
+      <label for="{{ form.recommendation_comment.id_for_label }}">Recommendation comment</label>
+      {{ form.recommendation_comment }}
+    </div>
+  </div>
+
+  <p style="margin-top: 1rem;">
+    <button type="submit" class="btn btn-green">Save appraisal</button>
+    <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue">View appraisal steps</a>
+    <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+  </p>
+</form>
+{% endblock %}
+

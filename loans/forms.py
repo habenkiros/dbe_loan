@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import (
     CustomUser, LoanRequest, District, Branch, Region, Zone, City,
-    LoanCategory, CollateralType, LoanApplicationDocumentType, CollateralEstimationConfig,
+    LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
 )
 
 class CustomUserCreationForm(UserCreationForm):
@@ -110,6 +110,56 @@ class LoanRequestForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
+
+
+class LoanAppraisalForm(forms.ModelForm):
+    class Meta:
+        model = LoanAppraisal
+        fields = [
+            'monthly_business_income',
+            'monthly_business_expenses',
+            'other_monthly_income',
+            'other_monthly_expenses',
+            'proposed_monthly_installment',
+            'net_monthly_cashflow',
+            'dscr',
+            'business_assessment',
+            'character_assessment',
+            'collateral_total_value',
+            'recommendation',
+            'recommendation_comment',
+        ]
+        widgets = {
+            'monthly_business_income': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'monthly_business_expenses': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'other_monthly_income': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'other_monthly_expenses': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'proposed_monthly_installment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'net_monthly_cashflow': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'dscr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'business_assessment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'character_assessment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'collateral_total_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'recommendation': forms.Select(attrs={'class': 'form-control'}),
+            'recommendation_comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def clean(self):
+        from decimal import Decimal, InvalidOperation
+        data = super().clean()
+        inc1 = data.get('monthly_business_income') or Decimal('0')
+        inc2 = data.get('other_monthly_income') or Decimal('0')
+        exp1 = data.get('monthly_business_expenses') or Decimal('0')
+        exp2 = data.get('other_monthly_expenses') or Decimal('0')
+        net = inc1 + inc2 - exp1 - exp2
+        data['net_monthly_cashflow'] = net
+        installment = data.get('proposed_monthly_installment')
+        if installment and installment > 0:
+            try:
+                data['dscr'] = (net / installment).quantize(Decimal('0.01'))
+            except (InvalidOperation, ZeroDivisionError):
+                data['dscr'] = None
+        return data
 
 
 class AssignLoanOfficerForm(forms.Form):

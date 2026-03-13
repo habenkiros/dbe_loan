@@ -4,6 +4,16 @@
 <h2>Application documents – {{ loan_request.loan_request_id }}</h2>
 <p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
 
+{% if document_requests %}
+<h3>Requested by loan officer / engineer</h3>
+<p>The assigned officer or engineer asked for these documents. Please upload them when available.</p>
+<ul>
+    {% for req in document_requests %}
+    <li><strong>{{ req.document_type.name }}</strong> — requested {{ req.requested_at|date:"SHORT_DATETIME_FORMAT" }} by {{ req.requested_by.get_full_name|default:req.requested_by.username }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 <h3>Required document types</h3>
 <p>Upload the following documents for this loan application. You can add documents now or later from the loan request detail page.</p>
 

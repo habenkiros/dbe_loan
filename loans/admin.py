@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from .models import (
     Zone, Branch, LoanCategory, CollateralType,
-    LoanApplicationDocumentType, LoanRequestDocument,
+    LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, CollateralEstimationConfig,
 )
 
@@ -47,7 +47,18 @@ class LoanApplicationDocumentTypeAdmin(admin.ModelAdmin):
 
 
 admin.site.register(LoanRequestDocument)
+
+
+@admin.register(LoanDocumentRequest)
+class LoanDocumentRequestAdmin(admin.ModelAdmin):
+    list_display = ('loan_request', 'document_type', 'requested_by', 'requested_at')
+    list_filter = ('document_type',)
+    search_fields = ('loan_request__loan_request_id',)
+    readonly_fields = ('requested_at',)
+
+
 admin.site.register(CustomUser)
+admin.site.register(LoanAppraisal)
 
 
 @admin.register(CollateralEstimationConfig)

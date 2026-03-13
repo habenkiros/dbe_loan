@@ -198,6 +198,19 @@ class LoanRequest(models.Model):
         limit_choices_to={'role': 'engineer'},
         help_text='Engineer assigned by engineering head for collateral estimation (when mode is Engineering Team).',
     )
+    documents_reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the assigned loan officer or engineer marked documents reviewed and proceeded to collateral.',
+    )
+    documents_reviewed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_requests_documents_reviewed',
+        help_text='Loan officer or engineer who reviewed documents and proceeded to collateral estimation.',
+    )
 
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules
@@ -242,4 +255,114 @@ class LoanRequestDocument(models.Model):
 
     def __str__(self):
         return f'{self.document_type.name} – {self.loan_request.loan_request_id}'
+
+
+class LoanDocumentRequest(models.Model):
+    """Request by assigned loan officer or engineer for a document type (branch manager can then upload)."""
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='document_requests',
+    )
+    document_type = models.ForeignKey(
+        LoanApplicationDocumentType,
+        on_delete=models.CASCADE,
+        related_name='loan_requests_requested',
+    )
+    requested_by = models.ForeignKey(
+        'CustomUser',
+        on_delete=models.CASCADE,
+        related_name='document_requests_made',
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = 'Loan document request'
+        verbose_name_plural = 'Loan document requests'
+        unique_together = [('loan_request', 'document_type')]  # one pending request per type per loan
+
+    def __str__(self):
+        return f'{self.document_type.name} for {self.loan_request.loan_request_id}'
+
+
+class LoanAppraisal(models.Model):
+    """
+    Cashflow-based loan appraisal linked to a loan request.
+    One appraisal per loan request, created by the assigned loan officer.
+    """
+    RECOMMEND_APPROVE = 'approve'
+    RECOMMEND_DECLINE = 'decline'
+    RECOMMEND_ESCALATE = 'escalate'
+    RECOMMEND_CHOICES = [
+        (RECOMMEND_APPROVE, 'Approve'),
+        (RECOMMEND_DECLINE, 'Decline'),
+        (RECOMMEND_ESCALATE, 'Escalate / further review'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='appraisal',
+    )
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_appraisals_created',
+        help_text='Loan officer who created this appraisal.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Financial / cashflow analysis
+    monthly_business_income = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    monthly_business_expenses = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    other_monthly_income = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    other_monthly_expenses = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    proposed_monthly_installment = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    net_monthly_cashflow = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Calculated as (business + other income) – (business + other expenses).',
+    )
+    dscr = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Debt service coverage ratio (net cashflow / proposed installment).',
+    )
+
+    # Business & character assessment
+    business_assessment = models.TextField(null=True, blank=True, help_text='Summary of business assessment.')
+    character_assessment = models.TextField(null=True, blank=True, help_text='Summary of character / E&S assessment.')
+
+    # Collateral summary (snapshot – can be filled from collateral module)
+    collateral_total_value = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Total collateral value considered in this appraisal (snapshot).',
+    )
+
+    # Summary & decision
+    recommendation = models.CharField(
+        max_length=20,
+        choices=RECOMMEND_CHOICES,
+        null=True,
+        blank=True,
+    )
+    recommendation_comment = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Reasoning behind the recommendation.',
+    )
+
+    def __str__(self):
+        return f'Appraisal for {self.loan_request.loan_request_id}'
 

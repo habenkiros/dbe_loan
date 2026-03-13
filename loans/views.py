@@ -7,13 +7,13 @@ from .services import fetch_customer_by_number
 from django.utils import timezone
 from .models import (
     Region, Zone, City, District, Branch, LoanCategory, CollateralType,
-    LoanApplicationDocumentType, LoanRequestDocument,
+    LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
 )
 from .forms import (
     CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm, AssignEngineerForm,
     DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
-    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm, CollateralEstimationConfigForm,
+    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm, LoanAppraisalForm, CollateralEstimationConfigForm,
 )
 from .collateral_config import get_collateral_estimation_mode, allows_loan_officer, allows_engineering_team
 from django.http import JsonResponse
@@ -105,9 +105,9 @@ def create_loan_request(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'admin', 'superadmin'])
+@user_passes_test(lambda u: u.role == 'branch_manager')
 def upload_loan_request_documents(request, loan_request_id):
-    """Upload or view application documents for a loan request. Branch manager: own branch only."""
+    """Upload or view application documents for a loan request. Branch manager only; own branch only."""
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
         messages.warning(request, 'You can only manage documents for loans in your branch.')
@@ -132,10 +132,12 @@ def upload_loan_request_documents(request, loan_request_id):
         if uploaded:
             messages.success(request, f'{uploaded} document(s) uploaded.')
         return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
+    document_requests = loan_request.document_requests.select_related('document_type', 'requested_by').all()
     return render(request, 'loans/upload_loan_request_documents.html', {
         'loan_request': loan_request,
         'document_types': document_types,
         'existing_documents': existing,
+        'document_requests': document_requests,
     })
 
 
@@ -182,6 +184,15 @@ def update_finance_manager_approval(request, loan_request_id):
     return render(request, 'loans/update_finance_manager_approval.html', {'loan_request': loan_request})
 
 
+def _is_assigned_officer_or_engineer(user, loan_request):
+    """True if this user is the assigned loan officer or engineer for this loan."""
+    if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+        return True
+    if user.role == 'engineer' and loan_request.assigned_engineer_id == user.id:
+        return True
+    return False
+
+
 @login_required
 @user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'loan_officer', 'engineer', 'engineering_head', 'superadmin', 'admin'])
 def loan_request_detail(request, loan_request_id):
@@ -195,11 +206,103 @@ def loan_request_detail(request, loan_request_id):
     collateral_mode = get_collateral_estimation_mode()
     document_types = LoanApplicationDocumentType.objects.all()
     application_documents = loan_request.application_documents.select_related('document_type').all()
+    uploaded_type_ids = set(application_documents.values_list('document_type_id', flat=True))
+    pending_document_requests = loan_request.document_requests.select_related('document_type', 'requested_by').all()
+    requested_type_ids = set(pending_document_requests.values_list('document_type_id', flat=True))
+    can_request_documents = _is_assigned_officer_or_engineer(user, loan_request)
+    document_types_missing = [dt for dt in document_types if dt.id not in uploaded_type_ids] if document_types else []
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
         'document_types': document_types,
         'application_documents': application_documents,
+        'pending_document_requests': pending_document_requests,
+        'can_request_documents': can_request_documents,
+        'document_types_missing': document_types_missing,
+        'requested_type_ids': requested_type_ids,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'engineer'])
+def request_loan_document(request, loan_request_id):
+    """Assigned loan officer or engineer requests a document type (branch manager can then upload)."""
+    if request.method != 'POST':
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    if request.user.role == 'loan_officer':
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    else:
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
+    doc_type_id = request.POST.get('document_type_id')
+    if not doc_type_id:
+        messages.warning(request, 'Please select a document type.')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    try:
+        doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
+    except LoanApplicationDocumentType.DoesNotExist:
+        messages.warning(request, 'Invalid document type.')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    LoanDocumentRequest.objects.update_or_create(
+        loan_request=loan_request,
+        document_type=doc_type,
+        defaults={'requested_by': request.user, 'requested_at': timezone.now()},
+    )
+    messages.success(request, f'Request for "{doc_type.name}" recorded. Branch manager will be notified to upload it.')
+    return redirect('loan_request_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@user_passes_test(lambda u: u.role in ['loan_officer', 'engineer'])
+def proceed_to_collateral(request, loan_request_id):
+    """Assigned loan officer or engineer marks documents reviewed and proceeds to collateral estimation."""
+    if request.method != 'POST':
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    if request.user.role == 'loan_officer':
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    else:
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
+    loan_request.documents_reviewed_at = timezone.now()
+    loan_request.documents_reviewed_by = request.user
+    loan_request.save(update_fields=['documents_reviewed_at', 'documents_reviewed_by'])
+    messages.success(request, 'Documents reviewed. You can now proceed to collateral estimation.')
+    return redirect('loan_request_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'loan_officer')
+def loan_appraisal_steps(request):
+    """Loan officers only: static clickable steps from Cashflow based MSME loan appraisal tool (V1.8.3). Presentation only."""
+    return render(request, 'loans/loan_appraisal_steps.html')
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'loan_officer')
+def loan_appraisal_edit(request, loan_request_id):
+    """
+    Loan officer creates or edits the cashflow-based loan appraisal for an assigned loan request.
+    Uses the sections from the Excel tool: financial/cashflow, business & character, collateral, summary/decision.
+    """
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    appraisal, created = LoanAppraisal.objects.get_or_create(
+        loan_request=loan_request,
+        defaults={'created_by': request.user},
+    )
+    if request.method == 'POST':
+        form = LoanAppraisalForm(request.POST, instance=appraisal)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if not obj.created_by_id:
+                obj.created_by = request.user
+            obj.save()
+            messages.success(request, 'Loan appraisal saved.')
+            return redirect('loan_request_detail', loan_request_id=loan_request.id)
+    else:
+        form = LoanAppraisalForm(instance=appraisal)
+    return render(request, 'loans/loan_appraisal_form.html', {
+        'loan_request': loan_request,
+        'form': form,
+        'appraisal': appraisal,
+        'created': created,
     })
 
 

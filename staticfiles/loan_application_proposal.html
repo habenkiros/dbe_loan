@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Appraisal Platform — Proposal for Wegagen Bank</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Libre+Baskerville:wght@400;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #e8ecf1; color: #1a1d29; }
+
+    .slide {
+      display: none;
+      position: absolute;
+      inset: 0;
+      padding: 2.5rem 3.5rem 5rem;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(165deg, #f0f4f8 0%, #e2e8f0 50%, #dbe4ed 100%);
+      background-image: linear-gradient(165deg, #f0f4f8 0%, #e2e8f0 50%, #dbe4ed 100%), radial-gradient(circle at 100% 0%, rgba(30, 58, 95, 0.06) 0%, transparent 45%), radial-gradient(circle at 0% 100%, rgba(201, 162, 39, 0.05) 0%, transparent 40%);
+    }
+    .slide::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #1e3a5f 0%, #2d5a87 25%, #c9a227 50%, #2d5a87 75%, #1e3a5f 100%);
+      opacity: 0.95;
+    }
+    .slide.active { display: flex; animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .slide-content { width: 100%; max-width: 54rem; margin: 0 auto; text-align: center; }
+    .slide-content.left { text-align: left; }
+    .slide h1 { font-family: 'Libre Baskerville', serif; font-size: 2.25rem; font-weight: 700; margin-bottom: 0.75rem; color: #1e3a5f; letter-spacing: -0.02em; }
+    .slide h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #1e3a5f; letter-spacing: -0.01em; }
+    .slide h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #2d5a87; }
+    .slide p, .slide li { font-size: 1.08rem; line-height: 1.7; color: #334155; margin-bottom: 0.5rem; }
+    .slide ul { margin: 0 auto 1rem; padding-left: 1.5rem; text-align: left; display: inline-block; }
+    .slide ol { margin: 0 auto 1rem; padding-left: 1.5rem; text-align: left; display: inline-block; }
+    .slide .sub { font-size: 1rem; color: #64748b; margin-top: 0.5rem; }
+    .slide .confidential { position: absolute; top: 1rem; right: 2rem; font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+    .slide .big-message { font-size: 1.25rem; font-weight: 600; color: #1e3a5f; margin-bottom: 1.25rem; line-height: 1.5; max-width: 42rem; margin-left: auto; margin-right: auto; }
+
+    .title-slide {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(165deg, #0d5c2e 0%, #1a7a3e 40%, #0f4d2a 100%);
+      background-image: linear-gradient(165deg, #0d5c2e 0%, #1a7a3e 40%, #0f4d2a 100%), radial-gradient(ellipse 70% 60% at 50% 30%, rgba(255, 255, 255, 0.08) 0%, transparent 55%);
+    }
+    .title-slide::before { background: linear-gradient(90deg, transparent, #22c55e, #86efac, #22c55e, transparent); }
+    .title-slide h1 { color: #fff; font-size: 2.75rem; }
+    .title-slide .for { font-size: 0.95rem; color: #86efac; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 0.5rem; }
+    .title-slide .tagline { font-size: 1.2rem; color: #e2e8f0; margin-top: 0.35rem; }
+    .title-slide .sub { color: #a7f3d0; }
+    .title-slide .link { margin-top: 2rem; font-size: 1rem; }
+    .title-slide .link a { color: #86efac; text-decoration: none; border-bottom: 1px solid rgba(134, 239, 172, 0.5); }
+    .title-slide .link a:hover { border-bottom-color: #86efac; }
+
+    .stats { display: flex; gap: 1.25rem; margin-top: 1.25rem; flex-wrap: wrap; justify-content: center; }
+    .stat { background: #fff; box-shadow: 0 2px 12px rgba(30, 58, 95, 0.08); border: 1px solid rgba(30, 58, 95, 0.12); padding: 1.25rem 1.5rem; border-radius: 12px; min-width: 130px; position: relative; overflow: hidden; }
+    .stat::after { content: ''; position: absolute; bottom: 0; left: 0; height: 3px; background: linear-gradient(90deg, #1e3a5f, #c9a227); width: 100%; }
+    .stat .value { font-size: 1.5rem; font-weight: 700; color: #1e3a5f; letter-spacing: -0.02em; }
+    .stat .label { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; }
+    .stat.big .value { font-size: 1.85rem; color: #2d5a87; }
+
+    .bar-chart { width: 100%; max-width: 28rem; margin: 1.5rem auto; text-align: left; }
+    .bar-row { margin-bottom: 0.85rem; }
+    .bar-row .bar-label { font-size: 0.95rem; color: #334155; margin-bottom: 0.25rem; display: flex; justify-content: space-between; }
+    .bar-row .bar-track { height: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .bar-row .bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #2d5a87, #1e3a5f); transition: width 0.5s ease; }
+    .bar-row .bar-fill.gold { background: linear-gradient(90deg, #c9a227, #a68b1e); }
+
+    .quote { border-left: 4px solid #c9a227; padding-left: 1.25rem; margin: 1rem auto; font-style: italic; color: #334155; max-width: 36rem; text-align: left; background: rgba(255,255,255,0.6); padding: 1rem 1rem 1rem 1.25rem; border-radius: 0 8px 8px 0; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%; max-width: 52rem; margin: 0 auto; text-align: left; }
+    .two-col ul { display: block; padding-left: 1.25rem; }
+
+    .highlight-box { background: #fff; border: 1px solid rgba(30, 58, 95, 0.15); border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1rem auto; box-shadow: 0 2px 8px rgba(30, 58, 95, 0.06); max-width: 40rem; }
+    .highlight-box p { margin: 0; color: #334155; font-size: 1.05rem; }
+
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.25rem; margin-top: 1rem; max-width: 56rem; text-align: left; }
+    .problem-item { display: flex; align-items: flex-start; gap: 0.75rem; background: #fff; padding: 1rem 1.25rem; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-left: 4px solid #dc2626; }
+    .problem-item .icon { width: 2rem; height: 2rem; min-width: 2rem; background: #fef2f2; border-radius: 8px; color: #dc2626; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .problem-item strong { color: #b91c1c; }
+    .problem-item p { margin: 0; font-size: 1rem; line-height: 1.55; color: #475569; }
+
+    .solution-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.25rem; margin-top: 1rem; max-width: 56rem; text-align: left; }
+    .solution-item { display: flex; align-items: flex-start; gap: 0.75rem; background: #fff; padding: 1rem 1.25rem; border-radius: 10px; box-shadow: 0 2px 8px rgba(30, 58, 95, 0.06); border-left: 4px solid #059669; }
+    .solution-item .icon { width: 2rem; height: 2rem; min-width: 2rem; background: #ecfdf5; border-radius: 8px; color: #059669; font-size: 1rem; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .solution-item strong { color: #047857; }
+    .solution-item p { margin: 0; font-size: 1rem; line-height: 1.55; color: #475569; }
+
+    .company-profile { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 0.5rem; max-width: 56rem; text-align: left; }
+    .company-profile .left h3 { margin-top: 0; color: #2d5a87; }
+    .company-profile .right { background: #fff; border: 1px solid rgba(30, 58, 95, 0.12); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(30, 58, 95, 0.06); }
+    .company-profile .right p { margin-bottom: 0.5rem; }
+    .company-profile .right .label { color: #64748b; font-size: 0.85rem; }
+
+    .case-study-header { display: flex; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center; }
+    .case-study-header .client { font-size: 1.15rem; color: #1e3a5f; font-weight: 600; }
+    .case-study-header .meta { font-size: 0.95rem; color: #64748b; }
+    .case-study-section { margin-bottom: 1.25rem; text-align: center; }
+    .case-study-section h4 { font-size: 0.9rem; color: #c9a227; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.35rem; }
+    .case-study-section p { margin: 0 auto; font-size: 1.05rem; max-width: 44rem; }
+
+    .nav { position: fixed; bottom: 1.5rem; right: 2rem; display: flex; gap: 0.5rem; z-index: 100; }
+    .nav button {
+      background: #1e3a5f;
+      border: 1px solid #2d5a87;
+      color: #fff;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: 0 2px 6px rgba(30, 58, 95, 0.2);
+    }
+    .nav button:hover { background: #2d5a87; }
+    .slide-counter { position: fixed; bottom: 1.5rem; left: 2rem; font-size: 0.85rem; color: #64748b; letter-spacing: 0.05em; font-weight: 500; }
+
+    .flowchart-slide { justify-content: center; align-items: center; padding: 2rem 3rem 5rem; }
+    .flowchart-slide .flowchart-wrap { width: 100%; max-width: 64rem; display: flex; flex-direction: column; align-items: center; }
+    .flowchart-slide img { max-width: 100%; height: auto; max-height: 68vh; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 24px rgba(30, 58, 95, 0.12); border: 1px solid rgba(30, 58, 95, 0.1); }
+    .flowchart-slide .caption { margin-top: 1rem; font-size: 1rem; color: #64748b; text-align: center; line-height: 1.5; }
+
+    .flow-steps { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin: 1.25rem 0; }
+    .flow-step { background: #fff; padding: 0.65rem 1.1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: #1e3a5f; border: 1px solid rgba(30, 58, 95, 0.15); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+    .flow-step::after { content: ' →'; color: #94a3b8; font-weight: 400; }
+    .flow-step:last-child::after { display: none; }
+    .slide a { color: #2d5a87; text-decoration: none; }
+    .slide a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Slide 1: Title -->
+  <div class="slide title-slide active" data-slide="1">
+    <p class="for">Presented to</p>
+    <h1>Wegagen Bank</h1>
+    <p class="tagline">Loan Application and Processing System</p>
+    <p class="sub">Digital queuing · Document fulfillment · Multi-level authorization · Collateral GPS &amp; estimation · Disbursement</p>
+    <p class="link">Proposal document: <em>Loan application proposal</em> (presentation folder)</p>
+  </div>
+
+  <!-- Slide 2: Agenda -->
+  <div class="slide" data-slide="2">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+    <h2>Agenda</h2>
+    <ol style="list-style: decimal; margin-left: 1.5rem; color: #334155; font-size: 1.1rem; line-height: 1.8;">
+      <li>Company profile</li>
+      <li>Current challenges in banking — loan operations</li>
+      <li>Our proposed system</li>
+      <li>Proposed system flow &amp; flowchart</li>
+      <li><strong>Loan Appraisal — core of the system</strong> (Cashflow-based tool)</li>
+      <li>Authorization levels &amp; security</li>
+      <li>Case study: proposal for DECSI</li>
+      <li>Strategic fit for Wegagen Bank &amp; next steps</li>
+    </ol>
+    </div>
+  </div>
+
+  <!-- Slide 3: Company profile -->
+  <div class="slide" data-slide="3">
+    <span class="confidential">Confidential</span>
+    <h2>Company Profile</h2>
+    <p class="big-message">We design technology that helps Ethiopian financial institutions run faster, compliant, and paper-free operations.</p>
+    <div class="company-profile">
+      <div class="left">
+        <h3>Who we are</h3>
+        <p><strong>Seqela</strong> delivers digital solutions for banks, MFIs, and SACCOs. We propose the <strong>Loan Application and Processing System</strong> (“Loan Hub”) — a web-based, mobile-friendly platform for the full loan lifecycle — and we also deliver <strong>Seqela Digital Equb</strong> and <strong>Horizon SACCO core banking</strong>. We focus on security, NBE alignment, and scalability.</p>
+        <h3>What we do</h3>
+        <p>We design and deliver digital loan workflows: application and product information, digital queuing, guided document fulfillment with OCR/AI validation, multi-level authorization (Branch → Zonal → Head Office), collateral GPS and estimation, disbursement integration (e.g. Temenos), and full audit trails. Beyond lending, we deliver <strong>Seqela Digital Equb</strong> and <strong>Horizon SACCO core banking</strong> for savings and credit cooperatives.</p>
+        <h3>Our commitment</h3>
+        <p>To reduce processing delays, improve risk management, and support your hierarchical structure — so you can serve more customers with greater transparency and control.</p>
+      </div>
+      <div class="right">
+        <p><span class="label">Solutions we deliver</span><br>Loan Application and Processing System (Loan Hub)<br>Seqela Digital Equb<br>Horizon SACCO core banking</p>
+        <p><span class="label">Website</span><br><a href="https://seqela.com" target="_blank" rel="noopener" style="color:#e8d48b">seqela.com</a></p>
+        <p><span class="label">Proposal prepared for</span><br>DECSI (Oct. 2025); adaptable for Wegagen Bank</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: Current problems in banking (loan) -->
+  <div class="slide" data-slide="4">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+    <h2>Current Challenges in Banking — Manual Loan Processing</h2>
+    <p class="big-message">Banks and MFIs face common pain points when loan processing is manual. Addressing them is key to growth and regulatory confidence.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-item">
+        <span class="icon">1</span>
+        <div><strong>Slow appraisal &amp; backlogs</strong><br><p>Long turnaround times and growing queues hurt customer experience and tie up staff.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">2</span>
+        <div><strong>Paper-heavy processes</strong><br><p>Physical files, printing, courier, and storage increase cost and risk of loss or delay.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">3</span>
+        <div><strong>Compliance &amp; audit gaps</strong><br><p>Weak audit trails and scattered documents make NBE and internal audit difficult and risky.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">4</span>
+        <div><strong>Siloed workflows &amp; poor visibility</strong><br><p>Operations, finance, and branches work in silos; management lacks real-time visibility.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">5</span>
+        <div><strong>Customer dissatisfaction &amp; drop-off</strong><br><p>Lengthy waits and opaque status erode trust and push customers to competitors.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">6</span>
+        <div><strong>Collateral verification delays</strong><br><p>Manual checks, unclear assignment (officer vs. engineer), and document rework slow decisions.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">7</span>
+        <div><strong>Manual data entry &amp; re-keying errors</strong><br><p>Same data entered multiple times across forms and systems; typos and inconsistencies cause rejections or rework.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">8</span>
+        <div><strong>Inconsistent appraisal methodology</strong><br><p>Spreadsheet-based or ad-hoc appraisal; different officers apply different standards; hard to replicate or audit.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">9</span>
+        <div><strong>Physical approval bottlenecks</strong><br><p>Files wait on desks for sign-offs; sequential handoffs between branch, zonal, and head office; no escalation visibility.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">10</span>
+        <div><strong>Lost or misplaced files</strong><br><p>Paper files go missing; duplicates created; delays and customer complaints when documents cannot be located.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">11</span>
+        <div><strong>High operational cost</strong><br><p>More staff and overtime to handle volume; courier and storage costs; inability to scale without proportional headcount.</p></div>
+      </div>
+      <div class="problem-item">
+        <span class="icon">12</span>
+        <div><strong>No single pipeline view</strong><br><p>“Where is my loan?” unanswered; branch and HO cannot see the same pipeline; reporting is manual and late.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: Our proposed system (from proposal PDF) -->
+  <div class="slide" data-slide="5">
+    <span class="confidential">Confidential</span>
+    <h2>Our Proposed System</h2>
+    <div class="flow-steps">
+      <span class="flow-step">Queue</span>
+      <span class="flow-step">Documents</span>
+      <span class="flow-step">Collateral</span>
+      <span class="flow-step">Loan Appraisal</span>
+      <span class="flow-step">Authorization</span>
+      <span class="flow-step">Disbursement</span>
+    </div>
+    <p class="big-message">One platform that tackles these challenges: digital queuing, document fulfillment, <strong>cashflow-based loan appraisal (core)</strong>, and multi-level authorizations aligned with your Branch → Zonal → Head Office structure.</p>
+    <div class="solution-grid">
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Digital queuing</strong><br><p>Virtual queue, branch selection, real-time status via SMS/email; target 50–70% reduction in physical wait times.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Document fulfillment</strong><br><p>Guided upload, checklists by loan type, OCR/AI validation (KYC/AML); lower rejections from incomplete submissions.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Multi-level authorization</strong><br><p>Sub-Branch/Branch → Zonal → Operation HO → Management HO; configurable thresholds and full audit trail.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Collateral GPS &amp; estimation</strong><br><p>GPS capture for assets; AI-driven valuation with market data; risk-adjusted scoring and NBE-compliant audit trail.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Loan Appraisal</strong><br><p>Cashflow-based appraisal: financial assessment, business and character assessment, repayment capacity; summary and decision feeding into authorization.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Core banking integration</strong><br><p>Seamless disbursement (e.g. Temenos); e-signature loan agreements; pre-check eligibility during queuing.</p></div>
+      </div>
+      <div class="solution-item">
+        <span class="icon">✓</span>
+        <div><strong>Reporting &amp; security</strong><br><p>Dashboards (queue, document rates, approval times); role-based access, encryption, fraud detection; NBE-aligned.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 6: System flow — flowchart (all steps and features from proposal) -->
+  <div class="slide flowchart-slide" data-slide="6">
+    <span class="confidential">Confidential</span>
+    <h2>System Flow — All Steps &amp; Features</h2>
+    <div class="flowchart-wrap">
+      <img src="system_flow.png" alt="Loan Application Proposal system flowchart: Application → Documents → Loan Queue No Generation → GPS → Collateral Estimation → Loan Appraisal → Authorization (Branch, Zonal, HO Operation, HO Mgt) → Prohibition of collateral in legal administration → Processing Workflow → Disbursement → Report &amp; Analytics → Security and Compliance" />
+      <p class="caption">End-to-end flow: Application · Documents · Queue · GPS · Collateral Estimation · Loan Appraisal · Authorization (4 levels) · Legal prohibition · Processing · Disbursement · Reporting · Security &amp; Compliance</p>
+    </div>
+  </div>
+
+  <!-- Slide 7: Loan Appraisal — core of the system, how we implement it -->
+  <div class="slide" data-slide="7">
+    <span class="confidential">Confidential</span>
+    <h2>Loan Appraisal — Core of the System</h2>
+    <p class="big-message">The platform embeds <strong>cashflow-based loan appraisal</strong> methodology so every decision is consistent, auditable, and feeds straight into authorization.</p>
+    <div class="slide-content left" style="text-align: left; max-width: 52rem;">
+    <h3>How we implement it in the new system</h3>
+    <ul>
+      <li><strong>Basic info and loan request</strong> — Captured in the application and queue: applicant details, loan type, amount, term, and branch are stored in the system. Loan officers see the same record; no re-keying. Data flows into the appraisal workflow automatically.</li>
+      <li><strong>Business and character assessment</strong> — Implemented as structured forms and checklists in the platform. Officers complete qualitative assessment (business viability, borrower character) through guided screens; scores and comments are saved and linked to the loan file for audit.</li>
+      <li><strong>Cashflow analysis</strong> — The system implements the cashflow-based logic (income, expenses, repayment capacity) as configurable rules and calculations. Officers enter or import figures; the engine computes repayment capacity and coverage ratios. Results are stored and displayed in a single appraisal view, replacing spreadsheet-based analysis.</li>
+      <li><strong>E&amp;S and collateral</strong> — Environment &amp; social and collateral inputs are captured in the same workflow. Collateral values from the Collateral Estimation module (GPS, valuation) are pulled into the appraisal so coverage and risk are calculated in one place.</li>
+      <li><strong>Summary and decision</strong> — The platform generates a consolidated appraisal summary (financial, business, collateral, risk). A clear recommend/decline outcome is produced and passed to the four-level authorization (Branch → Zonal → Operation HO → Management HO). Every step is logged for NBE and internal audit.</li>
+      <li><strong>Repayment and amortization</strong> — Repayment schedule and loan amortization are calculated by the system based on approved amount, term, and rate. Schedules can be viewed in the platform and, upon final approval, sent to core banking (e.g. Temenos) for disbursement and booking.</li>
+    </ul>
+    <p class="sub">Result: one integrated appraisal workflow in the system — no standalone Excel files, full traceability, and a single source of truth for every loan.</p>
+    </div>
+  </div>
+
+  <!-- Slide 8: System flow — key features detail (from proposal PDF) -->
+  <div class="slide" data-slide="8">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+    <h2>System Flow &amp; Key Features</h2>
+    <p class="big-message">Full loan lifecycle from application to disbursement.</p>
+    <ul>
+      <li><strong>1. Application to loan</strong> — Customer applies and gets product/requirement info; joins virtual queue (loan type, preferred branch); auto-added to branch queue.</li>
+      <li><strong>2. Fulfilling necessary documents</strong> — Guided upload portal with checklists by loan type (e.g. business plan, license, ID, marriage certificate, collateral certs); OCR/AI validation for completeness and KYC/AML; step-by-step wizard; support for group loans (e.g. 3+ group guarantees).</li>
+      <li><strong>3. Queuing for loan request</strong> — Digital queue (web/in-branch); real-time SMS/email (wait time, appointment, queue position); branch dashboard (sort, filter, adjust list); Temenos pre-check for eligibility; queue export for reporting.</li>
+      <li><strong>4. Collateral GPS</strong> — Clients or field officers submit GPS coordinates of collateral (land, property, equipment) via mobile or web.</li>
+      <li><strong>5. Collateral estimation</strong> — Automated valuation using GPS + AI + market data + historical data; real estate, livestock/equipment, group collateral; manual override; risk-adjusted scoring (coverage ratio); audit trail per NBE guidelines.</li>
+      <li><strong>6. Loan Appraisal</strong> — Cashflow-based appraisal: financial assessment, business and character assessment, cashflow analysis, collateral worksheet, summary and decision sheet; output feeds into authorization.</li>
+    </ul>
+    <p class="sub">Continues: Multi-level authorization → Prohibition (legal admin) → Processing workflow → Disbursement → Reporting &amp; analytics → Security &amp; compliance.</p>
+    </div>
+  </div>
+
+  <!-- Slide 9: Authorization levels + workflow + security (from proposal PDF) -->
+  <div class="slide" data-slide="9">
+    <span class="confidential">Confidential</span>
+    <h2>Authorization Levels &amp; Security (from Proposal)</h2>
+    <div class="two-col">
+      <div>
+        <h3>Four-level authorization</h3>
+        <p><strong>Sub-Branch / Branch</strong> — Loan officers: document verification, preliminary credit assessment, eligibility; approve/reject or escalate to Zonal.</p>
+        <p><strong>Zonal office</strong> — Review escalated applications; higher-risk/larger loans; AI risk scoring; approve/reject/request info; configurable escalation to HO.</p>
+        <p><strong>Operation head office</strong> — High-value loans, exceptions, compliance; alignment with lending policies and NBE (e.g. Proclamation No. 626/2009).</p>
+        <p><strong>Management head office</strong> — Final sign-off for critical cases; Temenos fund allocation; e-signature loan agreements; notifications and escalation timers.</p>
+      </div>
+      <div>
+        <h3>Processing, disbursement &amp; reporting</h3>
+        <p><strong>Workflow</strong> — End-to-end from queue to disbursement; ML credit scoring; real-time status; SMS/email at each stage.</p>
+        <p><strong>Disbursement</strong> — On final HO approval, transfer via Temenos to client accounts or mobile wallets; automated loan agreement with e-signatures.</p>
+        <p><strong>Reporting</strong> — Dashboards (queue volumes, document fulfillment, approval times per level); custom reports; export and Temenos integration.</p>
+        <h3>Security &amp; compliance</h3>
+        <p>Role-based access per level; data encryption; logging to meet NBE standards; fraud detection during document fulfillment and approvals.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 10: Case study — Proposal for DECSI (from proposal PDF) -->
+  <div class="slide" data-slide="10">
+    <span class="confidential">Confidential</span>
+    <h2>Case Study: DECSI Microfinance</h2>
+    <div class="case-study-header">
+      <span class="client">DECSI Microfinance</span>
+      <span class="meta">Headquarters: Mekelle, Ethiopia</span>
+    </div>
+    <p class="sub" style="margin-bottom: 1rem;"><strong>Reference:</strong> Tsige Bayray, Vice Chief of IT at DECSI · <a href="tel:+251914701978">+251 914 701 978</a></p>
+    <div class="case-study-section">
+      <h4>Success stories — scale and impact</h4>
+      <div class="stats" style="margin-bottom: 0.5rem;">
+        <div class="stat big"><span class="value">50,000+</span><br><span class="label">Loan applicants</span></div>
+        <div class="stat big"><span class="value">30,000+</span><br><span class="label">Approved loans</span></div>
+        <div class="stat big"><span class="value">9+ Billion</span><br><span class="label">Disbursed (Birr)</span></div>
+      </div>
+      <p class="sub" style="margin-top: 0;">Real results at DECSI — demonstrating the platform’s capacity for high volume and significant disbursement.</p>
+    </div>
+    <div class="case-study-section">
+      <h4>Context</h4>
+      <p>DECSI operates with branches, zonal offices, and head office in Mekelle. The proposal was prepared to address manual queuing, incomplete document submissions leading to rejections, and sequential approvals causing bottlenecks — aligned with NBE Proclamation No. 626/2009 and DECSI practices (group guarantees, collateral for business/housing/agricultural loans).</p>
+    </div>
+    <div class="case-study-section">
+      <h4>Proposed solution</h4>
+      <p>Loan Application and Processing System (“DECSI Loan Hub”): start at queuing, integrated document handling and tiered approvals (Branch → Zonal → Head Office). Cloud-hosted; roles for clients, branch staff, zonal approvers, head office administrators, and loan officers. Complements existing Temenos core banking.</p>
+    </div>
+    <div class="case-study-section">
+      <h4>Expected benefits (from proposal)</h4>
+      <div class="stats">
+        <div class="stat big"><span class="value">50–70%</span><br><span class="label">Reduction in physical wait times (queuing)</span></div>
+        <div class="stat big"><span class="value">Lower</span><br><span class="label">Rejection rates (document automation)</span></div>
+        <div class="stat big"><span class="value">Weeks → Days</span><br><span class="label">Faster multi-level approvals</span></div>
+        <div class="stat big"><span class="value">12–18 mo</span><br><span class="label">Projected break-even (ROI)</span></div>
+      </div>
+      <p style="margin-top: 1rem; font-size: 0.95rem; color: #64748b;">Impact at a glance</p>
+      <div class="bar-chart">
+        <div class="bar-row"><div class="bar-label"><span>Wait time reduction</span><span>50–70%</span></div><div class="bar-track"><div class="bar-fill gold" style="width: 70%;"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Approval speed (weeks → days)</span><span>~80%</span></div><div class="bar-track"><div class="bar-fill" style="width: 80%;"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Document completeness (target)</span><span>95%+</span></div><div class="bar-track"><div class="bar-fill" style="width: 95%;"></div></div></div>
+      </div>
+    </div>
+    <p class="sub">Same proposal structure and flow can be adapted for Wegagen Bank (e.g. branch/zonal/HO hierarchy, Temenos integration).</p>
+  </div>
+
+  <!-- Slide 11: Implementation (from proposal PDF) -->
+  <div class="slide" data-slide="11">
+    <span class="confidential">Confidential</span>
+    <h2>Implementation (from Proposal)</h2>
+    <p>Agile approach; estimated <strong>6 months</strong> to completion:</p>
+    <ul>
+      <li><strong>Discovery</strong> (1 month) — Refine requirements, map hierarchy, prototype queuing and approval flows.</li>
+      <li><strong>Development</strong> (3 months) — Build modules; integrate multi-level workflows and core banking.</li>
+      <li><strong>Testing &amp; QA</strong> (1 month) — Simulate hierarchical approvals; security testing.</li>
+      <li><strong>Deployment &amp; training</strong> (1 month) — Rollout with training for branch, zonal, and head office staff.</li>
+    </ul>
+    <p class="sub">Cost estimate and timeline details are in the full proposal document.</p>
+  </div>
+
+  <!-- Slide 12: Strategic fit for Wegagen -->
+  <div class="slide" data-slide="12">
+    <span class="confidential">Confidential</span>
+    <h2>Why This Proposal Fits Wegagen Bank</h2>
+    <ul>
+      <li><strong>Scale</strong> — Design supports multi-branch, high-volume operations (397 branches; 4,800+ staff); cloud-hosted for scalability.</li>
+      <li><strong>Hierarchy</strong> — Four-level authorization (Branch → Zonal → Operation HO → Management HO) can be mapped to Wegagen’s structure.</li>
+      <li><strong>Digital-first</strong> — Digital queuing, document fulfillment, and paper-free workflow align with Wegagen’s innovation legacy.</li>
+      <li><strong>Core banking</strong> — Integration with Temenos (or equivalent) for eligibility pre-check and disbursement; e-signature agreements.</li>
+      <li><strong>Compliance</strong> — NBE-aligned (e.g. Proclamation No. 626/2009); role-based access, audit trail, fraud detection.</li>
+    </ul>
+  </div>
+
+  <!-- Slide 13: Next steps -->
+  <div class="slide" data-slide="13">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+    <h2>Next Steps</h2>
+    <p style="font-size: 1.15rem;"><strong>Full proposal</strong><br>Detailed flow, features, timeline, and cost estimate: <em>Loan application proposal PDF</em> in the presentation folder.</p>
+    <p style="margin-top: 1.5rem; font-size: 1.1rem;"><strong>Contact us</strong><br><a href="mailto:info@seqela.com">info@seqela.com</a> · <a href="tel:+251964790724">+251 964 790 724</a><br><a href="https://seqela.com" target="_blank" rel="noopener">seqela.com</a></p>
+    <p class="sub" style="margin-top: 2rem; font-size: 1.05rem;">Thank you. We look forward to discussing how the Loan Application and Processing System can support Wegagen Bank’s loan operations and strategic goals.</p>
+    </div>
+  </div>
+
+  <div class="slide-counter" aria-live="polite">1 / 13</div>
+  <nav class="nav" aria-label="Slide navigation">
+    <button type="button" id="prev" aria-label="Previous slide">← Previous</button>
+    <button type="button" id="next" aria-label="Next slide">Next →</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    const counterEl = document.querySelector('.slide-counter');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+
+    function go(n) {
+      slides[current].classList.remove('active');
+      current = (current + n + total) % total;
+      slides[current].classList.add('active');
+      counterEl.textContent = (current + 1) + ' / ' + total;
+    }
+    prevBtn.addEventListener('click', () => go(-1));
+    nextBtn.addEventListener('click', () => go(1));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'ArrowRight') go(1);
+    });
+  </script>
+</body>
+</html>

@@ -36,6 +36,10 @@
                 <td>{{ lr.branch.name }}</td>
                 <td>
                     {% with ct=lr.collateral.name|lower %}
+                    {% if is_loan_officer %}
+                    <a href="{% url 'loan_appraisal_steps' %}" title="Cashflow based MSME loan appraisal tool – V1.8.3 steps">Loan appraisal</a>
+                    &nbsp;|&nbsp;
+                    {% endif %}
                     {% if "building" in ct or "house" in ct or "construction" in ct %}
                     <a href="{% url 'collateral:building_list' lr.id %}">Buildings</a>
                     &nbsp;|&nbsp;

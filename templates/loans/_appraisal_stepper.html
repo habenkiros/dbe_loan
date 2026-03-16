@@ -1,0 +1,104 @@
+{% comment %}Progress stepper for page-based loan appraisal. Expects: loan_request, step, total_steps, steps. {% endcomment %}
+<style>
+.appraisal-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1.5rem 0 2rem;
+  padding: 0 0.5rem;
+  counter-reset: step;
+}
+.appraisal-stepper .step-item {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  position: relative;
+}
+.appraisal-stepper .step-item span {
+  font-size: 0.8rem;
+  display: block;
+}
+.appraisal-stepper .step-item::before {
+  counter-increment: step;
+  content: counter(step);
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  line-height: 2.25rem;
+  margin: 0 auto 0.5rem;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #555;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+.appraisal-stepper .step-item.current::before {
+  background: #064420;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(6,68,32,0.3);
+}
+.appraisal-stepper .step-item.done::before {
+  background: #28a745;
+  color: white;
+}
+.appraisal-stepper .step-item a {
+  text-decoration: none;
+  color: #333;
+  font-size: 0.85rem;
+  display: block;
+}
+.appraisal-stepper .step-item.current a {
+  color: #064420;
+  font-weight: bold;
+}
+.appraisal-stepper .step-item a:hover {
+  text-decoration: underline;
+}
+.appraisal-stepper .step-connector {
+  flex: 0 0 2rem;
+  height: 3px;
+  background: #e0e0e0;
+  margin-bottom: 2rem;
+}
+.appraisal-stepper .step-connector.done {
+  background: #28a745;
+}
+.appraisal-header {
+  border-bottom: 2px solid #064420;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.appraisal-header h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; }
+.appraisal-header .meta { color: #555; font-size: 0.95rem; }
+.appraisal-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.appraisal-card h2 { margin-top: 0; color: #064420; font-size: 1.2rem; }
+.appraisal-actions { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.btn-gray { background-color: #6c757d; color: white; }
+.btn-gray:hover { background-color: #5a6268; }
+</style>
+<div class="appraisal-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1>Loan appraisal – {{ loan_request.loan_request_id }}</h1>
+    <p class="meta">Applicant: <strong>{{ loan_request.applicant_name }}</strong> · Phone: {{ loan_request.phone_number }} · Amount: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong></p>
+  </div>
+  <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue" style="flex-shrink: 0;">View steps guide</a>
+</div>
+<div class="appraisal-stepper">
+  {% for s in steps %}
+  <div class="step-item {% if s.0 == step %}current{% elif s.0 < step %}done{% endif %}">
+    {% if s.0 < step %}
+      <a href="{% url 'loan_appraisal_step' loan_request.id s.0 %}">{{ s.1 }}</a>
+    {% else %}
+      <span>{{ s.1 }}</span>
+    {% endif %}
+  </div>
+  {% if not forloop.last %}<div class="step-connector {% if forloop.counter < step %}done{% endif %}"></div>{% endif %}
+  {% endfor %}
+</div>

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Appraisal Step 1 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+{% include "loans/_appraisal_stepper.html" %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="appraisal-card">
+    <h2>Sheet 1: {{ step_title }}</h2>
+    <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request.</p>
+    <div class="table-container">
+      <table class="form-table">
+        <tr><th colspan="2">Personal (client)</th></tr>
+        <tr><td>{{ basic_form.tin_number.label }}</td><td>{{ basic_form.tin_number }}</td></tr>
+        <tr><td>{{ basic_form.gender.label }}</td><td>{{ basic_form.gender }}</td></tr>
+        <tr><td>{{ basic_form.age.label }}</td><td>{{ basic_form.age }}</td></tr>
+        <tr><td>{{ basic_form.marital_status.label }}</td><td>{{ basic_form.marital_status }}</td></tr>
+        <tr><td>{{ basic_form.education_level.label }}</td><td>{{ basic_form.education_level }}</td></tr>
+        <tr><td>{{ basic_form.home_address.label }}</td><td>{{ basic_form.home_address }}</td></tr>
+        <tr><td>{{ basic_form.spouse_name.label }}</td><td>{{ basic_form.spouse_name }}</td></tr>
+        <tr><td>{{ basic_form.spouse_occupation.label }}</td><td>{{ basic_form.spouse_occupation }}</td></tr>
+        <tr><td>{{ basic_form.father_name.label }}</td><td>{{ basic_form.father_name }}</td></tr>
+        <tr><td>{{ basic_form.grandfather_name.label }}</td><td>{{ basic_form.grandfather_name }}</td></tr>
+        <tr><th colspan="2">Business</th></tr>
+        <tr><td>{{ basic_form.business_name.label }}</td><td>{{ basic_form.business_name }}</td></tr>
+        <tr><td>{{ basic_form.business_description.label }}</td><td>{{ basic_form.business_description }}</td></tr>
+        <tr><td>{{ basic_form.business_address.label }}</td><td>{{ basic_form.business_address }}</td></tr>
+        <tr><td>{{ basic_form.date_business_started.label }}</td><td>{{ basic_form.date_business_started }}</td></tr>
+        <tr><td>{{ basic_form.form_of_ownership.label }}</td><td>{{ basic_form.form_of_ownership }}</td></tr>
+        <tr><td>{{ basic_form.economic_sector.label }}</td><td>{{ basic_form.economic_sector }}</td></tr>
+        <tr><td>{{ basic_form.subsector_activity.label }}</td><td>{{ basic_form.subsector_activity }}</td></tr>
+        <tr><td>{{ basic_form.employees_full_time.label }}</td><td>{{ basic_form.employees_full_time }}</td></tr>
+        <tr><td>{{ basic_form.employees_part_time.label }}</td><td>{{ basic_form.employees_part_time }}</td></tr>
+        <tr><td>{{ basic_form.employees_seasonal.label }}</td><td>{{ basic_form.employees_seasonal }}</td></tr>
+        <tr><td>{{ basic_form.employees_ft_equivalent.label }}</td><td>{{ basic_form.employees_ft_equivalent }}</td></tr>
+        <tr><td>{{ basic_form.family_members_employed.label }}</td><td>{{ basic_form.family_members_employed }}</td></tr>
+        <tr><td>{{ basic_form.peak_sales_months.label }}</td><td>{{ basic_form.peak_sales_months }}</td></tr>
+        <tr><td>{{ basic_form.lowest_sales_months.label }}</td><td>{{ basic_form.lowest_sales_months }}</td></tr>
+        <tr><td>{{ basic_form.number_business_owners.label }}</td><td>{{ basic_form.number_business_owners }}</td></tr>
+        <tr><th colspan="2">Loan request (additional)</th></tr>
+        <tr><td>{{ basic_form.term_months.label }}</td><td>{{ basic_form.term_months }}</td></tr>
+        <tr><td>{{ basic_form.repayment_frequency.label }}</td><td>{{ basic_form.repayment_frequency }}</td></tr>
+        <tr><td>{{ basic_form.interest_rate.label }}</td><td>{{ basic_form.interest_rate }}</td></tr>
+        <tr><td>{{ basic_form.interest_basis.label }}</td><td>{{ basic_form.interest_basis }}</td></tr>
+        <tr><td>{{ basic_form.grace_period_months.label }}</td><td>{{ basic_form.grace_period_months }}</td></tr>
+        <tr><td>{{ basic_form.interest_only_months.label }}</td><td>{{ basic_form.interest_only_months }}</td></tr>
+        <tr><td>{{ basic_form.instalments_per_year.label }}</td><td>{{ basic_form.instalments_per_year }}</td></tr>
+        <tr><td>{{ basic_form.cash_contribution.label }}</td><td>{{ basic_form.cash_contribution }}</td></tr>
+      </table>
+    </div>
+    <div class="appraisal-actions">
+      <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 2</button>
+      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Appraisal Step 6 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+{% include "loans/_appraisal_stepper.html" %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="appraisal-card">
+    <h2>Sheet 6: {{ step_title }}</h2>
+    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms.</p>
+    <div class="table-container">
+      <table class="form-table">
+        <tr><td>{{ form.recommendation.label }}</td><td>{{ form.recommendation }}</td></tr>
+        <tr><td>{{ form.recommendation_comment.label }}</td><td>{{ form.recommendation_comment }}</td></tr>
+        <tr><td>{{ form.strengths.label }}</td><td>{{ form.strengths }}</td></tr>
+        <tr><td>{{ form.weaknesses.label }}</td><td>{{ form.weaknesses }}</td></tr>
+        <tr><td>{{ form.committee_comments.label }}</td><td>{{ form.committee_comments }}</td></tr>
+        <tr><td>{{ form.amount_approved.label }}</td><td>{{ form.amount_approved }}</td></tr>
+        <tr><td>{{ form.term_approved_months.label }}</td><td>{{ form.term_approved_months }}</td></tr>
+        <tr><td>{{ form.rate_approved.label }}</td><td>{{ form.rate_approved }}</td></tr>
+      </table>
+    </div>
+    <div class="appraisal-actions">
+      <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 7</button>
+      <a href="{% url 'loan_appraisal_step' loan_request.id 5 %}" class="btn btn-blue">Back to Sheet 5</a>
+      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

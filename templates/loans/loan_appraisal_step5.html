@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Appraisal Step 5 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+{% include "loans/_appraisal_stepper.html" %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="appraisal-card">
+    <h2>Sheet 5: {{ step_title }}</h2>
+    <p class="meta">Collateral breakdown (immovable, moveable, intangible, guarantors) and total; coverage ratio.</p>
+    <div class="table-container">
+      <table class="form-table">
+        <tr><td>{{ form.collateral_immovable_value.label }}</td><td>{{ form.collateral_immovable_value }}</td></tr>
+        <tr><td>{{ form.collateral_moveable_value.label }}</td><td>{{ form.collateral_moveable_value }}</td></tr>
+        <tr><td>{{ form.collateral_intangible_value.label }}</td><td>{{ form.collateral_intangible_value }}</td></tr>
+        <tr><td>{{ form.collateral_guarantors_value.label }}</td><td>{{ form.collateral_guarantors_value }}</td></tr>
+        <tr><td>{{ form.collateral_total_value.label }}</td><td>{{ form.collateral_total_value }}</td></tr>
+        <tr><td>{{ form.collateral_coverage_ratio.label }}</td><td>{{ form.collateral_coverage_ratio }}</td></tr>
+      </table>
+    </div>
+    <div class="appraisal-actions">
+      <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 6</button>
+      <a href="{% url 'loan_appraisal_step' loan_request.id 4 %}" class="btn btn-blue">Back to Sheet 4</a>
+      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

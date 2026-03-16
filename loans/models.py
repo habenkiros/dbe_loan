@@ -286,6 +286,60 @@ class LoanDocumentRequest(models.Model):
         return f'{self.document_type.name} for {self.loan_request.loan_request_id}'
 
 
+class LoanRequestBasicInfo(models.Model):
+    """
+    Sheet (1) Basic Info and loan request – client, business, and loan request details.
+    One-to-one with LoanRequest. Data we don't already have on LoanRequest.
+    """
+    loan_request = models.OneToOneField(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='basic_info',
+    )
+
+    # ----- Client (personal) -----
+    tin_number = models.CharField(max_length=50, null=True, blank=True)
+    gender = models.CharField(max_length=20, null=True, blank=True, choices=[('Male', 'Male'), ('Female', 'Female')])
+    age = models.PositiveIntegerField(null=True, blank=True)
+    marital_status = models.CharField(max_length=30, null=True, blank=True)
+    education_level = models.CharField(max_length=100, null=True, blank=True)
+    home_address = models.TextField(null=True, blank=True)
+    spouse_name = models.CharField(max_length=255, null=True, blank=True)
+    spouse_occupation = models.CharField(max_length=255, null=True, blank=True)
+    father_name = models.CharField(max_length=255, null=True, blank=True)
+    grandfather_name = models.CharField(max_length=255, null=True, blank=True)
+
+    # ----- Business -----
+    business_name = models.CharField(max_length=255, null=True, blank=True)
+    business_description = models.TextField(null=True, blank=True)
+    business_address = models.TextField(null=True, blank=True)
+    date_business_started = models.DateField(null=True, blank=True)
+    form_of_ownership = models.CharField(max_length=100, null=True, blank=True)  # e.g. Sole Proprietorship
+    economic_sector = models.CharField(max_length=100, null=True, blank=True)  # Agriculture, Manufacturing, etc.
+    subsector_activity = models.CharField(max_length=255, null=True, blank=True)
+    employees_full_time = models.PositiveIntegerField(null=True, blank=True)
+    employees_part_time = models.PositiveIntegerField(null=True, blank=True)
+    employees_seasonal = models.PositiveIntegerField(null=True, blank=True)
+    employees_ft_equivalent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    family_members_employed = models.PositiveIntegerField(null=True, blank=True)
+    peak_sales_months = models.CharField(max_length=100, null=True, blank=True)
+    lowest_sales_months = models.CharField(max_length=100, null=True, blank=True)
+    number_business_owners = models.PositiveIntegerField(null=True, blank=True)
+
+    # ----- Loan request (additional to LoanRequest.amount_requested, etc.) -----
+    term_months = models.PositiveIntegerField(null=True, blank=True)
+    repayment_frequency = models.CharField(max_length=50, null=True, blank=True)  # Monthly, Quarterly, etc.
+    interest_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    interest_basis = models.CharField(max_length=50, null=True, blank=True)  # Declining, Flat
+    grace_period_months = models.PositiveIntegerField(null=True, blank=True)
+    interest_only_months = models.PositiveIntegerField(null=True, blank=True)
+    instalments_per_year = models.PositiveIntegerField(null=True, blank=True)
+    cash_contribution = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return f'Basic info – {self.loan_request.loan_request_id}'
+
+
 class LoanAppraisal(models.Model):
     """
     Cashflow-based loan appraisal linked to a loan request.
@@ -337,11 +391,76 @@ class LoanAppraisal(models.Model):
         help_text='Debt service coverage ratio (net cashflow / proposed installment).',
     )
 
-    # Business & character assessment
+    # ----- Sheet (2) Business & character assessment -----
+    nbe_credit_report_obtained = models.BooleanField(null=True, blank=True, help_text='NBE Credit Report obtained (Y/N).')
+    nbe_report_date_received = models.DateField(null=True, blank=True)
+    total_number_repaid_loans = models.PositiveIntegerField(null=True, blank=True)
+    credit_history_max_score = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    qualitative_total_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Business and character total score (0–100). Applicant needs ≥75% to proceed.',
+    )
+    qualitative_passed = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text='True if qualitative assessment passed (≥75%). Proceed to Cashflow Analysis.',
+    )
     business_assessment = models.TextField(null=True, blank=True, help_text='Summary of business assessment.')
     character_assessment = models.TextField(null=True, blank=True, help_text='Summary of character / E&S assessment.')
 
-    # Collateral summary (snapshot – can be filled from collateral module)
+    # ----- Sheet (4) E&S Assessment -----
+    ES_RISK_LOW = 'low'
+    ES_RISK_MEDIUM = 'medium'
+    ES_RISK_HIGH = 'high'
+    ES_RISK_CHOICES = [
+        (ES_RISK_LOW, 'Low'),
+        (ES_RISK_MEDIUM, 'Medium'),
+        (ES_RISK_HIGH, 'High'),
+    ]
+    ES_ELIGIBILITY_PASS = 'pass'
+    ES_ELIGIBILITY_PASS_ACTION = 'pass_action'
+    ES_ELIGIBILITY_REJECT = 'reject'
+    ES_ELIGIBILITY_CHOICES = [
+        (ES_ELIGIBILITY_PASS, 'PASS'),
+        (ES_ELIGIBILITY_PASS_ACTION, 'PASS WITH ACTION POINTS'),
+        (ES_ELIGIBILITY_REJECT, 'REJECT'),
+    ]
+    es_risk_category = models.CharField(
+        max_length=20, choices=ES_RISK_CHOICES, null=True, blank=True,
+        help_text='E&S risk category.',
+    )
+    es_eligibility_decision = models.CharField(
+        max_length=20, choices=ES_ELIGIBILITY_CHOICES, null=True, blank=True,
+        help_text='Decision on eligibility: PASS / PASS WITH ACTION POINTS / REJECT.',
+    )
+    es_screened_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='es_screened_appraisals',
+    )
+    es_checked_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='es_checked_appraisals',
+    )
+    es_approved_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='es_approved_appraisals',
+    )
+    es_assessment_date = models.DateField(null=True, blank=True)
+    es_notes = models.TextField(null=True, blank=True, help_text='E&S checklist summary / action points.')
+
+    # ----- Sheet (5) Collateral Worksheet -----
     collateral_total_value = models.DecimalField(
         max_digits=20,
         decimal_places=2,
@@ -349,8 +468,28 @@ class LoanAppraisal(models.Model):
         blank=True,
         help_text='Total collateral value considered in this appraisal (snapshot).',
     )
+    collateral_immovable_value = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Immovable (land/buildings) value.',
+    )
+    collateral_moveable_value = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Moveable / fixed deposits value.',
+    )
+    collateral_intangible_value = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Intangible / securities / contracts value.',
+    )
+    collateral_guarantors_value = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Guarantors value.',
+    )
+    collateral_coverage_ratio = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Collateral coverage (total collateral / loan amount).',
+    )
 
-    # Summary & decision
+    # ----- Sheet (6) Summary & decision -----
     recommendation = models.CharField(
         max_length=20,
         choices=RECOMMEND_CHOICES,
@@ -362,7 +501,114 @@ class LoanAppraisal(models.Model):
         blank=True,
         help_text='Reasoning behind the recommendation.',
     )
+    strengths = models.TextField(null=True, blank=True, help_text='Key strengths.')
+    weaknesses = models.TextField(null=True, blank=True, help_text='Key weaknesses.')
+    committee_comments = models.TextField(null=True, blank=True, help_text='Credit committee comments.')
+    amount_approved = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Amount approved by committee (if different from requested).',
+    )
+    term_approved_months = models.PositiveIntegerField(null=True, blank=True, help_text='Term approved (months).')
+    rate_approved = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text='Interest rate approved (%).',
+    )
 
     def __str__(self):
         return f'Appraisal for {self.loan_request.loan_request_id}'
+
+
+class AppraisalCreditHistoryEntry(models.Model):
+    """Sheet (2) – one row per existing loan/lease in credit history."""
+    STATUS_REGULAR = 'regular'
+    STATUS_SETTLED_ON_TIME = 'settled_on_time'
+    STATUS_SETTLED_LATE = 'settled_late'
+    STATUS_IRREGULAR = 'irregular'
+    STATUS_DEFAULTED = 'defaulted'
+    STATUS_CHOICES = [
+        (STATUS_REGULAR, 'Regular'),
+        (STATUS_SETTLED_ON_TIME, 'Settled on time'),
+        (STATUS_SETTLED_LATE, 'Settled late'),
+        (STATUS_IRREGULAR, 'Irregular'),
+        (STATUS_DEFAULTED, 'Defaulted'),
+    ]
+    appraisal = models.ForeignKey(
+        LoanAppraisal,
+        on_delete=models.CASCADE,
+        related_name='credit_history_entries',
+    )
+    lender = models.CharField(max_length=255, null=True, blank=True)
+    loan_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    current_balance = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    maturity_date = models.DateField(null=True, blank=True)
+    purpose = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True)
+    repayment = models.CharField(max_length=100, null=True, blank=True)
+    letter_from_lender = models.CharField(max_length=100, null=True, blank=True)
+    score = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'id']
+
+    def __str__(self):
+        return f'{self.lender} – {self.appraisal.loan_request.loan_request_id}'
+
+
+# 10 factors from Sheet (2) Bus. and Character Assess. – fixed list
+QUALITATIVE_FACTOR_KEYS = [
+    ('years_operation', 'Years of business operation'),
+    ('management_competence', 'Management competence'),
+    ('supplier_quality', 'Supplier quality'),
+    ('sales_prospects', 'Sales prospects / market suitability'),
+    ('project_plan', 'Project plan (preparation)'),
+    ('savings_record', 'Savings record'),
+    ('character', 'Character'),
+    ('asset_management', 'Record keeping and asset management'),
+    ('record_keeping', 'Record keeping'),
+    ('third_party_opinion', '3rd party opinion'),
+]
+
+
+class AppraisalQualitativeFactor(models.Model):
+    """Sheet (2) – one row per qualitative factor (10 factors). Rating and notes per factor."""
+    appraisal = models.ForeignKey(
+        LoanAppraisal,
+        on_delete=models.CASCADE,
+        related_name='qualitative_factors',
+    )
+    factor_key = models.CharField(max_length=50)  # e.g. years_operation
+    factor_name = models.CharField(max_length=255, null=True, blank=True)
+    rating = models.CharField(max_length=100, null=True, blank=True)  # e.g. Very competent, Average
+    notes = models.TextField(null=True, blank=True, help_text='Observation / justification.')
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'id']
+        unique_together = [('appraisal', 'factor_key')]
+
+    def __str__(self):
+        return f'{self.factor_key} – {self.appraisal.loan_request.loan_request_id}'
+
+
+class AppraisalAmortizationEntry(models.Model):
+    """Sheet (7) / Loan Amortization Schedule – one row per payment."""
+    appraisal = models.ForeignKey(
+        LoanAppraisal,
+        on_delete=models.CASCADE,
+        related_name='amortization_entries',
+    )
+    period_number = models.PositiveIntegerField(help_text='Payment number.')
+    payment_date = models.DateField(null=True, blank=True)
+    payment_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    principal = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    interest = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    balance_after = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        ordering = ['period_number']
+        verbose_name_plural = 'Appraisal amortization entries'
+
+    def __str__(self):
+        return f'#{self.period_number} – {self.appraisal.loan_request.loan_request_id}'
 

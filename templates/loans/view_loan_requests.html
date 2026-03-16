@@ -69,6 +69,9 @@
                         <button class="dropbtn">Actions ▾</button>
                         <div class="dropdown-content">
                             <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-blue">Details</a>
+                            {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
+                            <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green">Loan appraisal</a>
+                            {% endif %}
                             {% if user.role == 'branch_manager' or user.is_superuser %}
                             {% if loan_request.status|default:''|lower == 'approved' %}
                             {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}

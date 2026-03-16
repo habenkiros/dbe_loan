@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Appraisal Step 7 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+{% include "loans/_appraisal_stepper.html" %}
+
+<div class="appraisal-card">
+  <h2>Sheet 7: {{ step_title }}</h2>
+  <p class="meta">Repayment schedule and loan amortization. Generate from loan terms (Sheet 1) and amount requested.</p>
+
+  {% if loan_request.applicant_name %}
+  <p><strong>Loan amount:</strong> {{ loan_request.amount_requested|floatformat:2 }} &nbsp;|&nbsp;
+     <strong>Applicant:</strong> {{ loan_request.applicant_name }}</p>
+  {% endif %}
+
+  {% if appraisal.amortization_entries.exists %}
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Payment date</th>
+          <th>Payment</th>
+          <th>Principal</th>
+          <th>Interest</th>
+          <th>Balance after</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in appraisal.amortization_entries.all %}
+        <tr>
+          <td>{{ row.period_number }}</td>
+          <td>{{ row.payment_date|date:"Y-m-d" }}</td>
+          <td>{{ row.payment_amount|floatformat:2 }}</td>
+          <td>{{ row.principal|floatformat:2 }}</td>
+          <td>{{ row.interest|floatformat:2 }}</td>
+          <td>{{ row.balance_after|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No amortization schedule yet. Click &quot;Generate schedule&quot; to create it from the loan amount and terms (Sheet 1).</p>
+  {% endif %}
+
+  <form method="post" style="margin-top: 1.5rem;">
+    {% csrf_token %}
+    <div class="appraisal-actions">
+      <button type="submit" name="generate_schedule" value="1" class="btn btn-green">Generate schedule</button>
+      <button type="submit" name="finish" value="1" class="btn btn-blue">Finish appraisal</button>
+      <a href="{% url 'loan_appraisal_step' loan_request.id 6 %}" class="btn btn-gray">Back to Sheet 6</a>
+      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -147,11 +147,14 @@
 {% endif %}
 
 {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
-<h3>Loan officer steps</h3>
-<p>
-    <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green" title="Open loan appraisal form">Loan appraisal</a>
-    <span class="help-inline">Fill the cashflow-based MSME loan appraisal (V1.8.3). Steps available on the next page.</span>
-</p>
+<div class="loan-officer-actions" style="margin: 1.5rem 0; padding: 1rem; border: 2px solid #064420; border-radius: 8px; background: #f0f8f0;">
+    <h3 style="margin-top: 0;">Loan officer steps</h3>
+    <p style="margin-bottom: 0.5rem;">Fill the cashflow-based MSME loan appraisal (Sheet 1–3, collateral, decision).</p>
+    <p>
+        <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green" title="Open loan appraisal form">Open loan appraisal</a>
+        <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue">View appraisal steps (guide)</a>
+    </p>
+</div>
 {% endif %}
 
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>

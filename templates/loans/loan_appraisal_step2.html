@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Appraisal Step 2 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+{% include "loans/_appraisal_stepper.html" %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="appraisal-card">
+    <h2>Sheet 2: {{ step_title }}</h2>
+    <p class="meta">Credit history, NBE report, 10 qualitative factors and business/character assessment.</p>
+
+    <h3 style="margin-top: 1rem;">Credit history &amp; NBE</h3>
+    <p>
+      <label>{{ form.nbe_credit_report_obtained }} NBE Credit Report obtained (Y/N)</label>
+      {{ form.nbe_report_date_received.label }}: {{ form.nbe_report_date_received }}
+      {{ form.total_number_repaid_loans.label }}: {{ form.total_number_repaid_loans }}
+      {{ form.credit_history_max_score.label }}: {{ form.credit_history_max_score }}
+    </p>
+    <p><strong>Existing loans / leases</strong></p>
+    {{ credit_formset.management_form }}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Lender</th>
+            <th>Loan amount</th>
+            <th>Current balance</th>
+            <th>Maturity date</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th>Repayment</th>
+            <th>Letter</th>
+            <th>Score</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in credit_formset %}
+          <tr>
+            <td>{{ f.id }}{{ f.lender }}</td>
+            <td>{{ f.loan_amount }}</td>
+            <td>{{ f.current_balance }}</td>
+            <td>{{ f.maturity_date }}</td>
+            <td>{{ f.purpose }}</td>
+            <td>{{ f.status }}</td>
+            <td>{{ f.repayment }}</td>
+            <td>{{ f.letter_from_lender }}</td>
+            <td>{{ f.score }}</td>
+            <td>{% if credit_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top: 1rem;">10 qualitative factors</h3>
+    {{ qual_formset.management_form }}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr><th>Factor</th><th>Rating</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          {% for f in qual_formset %}
+          <tr>
+            <td>{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
+            <td>{{ f.rating }}</td>
+            <td>{{ f.notes }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p>
+      {{ form.qualitative_total_score.label }}: {{ form.qualitative_total_score }}
+      <label>{{ form.qualitative_passed }} Passed (≥75%) – proceed to Cashflow</label>
+    </p>
+    <p>{{ form.business_assessment.label }}: {{ form.business_assessment }}</p>
+    <p>{{ form.character_assessment.label }}: {{ form.character_assessment }}</p>
+
+    <div class="appraisal-actions">
+      <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 3</button>
+      <a href="{% url 'loan_appraisal_step' loan_request.id 1 %}" class="btn btn-blue">Back to Sheet 1</a>
+      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

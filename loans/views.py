@@ -9,11 +9,17 @@ from .models import (
     Region, Zone, City, District, Branch, LoanCategory, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
+    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
+    AppraisalAmortizationEntry,
 )
 from .forms import (
     CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm, AssignEngineerForm,
     DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
-    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm, LoanAppraisalForm, CollateralEstimationConfigForm,
+    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm, LoanAppraisalForm,
+    LoanRequestBasicInfoForm, get_credit_history_formset, get_qualitative_factors_formset,
+    CollateralEstimationConfigForm,
+    AppraisalSheet2Form, AppraisalSheet3Form,
+    AppraisalESForm, AppraisalCollateralForm, AppraisalSummaryForm,
 )
 from .collateral_config import get_collateral_estimation_mode, allows_loan_officer, allows_engineering_team
 from django.http import JsonResponse
@@ -275,35 +281,227 @@ def loan_appraisal_steps(request):
     return render(request, 'loans/loan_appraisal_steps.html')
 
 
+def _ensure_qualitative_factors(appraisal):
+    """Ensure exactly 10 qualitative factor rows exist for this appraisal (Sheet 2)."""
+    existing_keys = set(
+        appraisal.qualitative_factors.values_list('factor_key', flat=True)
+    )
+    for order, (key, name) in enumerate(QUALITATIVE_FACTOR_KEYS):
+        if key not in existing_keys:
+            AppraisalQualitativeFactor.objects.create(
+                appraisal=appraisal,
+                factor_key=key,
+                factor_name=name,
+                display_order=order,
+            )
+
+
+APPRAISAL_STEPS = [
+    (1, 'Basic Info & loan request'),
+    (2, 'Business & character assessment'),
+    (3, 'Cashflow analysis'),
+    (4, 'E&S assessment'),
+    (5, 'Collateral worksheet'),
+    (6, 'Summary & decision'),
+    (7, 'Repayment & amortization'),
+]
+TOTAL_APPRAISAL_STEPS = len(APPRAISAL_STEPS)
+
+
 @login_required
 @user_passes_test(lambda u: u.role == 'loan_officer')
 def loan_appraisal_edit(request, loan_request_id):
+    """Redirect to step-based appraisal (step 1)."""
+    return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=1)
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'loan_officer')
+def loan_appraisal_step(request, loan_request_id, step):
     """
-    Loan officer creates or edits the cashflow-based loan appraisal for an assigned loan request.
-    Uses the sections from the Excel tool: financial/cashflow, business & character, collateral, summary/decision.
+    Page-based loan appraisal: one sheet per step (1–4).
+    GET: show that step's form. POST: save and redirect to next step (or stay on error).
     """
+    if step < 1 or step > TOTAL_APPRAISAL_STEPS:
+        return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
+
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
-    appraisal, created = LoanAppraisal.objects.get_or_create(
+    basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
+    appraisal, _ = LoanAppraisal.objects.get_or_create(
         loan_request=loan_request,
         defaults={'created_by': request.user},
     )
-    if request.method == 'POST':
-        form = LoanAppraisalForm(request.POST, instance=appraisal)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            if not obj.created_by_id:
-                obj.created_by = request.user
-            obj.save()
-            messages.success(request, 'Loan appraisal saved.')
-            return redirect('loan_request_detail', loan_request_id=loan_request.id)
-    else:
-        form = LoanAppraisalForm(instance=appraisal)
-    return render(request, 'loans/loan_appraisal_form.html', {
+    _ensure_qualitative_factors(appraisal)
+
+    CreditHistoryFormSet = get_credit_history_formset()
+    QualitativeFormSet = get_qualitative_factors_formset()
+
+    common_ctx = {
         'loan_request': loan_request,
-        'form': form,
         'appraisal': appraisal,
-        'created': created,
-    })
+        'step': step,
+        'total_steps': TOTAL_APPRAISAL_STEPS,
+        'steps': APPRAISAL_STEPS,
+        'step_title': APPRAISAL_STEPS[step - 1][1],
+    }
+
+    if request.method == 'POST':
+        if step == 1:
+            basic_form = LoanRequestBasicInfoForm(request.POST, instance=basic_info)
+            if basic_form.is_valid():
+                basic_form.save()
+                messages.success(request, 'Sheet 1 saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=2)
+            return render(request, 'loans/loan_appraisal_step1.html', {
+                **common_ctx, 'basic_form': basic_form,
+            })
+
+        if step == 2:
+            form = AppraisalSheet2Form(request.POST, instance=appraisal)
+            credit_formset = CreditHistoryFormSet(request.POST, instance=appraisal, prefix='credit')
+            qual_formset = QualitativeFormSet(request.POST, instance=appraisal, prefix='qual')
+            if form.is_valid() and credit_formset.is_valid() and qual_formset.is_valid():
+                form.save()
+                credit_formset.save()
+                qual_formset.save()
+                messages.success(request, 'Sheet 2 saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=3)
+            return render(request, 'loans/loan_appraisal_step2.html', {
+                **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
+            })
+
+        if step == 3:
+            form = AppraisalSheet3Form(request.POST, instance=appraisal)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Sheet 3 saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=4)
+            return render(request, 'loans/loan_appraisal_step3.html', {
+                **common_ctx, 'form': form,
+            })
+
+        if step == 4:
+            form = AppraisalESForm(request.POST, instance=appraisal)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Sheet 4 (E&S) saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=5)
+            return render(request, 'loans/loan_appraisal_step4.html', { **common_ctx, 'form': form })
+
+        if step == 5:
+            form = AppraisalCollateralForm(request.POST, instance=appraisal)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Sheet 5 (Collateral) saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=6)
+            return render(request, 'loans/loan_appraisal_step5.html', { **common_ctx, 'form': form })
+
+        if step == 6:
+            form = AppraisalSummaryForm(request.POST, instance=appraisal)
+            if form.is_valid():
+                obj = form.save(commit=False)
+                if not obj.created_by_id:
+                    obj.created_by = request.user
+                obj.save()
+                messages.success(request, 'Sheet 6 (Summary & decision) saved.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
+            return render(request, 'loans/loan_appraisal_step6.html', { **common_ctx, 'form': form })
+
+        if step == 7:
+            if request.POST.get('generate_schedule'):
+                _generate_amortization_schedule(appraisal, basic_info, loan_request)
+                messages.success(request, 'Repayment schedule generated.')
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
+            if request.POST.get('finish'):
+                messages.success(request, 'Appraisal complete.')
+                return redirect('loan_request_detail', loan_request_id=loan_request_id)
+            return render(request, 'loans/loan_appraisal_step7.html', common_ctx)
+
+    # GET
+    if step == 1:
+        basic_form = LoanRequestBasicInfoForm(instance=basic_info)
+        return render(request, 'loans/loan_appraisal_step1.html', {
+            **common_ctx, 'basic_form': basic_form,
+        })
+    if step == 2:
+        form = AppraisalSheet2Form(instance=appraisal)
+        credit_formset = CreditHistoryFormSet(instance=appraisal, prefix='credit')
+        qual_formset = QualitativeFormSet(instance=appraisal, prefix='qual')
+        return render(request, 'loans/loan_appraisal_step2.html', {
+            **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
+        })
+    if step == 3:
+        form = AppraisalSheet3Form(instance=appraisal)
+        return render(request, 'loans/loan_appraisal_step3.html', { **common_ctx, 'form': form })
+    if step == 4:
+        form = AppraisalESForm(instance=appraisal)
+        return render(request, 'loans/loan_appraisal_step4.html', { **common_ctx, 'form': form })
+    if step == 5:
+        form = AppraisalCollateralForm(instance=appraisal)
+        return render(request, 'loans/loan_appraisal_step5.html', { **common_ctx, 'form': form })
+    if step == 6:
+        form = AppraisalSummaryForm(instance=appraisal)
+        return render(request, 'loans/loan_appraisal_step6.html', { **common_ctx, 'form': form })
+    if step == 7:
+        return render(request, 'loans/loan_appraisal_step7.html', common_ctx)
+
+    return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
+
+
+def _add_months(date, months):
+    """Add months to a date (stdlib only)."""
+    import calendar
+    month = date.month - 1 + months
+    year = date.year + month // 12
+    month = month % 12 + 1
+    day = min(date.day, calendar.monthrange(year, month)[1])
+    return date.replace(year=year, month=month, day=day)
+
+
+def _generate_amortization_schedule(appraisal, basic_info, loan_request):
+    """Generate amortization entries from loan amount and basic info terms (declining balance)."""
+    from decimal import Decimal
+    from django.utils import timezone
+
+    AppraisalAmortizationEntry.objects.filter(appraisal=appraisal).delete()
+    amount = loan_request.amount_requested or Decimal('0')
+    term_months = basic_info.term_months or 12
+    annual_rate = (basic_info.interest_rate or Decimal('0')) / Decimal('100')
+    if amount <= 0 or term_months <= 0:
+        return
+    n = term_months
+    r = annual_rate / 12 if annual_rate else Decimal('0')
+    balance = amount
+    start_date = timezone.now().date()
+    entries = []
+    for period in range(1, n + 1):
+        if r > 0:
+            interest = (balance * r).quantize(Decimal('0.01'))
+            remaining_periods = n - period + 1
+            principal = (balance / remaining_periods).quantize(Decimal('0.01'))
+            if period == n:
+                principal = balance
+            payment = principal + interest
+        else:
+            interest = Decimal('0')
+            principal = (amount / n).quantize(Decimal('0.01'))
+            if period == n:
+                principal = balance
+            payment = principal
+        balance = (balance - principal).quantize(Decimal('0.01'))
+        if balance < 0:
+            balance = Decimal('0')
+        pay_date = _add_months(start_date, period)
+        entries.append(AppraisalAmortizationEntry(
+            appraisal=appraisal,
+            period_number=period,
+            payment_date=pay_date,
+            payment_amount=payment,
+            principal=principal,
+            interest=interest,
+            balance_after=balance,
+        ))
+    AppraisalAmortizationEntry.objects.bulk_create(entries)
 
 
 @login_required

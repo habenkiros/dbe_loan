@@ -7,6 +7,8 @@ from .models import (
     Zone, Branch, LoanCategory, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, CollateralEstimationConfig,
+    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
+    AppraisalAmortizationEntry,
 )
 
 
@@ -58,7 +60,29 @@ class LoanDocumentRequestAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CustomUser)
-admin.site.register(LoanAppraisal)
+admin.site.register(LoanRequestBasicInfo)
+
+
+class AppraisalCreditHistoryEntryInline(admin.TabularInline):
+    model = AppraisalCreditHistoryEntry
+    extra = 0
+
+
+class AppraisalQualitativeFactorInline(admin.TabularInline):
+    model = AppraisalQualitativeFactor
+    extra = 0
+    max_num = 10
+
+
+class AppraisalAmortizationEntryInline(admin.TabularInline):
+    model = AppraisalAmortizationEntry
+    extra = 0
+
+
+@admin.register(LoanAppraisal)
+class LoanAppraisalAdmin(admin.ModelAdmin):
+    list_display = ('loan_request', 'created_by', 'qualitative_total_score', 'qualitative_passed', 'es_eligibility_decision', 'recommendation', 'created_at')
+    inlines = [AppraisalCreditHistoryEntryInline, AppraisalQualitativeFactorInline, AppraisalAmortizationEntryInline]
 
 
 @admin.register(CollateralEstimationConfig)

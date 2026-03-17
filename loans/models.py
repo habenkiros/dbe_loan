@@ -301,8 +301,19 @@ class LoanRequestBasicInfo(models.Model):
     tin_number = models.CharField(max_length=50, null=True, blank=True)
     gender = models.CharField(max_length=20, null=True, blank=True, choices=[('Male', 'Male'), ('Female', 'Female')])
     age = models.PositiveIntegerField(null=True, blank=True)
-    marital_status = models.CharField(max_length=30, null=True, blank=True)
-    education_level = models.CharField(max_length=100, null=True, blank=True)
+    MARITAL_SINGLE = 'Single'
+    MARITAL_MARRIED = 'Married'
+    MARITAL_DIVORCED = 'Divorced'
+    MARITAL_WIDOWED = 'Widowed'
+    MARITAL_CHOICES = [(MARITAL_SINGLE, 'Single'), (MARITAL_MARRIED, 'Married'), (MARITAL_DIVORCED, 'Divorced'), (MARITAL_WIDOWED, 'Widowed')]
+    marital_status = models.CharField(max_length=30, null=True, blank=True, choices=MARITAL_CHOICES)
+    EDUCATION_NONE = 'None'
+    EDUCATION_PRIMARY = 'Primary'
+    EDUCATION_SECONDARY = 'Secondary'
+    EDUCATION_COLLEGE = 'College'
+    EDUCATION_BA = 'BA and above'
+    EDUCATION_CHOICES = [(EDUCATION_NONE, 'None'), (EDUCATION_PRIMARY, 'Primary'), (EDUCATION_SECONDARY, 'Secondary'), (EDUCATION_COLLEGE, 'College'), (EDUCATION_BA, 'BA and above')]
+    education_level = models.CharField(max_length=100, null=True, blank=True, choices=EDUCATION_CHOICES)
     home_address = models.TextField(null=True, blank=True)
     spouse_name = models.CharField(max_length=255, null=True, blank=True)
     spouse_occupation = models.CharField(max_length=255, null=True, blank=True)
@@ -314,8 +325,20 @@ class LoanRequestBasicInfo(models.Model):
     business_description = models.TextField(null=True, blank=True)
     business_address = models.TextField(null=True, blank=True)
     date_business_started = models.DateField(null=True, blank=True)
-    form_of_ownership = models.CharField(max_length=100, null=True, blank=True)  # e.g. Sole Proprietorship
-    economic_sector = models.CharField(max_length=100, null=True, blank=True)  # Agriculture, Manufacturing, etc.
+    OWNERSHIP_SOLE = 'Sole Proprietorship'
+    OWNERSHIP_PLC = 'PLC'
+    OWNERSHIP_PARTNERSHIP = 'Partnership'
+    OWNERSHIP_ASSOCIATION = 'Association'
+    OWNERSHIP_SHARE = 'Share Company'
+    OWNERSHIP_CHOICES = [(OWNERSHIP_SOLE, 'Sole Proprietorship'), (OWNERSHIP_PLC, 'PLC'), (OWNERSHIP_PARTNERSHIP, 'Partnership'), (OWNERSHIP_ASSOCIATION, 'Association'), (OWNERSHIP_SHARE, 'Share Company')]
+    form_of_ownership = models.CharField(max_length=100, null=True, blank=True, choices=OWNERSHIP_CHOICES)
+    SECTOR_MANUFACTURING = 'Manufacturing'
+    SECTOR_TRADE = 'Trade'
+    SECTOR_SERVICE = 'Service'
+    SECTOR_CONSTRUCTION = 'Construction'
+    SECTOR_AGRICULTURE = 'Agriculture'
+    SECTOR_CHOICES = [(SECTOR_MANUFACTURING, 'Manufacturing'), (SECTOR_TRADE, 'Trade'), (SECTOR_SERVICE, 'Service'), (SECTOR_CONSTRUCTION, 'Construction'), (SECTOR_AGRICULTURE, 'Agriculture')]
+    economic_sector = models.CharField(max_length=100, null=True, blank=True, choices=SECTOR_CHOICES)
     subsector_activity = models.CharField(max_length=255, null=True, blank=True)
     employees_full_time = models.PositiveIntegerField(null=True, blank=True)
     employees_part_time = models.PositiveIntegerField(null=True, blank=True)
@@ -328,9 +351,18 @@ class LoanRequestBasicInfo(models.Model):
 
     # ----- Loan request (additional to LoanRequest.amount_requested, etc.) -----
     term_months = models.PositiveIntegerField(null=True, blank=True)
-    repayment_frequency = models.CharField(max_length=50, null=True, blank=True)  # Monthly, Quarterly, etc.
+    FREQ_BIWEEKLY = 'Bi-Weekly'
+    FREQ_MONTHLY = 'Monthly'
+    FREQ_QUARTERLY = 'Quarterly'
+    FREQ_SEMI = 'Semi-annual'
+    FREQ_ANNUAL = 'Annual'
+    REPAYMENT_FREQUENCY_CHOICES = [(FREQ_BIWEEKLY, 'Bi-Weekly'), (FREQ_MONTHLY, 'Monthly'), (FREQ_QUARTERLY, 'Quarterly'), (FREQ_SEMI, 'Semi-annual'), (FREQ_ANNUAL, 'Annual')]
+    repayment_frequency = models.CharField(max_length=50, null=True, blank=True, choices=REPAYMENT_FREQUENCY_CHOICES)
     interest_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    interest_basis = models.CharField(max_length=50, null=True, blank=True)  # Declining, Flat
+    INTEREST_DECLINING = 'Declining'
+    INTEREST_FLAT = 'Flat'
+    INTEREST_BASIS_CHOICES = [(INTEREST_DECLINING, 'Declining'), (INTEREST_FLAT, 'Flat')]
+    interest_basis = models.CharField(max_length=50, null=True, blank=True, choices=INTEREST_BASIS_CHOICES)
     grace_period_months = models.PositiveIntegerField(null=True, blank=True)
     interest_only_months = models.PositiveIntegerField(null=True, blank=True)
     instalments_per_year = models.PositiveIntegerField(null=True, blank=True)
@@ -554,6 +586,14 @@ class AppraisalCreditHistoryEntry(models.Model):
     def __str__(self):
         return f'{self.lender} – {self.appraisal.loan_request.loan_request_id}'
 
+
+# Qualitative factor rating scale (from Excel Sheet 2)
+QUALITATIVE_RATING_CHOICES = [
+    ('', '—'),
+    ('Poor', 'Poor'),
+    ('basic', 'Basic'),
+    ('Professional', 'Professional'),
+]
 
 # 10 factors from Sheet (2) Bus. and Character Assess. – fixed list
 QUALITATIVE_FACTOR_KEYS = [

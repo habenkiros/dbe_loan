@@ -9,6 +9,14 @@
     <h2>Sheet 2: {{ step_title }}</h2>
     <p class="meta">Credit history, NBE report, 10 qualitative factors and business/character assessment.</p>
 
+    {% if form.errors or credit_formset.non_form_errors or qual_formset.non_form_errors %}
+    <div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">
+      {% if form.errors %}<p><strong>Form:</strong> {{ form.errors }}</p>{% endif %}
+      {% if credit_formset.non_form_errors %}<p><strong>Credit table:</strong> {{ credit_formset.non_form_errors }}</p>{% endif %}
+      {% if qual_formset.non_form_errors %}<p><strong>Qualitative table:</strong> {{ qual_formset.non_form_errors }}</p>{% endif %}
+    </div>
+    {% endif %}
+
     <h3 style="margin-top: 1rem;">Credit history &amp; NBE</h3>
     <p>
       <label>{{ form.nbe_credit_report_obtained }} NBE Credit Report obtained (Y/N)</label>
@@ -37,7 +45,7 @@
         <tbody>
           {% for f in credit_formset %}
           <tr>
-            <td>{{ f.id }}{{ f.lender }}</td>
+            <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.lender }}</td>
             <td>{{ f.loan_amount }}</td>
             <td>{{ f.current_balance }}</td>
             <td>{{ f.maturity_date }}</td>
@@ -63,7 +71,7 @@
         <tbody>
           {% for f in qual_formset %}
           <tr>
-            <td>{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
+            <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
             <td>{{ f.rating }}</td>
             <td>{{ f.notes }}</td>
           </tr>

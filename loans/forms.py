@@ -5,7 +5,8 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import (
     CustomUser, LoanRequest, District, Branch, Region, Zone, City,
     LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
-    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
+    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
+    QUALITATIVE_FACTOR_KEYS, QUALITATIVE_RATING_CHOICES,
 )
 
 class CustomUserCreationForm(UserCreationForm):
@@ -143,7 +144,7 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
 
 
 class AppraisalCreditHistoryEntryForm(forms.ModelForm):
-    """One row of credit history (Sheet 2)."""
+    """One row of credit history (Sheet 2). Status = dropdown per Excel."""
     class Meta:
         model = AppraisalCreditHistoryEntry
         fields = [
@@ -152,21 +153,23 @@ class AppraisalCreditHistoryEntryForm(forms.ModelForm):
         ]
         widgets = {
             'maturity_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
+        self.fields['status'].required = False
 
 
 class AppraisalQualitativeFactorForm(forms.ModelForm):
-    """One qualitative factor (Sheet 2) – rating and notes."""
+    """One qualitative factor (Sheet 2) – rating (dropdown: Poor/basic/Professional) and notes."""
     class Meta:
         model = AppraisalQualitativeFactor
         fields = ['factor_key', 'factor_name', 'rating', 'notes', 'display_order']
         widgets = {
-            'rating': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Very competent'}),
+            'rating': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
@@ -176,6 +179,8 @@ class AppraisalQualitativeFactorForm(forms.ModelForm):
         self.fields['factor_name'].widget.attrs['readonly'] = True
         self.fields['factor_name'].widget.attrs['class'] = 'form-control'
         self.fields['display_order'].widget = forms.HiddenInput()
+        self.fields['rating'].choices = QUALITATIVE_RATING_CHOICES
+        self.fields['rating'].required = False
 
 
 def get_credit_history_formset():

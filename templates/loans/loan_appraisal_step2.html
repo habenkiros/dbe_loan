@@ -3,11 +3,30 @@
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
 
+<style>
+.sheet2-section { background: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.sheet2-section h3 { margin: 0 0 1rem 0; color: #064420; font-size: 1.1rem; border-bottom: 2px solid #064420; padding-bottom: 0.4rem; }
+.sheet2-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem 1.5rem; align-items: end; }
+.sheet2-grid .field { display: flex; flex-direction: column; gap: 0.25rem; }
+.sheet2-grid .field label { font-weight: 600; color: #333; font-size: 0.9rem; }
+.sheet2-grid .field.checkbox { flex-direction: row; align-items: center; }
+.sheet2-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
+.sheet2-table th, .sheet2-table td { border: 1px solid #ddd; padding: 0.5rem 0.4rem; text-align: left; }
+.sheet2-table th { background: #064420; color: white; font-weight: 600; }
+.sheet2-table tbody tr:nth-child(even) { background: #f9fbf9; }
+.sheet2-table tbody tr:hover { background: #f0f8f0; }
+.sheet2-table input[type="text"], .sheet2-table input[type="number"], .sheet2-table select { width: 100%; max-width: 120px; }
+.sheet2-table textarea { width: 100%; min-width: 100px; }
+.sheet2-table .col-delete { width: 2.5rem; text-align: center; }
+.sheet2-pass-box { background: #e8f5e9; border: 2px solid #28a745; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+.sheet2-pass-box label { font-weight: 700; color: #155724; }
+</style>
+
 <form method="post">
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 2: {{ step_title }}</h2>
-    <p class="meta">Credit history, NBE report, 10 qualitative factors and business/character assessment.</p>
+    <p class="meta">NBE credit report, existing loans/leases, 10 qualitative factors, and business &amp; character assessment (per Excel).</p>
 
     {% if form.errors or credit_formset.non_form_errors or qual_formset.non_form_errors %}
     <div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">
@@ -17,74 +36,102 @@
     </div>
     {% endif %}
 
-    <h3 style="margin-top: 1rem;">Credit history &amp; NBE</h3>
-    <p>
-      <label>{{ form.nbe_credit_report_obtained }} NBE Credit Report obtained (Y/N)</label>
-      {{ form.nbe_report_date_received.label }}: {{ form.nbe_report_date_received }}
-      {{ form.total_number_repaid_loans.label }}: {{ form.total_number_repaid_loans }}
-      {{ form.credit_history_max_score.label }}: {{ form.credit_history_max_score }}
-    </p>
-    <p><strong>Existing loans / leases</strong></p>
-    {{ credit_formset.management_form }}
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Lender</th>
-            <th>Loan amount</th>
-            <th>Current balance</th>
-            <th>Maturity date</th>
-            <th>Purpose</th>
-            <th>Status</th>
-            <th>Repayment</th>
-            <th>Letter</th>
-            <th>Score</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for f in credit_formset %}
-          <tr>
-            <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.lender }}</td>
-            <td>{{ f.loan_amount }}</td>
-            <td>{{ f.current_balance }}</td>
-            <td>{{ f.maturity_date }}</td>
-            <td>{{ f.purpose }}</td>
-            <td>{{ f.status }}</td>
-            <td>{{ f.repayment }}</td>
-            <td>{{ f.letter_from_lender }}</td>
-            <td>{{ f.score }}</td>
-            <td>{% if credit_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="sheet2-section">
+      <h3>NBE Credit Report</h3>
+      <div class="sheet2-grid">
+        <div class="field checkbox">
+          {{ form.nbe_credit_report_obtained }}
+          <label for="id_nbe_credit_report_obtained">NBE Credit Report obtained (Y/N)</label>
+        </div>
+        <div class="field">{{ form.nbe_report_date_received.label_tag }}{{ form.nbe_report_date_received }}</div>
+        <div class="field">{{ form.total_number_repaid_loans.label_tag }}{{ form.total_number_repaid_loans }}</div>
+        <div class="field">{{ form.credit_history_max_score.label_tag }}{{ form.credit_history_max_score }}</div>
+      </div>
     </div>
 
-    <h3 style="margin-top: 1rem;">10 qualitative factors</h3>
-    {{ qual_formset.management_form }}
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr><th>Factor</th><th>Rating</th><th>Notes</th></tr>
-        </thead>
-        <tbody>
-          {% for f in qual_formset %}
-          <tr>
-            <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
-            <td>{{ f.rating }}</td>
-            <td>{{ f.notes }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="sheet2-section">
+      <h3>Existing loans / leases</h3>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">For each existing loan or lease: Lender, Amount, Balance, Maturity, Purpose, Status, Repayment, Letter from lender, Score.</p>
+      {{ credit_formset.management_form }}
+      <div class="table-container">
+        <table class="sheet2-table">
+          <thead>
+            <tr>
+              <th>Lender</th>
+              <th>Loan amount</th>
+              <th>Current balance</th>
+              <th>Maturity date</th>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th>Repayment</th>
+              <th>Letter from lender</th>
+              <th>Score</th>
+              <th class="col-delete">Del.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in credit_formset %}
+            <tr>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.lender }}</td>
+              <td>{{ f.loan_amount }}</td>
+              <td>{{ f.current_balance }}</td>
+              <td>{{ f.maturity_date }}</td>
+              <td>{{ f.purpose }}</td>
+              <td>{{ f.status }}</td>
+              <td>{{ f.repayment }}</td>
+              <td>{{ f.letter_from_lender }}</td>
+              <td>{{ f.score }}</td>
+              <td class="col-delete">{% if credit_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <p>
-      {{ form.qualitative_total_score.label }}: {{ form.qualitative_total_score }}
-      <label>{{ form.qualitative_passed }} Passed (≥75%) – proceed to Cashflow</label>
-    </p>
-    <p>{{ form.business_assessment.label }}: {{ form.business_assessment }}</p>
-    <p>{{ form.character_assessment.label }}: {{ form.character_assessment }}</p>
+
+    <div class="sheet2-section">
+      <h3>10 qualitative factors (rate and justify each)</h3>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Rate each factor: Poor, Basic, or Professional. Add observation / justification in Notes.</p>
+      {{ qual_formset.management_form }}
+      <div class="table-container">
+        <table class="sheet2-table">
+          <thead>
+            <tr>
+              <th>Factor</th>
+              <th>Rating</th>
+              <th>Notes / observation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in qual_formset %}
+            <tr>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
+              <td>{{ f.rating }}</td>
+              <td>{{ f.notes }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sheet2-section">
+      <h3>Business and Character – Maximum score (out of 100)</h3>
+      <div class="sheet2-grid">
+        <div class="field">{{ form.qualitative_total_score.label_tag }}{{ form.qualitative_total_score }}</div>
+      </div>
+      <div class="sheet2-pass-box">
+        <label>{{ form.qualitative_passed }} Applicant passed qualitative assessment (≥75%): Proceed to Cashflow Analysis. If not checked: Borrower failed – DO NOT PROCEED.</label>
+      </div>
+    </div>
+
+    <div class="sheet2-section">
+      <h3>Business assessment &amp; Character assessment</h3>
+      <div style="display:grid; gap:1rem;">
+        <div class="field">{{ form.business_assessment.label_tag }}{{ form.business_assessment }}</div>
+        <div class="field">{{ form.character_assessment.label_tag }}{{ form.character_assessment }}</div>
+      </div>
+    </div>
 
     <div class="appraisal-actions">
       <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 3</button>

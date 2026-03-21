@@ -573,10 +573,13 @@ class AppraisalCreditHistoryEntry(models.Model):
     loan_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     current_balance = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     maturity_date = models.DateField(null=True, blank=True)
-    purpose = models.CharField(max_length=255, null=True, blank=True)
+    PURPOSE_CHOICES = [('Working capital', 'Working capital'), ('Fixed Asset', 'Fixed Asset')]
+    purpose = models.CharField(max_length=255, null=True, blank=True, choices=PURPOSE_CHOICES)
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=True, blank=True)
-    repayment = models.CharField(max_length=100, null=True, blank=True)
-    letter_from_lender = models.CharField(max_length=100, null=True, blank=True)
+    REPAYMENT_CHOICES = [('Regular', 'Regular'), ('Irregular', 'Irregular'), ('On time', 'On time'), ('Delayed', 'Delayed')]
+    repayment = models.CharField(max_length=100, null=True, blank=True, choices=REPAYMENT_CHOICES)
+    LETTER_CHOICES = [('Yes', 'Yes'), ('No', 'No')]
+    letter_from_lender = models.CharField(max_length=100, null=True, blank=True, choices=LETTER_CHOICES)
     score = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     display_order = models.PositiveIntegerField(default=0)
 

@@ -144,7 +144,7 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
 
 
 class AppraisalCreditHistoryEntryForm(forms.ModelForm):
-    """One row of credit history (Sheet 2). Status = dropdown per Excel."""
+    """One row of credit history (Sheet 2). Dropdowns per Excel: Status, Purpose, Repayment, Letter from lender."""
     class Meta:
         model = AppraisalCreditHistoryEntry
         fields = [
@@ -153,14 +153,19 @@ class AppraisalCreditHistoryEntryForm(forms.ModelForm):
         ]
         widgets = {
             'maturity_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'purpose': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'repayment': forms.Select(attrs={'class': 'form-control'}),
+            'letter_from_lender': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
-        self.fields['status'].required = False
+        for name in ('purpose', 'status', 'repayment', 'letter_from_lender'):
+            self.fields[name].required = False
+            self.fields[name].empty_label = '—'
 
 
 class AppraisalQualitativeFactorForm(forms.ModelForm):

@@ -1,0 +1,52 @@
+{% comment %}Automated check summary. Expects: doc {% endcomment %}
+{% if doc.automated_checks %}
+<details style="margin-top:0.35rem; font-size:0.85rem;">
+  <summary>Automated checks</summary>
+  <ul style="margin:0.35rem 0 0 1rem;">
+    {% for msg in doc.automated_checks.messages %}
+    <li>{{ msg }}</li>
+    {% empty %}
+    <li>No issues reported.</li>
+    {% endfor %}
+  </ul>
+  {% if doc.automated_checks.extracted_fields %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Extracted for appraisal:</strong>
+    {% for k,v in doc.automated_checks.extracted_fields.items %}{{ k }}={{ v|truncatechars:40 }}{% if not forloop.last %}; {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+  {% if doc.automated_checks.content_validation.reference_match.enabled %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Reference sample match:</strong>
+    {% if doc.automated_checks.content_validation.reference_match.passed %}✓ passed{% else %}✗ failed{% endif %}
+    — similarity {{ doc.automated_checks.content_validation.reference_match.text_similarity }}
+    (min {{ doc.automated_checks.content_validation.reference_match.min_similarity }})
+    {% if doc.automated_checks.content_validation.reference_match.reference_filename %}
+    vs {{ doc.automated_checks.content_validation.reference_match.reference_filename }}
+    {% endif %}
+  </p>
+  {% endif %}
+  {% if doc.automated_checks.content_validation.phrase_match %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Content validation:</strong>
+    {{ doc.automated_checks.content_validation.phrase_match.match_count }}/{{ doc.automated_checks.content_validation.phrase_match.min_matches }} phrases matched
+    {% if doc.automated_checks.content_validation.phrase_match.matched %}
+    — found: {{ doc.automated_checks.content_validation.phrase_match.matched|join:", " }}
+    {% endif %}
+  </p>
+  {% endif %}
+  {% if doc.automated_checks.ocr_match_sheet1 %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>OCR vs Sheet 1:</strong>
+    score {{ doc.automated_checks.ocr_match_sheet1.match_score }}/{{ doc.automated_checks.ocr_match_sheet1.min_score }}
+    — name {% if doc.automated_checks.ocr_match_sheet1.name_match %}✓{% else %}✗{% endif %},
+    TIN {% if doc.automated_checks.ocr_match_sheet1.tin_match %}✓{% else %}✗{% endif %}
+  </p>
+  {% endif %}
+  {% if doc.automated_checks.llm_bank_statement.plausible is not None %}
+  <p><strong>LLM (bank statement):</strong> plausible={{ doc.automated_checks.llm_bank_statement.plausible }}
+    {% if doc.automated_checks.llm_bank_statement.summary %} — {{ doc.automated_checks.llm_bank_statement.summary|truncatewords:25 }}{% endif %}
+  </p>
+  {% endif %}
+</details>
+{% endif %}

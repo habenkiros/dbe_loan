@@ -8,6 +8,11 @@
   <div class="appraisal-card">
     <h2>Sheet 5: {{ step_title }}</h2>
     <p class="meta">Collateral breakdown (immovable, moveable, intangible, guarantors) and total; coverage ratio.</p>
+    {% if prefill_report.collateral %}
+    <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px; font-size:0.9rem;">
+      <strong>Imported from collateral estimation:</strong> {{ prefill_report.collateral|join:", " }}
+    </div>
+    {% endif %}
     <div class="table-container">
       <table class="form-table">
         <tr><td>{{ form.collateral_immovable_value.label }}</td><td>{{ form.collateral_immovable_value }}</td></tr>

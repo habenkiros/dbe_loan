@@ -1,0 +1,15 @@
+{% comment %}Document fulfilment readiness before collateral. Expects: doc_readiness {% endcomment %}
+{% if doc_readiness %}
+<div class="doc-readiness-panel" style="margin:0.75rem 0; padding:0.75rem 1rem; border-radius:6px; {% if doc_readiness.ready %}background:#e8f5e9; border:1px solid #2e7d32;{% else %}background:#fff8e1; border:1px solid #f9a825;{% endif %}">
+  <strong>Document fulfilment:</strong>
+  {% if doc_readiness.ready %}
+  All required documents are uploaded and authenticated — you may proceed to collateral when ready.
+  {% else %}
+  Not ready for collateral yet.
+  {% if doc_readiness.missing_required %}<br><span class="help">Missing: {{ doc_readiness.missing_required|join:", " }}</span>{% endif %}
+  {% if doc_readiness.not_authenticated %}<br><span class="help">Not verified: {{ doc_readiness.not_authenticated|join:", " }}</span>{% endif %}
+  {% if doc_readiness.pending_review %}<br><span class="help">Pending review: {{ doc_readiness.pending_review|join:", " }}</span>{% endif %}
+  {% if doc_readiness.rejected %}<br><span class="help">Rejected: {{ doc_readiness.rejected|join:", " }}</span>{% endif %}
+  {% endif %}
+</div>
+{% endif %}

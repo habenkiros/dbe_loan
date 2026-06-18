@@ -3,53 +3,123 @@
 {% block title %}Application document types{% endblock %}
 
 {% block content %}
-<h1>Application document types</h1>
-<p>Document types required or optional when registering a loan application (e.g. National ID, Proof of income).</p>
+<h1>Application document types &amp; authentication</h1>
+<p>Configure each document required at loan registration — upload rules and automated checks per document type.</p>
+<p class="help"><strong>Path B:</strong> On <em>Edit</em>, upload an official reference PDF/image per type. The system learns validation phrases via OCR and compares customer uploads to that sample.</p>
 
-<form method="post">
+<section style="margin:1.5rem 0; padding:1rem 1.25rem; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px;">
+  <h2 style="margin-top:0; font-size:1.1rem;">Bank-wide defaults</h2>
+  <p class="help">Used when a document type leaves <em>allowed extensions</em> or <em>max size</em> blank.</p>
+  <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Add document type</button>
-</form>
+    <input type="hidden" name="form_kind" value="defaults">
+    <table>
+      <tr>
+        <th>{{ defaults_form.allowed_extensions.label }}</th>
+        <td>{{ defaults_form.allowed_extensions }}<br><small>{{ defaults_form.allowed_extensions.help_text }}</small></td>
+      </tr>
+      <tr>
+        <th>{{ defaults_form.max_file_size_mb.label }}</th>
+        <td>{{ defaults_form.max_file_size_mb }} MB<br><small>{{ defaults_form.max_file_size_mb.help_text }}</small></td>
+      </tr>
+      <tr>
+        <th>Collateral gate</th>
+        <td>
+          <label>{{ defaults_form.require_verified_documents_for_collateral }} {{ defaults_form.require_verified_documents_for_collateral.help_text }}</label>
+        </td>
+      </tr>
+    </table>
+    <p style="margin-top:0.75rem;"><button type="submit">Save bank-wide defaults</button></p>
+  </form>
+</section>
+
+<section style="margin:1.5rem 0;">
+  <h2 style="font-size:1.1rem;">Add document type</h2>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="form_kind" value="add_type">
+    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px;">
+      <legend>Basic</legend>
+      <p>{{ form.name.label_tag }} {{ form.name }}</p>
+      <p>{{ form.order.label_tag }} {{ form.order }} {{ form.is_required }} {{ form.is_required.label_tag }}</p>
+      <p>{{ form.auth_notes.label_tag }} {{ form.auth_notes }}</p>
+    </fieldset>
+    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+      <legend>Upload rules (optional — blank uses bank defaults)</legend>
+      <p>{{ form.allowed_extensions.label_tag }} {{ form.allowed_extensions }}</p>
+      <p>{{ form.max_file_size_mb.label_tag }} {{ form.max_file_size_mb }} MB</p>
+    </fieldset>
+    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+      <legend>Appraisal auto-fill (optional)</legend>
+      <p>{{ form.content_extraction_mappings.label_tag }}<br>{{ form.content_extraction_mappings }}</p>
+    </fieldset>
+    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+      <legend>Content validation (optional)</legend>
+      <p>{{ form.content_validation_sample.label_tag }}<br>{{ form.content_validation_sample }}</p>
+      <p>{{ form.content_validation_min_matches.label_tag }} {{ form.content_validation_min_matches }}
+        <label style="margin-left:1rem;">{{ form.content_validation_strict }} {{ form.content_validation_strict.label }}</label></p>
+    </fieldset>
+    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+      <legend>Authentication checks</legend>
+      <p><label>{{ form.require_officer_verification }} {{ form.require_officer_verification.label }}</label></p>
+      <p><label>{{ form.enable_ocr_match }} {{ form.enable_ocr_match.label }}</label></p>
+      <p><label>{{ form.enable_llm_check }} {{ form.enable_llm_check.label }}</label></p>
+      <p><label>{{ form.enable_external_id }} {{ form.enable_external_id.label }}</label></p>
+    </fieldset>
+    <p style="margin-top:0.75rem;"><button type="submit">Add document type</button></p>
+  </form>
+</section>
 
 <div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Order</th>
-                <th>Name</th>
-                <th>Required</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for dt in page_obj %}
-            <tr>
-                <td>{{ dt.order }}</td>
-                <td>{{ dt.name }}</td>
-                <td>{% if dt.is_required %}Yes{% else %}Optional{% endif %}</td>
-                <td><a href="{% url 'edit_loan_application_document_type' dt.id %}">Edit</a></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4">No document types yet. Add one above.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <h2 style="font-size:1.1rem;">Configured document types</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Name</th>
+        <th>Required</th>
+        <th>Upload / auth rules</th>
+        <th>Reference</th>
+        <th>Checks</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dt in page_obj %}
+      <tr>
+        <td>{{ dt.order }}</td>
+        <td>{{ dt.name }}{% if dt.auth_notes %}<br><small>{{ dt.auth_notes }}</small>{% endif %}</td>
+        <td>{% if dt.is_required %}Yes{% else %}Optional{% endif %}</td>
+        <td><small>{{ dt.auth_checks_summary }}</small></td>
+        <td>{% if dt.reference_sample %}✓ Sample{% else %}—{% endif %}</td>
+        <td>
+          {% if dt.require_officer_verification %}<span title="Officer verify">👤</span>{% endif %}
+          {% if dt.enable_ocr_match %}<span title="OCR">OCR</span>{% endif %}
+          {% if dt.enable_llm_check %}<span title="LLM">LLM</span>{% endif %}
+          {% if dt.enable_external_id %}<span title="External ID">ID</span>{% endif %}
+        </td>
+        <td><a href="{% url 'edit_loan_application_document_type' dt.id %}">Edit</a></td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">No document types yet. Add one above.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <div class="pagination">
-    <span class="step-links">
-        {% if page_obj.has_previous %}
-            <a href="?page=1">&laquo; First</a>
-            <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
-        {% endif %}
-        <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-        {% endif %}
-    </span>
+  <span class="step-links">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo; First</a>
+      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
+    {% endif %}
+    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+    {% endif %}
+  </span>
 </div>
 {% endblock %}

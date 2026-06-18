@@ -232,7 +232,9 @@
     <header>
         <h1 style="color: white;">HK Loan Appraisal</h1>
         {% if user.is_authenticated %}
-            <p>Welcome, {{ user.username }} | <a href="{% url 'logout' %}" style="color: white;">Logout</a></p>
+            <p>Welcome, {{ user.username }}
+            | <a href="{% url 'loan_notifications_list' %}" style="color: white;">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
+            | <a href="{% url 'logout' %}" style="color: white;">Logout</a></p>
         {% else %}
             <p><a href="{% url 'login' %}" style="color: white;">Login</a></p>
         {% endif %}
@@ -253,19 +255,24 @@
                     </div>
                 </div>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
+                <a href="{% url 'loan_notifications_list' %}">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
             {% elif user.role == 'operation_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
             {% elif user.role == 'finance_manager' %}
                 <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
 
-            {% elif user.role == 'credit_committee' %}
-                <a href="{% url 'view_loan_requests_manager' %}">View Loan Requests</a>
+            {% elif user.role == 'credit_committee' or user.role == 'accountant' or user.role == 'district_manager' or user.role == 'ceo' or user.role == 'vp' or user.role == 'board_member' %}
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
+                <a href="{% url 'view_loan_requests_manager' %}">Committee loans (my scope)</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
             {% elif user.role == 'engineering_head' or user.role == 'Engineering Head' %}

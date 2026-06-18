@@ -1,0 +1,43 @@
+{% comment %}
+Excel sheet completeness (per workbook). Expects: step, sheet_status_list, current_sheet_status, loan_request.
+{% endcomment %}
+{% if sheet_status_list %}
+<style>
+.sheet-req-panel { background: #f4f8fc; border: 1px solid #c5d4f0; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; }
+.sheet-req-panel h4 { margin: 0 0 0.5rem 0; color: #064420; font-size: 0.95rem; }
+.sheet-req-panel ul { margin: 0.35rem 0 0 1.1rem; padding: 0; }
+.sheet-req-panel .ok { color: #155724; }
+.sheet-req-panel .gap { color: #856404; }
+.sheet-req-panel .sheet-row { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin-top: 0.5rem; }
+.sheet-req-panel .badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.8rem; text-decoration: none; color: inherit; }
+.sheet-req-panel .badge.done { background: #d4edda; color: #155724; }
+.sheet-req-panel .badge.pending { background: #fff3cd; color: #856404; }
+.sheet-req-panel .badge.current { outline: 2px solid #064420; }
+</style>
+<div class="sheet-req-panel">
+  <h4>Workbook requirements (Excel sheets 1–7)</h4>
+  <p style="margin:0; color:#555;">Loan analysis and AI use this sheet structure. Collateral BOQ (buildings) counts toward Sheet 5.</p>
+  <div class="sheet-row">
+    {% for step_num, info in sheet_status_list %}
+    <a href="{% url 'loan_appraisal_step' loan_request.id step_num %}" class="badge {% if info.complete %}done{% else %}pending{% endif %}{% if step_num == step %} current{% endif %}" title="{{ info.excel_sheet_name }}">
+      Sheet {{ step_num }}{% if not info.complete %} ⚠{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% if current_sheet_status %}
+    {% if current_sheet_status.complete %}
+    <p class="ok" style="margin:0.5rem 0 0 0;"><strong>This sheet:</strong> requirements met — <em>{{ current_sheet_status.excel_sheet_name }}</em>.</p>
+    {% else %}
+    <p class="gap" style="margin:0.5rem 0 0 0;"><strong>This sheet — still needed:</strong></p>
+    <ul>
+      {% for m in current_sheet_status.missing %}
+      <li>{{ m }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if current_sheet_status.excel_only_notes %}
+    <p style="margin:0.5rem 0 0 0; color:#666; font-size:0.85rem;"><strong>On Excel, not yet in app:</strong> {{ current_sheet_status.excel_only_notes|join:" · " }}</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endif %}

@@ -6,7 +6,10 @@ from .models import (
     CustomUser, LoanRequest, District, Branch, Region, Zone, City,
     LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
-    QUALITATIVE_FACTOR_KEYS, QUALITATIVE_RATING_CHOICES,
+    AppraisalRiskMitigation, AppraisalCondition,
+    AppraisalESChecklistItem,
+    QUALITATIVE_FACTOR_KEYS, qualitative_rating_field_choices,
+    es_checklist_item_count,
 )
 
 class CustomUserCreationForm(UserCreationForm):
@@ -74,15 +77,147 @@ class CollateralTypeForm(forms.ModelForm):
 
 
 class LoanApplicationDocumentTypeForm(forms.ModelForm):
-    """Superadmin: add/edit document types required for loan application."""
+    """Superadmin: document type + per-type authentication rules."""
     class Meta:
         model = LoanApplicationDocumentType
-        fields = ['name', 'order', 'is_required']
+        fields = [
+            'name', 'order', 'is_required',
+            'allowed_extensions', 'max_file_size_mb', 'auth_notes',
+            'content_validation_sample', 'content_validation_min_matches',
+            'content_validation_strict', 'content_extraction_mappings',
+            'require_officer_verification', 'enable_ocr_match',
+            'enable_llm_check', 'enable_external_id',
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'is_required': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'allowed_extensions': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'pdf,jpg,jpeg,png (blank = bank default)'},
+            ),
+            'max_file_size_mb': forms.NumberInput(
+                attrs={'class': 'form-control', 'min': 1, 'placeholder': 'Bank default'},
+            ),
+            'auth_notes': forms.TextInput(attrs={'class': 'form-control'}),
+            'content_validation_sample': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 6,
+                    'placeholder': 'One expected phrase per line, e.g.\nFEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA\nIDENTITY CARD\nTrade License',
+                },
+            ),
+            'content_validation_min_matches': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'content_validation_strict': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'content_extraction_mappings': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 5,
+                    'placeholder': 'tin_number=TIN\nbusiness_name=Business Name\nfather_name=Father Name\ntin_number=regex:\\b(\\d{10})\\b',
+                },
+            ),
+            'require_officer_verification': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_ocr_match': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_llm_check': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_external_id': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        help_texts = {
+            'allowed_extensions': 'Only these extensions accepted for this document type.',
+            'max_file_size_mb': 'Leave empty to use the bank-wide default below.',
+            'content_validation_sample': (
+                'Paste phrases that must appear in a valid upload (one per line). '
+                'The system reads PDF/image/DOCX text and rejects wrong documents.'
+            ),
+            'content_validation_min_matches': 'How many of the phrases above must be found in the file.',
+            'content_validation_strict': 'Reject upload immediately when content validation fails.',
+            'content_extraction_mappings': (
+                'Map document labels to appraisal fields for auto-fill (Sheet 1 / 2). '
+                'One per line: field_name=Label in document.'
+            ),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        phrases = []
+        sample = cleaned.get('content_validation_sample') or ''
+        for line in sample.splitlines():
+            line = line.strip()
+            if line and not line.startswith('#'):
+                phrases.append(line)
+        min_matches = cleaned.get('content_validation_min_matches') or 1
+        if phrases and min_matches > len(phrases):
+            raise forms.ValidationError(
+                f'Minimum matches ({min_matches}) cannot exceed number of phrases ({len(phrases)}).'
+            )
+        return cleaned
+
+
+class LoanApplicationDocumentTypeEditForm(LoanApplicationDocumentTypeForm):
+    """Edit form includes official reference sample file upload."""
+
+    class Meta(LoanApplicationDocumentTypeForm.Meta):
+        fields = LoanApplicationDocumentTypeForm.Meta.fields + [
+            'reference_sample',
+            'use_reference_sample_validation',
+            'reference_min_similarity',
+        ]
+        widgets = {
+            **LoanApplicationDocumentTypeForm.Meta.widgets,
+            'reference_sample': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}),
+            'use_reference_sample_validation': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'reference_min_similarity': forms.NumberInput(
+                attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '1'},
+            ),
+        }
+        help_texts = {
+            **LoanApplicationDocumentTypeForm.Meta.help_texts,
+            'reference_sample': 'Upload the official blank/sample document (PDF or image). Save to analyze and seed validation rules.',
+            'use_reference_sample_validation': 'Reject uploads that do not match the reference sample text/layout.',
+            'reference_min_similarity': '0.08 is lenient for phone scans; increase to 0.15+ for stricter matching.',
+        }
+
+
+class DocumentAuthenticationDefaultsForm(forms.Form):
+    """Bank-wide defaults when a document type leaves size/extensions blank."""
+
+    def __init__(self, *args, **kwargs):
+        from .models import DocumentAuthenticationPolicy
+        self.policy = DocumentAuthenticationPolicy.objects.first()
+        if not self.policy:
+            self.policy = DocumentAuthenticationPolicy()
+        super().__init__(*args, **kwargs)
+        self.fields['allowed_extensions'] = forms.CharField(
+            required=True,
+            initial=self.policy.allowed_extensions,
+            widget=forms.TextInput(attrs={'class': 'form-control'}),
+            help_text='Used when a document type does not set its own allowed extensions.',
+        )
+        self.fields['max_file_size_mb'] = forms.IntegerField(
+            min_value=1,
+            initial=self.policy.max_file_size_mb,
+            widget=forms.NumberInput(attrs={'class': 'form-control'}),
+            help_text='Used when a document type does not set its own max size.',
+        )
+        self.fields['require_verified_documents_for_collateral'] = forms.BooleanField(
+            required=False,
+            initial=self.policy.require_verified_documents_for_collateral,
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            help_text='Required document types must pass authentication before collateral.',
+        )
+
+    def save(self):
+        from .models import DocumentAuthenticationPolicy
+        if not self.policy.pk:
+            self.policy = DocumentAuthenticationPolicy.objects.create(
+                allowed_extensions=self.cleaned_data['allowed_extensions'],
+                max_file_size_mb=self.cleaned_data['max_file_size_mb'],
+                require_verified_documents_for_collateral=self.cleaned_data['require_verified_documents_for_collateral'],
+            )
+        else:
+            self.policy.allowed_extensions = self.cleaned_data['allowed_extensions']
+            self.policy.max_file_size_mb = self.cleaned_data['max_file_size_mb']
+            self.policy.require_verified_documents_for_collateral = self.cleaned_data['require_verified_documents_for_collateral']
+            self.policy.save()
+        return self.policy
 
 
 class CollateralEstimationConfigForm(forms.ModelForm):
@@ -169,10 +304,14 @@ class AppraisalCreditHistoryEntryForm(forms.ModelForm):
 
 
 class AppraisalQualitativeFactorForm(forms.ModelForm):
-    """One qualitative factor (Sheet 2) – rating (dropdown: Poor/basic/Professional) and notes."""
+    """One qualitative factor (Sheet 2) – rating dropdown per Excel (options vary by factor_key)."""
     class Meta:
         model = AppraisalQualitativeFactor
-        fields = ['factor_key', 'factor_name', 'rating', 'notes', 'display_order']
+        fields = [
+            'factor_key', 'factor_name',
+            'rating', 'weight', 'earned_score',
+            'notes', 'display_order',
+        ]
         widgets = {
             'rating': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -184,8 +323,22 @@ class AppraisalQualitativeFactorForm(forms.ModelForm):
         self.fields['factor_name'].widget.attrs['readonly'] = True
         self.fields['factor_name'].widget.attrs['class'] = 'form-control'
         self.fields['display_order'].widget = forms.HiddenInput()
-        self.fields['rating'].choices = QUALITATIVE_RATING_CHOICES
         self.fields['rating'].required = False
+        # Computed by Excel mapping; show as readonly in UI.
+        self.fields['weight'].disabled = True
+        self.fields['earned_score'].disabled = True
+
+        factor_key = ''
+        if getattr(self.instance, 'pk', None) and self.instance.factor_key:
+            factor_key = self.instance.factor_key
+        elif self.initial.get('factor_key'):
+            factor_key = self.initial['factor_key']
+
+        choices = qualitative_rating_field_choices(factor_key)
+        current = getattr(self.instance, 'rating', None) or self.initial.get('rating') or ''
+        if current and not any(current == c[0] for c in choices):
+            choices = list(choices) + [(current, current)]
+        self.fields['rating'].choices = choices
 
 
 def get_credit_history_formset():
@@ -211,6 +364,99 @@ def get_qualitative_factors_formset():
     )
 
 
+class AppraisalESChecklistItemForm(forms.ModelForm):
+    """One E&S checklist row (Sheet 4) – Yes/No/N/A, description, mitigation."""
+
+    class Meta:
+        model = AppraisalESChecklistItem
+        fields = [
+            'section_key', 'section_label', 'item_key', 'question_text',
+            'response_yes_no', 'description', 'mitigation', 'display_order',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'mitigation': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('section_key', 'section_label', 'item_key', 'question_text', 'display_order'):
+            self.fields[name].widget = forms.HiddenInput()
+        self.fields['response_yes_no'].required = False
+        self.fields['response_yes_no'].widget.attrs.setdefault('class', 'form-control')
+
+
+def get_es_checklist_formset():
+    from django.forms import inlineformset_factory
+    n = es_checklist_item_count()
+    return inlineformset_factory(
+        LoanAppraisal,
+        AppraisalESChecklistItem,
+        form=AppraisalESChecklistItemForm,
+        extra=0,
+        can_delete=False,
+        max_num=n,
+    )
+
+
+class AppraisalRiskMitigationForm(forms.ModelForm):
+    class Meta:
+        model = AppraisalRiskMitigation
+        fields = [
+            'risk', 'severity', 'mitigation', 'owner', 'due_date', 'status', 'display_order',
+        ]
+        widgets = {
+            'mitigation': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in self.fields:
+            self.fields[name].widget.attrs.setdefault('class', 'form-control')
+
+
+def get_risk_mitigation_formset():
+    from django.forms import inlineformset_factory
+    return inlineformset_factory(
+        LoanAppraisal,
+        AppraisalRiskMitigation,
+        form=AppraisalRiskMitigationForm,
+        extra=3,
+        can_delete=True,
+    )
+
+
+class AppraisalConditionForm(forms.ModelForm):
+    class Meta:
+        model = AppraisalCondition
+        fields = [
+            'condition_type', 'description', 'responsible_party', 'due_date', 'fulfilled', 'display_order',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in self.fields:
+            if name != 'fulfilled':
+                self.fields[name].widget.attrs.setdefault('class', 'form-control')
+        self.fields['fulfilled'].widget.attrs.setdefault('class', 'form-check-input')
+
+
+def get_conditions_formset():
+    from django.forms import inlineformset_factory
+    return inlineformset_factory(
+        LoanAppraisal,
+        AppraisalCondition,
+        form=AppraisalConditionForm,
+        extra=3,
+        can_delete=True,
+    )
+
+
 # Step-based appraisal: one form per sheet so saving a step doesn't overwrite others.
 class AppraisalSheet2Form(forms.ModelForm):
     """Sheet (2) Business & character – NBE, credit history summary, qualitative score, assessments."""
@@ -219,10 +465,14 @@ class AppraisalSheet2Form(forms.ModelForm):
         fields = [
             'nbe_credit_report_obtained', 'nbe_report_date_received', 'total_number_repaid_loans',
             'credit_history_max_score', 'qualitative_total_score', 'qualitative_passed',
+            'bureau_score', 'bureau_score_band', 'bureau_report_date',
+            'bureau_active_loans_count', 'bureau_total_outstanding', 'bureau_total_monthly_debt_service',
+            'bureau_inquiries_6m', 'bureau_defaults_ever', 'bureau_restructured_ever', 'bureau_thin_file',
             'business_assessment', 'character_assessment',
         ]
         widgets = {
             'nbe_report_date_received': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'bureau_report_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'business_assessment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'character_assessment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
@@ -234,47 +484,145 @@ class AppraisalSheet2Form(forms.ModelForm):
                 self.fields[name].widget.attrs.setdefault('class', 'form-control')
         self.fields['nbe_credit_report_obtained'].widget.attrs['class'] = 'form-check-input'
         self.fields['qualitative_passed'].widget.attrs['class'] = 'form-check-input'
+        # Computed from qualitative factors earned scores.
+        self.fields['qualitative_total_score'].disabled = True
+        self.fields['qualitative_passed'].disabled = True
 
 
 class AppraisalSheet3Form(forms.ModelForm):
-    """Sheet (3) Cashflow analysis."""
+    """
+    Sheet (3) Cashflow analysis.
+    Phase 0: aggregate income/expense + installment → net cashflow, DSCR (computed).
+    Phase 1: optional P&L lines roll into business income (from sales) / expenses when filled.
+    Phase 2: annual net cashflow, annual debt service, annual DSCR (computed from Sheet 1 frequency).
+    """
     class Meta:
         model = LoanAppraisal
         fields = [
+            # Phase 1 – structured monthly P&L
+            'cf_monthly_sales', 'cf_monthly_cogs', 'cf_monthly_salaries', 'cf_monthly_rent',
+            'cf_monthly_utilities', 'cf_monthly_transport', 'cf_monthly_other_operating', 'cf_monthly_taxes',
+            # Phase 0 – aggregates (optional if Phase 1 breakdown used)
             'monthly_business_income', 'monthly_business_expenses', 'other_monthly_income', 'other_monthly_expenses',
-            'proposed_monthly_installment', 'net_monthly_cashflow', 'dscr',
+            'proposed_monthly_installment',
+            # Stress test (sensitivity)
+            'stress_sales_drop_pct', 'stress_cost_increase_pct',
         ]
         widgets = {
+            'cf_monthly_sales': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_cogs': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_salaries': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_rent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_utilities': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_transport': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_other_operating': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'cf_monthly_taxes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'monthly_business_income': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'monthly_business_expenses': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'other_monthly_income': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'other_monthly_expenses': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'proposed_monthly_installment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'net_monthly_cashflow': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'dscr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'stress_sales_drop_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'stress_cost_increase_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, basic_info=None, **kwargs):
+        self.basic_info = basic_info
         super().__init__(*args, **kwargs)
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
+        self.fields['monthly_business_income'].help_text = (
+            'Leave blank to use Monthly sales (Phase 1) as business income when sales is filled.'
+        )
+        self.fields['monthly_business_expenses'].help_text = (
+            'When P&L expense lines sum to more than 0, that sum replaces monthly business expenses.'
+        )
 
     def clean(self):
         from decimal import Decimal, InvalidOperation
+        from .cashflow_utils import payments_per_year_from_repayment_frequency, annual_debt_service
+
         data = super().clean()
-        inc1 = data.get('monthly_business_income') or Decimal('0')
-        inc2 = data.get('other_monthly_income') or Decimal('0')
-        exp1 = data.get('monthly_business_expenses') or Decimal('0')
-        exp2 = data.get('other_monthly_expenses') or Decimal('0')
+
+        def d(v):
+            return v if v is not None else Decimal('0')
+
+        pl_exp = (
+            d(data.get('cf_monthly_cogs'))
+            + d(data.get('cf_monthly_salaries'))
+            + d(data.get('cf_monthly_rent'))
+            + d(data.get('cf_monthly_utilities'))
+            + d(data.get('cf_monthly_transport'))
+            + d(data.get('cf_monthly_other_operating'))
+            + d(data.get('cf_monthly_taxes'))
+        )
+        if pl_exp > 0:
+            data['monthly_business_expenses'] = pl_exp
+
+        sales = data.get('cf_monthly_sales')
+        if data.get('monthly_business_income') is None and sales is not None:
+            data['monthly_business_income'] = sales
+
+        inc1 = d(data.get('monthly_business_income'))
+        inc2 = d(data.get('other_monthly_income'))
+        exp1 = d(data.get('monthly_business_expenses'))
+        exp2 = d(data.get('other_monthly_expenses'))
         net = inc1 + inc2 - exp1 - exp2
-        data['net_monthly_cashflow'] = net
+        self._computed_net_monthly = net
+
         installment = data.get('proposed_monthly_installment')
+        self._computed_dscr_monthly = None
         if installment and installment > 0:
             try:
-                data['dscr'] = (net / installment).quantize(Decimal('0.01'))
+                self._computed_dscr_monthly = (net / installment).quantize(Decimal('0.01'))
             except (InvalidOperation, ZeroDivisionError):
-                data['dscr'] = None
+                pass
+
+        freq = getattr(self.basic_info, 'repayment_frequency', None) if self.basic_info else None
+        ppy = payments_per_year_from_repayment_frequency(freq)
+        self._payments_per_year = ppy
+        self._computed_annual_debt = annual_debt_service(installment, ppy)
+        self._computed_annual_net = (net * Decimal('12')).quantize(Decimal('0.01')) if net is not None else None
+        self._computed_dscr_annual = None
+        if self._computed_annual_net is not None and self._computed_annual_debt and self._computed_annual_debt > 0:
+            try:
+                self._computed_dscr_annual = (
+                    self._computed_annual_net / self._computed_annual_debt
+                ).quantize(Decimal('0.01'))
+            except (InvalidOperation, ZeroDivisionError):
+                pass
+
+        # Stress test: apply % shock to income and expenses, then recompute net + DSCR.
+        drop_pct = data.get('stress_sales_drop_pct')
+        cost_pct = data.get('stress_cost_increase_pct')
+        self._computed_stressed_net = None
+        self._computed_stressed_dscr = None
+        if (drop_pct is not None) or (cost_pct is not None):
+            try:
+                drop = d(drop_pct) / Decimal('100')
+                cost = d(cost_pct) / Decimal('100')
+                stressed_inc = (inc1 + inc2) * (Decimal('1') - drop)
+                stressed_exp = (exp1 + exp2) * (Decimal('1') + cost)
+                self._computed_stressed_net = (stressed_inc - stressed_exp).quantize(Decimal('0.01'))
+                if installment and installment > 0:
+                    self._computed_stressed_dscr = (self._computed_stressed_net / installment).quantize(Decimal('0.01'))
+            except (InvalidOperation, ZeroDivisionError):
+                pass
+
         return data
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        obj.net_monthly_cashflow = self._computed_net_monthly
+        obj.dscr = self._computed_dscr_monthly
+        obj.cf_annual_net_cashflow = self._computed_annual_net
+        obj.cf_annual_debt_service = self._computed_annual_debt
+        obj.dscr_annual = self._computed_dscr_annual
+        obj.stressed_net_monthly_cashflow = getattr(self, '_computed_stressed_net', None)
+        obj.stressed_dscr = getattr(self, '_computed_stressed_dscr', None)
+        if commit:
+            obj.save()
+        return obj
 
 
 class AppraisalESForm(forms.ModelForm):
@@ -361,6 +709,36 @@ class AppraisalSummaryForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
+        self.fields['amount_approved'].label = 'Recommended amount (ETB)'
+        self.fields['amount_approved'].help_text = (
+            'Amount the loan officer recommends; sent to the approval committee after appraisal.'
+        )
+        self.fields['term_approved_months'].label = 'Recommended term (months)'
+        self.fields['rate_approved'].label = 'Recommended rate (%)'
+        self.fields['committee_comments'].label = 'Notes for committee (optional)'
+
+
+class CommitteeVoteForm(forms.Form):
+    vote = forms.ChoiceField(
+        choices=[
+            ('approve', 'Approve'),
+            ('decline', 'Decline'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    amount_supported = forms.DecimalField(
+        required=False,
+        min_value=0,
+        decimal_places=2,
+        max_digits=20,
+        label='Amount you approve (ETB)',
+        help_text='Leave blank to use the loan officer’s recommended amount.',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+    )
+    comments = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+    )
 
 
 class LoanAppraisalForm(forms.ModelForm):

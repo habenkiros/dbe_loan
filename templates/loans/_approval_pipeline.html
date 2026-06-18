@@ -1,0 +1,37 @@
+{% comment %}Multi-level approval pipeline. Expects: committee_tally {% endcomment %}
+{% if committee_tally.pipeline %}
+<div class="approval-pipeline" style="margin:1rem 0;">
+  <h4 style="margin:0 0 0.5rem;">Approval levels</h4>
+  <ol style="margin:0; padding-left:1.25rem;">
+    {% for step in committee_tally.pipeline %}
+    <li style="margin-bottom:0.6rem;">
+      <strong>{{ step.level.name }}</strong>
+      {% if step.is_current %}<span class="committee-badge committee-pending">Current</span>{% endif %}
+      {% if step.tally.uses_branch_override %}<span class="committee-badge" style="background:#e7f1ff;color:#004085;">Branch-specific committee</span>{% endif %}
+      {% if step.progress %}
+        — {{ step.progress.get_status_display }}
+      {% endif %}
+      <br>
+      <small>
+        Needs {{ step.level.min_approvals_required }} approval(s) /
+        {{ step.level.min_declines_required }} decline(s)
+        {% if step.tally %}
+        · Votes: {{ step.tally.approve_count }}✓ / {{ step.tally.decline_count }}✗
+        ({{ step.tally.eligible_count }} eligible voter{{ step.tally.eligible_count|pluralize }})
+        {% if step.tally.eligible_voters %}
+        · {% for u in step.tally.eligible_voters %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        {% endif %}
+        {% endif %}
+      </small>
+      {% if step.tally and step.tally.votes %}
+      <ul style="margin:0.25rem 0 0 1rem; font-size:0.85rem;">
+        {% for v in step.tally.votes %}
+        <li>{{ v.member.username }}: {{ v.get_vote_display }}{% if v.amount_supported %} ({{ v.amount_supported|floatformat:2 }}){% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+{% endif %}

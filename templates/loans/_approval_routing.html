@@ -1,0 +1,32 @@
+{% comment %}Expects routing dict: amount, amount_source, applied_levels, skipped_levels, branch_override{% endcomment %}
+{% if routing %}
+<div class="approval-routing" style="margin:0.75rem 0; padding:0.75rem 1rem; background:#f0f4f8; border-radius:6px; font-size:0.9rem;">
+  <strong>Approval routing</strong>
+  <p style="margin:0.35rem 0;">
+    Amount used for routing:
+    <strong>{{ routing.amount|floatformat:2 }}</strong>
+    ({% if routing.amount_source == 'recommended' %}Sheet 6 recommended{% else %}requested amount{% endif %})
+  </p>
+  {% if routing.applied_levels %}
+  <p style="margin:0.35rem 0 0.15rem;"><strong>Levels this loan will follow:</strong></p>
+  <ol style="margin:0 0 0.5rem 1.1rem; padding:0;">
+    {% for level in routing.applied_levels %}
+    <li>{{ level.name }}{% if level.min_loan_amount or level.max_loan_amount %}
+      <small>({% if level.min_loan_amount %}≥ {{ level.min_loan_amount|floatformat:0 }}{% endif %}{% if level.min_loan_amount and level.max_loan_amount %} · {% endif %}{% if level.max_loan_amount %}≤ {{ level.max_loan_amount|floatformat:0 }}{% endif %})</small>
+    {% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  {% if routing.skipped_levels %}
+  <p style="margin:0.35rem 0 0.15rem;"><strong>Skipped levels:</strong></p>
+  <ul style="margin:0 0 0.5rem 1.1rem; padding:0;">
+    {% for item in routing.skipped_levels %}
+    <li><span style="text-decoration:line-through;">{{ item.level.name }}</span> — <small>{{ item.reason }}</small></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if routing.branch_override %}
+  <p class="help" style="margin:0.5rem 0 0;"><em>Branch committee: using custom setup for {{ loan_request.branch.name }} (not the global default).</em></p>
+  {% endif %}
+</div>
+{% endif %}

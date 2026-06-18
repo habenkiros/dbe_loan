@@ -3,22 +3,93 @@
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
 
+<style>
+.sheet3-section { background: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.sheet3-section h3 { margin: 0 0 0.75rem 0; color: #064420; font-size: 1.05rem; border-bottom: 2px solid #064420; padding-bottom: 0.35rem; }
+.sheet3-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem 1.25rem; }
+.sheet3-grid .field { display: flex; flex-direction: column; gap: 0.2rem; }
+.sheet3-grid .field label, .sheet3-grid .field .label { font-weight: 600; font-size: 0.9rem; }
+.sheet3-readonly { background: #eef6ee; border: 1px solid #c8dcc8; border-radius: 6px; padding: 0.75rem 1rem; margin-top: 0.5rem; }
+.sheet3-readonly strong { color: #064420; }
+.sheet3-hint { font-size: 0.85rem; color: #555; margin: 0 0 0.5rem 0; }
+.sheet3-ref { background: #f0f4ff; border: 1px solid #c5d4f0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+</style>
+
 <form method="post">
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 3: {{ step_title }}</h2>
-    <p class="meta">Monthly income, expenses, proposed installment and DSCR.</p>
-    <div class="table-container">
-      <table class="form-table">
-        <tr><td>{{ form.monthly_business_income.label }}</td><td>{{ form.monthly_business_income }}</td></tr>
-        <tr><td>{{ form.monthly_business_expenses.label }}</td><td>{{ form.monthly_business_expenses }}</td></tr>
-        <tr><td>{{ form.other_monthly_income.label }}</td><td>{{ form.other_monthly_income }}</td></tr>
-        <tr><td>{{ form.other_monthly_expenses.label }}</td><td>{{ form.other_monthly_expenses }}</td></tr>
-        <tr><td>{{ form.proposed_monthly_installment.label }}</td><td>{{ form.proposed_monthly_installment }}</td></tr>
-        <tr><td>{{ form.net_monthly_cashflow.label }}</td><td>{{ form.net_monthly_cashflow }}</td></tr>
-        <tr><td>{{ form.dscr.label }}</td><td>{{ form.dscr }}</td></tr>
-      </table>
+    <p class="meta">Phase 0–2: monthly aggregates, optional P&amp;L breakdown (Phase 1), and annual repayment capacity (Phase 2).</p>
+
+    <div class="sheet3-ref">
+      <strong>From Sheet 1 / loan request (reference):</strong>
+      Amount requested: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong>
+      {% if basic_info.term_months %} · Term: {{ basic_info.term_months }} mo{% endif %}
+      {% if basic_info.interest_rate %} · Rate: {{ basic_info.interest_rate }}%{% endif %}
+      {% if basic_info.repayment_frequency %} · Repayment: {{ basic_info.repayment_frequency }}{% endif %}
+      <br>
+      <span class="sheet3-hint" style="margin-top:0.35rem;display:inline-block;">Annual debt service uses <strong>{{ payments_per_year }}</strong> payment(s) per year from repayment frequency (installment × payments/year).</span>
     </div>
+
+    <div class="sheet3-section">
+      <h3>Phase 1 – Monthly P&amp;L breakdown (optional)</h3>
+      <p class="sheet3-hint">If any expense line below is filled, their <strong>sum</strong> becomes <em>Monthly business expenses</em>. If <em>Monthly business income</em> is empty, <strong>Monthly sales</strong> is used as business income.</p>
+      <div class="sheet3-grid">
+        <div class="field">{{ form.cf_monthly_sales.label_tag }}{{ form.cf_monthly_sales }}</div>
+        <div class="field">{{ form.cf_monthly_cogs.label_tag }}{{ form.cf_monthly_cogs }}</div>
+        <div class="field">{{ form.cf_monthly_salaries.label_tag }}{{ form.cf_monthly_salaries }}</div>
+        <div class="field">{{ form.cf_monthly_rent.label_tag }}{{ form.cf_monthly_rent }}</div>
+        <div class="field">{{ form.cf_monthly_utilities.label_tag }}{{ form.cf_monthly_utilities }}</div>
+        <div class="field">{{ form.cf_monthly_transport.label_tag }}{{ form.cf_monthly_transport }}</div>
+        <div class="field">{{ form.cf_monthly_other_operating.label_tag }}{{ form.cf_monthly_other_operating }}</div>
+        <div class="field">{{ form.cf_monthly_taxes.label_tag }}{{ form.cf_monthly_taxes }}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>Phase 0 – Monthly totals (aggregate)</h3>
+      <div class="sheet3-grid">
+        <div class="field">{{ form.monthly_business_income.label_tag }}{{ form.monthly_business_income }}{% if form.monthly_business_income.help_text %}<small class="sheet3-hint">{{ form.monthly_business_income.help_text }}</small>{% endif %}</div>
+        <div class="field">{{ form.monthly_business_expenses.label_tag }}{{ form.monthly_business_expenses }}{% if form.monthly_business_expenses.help_text %}<small class="sheet3-hint">{{ form.monthly_business_expenses.help_text }}</small>{% endif %}</div>
+        <div class="field">{{ form.other_monthly_income.label_tag }}{{ form.other_monthly_income }}</div>
+        <div class="field">{{ form.other_monthly_expenses.label_tag }}{{ form.other_monthly_expenses }}</div>
+        <div class="field">{{ form.proposed_monthly_installment.label_tag }}{{ form.proposed_monthly_installment }}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>Computed – Net cashflow &amp; DSCR</h3>
+      <p class="sheet3-hint">Net = (business income + other income) − (business expenses + other expenses). Saved when you submit.</p>
+      <div class="sheet3-readonly">
+        <div><strong>Net monthly cashflow:</strong> {% if appraisal.net_monthly_cashflow is not None %}{{ appraisal.net_monthly_cashflow|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Monthly DSCR</strong> (net ÷ proposed installment): {% if appraisal.dscr is not None %}{{ appraisal.dscr|floatformat:2 }}{% else %}—{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>Stress test (simple sensitivity)</h3>
+      <p class="sheet3-hint">This applies a % drop to total monthly income and a % increase to total monthly expenses, then recomputes stressed net cashflow and DSCR.</p>
+      <div class="sheet3-grid">
+        <div class="field">{{ form.stress_sales_drop_pct.label_tag }}{{ form.stress_sales_drop_pct }}</div>
+        <div class="field">{{ form.stress_cost_increase_pct.label_tag }}{{ form.stress_cost_increase_pct }}</div>
+      </div>
+      <div class="sheet3-readonly">
+        <div><strong>Stressed net monthly cashflow:</strong> {% if appraisal.stressed_net_monthly_cashflow is not None %}{{ appraisal.stressed_net_monthly_cashflow|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Stressed DSCR:</strong> {% if appraisal.stressed_dscr is not None %}{{ appraisal.stressed_dscr|floatformat:2 }}{% else %}—{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>Phase 2 – Annual repayment capacity</h3>
+      <p class="sheet3-hint">Annual net = net monthly × 12. Annual debt service = proposed installment × {{ payments_per_year }} (from Sheet 1 frequency). Annual DSCR = annual net ÷ annual debt service.</p>
+      <div class="sheet3-readonly">
+        <div><strong>Annual net cashflow:</strong> {% if appraisal.cf_annual_net_cashflow is not None %}{{ appraisal.cf_annual_net_cashflow|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Annual debt service:</strong> {% if appraisal.cf_annual_debt_service is not None %}{{ appraisal.cf_annual_debt_service|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Annual DSCR:</strong> {% if appraisal.dscr_annual is not None %}{{ appraisal.dscr_annual|floatformat:2 }}{% else %}—{% endif %}</div>
+      </div>
+      <p class="sheet3-hint">Policy hint (configurable in Admin): annual / monthly DSCR below <strong>{{ loan_analysis_policy.warn_annual_dscr_min }}</strong> / <strong>{{ loan_analysis_policy.warn_monthly_dscr_min }}</strong> triggers a warning after save.</p>
+    </div>
+
     <div class="appraisal-actions">
       <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 4</button>
       <a href="{% url 'loan_appraisal_step' loan_request.id 2 %}" class="btn btn-blue">Back to Sheet 2</a>

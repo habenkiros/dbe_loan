@@ -6,6 +6,13 @@
 {% block content %}
 <h1>Update Operation Manager Approval</h1>
 
+<div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px;">
+  <strong>Initial queue approval</strong> — operation and finance managers review new loan requests
+  <em>before</em> the branch assigns a loan officer or sends the loan to engineering.
+  When <strong>both</strong> approve, status becomes <em>Approved</em> and the branch can proceed.
+  Credit committee review happens later, after appraisal.
+</div>
+
 <form method="post">
     {% csrf_token %}
     <table>

@@ -2,7 +2,18 @@
 
 {% block content %}
 <div class="table-container">
-    <h2>Loan Requests</h2>
+    <h2>Approval committee — loan requests</h2>
+    {% if is_participant %}
+    <p>
+      <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="btn btn-green">My votes needed</a>
+      <a href="{% url 'view_loan_requests_manager' %}" class="btn btn-gray">{% if scope_limited %}Loans in my scope{% else %}All committee loans{% endif %}</a>
+    </p>
+    {% endif %}
+    {% if queue_my_votes %}
+    <p><strong>Showing loans where you can vote at the current approval level.</strong></p>
+    {% elif scope_limited %}
+    <p class="help"><strong>In my scope:</strong> branch committee — your branch; district — your district; head office / management — only while the loan is at that level.</p>
+    {% endif %}
     
     <!-- Filter Form -->
     <form method="get" class="form-inline" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
@@ -41,12 +52,21 @@
         </div>
 
         <div class="form-group">
-            <label for="id_branch">Status:</label>
+            <label for="id_status">Queue status:</label>
             <select id="id_status" name="status" class="form-control" style="width: 150px;">
                 <option value="">All Statuses</option>
                 <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
                 <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
                 <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="id_committee_status">Committee:</label>
+            <select id="id_committee_status" name="committee_status" class="form-control" style="width: 180px;">
+                <option value="">All</option>
+                {% for val, label in committee_status_choices %}
+                <option value="{{ val }}" {% if selected_committee_status == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
             </select>
         </div>
         
@@ -69,6 +89,8 @@
                         <th>Category</th>
                         <th>Amount Requested</th>
                         <th>Status</th>
+                        <th>Committee</th>
+                        <th>Current level</th>
                         <th>Date Requested</th>
                         <th>Actions</th>
                     </tr>
@@ -81,12 +103,14 @@
                             <td>{{ loan_request.category.name }}</td>
                             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
                             <td>{{ loan_request.status }}</td>
+                            <td>{{ loan_request.get_committee_status_display|default:"—" }}</td>
+                            <td>{% if loan_request.current_approval_level %}{{ loan_request.current_approval_level.name }}{% else %}—{% endif %}</td>
                             <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                             <td>
                                 <div class="dropdown">
                                     <button class="dropbtn">Actions ▾</button>
                                     <div class="dropdown-content">
-                                        <a href="{% url 'loan_request_detail_manager' loan_request.id %}" class="btn btn-blue">Details</a>
+                                        <a href="{% url 'loan_request_detail_manager' loan_request.id %}" class="btn btn-blue">{% if loan_request.committee_status == 'pending_committee' %}Review &amp; vote{% else %}Details{% endif %}</a>
                                     </div>
                                 </div>
                             </td>

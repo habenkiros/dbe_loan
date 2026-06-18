@@ -38,6 +38,7 @@ Summary extracted from the Excel file in `presentation/Cashflow based MSME loan 
 
 ### (4) E&S Assessment
 - Environmental/social checklist (questions with Yes/No, description, mitigations)
+- **App implementation:** `AppraisalESChecklistItem` (21 rows) seeded per appraisal from `ES_CHECKLIST_STRUCTURE` in `loans/models.py` — sections: *Exposure & compliance*, *Enterprise & sub-project*, *Environmental aspects*, *Occupational health & safety*, *Health & sanitation*. Each row: **Yes/No/N/A**, **description**, **mitigation**; plus on `LoanAppraisal`: **E&S Risk Category**, **eligibility**, **screened/checked/approved by**, **date**, **notes** (signatures via user pickers).
 - **E&S Risk Category**; **Decision on eligibility:** PASS / PASS WITH ACTION POINTS / REJECT
 - Screened by, Checked by, Approved by, Date, Signature
 

@@ -23,16 +23,18 @@ Extracted from `Cashflow based MSME loan appraisal.xlsx` for use in the Django a
 
 ## Sheet (2) Bus. and Character Assess.
 
+**Important:** The Excel uses **different dropdown lists per qualitative factor**, not one global Poor/Basic/Professional. See **`SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md`** for the full per-factor lists extracted from the workbook.
+
 | Field / area | Excel dropdown or options |
 |--------------|---------------------------|
 | **NBE report** | `Yes`, `No` |
 | **Credit history – Lender, Amount, Balance, Maturity** | Free text / number / date |
 | **Credit history – Purpose** | `Working capital`, `Fixed Asset` |
-| **Credit history – Status** | `Regular`, `Settled on time`, `Settled late`, `Irregular`, `Defaulted` |
+| **Credit history – Status** | `Regular`, `Settled on time`, `Settled late`, `Irregular`, `Defaulted`, **`None`** |
 | **Credit history – Repayment** | `Regular`, `Irregular`, `On time`, `Delayed` |
 | **Credit history – Letter from lender** | `Yes`, `No` |
 | **Credit history – Score** | Numeric |
-| **10 qualitative factors – Rating** | `Poor`, `Basic`, `Professional` |
+| **10 qualitative factors – Rating** | **Per-factor lists** (3 options each; years of operation has 4) — see analysis plan doc |
 | **10 qualitative factors – Notes** | Observation / justification (free text) |
 | **Business and Character Maximum score** | Out of 100 (numeric) |
 | **Applicant passed** | ≥75% → Proceed to Cashflow; else Borrower failed – DO NOT PROCEED |

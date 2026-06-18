@@ -1,0 +1,17 @@
+{% comment %}Badge for LoanRequestDocument auth_status. Expects: doc {% endcomment %}
+<style>
+.doc-auth-badge { display:inline-block; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
+.doc-auth-ok { background:#d4edda; color:#155724; }
+.doc-auth-bad { background:#f8d7da; color:#721c24; }
+.doc-auth-warn { background:#fff3cd; color:#856404; }
+.doc-auth-pending { background:#e9ecef; color:#495057; }
+</style>
+{% if doc.auth_status == 'verified' or doc.auth_status == 'auto_passed' %}
+<span class="doc-auth-badge doc-auth-ok">{{ doc.get_auth_status_display }}</span>
+{% elif doc.auth_status == 'rejected' %}
+<span class="doc-auth-badge doc-auth-bad">{{ doc.get_auth_status_display }}</span>
+{% elif doc.auth_status == 'needs_review' %}
+<span class="doc-auth-badge doc-auth-warn">{{ doc.get_auth_status_display }}</span>
+{% else %}
+<span class="doc-auth-badge doc-auth-pending">{{ doc.get_auth_status_display }}</span>
+{% endif %}

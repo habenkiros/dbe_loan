@@ -3,22 +3,83 @@
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
 
+<style>
+.sheet4-section { background: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.sheet4-section h3 { margin: 0 0 1rem 0; color: #064420; font-size: 1.1rem; border-bottom: 2px solid #064420; padding-bottom: 0.4rem; }
+.sheet4-es-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.88rem; }
+.sheet4-es-table th, .sheet4-es-table td { border: 1px solid #ddd; padding: 0.5rem 0.45rem; text-align: left; vertical-align: top; }
+.sheet4-es-table th { background: #064420; color: white; font-weight: 600; }
+.sheet4-es-table tbody tr:nth-child(even) { background: #f9fbf9; }
+.sheet4-es-table .col-q { min-width: 220px; }
+.sheet4-es-table .col-yn { width: 7rem; }
+.sheet4-es-table select.form-control { width: 100%; max-width: 7rem; }
+.sheet4-es-table textarea.form-control { width: 100%; min-height: 2.5rem; }
+.sheet4-summary-table td:first-child { font-weight: 600; width: 220px; }
+</style>
+
 <form method="post">
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 4: {{ step_title }}</h2>
-    <p class="meta">Environmental &amp; social risk category and eligibility decision.</p>
-    <div class="table-container">
-      <table class="form-table">
-        <tr><td>{{ form.es_risk_category.label }}</td><td>{{ form.es_risk_category }}</td></tr>
-        <tr><td>{{ form.es_eligibility_decision.label }}</td><td>{{ form.es_eligibility_decision }}</td></tr>
-        <tr><td>{{ form.es_screened_by.label }}</td><td>{{ form.es_screened_by }}</td></tr>
-        <tr><td>{{ form.es_checked_by.label }}</td><td>{{ form.es_checked_by }}</td></tr>
-        <tr><td>{{ form.es_approved_by.label }}</td><td>{{ form.es_approved_by }}</td></tr>
-        <tr><td>{{ form.es_assessment_date.label }}</td><td>{{ form.es_assessment_date }}</td></tr>
-        <tr><td>{{ form.es_notes.label }}</td><td>{{ form.es_notes }}</td></tr>
-      </table>
+    <p class="meta">Environmental &amp; social checklist (detail per Excel), then risk category, eligibility, reviewers, and notes.</p>
+
+    {% if form.errors or es_formset.non_form_errors %}
+    <div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">
+      {% if form.errors %}<p><strong>Summary fields:</strong> {{ form.errors }}</p>{% endif %}
+      {% if es_formset.non_form_errors %}<p><strong>E&amp;S checklist:</strong> {{ es_formset.non_form_errors }}</p>{% endif %}
     </div>
+    {% endif %}
+
+    {{ es_formset.management_form }}
+
+    {% for group in es_checklist_groups %}
+    <div class="sheet4-section">
+      <h3>{{ group.section_label }}</h3>
+      <div class="table-container">
+        <table class="sheet4-es-table">
+          <thead>
+            <tr>
+              <th class="col-q">Question</th>
+              <th class="col-yn">Yes / No / N/A</th>
+              <th>Description / details</th>
+              <th>Mitigation / action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in group.forms %}
+            <tr>
+              <td class="col-q">
+                {% if f.id %}{{ f.id }}{% endif %}
+                {{ f.section_key }}{{ f.section_label }}{{ f.item_key }}{{ f.question_text }}{{ f.display_order }}
+                <span class="es-q-text">{{ f.instance.question_text }}</span>
+                {% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}
+              </td>
+              <td class="col-yn">{{ f.response_yes_no }}</td>
+              <td>{{ f.description }}</td>
+              <td>{{ f.mitigation }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="sheet4-section">
+      <h3>Risk category, eligibility &amp; sign-off</h3>
+      <div class="table-container">
+        <table class="form-table sheet4-summary-table">
+          <tr><td>{{ form.es_risk_category.label }}</td><td>{{ form.es_risk_category }}</td></tr>
+          <tr><td>{{ form.es_eligibility_decision.label }}</td><td>{{ form.es_eligibility_decision }}</td></tr>
+          <tr><td>{{ form.es_screened_by.label }}</td><td>{{ form.es_screened_by }}</td></tr>
+          <tr><td>{{ form.es_checked_by.label }}</td><td>{{ form.es_checked_by }}</td></tr>
+          <tr><td>{{ form.es_approved_by.label }}</td><td>{{ form.es_approved_by }}</td></tr>
+          <tr><td>{{ form.es_assessment_date.label }}</td><td>{{ form.es_assessment_date }}</td></tr>
+          <tr><td>{{ form.es_notes.label }}</td><td>{{ form.es_notes }}</td></tr>
+        </table>
+      </div>
+    </div>
+
     <div class="appraisal-actions">
       <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 5</button>
       <a href="{% url 'loan_appraisal_step' loan_request.id 3 %}" class="btn btn-blue">Back to Sheet 3</a>

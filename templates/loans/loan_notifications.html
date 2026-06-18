@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<h1>Notifications</h1>
+<form method="post" style="margin-bottom:1rem;">
+  {% csrf_token %}
+  <input type="hidden" name="mark_all_read" value="1">
+  <button type="submit" class="btn btn-gray">Mark all as read</button>
+</form>
+{% if notifications %}
+<table>
+  <thead>
+    <tr><th>When</th><th>Title</th><th>Message</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for n in notifications %}
+    <tr style="{% if not n.is_read %}font-weight:600; background:#f8f9fa;{% endif %}">
+      <td>{{ n.created_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+      <td>{{ n.title }}</td>
+      <td>{{ n.message|truncatewords:30 }}</td>
+      <td>
+        <a href="{% url 'loan_notification_mark_read' n.id %}" class="btn btn-blue">Open</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No notifications yet.</p>
+{% endif %}
+{% endblock %}

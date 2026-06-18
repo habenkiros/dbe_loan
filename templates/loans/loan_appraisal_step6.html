@@ -3,23 +3,125 @@
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
 
+<style>
+.sheet6-section { background: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.sheet6-section h3 { margin: 0 0 0.75rem 0; color: #064420; font-size: 1.05rem; border-bottom: 2px solid #064420; padding-bottom: 0.35rem; }
+.sheet6-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
+.sheet6-table th, .sheet6-table td { border: 1px solid #ddd; padding: 0.5rem 0.4rem; text-align: left; vertical-align: top; }
+.sheet6-table th { background: #064420; color: white; font-weight: 600; }
+.sheet6-table tbody tr:nth-child(even) { background: #f9fbf9; }
+.sheet6-table textarea { width: 100%; min-width: 180px; }
+.sheet6-table select, .sheet6-table input[type="text"], .sheet6-table input[type="date"] { width: 100%; }
+</style>
+
 <form method="post">
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 6: {{ step_title }}</h2>
-    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms.</p>
-    <div class="table-container">
-      <table class="form-table">
-        <tr><td>{{ form.recommendation.label }}</td><td>{{ form.recommendation }}</td></tr>
-        <tr><td>{{ form.recommendation_comment.label }}</td><td>{{ form.recommendation_comment }}</td></tr>
-        <tr><td>{{ form.strengths.label }}</td><td>{{ form.strengths }}</td></tr>
-        <tr><td>{{ form.weaknesses.label }}</td><td>{{ form.weaknesses }}</td></tr>
-        <tr><td>{{ form.committee_comments.label }}</td><td>{{ form.committee_comments }}</td></tr>
-        <tr><td>{{ form.amount_approved.label }}</td><td>{{ form.amount_approved }}</td></tr>
-        <tr><td>{{ form.term_approved_months.label }}</td><td>{{ form.term_approved_months }}</td></tr>
-        <tr><td>{{ form.rate_approved.label }}</td><td>{{ form.rate_approved }}</td></tr>
-      </table>
+    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms. Warnings and hard blocks use thresholds from <strong>Admin → Loan analysis policy</strong>.</p>
+
+    {% if analysis_blocks %}
+    <div style="background:#ffecec; border:1px solid #e28b8b; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
+      <strong>Hard blocks (must fix before continuing)</strong>
+      <ul style="margin:0.5rem 0 0 1.25rem;">
+        {% for b in analysis_blocks %}
+        <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
     </div>
+    {% endif %}
+
+    {% if analysis_warnings %}
+    <div style="background:#fff8e5; border:1px solid #f0c36d; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
+      <strong>Automatic warnings</strong>
+      <ul style="margin:0.5rem 0 0 1.25rem;">
+        {% for w in analysis_warnings %}
+        <li>{{ w }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="sheet6-section">
+      <h3>Recommendation &amp; committee</h3>
+      <div class="table-container">
+        <table class="form-table">
+          <tr><td>{{ form.recommendation.label }}</td><td>{{ form.recommendation }}</td></tr>
+          <tr><td>{{ form.recommendation_comment.label }}</td><td>{{ form.recommendation_comment }}</td></tr>
+          <tr><td>{{ form.strengths.label }}</td><td>{{ form.strengths }}</td></tr>
+          <tr><td>{{ form.weaknesses.label }}</td><td>{{ form.weaknesses }}</td></tr>
+          <tr><td>{{ form.committee_comments.label }}</td><td>{{ form.committee_comments }}</td></tr>
+          <tr><td>{{ form.amount_approved.label }}</td><td>{{ form.amount_approved }}</td></tr>
+          <tr><td>{{ form.term_approved_months.label }}</td><td>{{ form.term_approved_months }}</td></tr>
+          <tr><td>{{ form.rate_approved.label }}</td><td>{{ form.rate_approved }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="sheet6-section">
+      <h3>Key risks &amp; mitigations</h3>
+      {{ risk_formset.management_form }}
+      <div class="table-container">
+        <table class="sheet6-table">
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th>Severity</th>
+              <th>Mitigation</th>
+              <th>Owner</th>
+              <th>Due date</th>
+              <th>Status</th>
+              <th>Del.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in risk_formset %}
+            <tr>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.risk }}</td>
+              <td>{{ f.severity }}</td>
+              <td>{{ f.mitigation }}</td>
+              <td>{{ f.owner }}</td>
+              <td>{{ f.due_date }}</td>
+              <td>{{ f.status }}</td>
+              <td>{% if risk_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sheet6-section">
+      <h3>Conditions precedent &amp; covenants</h3>
+      {{ cond_formset.management_form }}
+      <div class="table-container">
+        <table class="sheet6-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Responsible</th>
+              <th>Due date</th>
+              <th>Fulfilled</th>
+              <th>Del.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in cond_formset %}
+            <tr>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.condition_type }}</td>
+              <td>{{ f.description }}</td>
+              <td>{{ f.responsible_party }}</td>
+              <td>{{ f.due_date }}</td>
+              <td style="text-align:center;">{{ f.fulfilled }}</td>
+              <td>{% if cond_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="appraisal-actions">
       <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 7</button>
       <a href="{% url 'loan_appraisal_step' loan_request.id 5 %}" class="btn btn-blue">Back to Sheet 5</a>

@@ -48,6 +48,7 @@
     <div class="appraisal-actions">
       <button type="submit" name="generate_schedule" value="1" class="btn btn-green">Generate schedule</button>
       <button type="submit" name="finish" value="1" class="btn btn-blue">Finish appraisal</button>
+      <span class="help" style="display:block; margin-top:0.5rem;">After finishing, submit to the approval committee from the loan detail page (Sheet 6 recommended amount required).</span>
       <a href="{% url 'loan_appraisal_step' loan_request.id 6 %}" class="btn btn-gray">Back to Sheet 6</a>
       <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
     </div>

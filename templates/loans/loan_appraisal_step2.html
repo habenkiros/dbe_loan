@@ -10,6 +10,9 @@
 .sheet2-grid .field { display: flex; flex-direction: column; gap: 0.25rem; }
 .sheet2-grid .field label { font-weight: 600; color: #333; font-size: 0.9rem; }
 .sheet2-grid .field.checkbox { flex-direction: row; align-items: center; }
+.sheet2-summary { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.sheet2-summary td { border: 1px solid #e1e1e1; padding: 0.45rem 0.5rem; vertical-align: top; }
+.sheet2-summary td.label { background: #f2f6f2; font-weight: 600; width: 220px; }
 .sheet2-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
 .sheet2-table th, .sheet2-table td { border: 1px solid #ddd; padding: 0.5rem 0.4rem; text-align: left; }
 .sheet2-table th { background: #064420; color: white; font-weight: 600; }
@@ -37,6 +40,41 @@
     {% endif %}
 
     <div class="sheet2-section">
+      <h3>Client &amp; business information (reference)</h3>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Read-only reference from Sheet 1 (matches the Excel header on Sheet 2).</p>
+      <div class="table-container">
+        <table class="sheet2-summary">
+          <tr>
+            <td class="label">Loan request ID</td>
+            <td>{{ loan_request.loan_request_id }}</td>
+            <td class="label">Applicant name</td>
+            <td>{{ loan_request.applicant_name }}</td>
+          </tr>
+          <tr>
+            <td class="label">Business name</td>
+            <td>{{ basic_info.business_name }}</td>
+            <td class="label">Business address</td>
+            <td>{{ basic_info.business_address }}</td>
+          </tr>
+          <tr>
+            <td class="label">Business description</td>
+            <td colspan="3">{{ basic_info.business_description }}</td>
+          </tr>
+          <tr>
+            <td class="label">Date business started</td>
+            <td>{{ basic_info.date_business_started }}</td>
+            <td class="label">Repayment frequency</td>
+            <td>{{ basic_info.repayment_frequency }}</td>
+          </tr>
+          <tr>
+            <td class="label">Loan purpose</td>
+            <td colspan="3">{{ loan_request.reason }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="sheet2-section">
       <h3>NBE Credit Report</h3>
       <div class="sheet2-grid">
         <div class="field checkbox">
@@ -46,6 +84,32 @@
         <div class="field">{{ form.nbe_report_date_received.label_tag }}{{ form.nbe_report_date_received }}</div>
         <div class="field">{{ form.total_number_repaid_loans.label_tag }}{{ form.total_number_repaid_loans }}</div>
         <div class="field">{{ form.credit_history_max_score.label_tag }}{{ form.credit_history_max_score }}</div>
+      </div>
+    </div>
+
+    <div class="sheet2-section">
+      <h3>Credit score / bureau summary (optional)</h3>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Use this section when you have a bureau report or internal score. It supports banding, thin-file cases, and key bureau flags.</p>
+      <div class="sheet2-grid">
+        <div class="field">{{ form.bureau_score.label_tag }}{{ form.bureau_score }}</div>
+        <div class="field">{{ form.bureau_score_band.label_tag }}{{ form.bureau_score_band }}</div>
+        <div class="field">{{ form.bureau_report_date.label_tag }}{{ form.bureau_report_date }}</div>
+        <div class="field">{{ form.bureau_active_loans_count.label_tag }}{{ form.bureau_active_loans_count }}</div>
+        <div class="field">{{ form.bureau_total_outstanding.label_tag }}{{ form.bureau_total_outstanding }}</div>
+        <div class="field">{{ form.bureau_total_monthly_debt_service.label_tag }}{{ form.bureau_total_monthly_debt_service }}</div>
+        <div class="field">{{ form.bureau_inquiries_6m.label_tag }}{{ form.bureau_inquiries_6m }}</div>
+        <div class="field checkbox">
+          {{ form.bureau_defaults_ever }}
+          <label for="id_bureau_defaults_ever">Any defaults (ever)</label>
+        </div>
+        <div class="field checkbox">
+          {{ form.bureau_restructured_ever }}
+          <label for="id_bureau_restructured_ever">Any restructures (ever)</label>
+        </div>
+        <div class="field checkbox">
+          {{ form.bureau_thin_file }}
+          <label for="id_bureau_thin_file">Thin file / no bureau</label>
+        </div>
       </div>
     </div>
 
@@ -91,7 +155,7 @@
 
     <div class="sheet2-section">
       <h3>10 qualitative factors (rate and justify each)</h3>
-      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Rate each factor: Poor, Basic, or Professional. Add observation / justification in Notes.</p>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Each factor has its own rating options (per Excel). Add observation / justification in Notes.</p>
       {{ qual_formset.management_form }}
       <div class="table-container">
         <table class="sheet2-table">
@@ -99,6 +163,8 @@
             <tr>
               <th>Factor</th>
               <th>Rating</th>
+              <th>Weight (max)</th>
+              <th>Earned score</th>
               <th>Notes / observation</th>
             </tr>
           </thead>
@@ -107,6 +173,8 @@
             <tr>
               <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
               <td>{{ f.rating }}</td>
+              <td>{{ f.weight }}</td>
+              <td>{{ f.earned_score }}</td>
               <td>{{ f.notes }}</td>
             </tr>
             {% endfor %}

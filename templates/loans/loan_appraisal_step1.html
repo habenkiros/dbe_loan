@@ -18,6 +18,23 @@
   <div class="appraisal-card">
     <h2>Sheet 1: {{ step_title }}</h2>
     <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request.</p>
+
+    {% if prefill_report and prefill_report.total_fields %}
+    <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px; font-size:0.9rem;">
+      <strong>Auto-filled {{ prefill_report.total_fields }} field(s)</strong> from registration, uploaded documents, and collateral.
+      {% if prefill_report.registration %}<br>Registration: {{ prefill_report.registration|join:", " }}{% endif %}
+      {% for doc in prefill_report.documents %}<br>{{ doc.document_type }}: {% for k,v in doc.fields.items %}{{ k }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endfor %}
+      {% if prefill_report.collateral %}<br>Collateral: {{ prefill_report.collateral|join:", " }}{% endif %}
+    </div>
+    {% endif %}
+
+    <p style="margin-bottom:1rem;">
+      <button type="submit" name="import_sources" value="1" class="btn btn-blue" formnovalidate>
+        Re-import from registration &amp; documents
+      </button>
+      <span class="help" style="margin-left:0.5rem;">Fills empty fields only — your edits are kept.</span>
+    </p>
+
     {% if basic_form.errors %}<div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">{{ basic_form.errors }}</div>{% endif %}
 
     <div class="sheet1-section">

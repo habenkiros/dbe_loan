@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Appraisal pack — {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<style>
+.pack-readonly { max-width: 960px; }
+.pack-section { margin: 1.5rem 0; padding: 1rem 1.25rem; background: #fafafa; border: 1px solid #dee2e6; border-radius: 8px; }
+.pack-section h2 { margin: 0 0 0.75rem; color: #064420; font-size: 1.15rem; }
+.pack-section h3 { margin: 1rem 0 0.5rem; font-size: 1rem; color: #333; }
+.pack-grid { display: grid; grid-template-columns: 180px 1fr; gap: 0.4rem 1rem; align-items: start; }
+.pack-grid .lbl { font-weight: 600; color: #555; }
+.pack-banner { background: #e8f4ec; border: 1px solid #064420; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+.pack-nav a { margin-right: 1rem; }
+</style>
+
+<div class="pack-readonly">
+  <p class="pack-banner"><strong>Read-only appraisal pack</strong> — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.</p>
+  <p>
+    <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+    &nbsp;|&nbsp; Branch: {{ loan_request.branch.name }}
+    &nbsp;|&nbsp; Requested: {{ loan_request.amount_requested|floatformat:2 }}
+    {% if appraisal.created_by %}&nbsp;|&nbsp; Officer: {{ appraisal.created_by.username }}{% endif %}
+  </p>
+  <p class="pack-nav">
+    <a href="#sheet1">Sheet 1</a><a href="#sheet2">Sheet 2</a><a href="#sheet3">Sheet 3</a>
+    <a href="#sheet4">Sheet 4</a><a href="#sheet5">Sheet 5</a><a href="#sheet6">Sheet 6</a><a href="#sheet7">Sheet 7</a>
+    &nbsp;|&nbsp;<a href="{% url 'loan_request_detail_manager' loan_request.id %}">← Committee review</a>
+  </p>
+
+  <div id="sheet1" class="pack-section">
+    <h2>Sheet 1 — Basic information</h2>
+    {% if basic_info %}
+    <h3>Personal &amp; business</h3>
+    <div class="pack-grid">
+      <span class="lbl">TIN</span><span>{{ basic_info.tin_number|default:"—" }}</span>
+      <span class="lbl">Gender / age</span><span>{{ basic_info.gender|default:"—" }} / {{ basic_info.age|default:"—" }}</span>
+      <span class="lbl">Marital / education</span><span>{{ basic_info.marital_status|default:"—" }} / {{ basic_info.education_level|default:"—" }}</span>
+      <span class="lbl">Home address</span><span>{{ basic_info.home_address|default:"—" }}</span>
+      <span class="lbl">Business</span><span>{{ basic_info.business_name|default:"—" }} — {{ basic_info.economic_sector|default:"—" }}</span>
+      <span class="lbl">Business address</span><span>{{ basic_info.business_address|default:"—" }}</span>
+      <span class="lbl">Description</span><span>{{ basic_info.business_description|default:"—"|linebreaksbr }}</span>
+      <span class="lbl">Term / rate</span><span>{{ basic_info.term_months|default:"—" }} months @ {{ basic_info.interest_rate|default:"—" }}%</span>
+    </div>
+    {% else %}<p>No Sheet 1 data.</p>{% endif %}
+  </div>
+
+  <div id="sheet2" class="pack-section">
+    <h2>Sheet 2 — Business &amp; character</h2>
+    <div class="pack-grid">
+      <span class="lbl">NBE report</span><span>{% if appraisal.nbe_credit_report_obtained %}Yes{% elif appraisal.nbe_credit_report_obtained is False %}No{% else %}—{% endif %}</span>
+      <span class="lbl">Qualitative</span><span>{{ appraisal.qualitative_total_score|default:"—" }}{% if appraisal.qualitative_passed is not None %} ({% if appraisal.qualitative_passed %}Pass{% else %}Fail{% endif %}){% endif %}</span>
+      <span class="lbl">Business assessment</span><span>{{ appraisal.business_assessment|default:"—"|linebreaksbr }}</span>
+      <span class="lbl">Character assessment</span><span>{{ appraisal.character_assessment|default:"—"|linebreaksbr }}</span>
+    </div>
+    {% if credit_entries %}
+    <h3>Credit history</h3>
+    <table><tr><th>Lender</th><th>Amount</th><th>Balance</th><th>Status</th></tr>
+    {% for e in credit_entries %}
+    <tr><td>{{ e.lender|default:"—" }}</td><td>{{ e.loan_amount|default:"—" }}</td><td>{{ e.current_balance|default:"—" }}</td><td>{{ e.get_status_display|default:e.status|default:"—" }}</td></tr>
+    {% endfor %}</table>
+    {% endif %}
+    {% if qualitative %}
+    <h3>Qualitative factors</h3>
+    <table><tr><th>Factor</th><th>Rating</th><th>Weight</th><th>Earned</th></tr>
+    {% for q in qualitative %}
+    <tr><td>{{ q.factor_key }}</td><td>{{ q.get_rating_display|default:q.rating|default:"—" }}</td><td>{{ q.weight|default:"—" }}</td><td>{{ q.earned_score|default:"—" }}</td></tr>
+    {% endfor %}</table>
+    {% endif %}
+  </div>
+
+  <div id="sheet3" class="pack-section">
+    <h2>Sheet 3 — Cashflow &amp; bureau</h2>
+    <div class="pack-grid">
+      <span class="lbl">Monthly sales</span><span>{{ appraisal.cf_monthly_sales|default:"—" }}</span>
+      <span class="lbl">Annual net CF / DSCR</span><span>{{ appraisal.cf_annual_net_cashflow|default:"—" }} / {{ appraisal.dscr_annual|default:"—" }}</span>
+      <span class="lbl">Bureau score</span><span>{{ appraisal.bureau_score|default:"—" }} ({{ appraisal.get_bureau_score_band_display|default:"—" }})</span>
+      <span class="lbl">Stress test DSCR</span><span>{{ appraisal.stressed_dscr|default:"—" }}</span>
+    </div>
+  </div>
+
+  <div id="sheet4" class="pack-section">
+    <h2>Sheet 4 — E&amp;S</h2>
+    <div class="pack-grid">
+      <span class="lbl">Risk / decision</span><span>{{ appraisal.get_es_risk_category_display|default:"—" }} / {{ appraisal.get_es_eligibility_decision_display|default:"—" }}</span>
+      <span class="lbl">Notes</span><span>{{ appraisal.es_notes|default:"—"|linebreaksbr }}</span>
+    </div>
+    {% if es_items %}<p><small>{{ es_items|length }} checklist items on file.</small></p>{% endif %}
+  </div>
+
+  <div id="sheet5" class="pack-section">
+    <h2>Sheet 5 — Collateral</h2>
+    <div class="pack-grid">
+      <span class="lbl">Total value</span><span>{{ appraisal.collateral_total_value|default:"—" }}</span>
+      <span class="lbl">Coverage</span><span>{{ appraisal.collateral_coverage_ratio|default:"—" }}</span>
+    </div>
+  </div>
+
+  <div id="sheet6" class="pack-section">
+    <h2>Sheet 6 — Summary &amp; decision</h2>
+    <div class="pack-grid">
+      <span class="lbl">Recommendation</span><span>{{ appraisal.get_recommendation_display|default:"—" }}</span>
+      <span class="lbl">Recommended amount</span><span>{{ appraisal.amount_approved|default:"—" }}</span>
+      <span class="lbl">Strengths / weaknesses</span><span>{{ appraisal.strengths|default:"—"|linebreaksbr }}<br><em>Weaknesses:</em> {{ appraisal.weaknesses|default:"—"|linebreaksbr }}</span>
+    </div>
+    {% if risks %}<h3>Risks</h3><ul>{% for r in risks %}<li><strong>{{ r.risk }}</strong> — {{ r.mitigation|default:"—" }}</li>{% endfor %}</ul>{% endif %}
+    {% if conditions %}<h3>Conditions</h3><ul>{% for c in conditions %}<li>{{ c.description }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+
+  <div id="sheet7" class="pack-section">
+    <h2>Sheet 7 — Amortization</h2>
+    {% if amortization %}
+    <table>
+      <tr><th>#</th><th>Date</th><th>Payment</th><th>Principal</th><th>Interest</th><th>Balance</th></tr>
+      {% for row in amortization %}
+      <tr>
+        <td>{{ row.period_number }}</td>
+        <td>{{ row.payment_date|date:"Y-m-d"|default:"—" }}</td>
+        <td>{{ row.payment_amount|floatformat:2 }}</td>
+        <td>{{ row.principal|floatformat:2 }}</td>
+        <td>{{ row.interest|floatformat:2 }}</td>
+        <td>{{ row.balance_after|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p>No schedule generated.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

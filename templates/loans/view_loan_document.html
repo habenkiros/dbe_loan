@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}View document – {{ doc.document_type.name }}{% endblock %}
+{% block content %}
+<h1>{{ doc.document_type.name }}</h1>
+<p>
+  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+  &nbsp;|&nbsp; {% include "loans/_document_auth_status.html" %}
+</p>
+<p>
+  {% if user.role == 'branch_manager' %}
+  <a href="{% url 'upload_loan_request_documents' loan_request.id %}">← Upload documents</a>
+  {% else %}
+  <a href="{% url 'loan_request_detail' loan_request.id %}">← Loan detail</a>
+  {% endif %}
+  {% if file_available and viewable_inline %}
+  &nbsp;|&nbsp;
+  <a href="{% url 'view_loan_document' loan_request.id doc.id %}?raw=1" target="_blank" rel="noopener">Open in new tab</a>
+  {% endif %}
+</p>
+
+{% if not file_available %}
+<div style="margin:1rem 0; padding:1rem; background:#f8d7da; border:1px solid #f5c6cb; border-radius:8px;">
+  <strong>File not available.</strong> The upload record exists but the file is missing on the server.
+  Try uploading the document again.
+</div>
+{% elif viewable_inline %}
+<div style="margin:1rem 0; border:1px solid #dee2e6; border-radius:8px; overflow:hidden; background:#f8f9fa;">
+  {% if file_ext == 'pdf' %}
+  <embed
+    src="{% url 'serve_loan_document_inline' loan_request.id doc.id %}"
+    type="application/pdf"
+    title="{{ doc.document_type.name }}"
+    style="width:100%; min-height:75vh; border:0;"
+  >
+  <p style="padding:0.5rem 1rem; margin:0; font-size:0.9rem;">
+    PDF not showing?
+    <a href="{% url 'view_loan_document' loan_request.id doc.id %}?raw=1" target="_blank" rel="noopener">Open PDF in a new tab</a>
+  </p>
+  {% else %}
+  <p style="text-align:center; padding:1rem;">
+    <img
+      src="{% url 'serve_loan_document_inline' loan_request.id doc.id %}"
+      alt="{{ doc.document_type.name }}"
+      style="max-width:100%; max-height:75vh; height:auto;"
+    >
+  </p>
+  {% endif %}
+</div>
+{% else %}
+<p>This file type ({{ file_ext|default:"unknown" }}) cannot be previewed in the browser.</p>
+<p><a href="{% url 'serve_loan_document_inline' loan_request.id doc.id %}?download=1" class="btn btn-blue">Download file</a></p>
+{% endif %}
+
+{% include "loans/_document_auth_checks.html" %}
+{% endblock %}

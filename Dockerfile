@@ -4,6 +4,14 @@ FROM python:3.9
 # Set the working directory in the container
 WORKDIR /app
 
+# Tesseract OCR for scanned document text extraction (optional checks)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-amh \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install any needed packages specified in requirements.txt
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt

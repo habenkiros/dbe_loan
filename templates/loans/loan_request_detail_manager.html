@@ -1,78 +1,90 @@
-<!-- templates/loans/loan_request_detail.html -->
 {% extends "base.html" %}
-
-{% block title %}Loan Request Details{% endblock %}
-
+{% block title %}Committee review – {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
-<h1>Loan Request Details</h1>
+<style>
+.committee-panel { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+.committee-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+.committee-pending { background: #fff3cd; color: #856404; }
+.committee-ok { background: #d4edda; color: #155724; }
+.committee-bad { background: #f8d7da; color: #721c24; }
+</style>
 
+<h1>Approval committee review</h1>
+<p><strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }} &nbsp;|&nbsp;
+   Branch: {{ loan_request.branch.name }} &nbsp;|&nbsp;
+   Requested: {{ loan_request.amount_requested|floatformat:2 }}</p>
+
+<div class="committee-panel">
+  <strong>Overall:</strong> {{ loan_request.get_committee_status_display|default:"—" }}
+  {% if committee_tally.current_level %}
+  <br><strong>Current level:</strong> {{ committee_tally.current_level.name }}
+  {% endif %}
+  {% if loan_request.submitted_to_committee_at %}
+  <p style="margin:0.5rem 0 0;">Submitted {{ loan_request.submitted_to_committee_at|date:"SHORT_DATETIME_FORMAT" }}
+    {% if loan_request.submitted_to_committee_by %}by {{ loan_request.submitted_to_committee_by.username }}{% endif %}
+  </p>
+  {% endif %}
+  {% if loan_request.committee_submission_notes %}
+  <p><strong>Officer notes:</strong> {{ loan_request.committee_submission_notes }}</p>
+  {% endif %}
+  {% if loan_request.committee_final_amount %}
+  <p><strong>Final approved amount:</strong> {{ loan_request.committee_final_amount|floatformat:2 }}</p>
+  {% endif %}
+</div>
+
+{% if committee_tally.routing %}
+{% include "loans/_approval_routing.html" with routing=committee_tally.routing %}
+{% endif %}
+{% include "loans/_approval_pipeline.html" %}
+
+{% if appraisal %}
+<p style="margin:1rem 0;">
+  <a href="{% url 'committee_appraisal_pack' loan_request.id %}" class="btn btn-blue">View full appraisal pack (Sheets 1–7, read-only)</a>
+</p>
+<h2>Sheet 6 summary</h2>
 <table>
-    <tr>
-        <th>ID</th>
-        <td>{{ loan_request.loan_request_id }}</td>
-    </tr>
-    <tr>
-        <th>Applicant Name</th>
-        <td>{{ loan_request.applicant_name }}</td>
-    </tr>
-    <tr>
-        <th>Phone Number</th>
-        <td>{{ loan_request.phone_number }}</td>
-    </tr>
-    <tr>
-        <th>Email</th>
-        <td>{{ loan_request.email }}</td>
-    </tr>
-    <tr>
-        <th>Category</th>
-        <td>{{ loan_request.category.name }}</td>
-    </tr>
-    <tr>
-        <th>Collateral</th>
-        <td>{{ loan_request.collateral.name }}</td>
-    </tr>
-    <tr>
-        <th>Amount Requested</th>
-        <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
-    </tr>
-    <tr>
-        <th>Reason</th>
-        <td>{{ loan_request.reason }}</td>
-    </tr>
-    <tr>
-        <th>Status</th>
-        <td>{{ loan_request.status }}</td>
-    </tr>
-    <tr>
-        <th>Operation Manager Approval</th>
-        <td>{{ loan_request.operation_manager_approval }}</td>
-    </tr>
-    <tr>
-        <th>Finance Approval</th>
-        <td>{{ loan_request.finance_approval }}</td>
-    </tr>
-    <tr>
-        <th>Date Requested</th>
-        <td>{{ loan_request.date_requested }}</td>
-    </tr>
-    <tr>
-        <th>Date Reviewed</th>
-        <td>{{ loan_request.date_reviewed }}</td>
-    </tr>
-    <tr>
-        <th>District</th>
-        <td>{{ loan_request.branch.district.name }}</td>
-    </tr>
-    <tr>
-        <th>Branch</th>
-        <td>{{ loan_request.branch.name }}</td>
-    </tr>
-    <tr>
-        <th>Cutomer History</th>
-        <td>{{ loan_request.customer_history }}</td>
-    </tr>
+  <tr><th>Recommendation</th><td>{{ appraisal.get_recommendation_display|default:"—" }}</td></tr>
+  <tr><th>Recommended amount</th><td>{% if appraisal.amount_approved %}{{ appraisal.amount_approved|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+  <tr><th>Recommended term</th><td>{{ appraisal.term_approved_months|default:"—" }} months</td></tr>
+  <tr><th>Recommended rate</th><td>{% if appraisal.rate_approved %}{{ appraisal.rate_approved }}%{% else %}—{% endif %}</td></tr>
+  <tr><th>Strengths</th><td>{{ appraisal.strengths|default:"—"|linebreaksbr }}</td></tr>
+  <tr><th>Weaknesses</th><td>{{ appraisal.weaknesses|default:"—"|linebreaksbr }}</td></tr>
 </table>
+{% endif %}
 
-<a href="{% url 'view_loan_requests_manager' %}">Back to Loan Requests</a>
+{% if can_return_to_officer %}
+<h3>Return to loan officer</h3>
+<p class="help">Send back for corrections without declining the loan. The officer will be notified and can resubmit after fixes.</p>
+<form method="post" action="{% url 'return_loan_to_officer' loan_request.id %}" class="committee-panel" onsubmit="return confirm('Return this loan to the loan officer for corrections?');">
+  {% csrf_token %}
+  <label>Feedback for loan officer (required)</label><br>
+  <textarea name="return_notes" rows="3" style="width:100%; max-width:520px;" required minlength="10" placeholder="Describe what must be corrected in the appraisal or documents…"></textarea>
+  <p style="margin-top:0.5rem;"><button type="submit" class="btn btn-gray">Return to loan officer</button></p>
+</form>
+{% endif %}
 
+{% if committee_tally.can_vote %}
+<h3>Cast your vote — {{ committee_tally.current_level.name }}</h3>
+<p class="help">You are voting as part of the configured committee at this level (branch / district / head office / management).</p>
+<form method="post" action="{% url 'cast_committee_vote' loan_request.id %}" class="committee-panel">
+  {% csrf_token %}
+  <table>
+    <tr><td>{{ vote_form.vote.label }}</td><td>{{ vote_form.vote }}</td></tr>
+    <tr><td>{{ vote_form.amount_supported.label }}</td><td>{{ vote_form.amount_supported }}<br><small>{{ vote_form.amount_supported.help_text }}</small></td></tr>
+    <tr><td>{{ vote_form.comments.label }}</td><td>{{ vote_form.comments }}</td></tr>
+  </table>
+  <p style="margin-top:0.75rem;"><button type="submit" class="btn btn-green">Submit vote</button></p>
+</form>
+{% elif committee_tally.user_vote %}
+<p><em>You voted <strong>{{ committee_tally.user_vote.get_vote_display }}</strong> at {{ committee_tally.user_vote.approval_level.name }}.</em></p>
+{% elif loan_request.committee_status == 'pending_committee' %}
+<p><em>You cannot vote at the current level, or you have already voted.</em></p>
+{% endif %}
+
+<p style="margin-top:1.5rem;">
+  <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">← My approval queue</a>
+  &nbsp;|&nbsp;
+  <a href="{% url 'view_loan_requests_manager' %}">Loans in my scope</a>
+</p>
+<p class="help" style="margin-top:0.5rem;">Committee membership is configured in <strong>Admin → Approval committee levels</strong> (roles per branch/district; head office / board separately).</p>
 {% endblock %}

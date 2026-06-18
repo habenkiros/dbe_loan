@@ -4,10 +4,100 @@
 
 {% block content %}
 <h1>Edit document type</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save changes</button>
+<p><strong>{{ doc_type.name }}</strong> — configure upload and authentication rules for this document.</p>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  <fieldset style="border:2px solid #064420; padding:1rem 1.25rem; border-radius:8px; background:#f8faf8;">
+    <legend><strong>Official reference sample (Path B)</strong></legend>
+    <p class="help">Upload the bank's real blank/sample PDF or image. The system runs OCR, learns validation phrases, and compares every customer upload against this file.</p>
+
+    <p>{{ form.reference_sample.label_tag }} {{ form.reference_sample }}<br>
+      <small>{{ form.reference_sample.help_text }}</small></p>
+
+    {% if doc_type.reference_sample %}
+    <p>
+      <strong>Current sample:</strong> {{ doc_type.reference_sample.name|cut:"document_type_samples/" }}
+      &nbsp;|&nbsp;
+      <a href="{% url 'serve_document_type_reference_sample' doc_type.id %}" target="_blank" rel="noopener">View reference</a>
+      {% if doc_type.reference_sample_analyzed_at %}
+      &nbsp;|&nbsp; Analyzed {{ doc_type.reference_sample_analyzed_at|date:"SHORT_DATETIME_FORMAT" }}
+      {% endif %}
+    </p>
+    {% endif %}
+
+    <p>
+      <label>{{ form.use_reference_sample_validation }} {{ form.use_reference_sample_validation.label }}</label><br>
+      <small>{{ form.use_reference_sample_validation.help_text }}</small>
+    </p>
+    <p>{{ form.reference_min_similarity.label_tag }} {{ form.reference_min_similarity }}
+      <small>{{ form.reference_min_similarity.help_text }}</small></p>
+
+    {% if reference_profile.validation_phrases %}
+    <div style="background:#fff; border:1px solid #dee2e6; padding:0.75rem; border-radius:6px; margin:0.75rem 0; font-size:0.9rem;">
+      <strong>Learned from reference ({{ reference_profile.validation_phrases|length }} phrases)</strong>
+      {% if reference_profile.extract.method %} — via {{ reference_profile.extract.method }}{% endif %}
+      <ul style="margin:0.35rem 0 0 1.1rem;">
+        {% for p in reference_profile.validation_phrases %}
+        <li>{{ p }}</li>
+        {% endfor %}
+      </ul>
+      {% if reference_profile.suggested_mappings %}
+      <p style="margin-top:0.5rem;"><strong>Suggested field mappings:</strong></p>
+      <ul style="margin:0 0 0 1.1rem; font-size:0.85rem;"><code>
+        {% for m in reference_profile.suggested_mappings %}<li>{{ m }}</li>{% endfor %}
+      </code></ul>
+      {% endif %}
+      {% if reference_profile.extract.error %}
+      <p style="color:#856404;"><strong>OCR note:</strong> {{ reference_profile.extract.error }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <p style="margin-top:0.5rem;">
+      <button type="submit" name="reanalyze_reference" value="1" class="btn btn-blue" formnovalidate>
+        Re-analyze reference sample
+      </button>
+      <label style="margin-left:1rem; font-size:0.9rem;">
+        <input type="checkbox" name="force_reseed_phrases" value="1">
+        Replace validation phrases from reference (overwrites manual phrases)
+      </label>
+    </p>
+  </fieldset>
+
+  <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+    <legend>Basic</legend>
+    <p>{{ form.name.label_tag }} {{ form.name }}</p>
+    <p>{{ form.order.label_tag }} {{ form.order }} {{ form.is_required }} {{ form.is_required.label_tag }}</p>
+    <p>{{ form.auth_notes.label_tag }} {{ form.auth_notes }}</p>
+  </fieldset>
+  <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+    <legend>Upload rules</legend>
+    <p>{{ form.allowed_extensions.label_tag }} {{ form.allowed_extensions }}<br><small>Blank = bank default from <a href="{% url 'manage_loan_application_document_types' %}">document types page</a>.</small></p>
+    <p>{{ form.max_file_size_mb.label_tag }} {{ form.max_file_size_mb }} MB</p>
+    <p class="help">Effective today: <strong>{{ doc_type.auth_checks_summary }}</strong></p>
+  </fieldset>
+  <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+    <legend>Appraisal auto-fill (extract fields from upload)</legend>
+    <p class="help">Filled automatically from reference sample when possible. Edit to fine-tune.</p>
+    <p>{{ form.content_extraction_mappings.label_tag }}<br>{{ form.content_extraction_mappings }}<br><small>{{ form.content_extraction_mappings.help_text }}</small></p>
+  </fieldset>
+  <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+    <legend>Content validation phrases</legend>
+    <p class="help">Auto-filled from reference sample. You can add or edit lines manually.</p>
+    <p>{{ form.content_validation_sample.label_tag }}<br>{{ form.content_validation_sample }}<br><small>{{ form.content_validation_sample.help_text }}</small></p>
+    <p>{{ form.content_validation_min_matches.label_tag }} {{ form.content_validation_min_matches }}<br><small>{{ form.content_validation_min_matches.help_text }}</small></p>
+    <p><label>{{ form.content_validation_strict }} {{ form.content_validation_strict.label }}</label><br><small>{{ form.content_validation_strict.help_text }}</small></p>
+  </fieldset>
+  <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
+    <legend>Authentication checks</legend>
+    <p><label>{{ form.require_officer_verification }} {{ form.require_officer_verification.label }}</label></p>
+    <p><label>{{ form.enable_ocr_match }} {{ form.enable_ocr_match.label }}</label></p>
+    <p><label>{{ form.enable_llm_check }} {{ form.enable_llm_check.label }}</label></p>
+    <p><label>{{ form.enable_external_id }} {{ form.enable_external_id.label }}</label></p>
+  </fieldset>
+  <p style="margin-top:0.75rem;"><button type="submit">Save changes</button></p>
 </form>
-<p><a href="{% url 'manage_loan_application_document_types' %}">Back to document types</a></p>
+<p><a href="{% url 'manage_loan_application_document_types' %}">← Back to document types</a></p>
 {% endblock %}

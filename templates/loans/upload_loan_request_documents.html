@@ -14,18 +14,20 @@
 </ul>
 {% endif %}
 
-<h3>Required document types</h3>
-<p>Upload the following documents for this loan application. You can add documents now or later from the loan request detail page.</p>
+<h3>Upload documents</h3>
+<p>Files are validated <strong>before upload</strong> (extension, size, file type, and document content when configured). Uploading again for the same document type <strong>replaces</strong> the previous file.</p>
+<p class="help">Rules per type: <strong>Settings → Application document types</strong>.</p>
 
 {% if existing_documents %}
-<h3>Uploaded documents</h3>
+<h3>Current uploads</h3>
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>Document type</th>
                 <th>Required</th>
-                <th>File</th>
+                <th>Auth status</th>
+                <th>Review</th>
                 <th>Uploaded</th>
             </tr>
         </thead>
@@ -34,7 +36,11 @@
             <tr>
                 <td>{{ doc.document_type.name }}</td>
                 <td>{% if doc.document_type.is_required %}Yes{% else %}Optional{% endif %}</td>
-                <td><a href="{{ doc.file.url }}" target="_blank" rel="noopener">Download</a></td>
+                <td>{% include "loans/_document_auth_status.html" %}</td>
+                <td>
+                    <a href="{% url 'view_loan_document' loan_request.id doc.id %}" class="btn btn-blue" style="font-size:0.85rem;">View</a>
+                    {% if doc.original_filename %}<br><small>{{ doc.original_filename }}</small>{% endif %}
+                </td>
                 <td>{{ doc.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}</td>
             </tr>
             {% endfor %}
@@ -43,14 +49,14 @@
 </div>
 {% endif %}
 
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" id="loan-doc-upload-form">
     {% csrf_token %}
     <table>
         <thead>
             <tr>
                 <th>Document type</th>
                 <th>Required</th>
-                <th>Upload file</th>
+                <th>Upload / replace</th>
             </tr>
         </thead>
         <tbody>
@@ -58,7 +64,29 @@
             <tr>
                 <td>{{ doc_type.name }}</td>
                 <td>{% if doc_type.is_required %}Yes{% else %}Optional{% endif %}</td>
-                <td><input type="file" name="doc_type_{{ doc_type.id }}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></td>
+                <td>
+                  {% for cur in existing_documents %}
+                  {% if cur.document_type_id == doc_type.id %}
+                  <p style="margin:0 0 0.35rem; font-size:0.9rem; color:#856404;">
+                    <strong>On file</strong> ({{ cur.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}) —
+                    uploading replaces the current file.
+                    <a href="{% url 'view_loan_document' loan_request.id cur.id %}">View current</a>
+                  </p>
+                  {% endif %}
+                  {% endfor %}
+                  <input
+                    type="file"
+                    name="doc_type_{{ doc_type.id }}"
+                    class="loan-doc-file-input"
+                    accept="{{ doc_type.get_accept_attribute }}"
+                    data-doc-name="{{ doc_type.name }}"
+                    data-max-mb="{{ doc_type.get_max_file_size_mb }}"
+                    data-allowed="{{ doc_type.get_allowed_extensions_list|join:',' }}"
+                  >
+                  <br><small>Max {{ doc_type.get_max_file_size_mb }}MB · Allowed: {{ doc_type.get_allowed_extensions_list|join:", " }}</small>
+                  {% if doc_type.auth_notes %}<br><small><em>{{ doc_type.auth_notes }}</em></small>{% endif %}
+                  <div class="file-validation-error" style="color:#c00; font-size:0.85rem; margin-top:0.25rem; display:none;"></div>
+                </td>
             </tr>
             {% empty %}
             <tr>
@@ -69,7 +97,7 @@
     </table>
     {% if document_types %}
     <p>
-        <button type="submit">Upload selected files</button>
+        <button type="submit" id="loan-doc-upload-btn">Upload selected files</button>
     </p>
     {% endif %}
 </form>
@@ -79,4 +107,72 @@
     &nbsp;|&nbsp;
     <a href="{% url 'view_loan_requests' %}">View all loan requests</a>
 </p>
+
+<script>
+(function() {
+  function extOf(filename) {
+    var i = filename.lastIndexOf('.');
+    return i >= 0 ? filename.slice(i + 1).toLowerCase() : '';
+  }
+
+  function validateInput(input) {
+    var errEl = input.parentElement.querySelector('.file-validation-error');
+    if (!input.files || !input.files.length) {
+      if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+      return true;
+    }
+    var file = input.files[0];
+    var allowed = (input.dataset.allowed || '').split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+    var maxMb = parseFloat(input.dataset.maxMb || '15');
+    var ext = extOf(file.name);
+    var errors = [];
+    if (!ext || allowed.indexOf(ext) === -1) {
+      errors.push('"' + (input.dataset.docName || 'Document') + '": .' + (ext || '?') + ' is not allowed. Use: ' + allowed.join(', '));
+    }
+    if (file.size > maxMb * 1024 * 1024) {
+      errors.push('"' + (input.dataset.docName || 'Document') + '": file is too large (max ' + maxMb + ' MB).');
+    }
+    if (file.size === 0) {
+      errors.push('"' + (input.dataset.docName || 'Document') + '": file is empty.');
+    }
+    if (errEl) {
+      if (errors.length) {
+        errEl.textContent = errors[0];
+        errEl.style.display = 'block';
+      } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+    }
+    return errors.length === 0;
+  }
+
+  document.querySelectorAll('.loan-doc-file-input').forEach(function(input) {
+    input.addEventListener('change', function() { validateInput(input); });
+  });
+
+  var form = document.getElementById('loan-doc-upload-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      var ok = true;
+      var anySelected = false;
+      document.querySelectorAll('.loan-doc-file-input').forEach(function(input) {
+        if (input.files && input.files.length) {
+          anySelected = true;
+          if (!validateInput(input)) ok = false;
+        }
+      });
+      if (!anySelected) {
+        e.preventDefault();
+        alert('Please select at least one file to upload.');
+        return;
+      }
+      if (!ok) {
+        e.preventDefault();
+        alert('Fix the file errors shown below before uploading.');
+      }
+    });
+  }
+})();
+</script>
 {% endblock %}

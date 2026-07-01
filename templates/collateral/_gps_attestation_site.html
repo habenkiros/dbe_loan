@@ -1,0 +1,15 @@
+{% comment %}Weak GPS officer attestation — site capture. Expects: gps_weak_threshold_m {% endcomment %}
+<div id="site-gps-attestation" class="field-gps-attestation" hidden>
+  <p class="field-gps-warn">GPS accuracy exceeds {{ gps_weak_threshold_m }}m or is unavailable. Officer attestation is required for audit and AI provenance.</p>
+  <p>
+    <label>
+      <input type="checkbox" name="site_gps_weak_ack" id="site_gps_weak_ack" value="1">
+      I verify this site location by physical inspection
+    </label>
+  </p>
+  <p>
+    <label for="site_gps_attestation_note">Attestation note</label><br>
+    <textarea name="site_gps_attestation_note" id="site_gps_attestation_note" class="field-input-lg" rows="2"
+              placeholder="Describe how the location was verified (minimum 10 characters)"></textarea>
+  </p>
+</div>

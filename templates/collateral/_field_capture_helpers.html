@@ -1,0 +1,14 @@
+{% comment %}GPS / camera helpers for laptop and tablet field visits {% endcomment %}
+<div id="field-secure-context-banner" class="field-secure-banner" hidden>
+  <strong>Location &amp; camera blocked:</strong> this page is not secure (HTTPS).
+  Browsers only allow GPS and webcam on <code>https://</code> or <code>http://localhost</code>.
+  Open the app as <code>http://localhost:8000</code> on this laptop, or deploy with HTTPS.
+</div>
+
+<div id="field-webcam-panel" class="field-webcam-panel" hidden>
+  <video id="field-webcam-video" class="field-webcam-video" playsinline autoplay muted></video>
+  <div class="field-webcam-actions">
+    <button type="button" class="field-btn field-btn-primary" id="btn-webcam-snap">Capture photo</button>
+    <button type="button" class="field-btn field-btn-secondary" id="btn-webcam-close">Close camera</button>
+  </div>
+</div>

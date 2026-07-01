@@ -5,6 +5,7 @@
     <title>{% block title %}Loan System{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    {% block extra_head %}{% endblock %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
@@ -62,6 +63,23 @@
         tr:hover {
             background-color: #f1f1f1;
         }
+        .flash-messages {
+            margin: 0 0 1.25rem 0;
+            padding: 0;
+            list-style: none;
+        }
+        .flash-messages li {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            font-size: 0.95rem;
+        }
+        .flash-success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .flash-error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .flash-warning { background: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .flash-info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        .flash-debug { background: #e2e3e5; border-color: #d6d8db; color: #383d41; }
         header {
             background-color: #064420;
             color: white;
@@ -320,6 +338,13 @@
     </nav>
 
     <div class="container">
+        {% if messages %}
+        <ul class="flash-messages" id="flash-messages">
+            {% for message in messages %}
+            <li class="flash-{{ message.tags|default:'info' }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
         {% block content %}
         {% endblock %}
     </div>

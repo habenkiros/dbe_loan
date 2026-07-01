@@ -101,6 +101,27 @@ class Building(models.Model):
         'loans.City', on_delete=models.SET_NULL, null=True, blank=True,
         help_text="City/Woreda for unit price",
     )
+    site_gps_lat = models.DecimalField(
+        max_digits=12, decimal_places=8, null=True, blank=True,
+        help_text='GPS latitude captured at the building site.',
+    )
+    site_gps_lon = models.DecimalField(
+        max_digits=12, decimal_places=8, null=True, blank=True,
+        help_text='GPS longitude captured at the building site.',
+    )
+    site_gps_accuracy_m = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='GPS accuracy in metres when site was marked.',
+    )
+    site_captured_at = models.DateTimeField(null=True, blank=True)
+    site_gps_weak_acknowledged = models.BooleanField(
+        default=False,
+        help_text='Officer attested location when GPS was weak or unavailable.',
+    )
+    site_gps_attestation_note = models.TextField(
+        blank=True,
+        help_text='Officer explanation when GPS accuracy exceeds policy threshold.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -159,12 +180,35 @@ class BuildingValuation(models.Model):
 
 class BuildingImage(models.Model):
     """Field photo for a building (mobile upload, optional GPS)."""
+    PHOTO_FRONT = 'front'
+    PHOTO_SIDE = 'side'
+    PHOTO_REAR = 'rear'
+    PHOTO_ROOF = 'roof'
+    PHOTO_INTERIOR = 'interior'
+    PHOTO_OTHER = 'other'
+    PHOTO_TYPE_CHOICES = [
+        (PHOTO_FRONT, 'Front / facade'),
+        (PHOTO_SIDE, 'Side'),
+        (PHOTO_REAR, 'Rear'),
+        (PHOTO_ROOF, 'Roof'),
+        (PHOTO_INTERIOR, 'Interior'),
+        (PHOTO_OTHER, 'Other'),
+    ]
+
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='collateral/building/%Y/%m/')
     caption = models.CharField(max_length=255, blank=True)
+    photo_type = models.CharField(
+        max_length=20, choices=PHOTO_TYPE_CHOICES, default=PHOTO_OTHER, blank=True,
+    )
     captured_at = models.DateTimeField(null=True, blank=True)
     gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
     gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_accuracy_m = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+    )
+    gps_weak_acknowledged = models.BooleanField(default=False)
+    gps_attestation_note = models.TextField(blank=True)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -182,6 +226,12 @@ class LandValuation(models.Model):
     land_size_sqm = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
     unit_price_per_sqm = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
     notes = models.TextField(blank=True)
+    site_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    site_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    site_gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    site_captured_at = models.DateTimeField(null=True, blank=True)
+    site_gps_weak_acknowledged = models.BooleanField(default=False)
+    site_gps_attestation_note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -193,6 +243,38 @@ class LandValuation(models.Model):
 
     def __str__(self):
         return f"Land {self.loan_request.loan_request_id}"
+
+
+class LandValuationImage(models.Model):
+    """Field photo for land collateral."""
+    PHOTO_PLOT = 'plot'
+    PHOTO_BOUNDARY = 'boundary'
+    PHOTO_TITLE = 'title_deed'
+    PHOTO_OTHER = 'other'
+    PHOTO_TYPE_CHOICES = [
+        (PHOTO_PLOT, 'Plot / overview'),
+        (PHOTO_BOUNDARY, 'Boundary / corners'),
+        (PHOTO_TITLE, 'Title / certificate'),
+        (PHOTO_OTHER, 'Other'),
+    ]
+
+    land_valuation = models.ForeignKey(LandValuation, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='collateral/land/%Y/%m/')
+    caption = models.CharField(max_length=255, blank=True)
+    photo_type = models.CharField(max_length=20, choices=PHOTO_TYPE_CHOICES, default=PHOTO_OTHER, blank=True)
+    captured_at = models.DateTimeField(null=True, blank=True)
+    gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gps_weak_acknowledged = models.BooleanField(default=False)
+    gps_attestation_note = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Land photo {self.land_valuation_id}"
 
 
 # ---------- Other collateral types (Vehicle, Machinery, Equipment, etc.) ----------
@@ -208,6 +290,12 @@ class OtherCollateralItem(models.Model):
     name = models.CharField(max_length=255, help_text="e.g. Toyota Pickup, Tractor, Machinery")
     estimated_value = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal('0'))
     notes = models.TextField(blank=True)
+    site_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    site_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    site_gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    site_captured_at = models.DateTimeField(null=True, blank=True)
+    site_gps_weak_acknowledged = models.BooleanField(default=False)
+    site_gps_attestation_note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -216,3 +304,81 @@ class OtherCollateralItem(models.Model):
 
     def __str__(self):
         return f"{self.name} – {self.loan_request.loan_request_id}"
+
+
+class OtherCollateralItemImage(models.Model):
+    """Field photo for vehicle / machinery / equipment collateral."""
+    PHOTO_PLATE = 'plate'
+    PHOTO_ASSET = 'asset'
+    PHOTO_SERIAL = 'serial_label'
+    PHOTO_OTHER = 'other'
+    PHOTO_TYPE_CHOICES = [
+        (PHOTO_PLATE, 'Plate / registration'),
+        (PHOTO_ASSET, 'Full asset'),
+        (PHOTO_SERIAL, 'Serial / chassis label'),
+        (PHOTO_OTHER, 'Other'),
+    ]
+
+    item = models.ForeignKey(OtherCollateralItem, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='collateral/other/%Y/%m/')
+    caption = models.CharField(max_length=255, blank=True)
+    photo_type = models.CharField(max_length=20, choices=PHOTO_TYPE_CHOICES, default=PHOTO_OTHER, blank=True)
+    captured_at = models.DateTimeField(null=True, blank=True)
+    gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gps_weak_acknowledged = models.BooleanField(default=False)
+    gps_attestation_note = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.item.name} photo"
+
+
+class CollateralFieldAuditLog(models.Model):
+    """
+    Immutable audit trail for on-site collateral actions.
+    Supports supervisory review and future AI / provenance analysis.
+    """
+    EVT_SITE_GPS = 'site_gps_marked'
+    EVT_PHOTO_UPLOADED = 'photo_uploaded'
+    EVT_PHOTO_DELETED = 'photo_deleted'
+    EVT_BOQ_SAVED = 'boq_saved'
+    EVT_VALUATION_EDITED = 'valuation_edited'
+    EVT_VALUATION_DELETED = 'valuation_deleted'
+    EVT_COLLATERAL_SUBMITTED = 'collateral_submitted'
+    EVT_WEAK_GPS_ATTESTED = 'weak_gps_attested'
+    EVENT_CHOICES = [
+        (EVT_SITE_GPS, 'Site GPS marked'),
+        (EVT_PHOTO_UPLOADED, 'Photo uploaded'),
+        (EVT_PHOTO_DELETED, 'Photo deleted'),
+        (EVT_BOQ_SAVED, 'BOQ quantities saved'),
+        (EVT_VALUATION_EDITED, 'Valuation row edited'),
+        (EVT_VALUATION_DELETED, 'Valuation row deleted'),
+        (EVT_COLLATERAL_SUBMITTED, 'Collateral submitted'),
+        (EVT_WEAK_GPS_ATTESTED, 'Weak GPS attested'),
+    ]
+
+    loan_request = models.ForeignKey(
+        'loans.LoanRequest', on_delete=models.CASCADE, related_name='collateral_audit_logs',
+    )
+    event_type = models.CharField(max_length=40, choices=EVENT_CHOICES)
+    subject_type = models.CharField(max_length=40, blank=True)
+    subject_id = models.PositiveIntegerField(null=True, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='collateral_audit_events',
+    )
+    performed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-performed_at']
+        verbose_name = 'Collateral field audit log'
+        verbose_name_plural = 'Collateral field audit logs'
+
+    def __str__(self):
+        return f'{self.event_type} — {self.loan_request_id} @ {self.performed_at}'

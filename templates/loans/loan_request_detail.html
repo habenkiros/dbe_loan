@@ -176,6 +176,11 @@
 <p>No document types configured. Add them in <a href="{% url 'manage_loan_application_document_types' %}">Settings → Application document types</a>.</p>
 {% endif %}
 
+{% if collateral_readiness %}
+<h3>Collateral estimation</h3>
+{% include "loans/_collateral_estimation_panel.html" %}
+{% endif %}
+
 {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
 <div class="loan-officer-actions" style="margin: 1.5rem 0; padding: 1rem; border: 2px solid #064420; border-radius: 8px; background: #f0f8f0;">
     <h3 style="margin-top: 0;">Loan officer steps</h3>

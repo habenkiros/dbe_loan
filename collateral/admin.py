@@ -1,8 +1,8 @@
 from django.contrib import admin
 from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
-    Building, BuildingValuation, BuildingImage, LandValuation,
-    OtherCollateralItem,
+    Building, BuildingValuation, BuildingImage, LandValuation, LandValuationImage,
+    OtherCollateralItem, OtherCollateralItemImage, CollateralFieldAuditLog,
 )
 
 
@@ -62,15 +62,40 @@ class BuildingValuationAdmin(admin.ModelAdmin):
 
 @admin.register(BuildingImage)
 class BuildingImageAdmin(admin.ModelAdmin):
-    list_display = ('building', 'caption', 'captured_at', 'gps_lat', 'gps_lon')
+    list_display = ('building', 'photo_type', 'caption', 'captured_at', 'gps_lat', 'gps_lon', 'gps_accuracy_m')
 
 
 @admin.register(LandValuation)
 class LandValuationAdmin(admin.ModelAdmin):
-    list_display = ('loan_request', 'land_size_sqm', 'unit_price_per_sqm', 'total_value')
+    list_display = ('loan_request', 'land_size_sqm', 'unit_price_per_sqm', 'site_gps_lat', 'site_gps_lon')
+
+
+class LandValuationImageInline(admin.TabularInline):
+    model = LandValuationImage
+    extra = 0
+
+
+LandValuationAdmin.inlines = [LandValuationImageInline]
 
 
 @admin.register(OtherCollateralItem)
 class OtherCollateralItemAdmin(admin.ModelAdmin):
-    list_display = ('loan_request', 'name', 'estimated_value', 'notes')
+    list_display = ('loan_request', 'name', 'estimated_value', 'site_gps_lat')
     list_filter = ('loan_request__collateral',)
+
+
+class OtherCollateralItemImageInline(admin.TabularInline):
+    model = OtherCollateralItemImage
+    extra = 0
+
+
+OtherCollateralItemAdmin.inlines = [OtherCollateralItemImageInline]
+
+
+@admin.register(CollateralFieldAuditLog)
+class CollateralFieldAuditLogAdmin(admin.ModelAdmin):
+    list_display = ('performed_at', 'loan_request', 'event_type', 'subject_type', 'subject_id', 'performed_by')
+    list_filter = ('event_type', 'subject_type')
+    search_fields = ('loan_request__loan_request_id', 'performed_by__username')
+    readonly_fields = ('loan_request', 'event_type', 'subject_type', 'subject_id', 'payload', 'performed_by', 'performed_at')
+    date_hierarchy = 'performed_at'

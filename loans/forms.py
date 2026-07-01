@@ -86,6 +86,7 @@ class LoanApplicationDocumentTypeForm(forms.ModelForm):
             'content_validation_sample', 'content_validation_min_matches',
             'content_validation_strict', 'content_extraction_mappings',
             'require_officer_verification', 'enable_ocr_match',
+            'identity_match_fields', 'identity_match_strict',
             'enable_llm_check', 'enable_external_id',
         ]
         widgets = {
@@ -117,6 +118,13 @@ class LoanApplicationDocumentTypeForm(forms.ModelForm):
             ),
             'require_officer_verification': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_ocr_match': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'identity_match_fields': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'applicant_name,phone_number,tin_number,business_name',
+                },
+            ),
+            'identity_match_strict': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_llm_check': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'enable_external_id': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -132,6 +140,14 @@ class LoanApplicationDocumentTypeForm(forms.ModelForm):
             'content_extraction_mappings': (
                 'Map document labels to appraisal fields for auto-fill (Sheet 1 / 2). '
                 'One per line: field_name=Label in document.'
+            ),
+            'identity_match_fields': (
+                'Comma-separated loan fields to find in the document via OCR: '
+                'applicant_name, phone_number, tin_number, business_name.'
+            ),
+            'identity_match_strict': (
+                'Reject upload when configured identity fields do not match loan data. '
+                'Leave unchecked to accept upload but flag for officer review.'
             ),
         }
 

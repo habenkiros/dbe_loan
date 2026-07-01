@@ -20,6 +20,56 @@
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
 
+{% if loan_readiness.applies %}
+<div style="margin:1rem 0;padding:1rem;border:1px solid #dee2e6;border-radius:8px;background:#f8f9fa;">
+  <h3 style="margin-top:0;">Field visit readiness</h3>
+  <ul style="list-style:none;padding:0;margin:0;">
+    {% for item in loan_readiness.buildings %}
+    <li style="padding:0.5rem 0;border-bottom:1px solid #eee;">
+      <strong>Building: {{ item.building.name }}</strong>
+      {% if item.readiness.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
+      <br><small>{{ item.readiness.image_count }}/{{ item.readiness.min_images }} photos · BOQ {{ item.readiness.building_total|floatformat:0 }}</small>
+      — <a href="{% url 'collateral:field_visit' item.building.id %}">Field visit</a>
+    </li>
+    {% endfor %}
+    {% if loan_readiness.land %}
+  {% with lr=loan_readiness.land.readiness %}
+    <li style="padding:0.5rem 0;border-bottom:1px solid #eee;">
+      <strong>Land</strong>
+      {% if lr.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
+      <br><small>{{ lr.image_count }}/{{ lr.min_images }} photos</small>
+      — <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Field visit</a>
+    </li>
+  {% endwith %}
+    {% endif %}
+    {% for row in loan_readiness.other_items %}
+    <li style="padding:0.5rem 0;border-bottom:1px solid #eee;">
+      <strong>{{ row.item.name }}</strong>
+      {% if row.readiness.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
+      <br><small>{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos · {{ row.readiness.total_value|floatformat:0 }}</small>
+      — <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if building_map_sections or land_map_section or other_map_sections %}
+{% load static %}
+<h3 style="margin-top:1.5rem;">Collateral location verification maps</h3>
+<p class="help">Registered site GPS (step 1) compared to each field photo capture. Dashed lines show distance from site to photo.</p>
+{% include "collateral/_map_assets.html" %}
+{% for section in building_map_sections %}
+{% include "collateral/_collateral_location_map.html" with map_id=section.map_id map_config_id=section.map_config_id map_data=section.map_data map_title=section.building.name compact=True %}
+{% endfor %}
+{% if land_map_section %}
+{% include "collateral/_collateral_location_map.html" with map_id="summary-land-map" map_config_id="summary-land-map-data" map_data=land_map_section map_title="Land plot" compact=True %}
+{% endif %}
+{% for section in other_map_sections %}
+{% include "collateral/_collateral_location_map.html" with map_id=section.map_id map_config_id=section.map_config_id map_data=section.map_data map_title=section.item.name compact=True %}
+{% endfor %}
+{% endif %}
+
 {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
 <div class="table-container">
     <table>
@@ -84,7 +134,7 @@
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
     <strong>At least {{ min_images_per_building }} images per building are required</strong> before you can submit.
     {% if buildings_below_image_min %}
-    <span class="error">Add more images for: {% for b in buildings_below_image_min %}<a href="{% url 'collateral:building_images' b.id %}">{{ b.name }}</a> ({{ b.image_count }}/{{ min_images_per_building }}){% if not forloop.last %}, {% endif %}{% endfor %}.</span>
+    <span class="error">Add more images for: {% for b in buildings_below_image_min %}<a href="{% url 'collateral:field_visit_step' b.id 3 %}">{{ b.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</span>
     {% endif %}
     {% endif %}
     When you are done, submit the collateral estimation:
@@ -92,8 +142,10 @@
         {% csrf_token %}
         <button type="submit" {% if not can_submit_collateral %}disabled title="Add at least {{ min_images_per_building }} images to each building first"{% endif %}>Submit collateral</button>
     </form>
-    {% if not can_submit_collateral %}
-    <em>(Add at least {{ min_images_per_building }} images to each building to enable submit.)</em>
+    {% if not can_submit_collateral and submit_blockers %}
+    <ul class="error">{% for b in submit_blockers %}<li>{{ b }}</li>{% endfor %}</ul>
+    {% elif not can_submit_collateral %}
+    <em>(Complete field visits before submitting.)</em>
     {% endif %}
     {% endif %}
 </p>

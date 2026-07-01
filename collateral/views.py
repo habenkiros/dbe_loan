@@ -13,8 +13,8 @@ from loans.models import LoanRequest, Region
 from loans.collateral_config import get_collateral_estimation_mode, allows_engineering_team
 from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
-    Building, BuildingValuation, BuildingImage, LandValuation,
-    OtherCollateralItem,
+    Building, BuildingValuation, BuildingImage, LandValuation, LandValuationImage,
+    OtherCollateralItem, OtherCollateralItemImage,
 )
 from .forms import (
     BuildingForm, BuildingValuationForm, BuildingImageForm, LandValuationForm,
@@ -22,6 +22,29 @@ from .forms import (
     MainWorkForm, SubWorkForm, SubSubWorkForm,
     OtherCollateralItemForm,
 )
+from .constants import (
+    MIN_IMAGES_PER_BUILDING, MIN_IMAGES_PER_LAND, MIN_IMAGES_PER_OTHER_ITEM,
+    FIELD_VISIT_STEPS, LAND_FIELD_STEPS, OTHER_FIELD_STEPS,
+    GPS_ACCURACY_WEAK_THRESHOLD_M,
+)
+from .field_utils import (
+    apply_site_gps_from_post,
+    apply_site_gps_to_instance,
+    build_field_boq_rows,
+    collateral_is_locked,
+    collateral_submit_blockers,
+    get_building_readiness,
+    get_land_readiness,
+    get_loan_collateral_readiness,
+    get_other_item_readiness,
+    get_unit_price_for_building,
+    save_field_visit_boq,
+    save_field_visit_photo,
+    save_land_field_photo,
+    save_other_field_photo,
+)
+from .governance import block_if_collateral_locked, log_collateral_event
+from .map_utils import building_map_data, haversine_m, land_map_data, other_item_map_data, PHOTO_MAX_DISTANCE_FROM_SITE_M
 
 
 def _can_access_collateral(user):
@@ -125,10 +148,15 @@ def building_list(request, loan_request_id):
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).select_related('city')
     ct = (loan_request.collateral.name or '').lower()
+    building_rows = []
+    for b in buildings:
+        building_rows.append({'building': b, 'readiness': get_building_readiness(b)})
     return render(request, 'collateral/building_list.html', {
         'loan_request': loan_request,
         'buildings': buildings,
+        'building_rows': building_rows,
         'collateral_type_lower': ct,
+        'locked': collateral_is_locked(loan_request),
     })
 
 
@@ -138,13 +166,16 @@ def building_add(request, loan_request_id):
     """Add a building to a loan request. City/woreda chosen via Region → Zone → City cascade."""
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:building_list', loan_request_id)
+        if blocked:
+            return blocked
         form = BuildingForm(request.POST)
         if form.is_valid():
             building = form.save(commit=False)
             building.loan_request = loan_request
             building.save()
             messages.success(request, f'Building "{building.name}" added.')
-            return redirect('collateral:building_list', loan_request_id=loan_request_id)
+            return redirect('collateral:field_visit', building_id=building.pk)
     else:
         form = BuildingForm()
     form.fields['city'].queryset = form.fields['city'].queryset.order_by('zone__region', 'zone', 'name')
@@ -165,6 +196,9 @@ def building_edit(request, building_id):
     building = get_object_or_404(Building, pk=building_id)
     loan_request = building.loan_request
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:building_list', loan_request.id)
+        if blocked:
+            return blocked
         form = BuildingForm(request.POST, instance=building)
         if form.is_valid():
             form.save()
@@ -198,26 +232,13 @@ def valuation_list(request, building_id):
         'building': building,
         'rows': rows,
         'building_total': total,
+        'locked': collateral_is_locked(building.loan_request),
     })
 
 
 def _get_unit_price_for_building(building, sub_work=None, sub_sub_work=None):
     """Get unit price from SubWorkUnitPrice for building's city (woreda) and sub_work or sub_sub_work."""
-    if not building.city_id:
-        return None
-    if sub_sub_work:
-        try:
-            up = SubWorkUnitPrice.objects.get(sub_sub_work=sub_sub_work, city=building.city)
-            return up.unit_price
-        except SubWorkUnitPrice.DoesNotExist:
-            return None
-    if sub_work:
-        try:
-            up = SubWorkUnitPrice.objects.get(sub_work=sub_work, city=building.city)
-            return up.unit_price
-        except SubWorkUnitPrice.DoesNotExist:
-            return None
-    return None
+    return get_unit_price_for_building(building, sub_work=sub_work, sub_sub_work=sub_sub_work)
 
 
 def _get_work_item_ids_with_unit_price(city):
@@ -292,6 +313,7 @@ def _build_work_items_flat(existing_sub_work_ids, existing_sub_sub_work_ids, all
 def valuation_add(request, building_id):
     """Add a valuation row. Loan officers enter only quantity; unit price comes from catalog. Engineers can override."""
     building = get_object_or_404(Building, pk=building_id)
+    loan_request = building.loan_request
     can_edit_unit_price = _user_can_edit_unit_price(request.user)
     existing_sub_work_ids = set(
         BuildingValuation.objects.filter(building=building).exclude(sub_work__isnull=True).values_list('sub_work_id', flat=True)
@@ -306,6 +328,9 @@ def valuation_add(request, building_id):
         allowed_sub_work_ids=allowed_sub_work_ids, allowed_sub_sub_work_ids=allowed_sub_sub_work_ids,
     )
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:valuation_list', building_id)
+        if blocked:
+            return blocked
         work_item = request.POST.get('work_item', '').strip()
         if not work_item:
             messages.error(request, 'Please select a work item from the list.')
@@ -394,10 +419,85 @@ def valuation_add(request, building_id):
 @login_required
 @user_passes_test(_can_access_collateral)
 def valuation_edit(request, valuation_id):
-    """Editing estimation results is disabled."""
-    row = get_object_or_404(BuildingValuation, pk=valuation_id)
-    messages.info(request, 'Editing estimation results is disabled.')
-    return redirect('collateral:valuation_list', building_id=row.building_id)
+    """Edit BOQ quantity (and unit price for engineers) until collateral is submitted."""
+    row = get_object_or_404(
+        BuildingValuation.objects.select_related('building', 'building__loan_request', 'sub_work', 'sub_sub_work'),
+        pk=valuation_id,
+    )
+    building = row.building
+    loan_request = building.loan_request
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:valuation_list', building.pk)
+    if blocked:
+        return blocked
+    can_edit_unit_price = _user_can_edit_unit_price(request.user)
+    work_label = row.sub_sub_work.name if row.sub_sub_work_id else row.sub_work.name
+    if request.method == 'POST':
+        form = BuildingValuationForm(request.POST, instance=row, can_edit_unit_price=can_edit_unit_price)
+        form.fields.pop('sub_work', None)
+        form.fields.pop('sub_sub_work', None)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if request.user.is_authenticated:
+                obj.quantity_entered_by = request.user
+                if can_edit_unit_price and 'unit_price' in form.cleaned_data:
+                    obj.unit_price_entered_by = request.user
+            obj.save()
+            log_collateral_event(
+                loan_request,
+                'valuation_edited',
+                user=request.user,
+                subject_type='BuildingValuation',
+                subject_id=row.pk,
+                payload={'work': work_label, 'quantity': str(obj.quantity), 'unit_price': str(obj.unit_price)},
+            )
+            messages.success(request, 'Valuation row updated.')
+            return redirect('collateral:valuation_list', building_id=building.pk)
+    else:
+        form = BuildingValuationForm(instance=row, can_edit_unit_price=can_edit_unit_price)
+        form.fields.pop('sub_work', None)
+        form.fields.pop('sub_sub_work', None)
+    return render(request, 'collateral/valuation_form.html', {
+        'building': building,
+        'form': form,
+        'work_choices': [],
+        'work_choices_empty': False,
+        'building_has_city': bool(building.city_id),
+        'is_edit': True,
+        'can_edit_unit_price': can_edit_unit_price,
+        'selected_work_item': None,
+        'edit_work_label': work_label,
+        'row': row,
+    })
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def valuation_delete(request, valuation_id):
+    """Remove a BOQ line until collateral is submitted."""
+    row = get_object_or_404(
+        BuildingValuation.objects.select_related('building', 'building__loan_request', 'sub_work', 'sub_sub_work'),
+        pk=valuation_id,
+    )
+    building = row.building
+    loan_request = building.loan_request
+    if request.method != 'POST':
+        return redirect('collateral:valuation_list', building_id=building.pk)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:valuation_list', building.pk)
+    if blocked:
+        return blocked
+    work_label = row.sub_sub_work.name if row.sub_sub_work_id else row.sub_work.name
+    row_id = row.pk
+    row.delete()
+    log_collateral_event(
+        loan_request,
+        'valuation_deleted',
+        user=request.user,
+        subject_type='BuildingValuation',
+        subject_id=row_id,
+        payload={'work': work_label},
+    )
+    messages.success(request, 'Valuation row removed.')
+    return redirect('collateral:valuation_list', building_id=building.pk)
 
 
 @login_required
@@ -405,6 +505,7 @@ def valuation_edit(request, valuation_id):
 def valuation_add_multiple(request, building_id):
     """Add multiple valuation rows at once: one quantity per available work item."""
     building = get_object_or_404(Building, pk=building_id)
+    loan_request = building.loan_request
     can_edit_unit_price = _user_can_edit_unit_price(request.user)
     existing_sub_work_ids = set(
         BuildingValuation.objects.filter(building=building).exclude(sub_work__isnull=True).values_list('sub_work_id', flat=True)
@@ -419,6 +520,9 @@ def valuation_add_multiple(request, building_id):
         allowed_sub_work_ids=allowed_sub_work_ids, allowed_sub_sub_work_ids=allowed_sub_sub_work_ids,
     )
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:valuation_list', building_id)
+        if blocked:
+            return blocked
         added = 0
         errors = []
         for i, (key, _label) in enumerate(work_items):
@@ -481,40 +585,377 @@ def valuation_add_multiple(request, building_id):
     })
 
 
+def _annotate_image_distances(site_lat, site_lon, images):
+    rows = []
+    for img in images:
+        dist = haversine_m(site_lat, site_lon, img.gps_lat, img.gps_lon)
+        far = dist is not None and dist > PHOTO_MAX_DISTANCE_FROM_SITE_M
+        rows.append({
+            'image': img,
+            'distance_m': round(dist) if dist is not None else None,
+            'far_from_site': far,
+        })
+    return rows
+
+
 @login_required
 @user_passes_test(_can_access_collateral)
-def valuation_delete(request, valuation_id):
-    """Deleting estimation results is disabled."""
-    row = get_object_or_404(BuildingValuation, pk=valuation_id)
-    messages.info(request, 'Editing and deleting estimation results is disabled.')
-    return redirect('collateral:valuation_list', building_id=row.building_id)
+def field_visit(request, building_id, step=1):
+    """Mobile-first on-site workflow: building → BOQ → photos → review."""
+    building = get_object_or_404(
+        Building.objects.select_related('loan_request', 'loan_request__collateral', 'city', 'city__zone', 'city__zone__region'),
+        pk=building_id,
+    )
+    loan_request = building.loan_request
+    get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request.pk)
+
+    step = int(step)
+    if step < 1 or step > 4:
+        return redirect('collateral:field_visit', building_id=building_id)
+
+    locked = collateral_is_locked(loan_request)
+    if locked and request.method == 'POST':
+        messages.warning(request, 'Collateral already submitted — field visit is read-only.')
+        return redirect('collateral:field_visit', building_id=building_id, step=step)
+
+    can_edit_unit_price = _user_can_edit_unit_price(request.user)
+    building_form = None
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or 'save').strip()
+
+        if step == 1 and action in ('save', 'save_next'):
+            building_form = BuildingForm(request.POST, instance=building)
+            if building_form.is_valid():
+                building_form.save()
+                building.refresh_from_db()
+                if request.POST.get('site_gps_lat'):
+                    gps_ok, gps_err = apply_site_gps_from_post(building, request.POST, user=request.user)
+                    if gps_err:
+                        messages.error(request, gps_err)
+                    elif gps_ok:
+                        messages.success(request, 'Building site location saved.')
+                messages.success(request, 'Building details saved.')
+                if action == 'save_next':
+                    return redirect('collateral:field_visit_step', building_id=building_id, step=2)
+            else:
+                messages.error(request, 'Please fix the errors below.')
+        elif step == 2 and action in ('save', 'save_next'):
+            allowed_sub, allowed_subsub = _get_work_item_ids_with_unit_price(building.city) if building.city_id else (set(), set())
+            work_items = _build_work_items_flat(set(), set(), allowed_sub_work_ids=allowed_sub, allowed_sub_sub_work_ids=allowed_subsub)
+            saved, errors = save_field_visit_boq(
+                building,
+                request.POST,
+                request.user,
+                work_items=work_items,
+                get_unit_price=_get_unit_price_for_building,
+                can_edit_unit_price=can_edit_unit_price,
+            )
+            for err in errors:
+                messages.error(request, err)
+            if saved:
+                messages.success(request, f'Saved {saved} BOQ line(s).')
+            elif not errors:
+                messages.info(request, 'No quantities entered.')
+            if action == 'save_next' and not errors:
+                return redirect('collateral:field_visit_step', building_id=building_id, step=3)
+        elif step == 3 and action == 'upload_photo':
+            ok, msg = save_field_visit_photo(building, request.POST, request.FILES, request.user)
+            if ok:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+        elif step == 3 and action == 'save_next':
+            return redirect('collateral:field_visit_step', building_id=building_id, step=4)
+
+    readiness = get_building_readiness(building)
+    if building_form is None:
+        building_form = BuildingForm(instance=building)
+    building_form.fields['city'].queryset = building_form.fields['city'].queryset.order_by('zone__region', 'zone', 'name')
+
+    allowed_sub, allowed_subsub = _get_work_item_ids_with_unit_price(building.city) if building.city_id else (set(), set())
+    work_items_flat = _build_work_items_flat(set(), set(), allowed_sub_work_ids=allowed_sub, allowed_sub_sub_work_ids=allowed_subsub)
+    valuations = list(BuildingValuation.objects.filter(building=building).select_related(
+        'sub_work', 'sub_sub_work',
+    ))
+    boq_rows = build_field_boq_rows(building, work_items_flat, valuations)
+
+    images = BuildingImage.objects.filter(building=building).order_by('-created_at')
+    photo_types = BuildingImage.PHOTO_TYPE_CHOICES
+    map_data = building_map_data(building)
+    image_rows = _annotate_image_distances(building.site_gps_lat, building.site_gps_lon, images)
+
+    return render(request, 'collateral/field_visit.html', {
+        'building': building,
+        'loan_request': loan_request,
+        'step': step,
+        'steps': FIELD_VISIT_STEPS,
+        'locked': locked,
+        'readiness': readiness,
+        'building_form': building_form,
+        'regions': Region.objects.all().order_by('name'),
+        'zones_url': request.build_absolute_uri(reverse('ajax_load_zones_by_region')),
+        'cities_url': request.build_absolute_uri(reverse('ajax_load_cities_by_zone')),
+        'boq_rows': boq_rows,
+        'building_has_city': bool(building.city_id),
+        'can_edit_unit_price': can_edit_unit_price,
+        'images': images,
+        'photo_types': photo_types,
+        'min_images': MIN_IMAGES_PER_BUILDING,
+        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'map_data': map_data,
+        'image_rows': image_rows,
+        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+    })
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def land_field_visit(request, loan_request_id, step=1):
+    """Field visit for land collateral: details + GPS → photos → review."""
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
+    land, _ = LandValuation.objects.get_or_create(loan_request=loan_request)
+    step = int(step)
+    if step < 1 or step > 3:
+        return redirect('collateral:land_field_visit', loan_request_id=loan_request_id)
+    locked = collateral_is_locked(loan_request)
+    land_form = None
+
+    if request.method == 'POST' and not locked:
+        action = (request.POST.get('action') or 'save').strip()
+        if step == 1 and action in ('save', 'save_next'):
+            land_form = LandValuationForm(request.POST, instance=land)
+            if land_form.is_valid():
+                land_form.save()
+                land.refresh_from_db()
+                if request.POST.get('site_gps_lat'):
+                    gps_ok, gps_err = apply_site_gps_to_instance(land, request.POST, user=request.user)
+                    if gps_err:
+                        messages.error(request, gps_err)
+                    elif gps_ok:
+                        messages.success(request, 'Plot location saved.')
+                messages.success(request, 'Land details saved.')
+                if action == 'save_next':
+                    return redirect('collateral:land_field_visit_step', loan_request_id=loan_request_id, step=2)
+            else:
+                messages.error(request, 'Please fix the errors below.')
+        elif step == 2 and action == 'upload_photo':
+            ok, msg = save_land_field_photo(land, request.POST, request.FILES, request.user)
+            messages.success(request, msg) if ok else messages.error(request, msg)
+        elif step == 2 and action == 'save_next':
+            return redirect('collateral:land_field_visit_step', loan_request_id=loan_request_id, step=3)
+
+    if land_form is None:
+        land_form = LandValuationForm(instance=land)
+    readiness = get_land_readiness(land)
+    images = LandValuationImage.objects.filter(land_valuation=land).order_by('-created_at')
+    map_data = land_map_data(land)
+    image_rows = _annotate_image_distances(land.site_gps_lat, land.site_gps_lon, images)
+
+    return render(request, 'collateral/field_visit_asset.html', {
+        'visit_kind': 'land',
+        'visit_title': 'Land field visit',
+        'visit_subject': loan_request.loan_request_id,
+        'loan_request': loan_request,
+        'land': land,
+        'step': step,
+        'steps': LAND_FIELD_STEPS,
+        'locked': locked,
+        'readiness': readiness,
+        'land_form': land_form,
+        'images': images,
+        'photo_types': LandValuationImage.PHOTO_TYPE_CHOICES,
+        'min_images': MIN_IMAGES_PER_LAND,
+        'back_url': reverse('collateral:land_valuation', args=[loan_request_id]),
+        'summary_url': reverse('collateral:summary', args=[loan_request_id]),
+        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'map_data': map_data,
+        'image_rows': image_rows,
+        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+    })
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def other_field_visit(request, item_id, step=1):
+    """Field visit for vehicle / machinery / equipment: details + GPS → photos → review."""
+    item = get_object_or_404(OtherCollateralItem.objects.select_related('loan_request'), pk=item_id)
+    loan_request = item.loan_request
+    get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request.pk)
+    step = int(step)
+    if step < 1 or step > 3:
+        return redirect('collateral:other_field_visit', item_id=item_id)
+    locked = collateral_is_locked(loan_request)
+    item_form = None
+
+    if request.method == 'POST' and not locked:
+        action = (request.POST.get('action') or 'save').strip()
+        if step == 1 and action in ('save', 'save_next'):
+            item_form = OtherCollateralItemForm(request.POST, instance=item)
+            if item_form.is_valid():
+                item_form.save()
+                item.refresh_from_db()
+                if request.POST.get('site_gps_lat'):
+                    gps_ok, gps_err = apply_site_gps_to_instance(item, request.POST, user=request.user)
+                    if gps_err:
+                        messages.error(request, gps_err)
+                    elif gps_ok:
+                        messages.success(request, 'Asset location saved.')
+                messages.success(request, 'Asset details saved.')
+                if action == 'save_next':
+                    return redirect('collateral:other_field_visit_step', item_id=item_id, step=2)
+            else:
+                messages.error(request, 'Please fix the errors below.')
+        elif step == 2 and action == 'upload_photo':
+            ok, msg = save_other_field_photo(item, request.POST, request.FILES, request.user)
+            messages.success(request, msg) if ok else messages.error(request, msg)
+        elif step == 2 and action == 'save_next':
+            return redirect('collateral:other_field_visit_step', item_id=item_id, step=3)
+
+    if item_form is None:
+        item_form = OtherCollateralItemForm(instance=item)
+    readiness = get_other_item_readiness(item)
+    images = OtherCollateralItemImage.objects.filter(item=item).order_by('-created_at')
+    map_data = other_item_map_data(item)
+    image_rows = _annotate_image_distances(item.site_gps_lat, item.site_gps_lon, images)
+
+    return render(request, 'collateral/field_visit_asset.html', {
+        'visit_kind': 'other',
+        'visit_title': f'Field visit — {item.name}',
+        'visit_subject': loan_request.loan_request_id,
+        'loan_request': loan_request,
+        'item': item,
+        'step': step,
+        'steps': OTHER_FIELD_STEPS,
+        'locked': locked,
+        'readiness': readiness,
+        'item_form': item_form,
+        'images': images,
+        'photo_types': OtherCollateralItemImage.PHOTO_TYPE_CHOICES,
+        'min_images': MIN_IMAGES_PER_OTHER_ITEM,
+        'back_url': reverse('collateral:other_collateral_list', args=[loan_request.id]),
+        'summary_url': reverse('collateral:summary', args=[loan_request.id]),
+        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'map_data': map_data,
+        'image_rows': image_rows,
+        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+    })
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def building_image_delete(request, image_id):
+    """Delete a building photo before collateral submit (audit logged)."""
+    img = get_object_or_404(BuildingImage.objects.select_related('building', 'building__loan_request'), pk=image_id)
+    building = img.building
+    loan_request = building.loan_request
+    if request.method != 'POST':
+        return redirect('collateral:field_visit_step', building_id=building.pk, step=3)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:field_visit_step', building.pk, step=3)
+    if blocked:
+        return blocked
+    payload = {'photo_type': img.photo_type, 'building_id': building.pk}
+    img_id = img.pk
+    if img.image:
+        img.image.delete(save=False)
+    img.delete()
+    log_collateral_event(
+        loan_request, 'photo_deleted', user=request.user,
+        subject_type='BuildingImage', subject_id=img_id, payload=payload,
+    )
+    messages.success(request, 'Photo removed.')
+    next_url = request.POST.get('next') or reverse('collateral:field_visit_step', args=[building.pk, 3])
+    return redirect(next_url)
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def land_image_delete(request, image_id):
+    img = get_object_or_404(LandValuationImage.objects.select_related('land_valuation', 'land_valuation__loan_request'), pk=image_id)
+    land = img.land_valuation
+    loan_request = land.loan_request
+    if request.method != 'POST':
+        return redirect('collateral:land_field_visit_step', loan_request_id=loan_request.pk, step=2)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:land_field_visit_step', loan_request.pk, step=2)
+    if blocked:
+        return blocked
+    img_id = img.pk
+    if img.image:
+        img.image.delete(save=False)
+    img.delete()
+    log_collateral_event(
+        loan_request, 'photo_deleted', user=request.user,
+        subject_type='LandValuationImage', subject_id=img_id, payload={'land_valuation_id': land.pk},
+    )
+    messages.success(request, 'Photo removed.')
+    next_url = request.POST.get('next') or reverse('collateral:land_field_visit_step', args=[loan_request.pk, 2])
+    return redirect(next_url)
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def other_image_delete(request, image_id):
+    img = get_object_or_404(OtherCollateralItemImage.objects.select_related('item', 'item__loan_request'), pk=image_id)
+    item = img.item
+    loan_request = item.loan_request
+    if request.method != 'POST':
+        return redirect('collateral:other_field_visit_step', item_id=item.pk, step=2)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_field_visit_step', item.pk, step=2)
+    if blocked:
+        return blocked
+    img_id = img.pk
+    if img.image:
+        img.image.delete(save=False)
+    img.delete()
+    log_collateral_event(
+        loan_request, 'photo_deleted', user=request.user,
+        subject_type='OtherCollateralItemImage', subject_id=img_id, payload={'item_id': item.pk},
+    )
+    messages.success(request, 'Photo removed.')
+    next_url = request.POST.get('next') or reverse('collateral:other_field_visit_step', args=[item.pk, 2])
+    return redirect(next_url)
 
 
 @login_required
 @user_passes_test(_can_access_collateral)
 def building_images(request, building_id):
-    """List and upload images for a building."""
+    """List and upload images for a building (desktop path; field visit preferred on tablet)."""
     building = get_object_or_404(Building, pk=building_id)
     images = BuildingImage.objects.filter(building=building).order_by('-created_at')
-    if request.method == 'POST':
-        form = BuildingImageForm(request.POST, request.FILES)
-        if form.is_valid():
-            img = form.save(commit=False)
-            img.building = building
-            img.uploaded_by = request.user
-            img.save()
-            messages.success(request, 'Image uploaded.')
-            return redirect('collateral:building_images', building_id=building_id)
-    else:
-        form = BuildingImageForm()
-    image_count = images.count()
-    min_images_required = 5
+    locked = collateral_is_locked(building.loan_request)
+    if request.method == 'POST' and not locked:
+        if request.FILES.get('image'):
+            ok, msg = save_field_visit_photo(building, request.POST, request.FILES, request.user)
+            if ok:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+        else:
+            form = BuildingImageForm(request.POST, request.FILES)
+            if form.is_valid():
+                img = form.save(commit=False)
+                img.building = building
+                img.uploaded_by = request.user
+                if not img.captured_at:
+                    img.captured_at = timezone.now()
+                img.save()
+                messages.success(request, 'Image uploaded.')
+        return redirect('collateral:building_images', building_id=building_id)
+    form = BuildingImageForm()
+    map_data = building_map_data(building)
+    image_rows = _annotate_image_distances(building.site_gps_lat, building.site_gps_lon, images)
     return render(request, 'collateral/building_images.html', {
         'building': building,
         'images': images,
         'form': form,
-        'image_count': image_count,
-        'min_images_required': min_images_required,
+        'image_count': images.count(),
+        'min_images_required': MIN_IMAGES_PER_BUILDING,
+        'photo_types': BuildingImage.PHOTO_TYPE_CHOICES,
+        'locked': locked,
+        'field_visit_url': reverse('collateral:field_visit', args=[building_id]),
+        'map_data': map_data,
+        'image_rows': image_rows,
+        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
     })
 
 
@@ -525,6 +966,9 @@ def land_valuation(request, loan_request_id):
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     land, _ = LandValuation.objects.get_or_create(loan_request=loan_request)
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:land_valuation', loan_request_id)
+        if blocked:
+            return blocked
         form = LandValuationForm(request.POST, instance=land)
         if form.is_valid():
             form.save()
@@ -536,6 +980,8 @@ def land_valuation(request, loan_request_id):
         'loan_request': loan_request,
         'form': form,
         'land': land,
+        'readiness': get_land_readiness(land),
+        'locked': collateral_is_locked(loan_request),
     })
 
 
@@ -548,21 +994,27 @@ def other_collateral_list(request, loan_request_id):
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     items = OtherCollateralItem.objects.filter(loan_request=loan_request).order_by('name')
     total_other = sum(item.estimated_value for item in items)
+    item_rows = [{'item': i, 'readiness': get_other_item_readiness(i)} for i in items]
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request_id)
+        if blocked:
+            return blocked
         form = OtherCollateralItemForm(request.POST)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.loan_request = loan_request
             obj.save()
             messages.success(request, 'Collateral item added.')
-            return redirect('collateral:other_collateral_list', loan_request_id=loan_request_id)
+            return redirect('collateral:other_field_visit', item_id=obj.pk)
     else:
         form = OtherCollateralItemForm()
     return render(request, 'collateral/other_collateral_list.html', {
         'loan_request': loan_request,
         'items': items,
+        'item_rows': item_rows,
         'total_other': total_other,
         'form': form,
+        'locked': collateral_is_locked(loan_request),
     })
 
 
@@ -572,6 +1024,9 @@ def other_collateral_edit(request, item_id):
     item = get_object_or_404(OtherCollateralItem, pk=item_id)
     loan_request = item.loan_request
     if request.method == 'POST':
+        blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request.id)
+        if blocked:
+            return blocked
         form = OtherCollateralItemForm(request.POST, instance=item)
         if form.is_valid():
             form.save()
@@ -592,6 +1047,12 @@ def other_collateral_edit(request, item_id):
 def other_collateral_delete(request, item_id):
     item = get_object_or_404(OtherCollateralItem, pk=item_id)
     loan_request_id = item.loan_request_id
+    loan_request = item.loan_request
+    if request.method != 'POST':
+        return redirect('collateral:other_collateral_list', loan_request_id=loan_request_id)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request_id)
+    if blocked:
+        return blocked
     item.delete()
     messages.success(request, 'Collateral item removed.')
     return redirect('collateral:other_collateral_list', loan_request_id=loan_request_id)
@@ -632,15 +1093,43 @@ def summary(request, loan_request_id):
     else:
         grand_total = total_buildings + land_value + total_other
     # For building collateral: require at least 5 images per building before submit
-    MIN_IMAGES_PER_BUILDING = 5
     buildings_below_image_min = []
-    if 'building' in ct or 'house' in ct or 'construction' in ct:
-        buildings_below_image_min = list(
-            Building.objects.filter(loan_request=loan_request)
-            .annotate(image_count=Count('buildingimage'))
-            .filter(image_count__lt=MIN_IMAGES_PER_BUILDING)
-        )
-    can_submit_collateral = len(buildings_below_image_min) == 0
+    loan_readiness = get_loan_collateral_readiness(loan_request)
+    if loan_readiness['applies']:
+        buildings_below_image_min = [
+            item['building'] for item in loan_readiness['buildings']
+            if item['readiness']['image_count'] < MIN_IMAGES_PER_BUILDING
+        ]
+    can_submit_collateral = loan_readiness.get('all_ready', True) and loan_readiness.get('applies', False)
+    if not loan_readiness.get('applies'):
+        can_submit_collateral = True
+    if loan_readiness.get('locked'):
+        can_submit_collateral = False
+    submit_blockers = collateral_submit_blockers(loan_request)
+    building_map_sections = [
+        {
+            'building': b,
+            'map_data': building_map_data(b),
+            'map_id': f'summary-bmap-{b.pk}',
+            'map_config_id': f'summary-bmap-data-{b.pk}',
+        }
+        for b in buildings.select_related('city', 'city__zone', 'city__zone__region')
+    ]
+    land_map_section = None
+    try:
+        land_obj = LandValuation.objects.get(loan_request=loan_request)
+        land_map_section = land_map_data(land_obj)
+    except LandValuation.DoesNotExist:
+        pass
+    other_map_sections = [
+        {
+            'item': item,
+            'map_data': other_item_map_data(item),
+            'map_id': f'summary-other-{item.pk}',
+            'map_config_id': f'summary-other-data-{item.pk}',
+        }
+        for item in other_items
+    ]
     return render(request, 'collateral/summary.html', {
         'loan_request': loan_request,
         'collateral_type_lower': ct,
@@ -653,6 +1142,11 @@ def summary(request, loan_request_id):
         'buildings_below_image_min': buildings_below_image_min,
         'min_images_per_building': MIN_IMAGES_PER_BUILDING,
         'can_submit_collateral': can_submit_collateral,
+        'loan_readiness': loan_readiness,
+        'submit_blockers': submit_blockers,
+        'building_map_sections': building_map_sections,
+        'land_map_section': land_map_section,
+        'other_map_sections': other_map_sections,
     })
 
 
@@ -663,26 +1157,28 @@ def collateral_submit(request, loan_request_id):
     if request.method != 'POST':
         return redirect('collateral:summary', loan_request_id=loan_request_id)
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
-    ct = (loan_request.collateral.name or '').lower()
-    MIN_IMAGES_PER_BUILDING = 5
-    # For building-type collateral: require at least 5 images per building
-    if 'building' in ct or 'house' in ct or 'construction' in ct:
-        buildings_below_min = list(
-            Building.objects.filter(loan_request=loan_request)
-            .annotate(image_count=Count('buildingimage'))
-            .filter(image_count__lt=MIN_IMAGES_PER_BUILDING)
-        )
-        if buildings_below_min:
-            names = ', '.join(b.name for b in buildings_below_min)
-            messages.error(
-                request,
-                'At least %d images are required for each building before submitting. '
-                'Add more images for: %s.' % (MIN_IMAGES_PER_BUILDING, names),
-            )
-            return redirect('collateral:summary', loan_request_id=loan_request_id)
+    blockers = collateral_submit_blockers(loan_request)
+    if blockers:
+        for msg in blockers:
+            messages.error(request, msg)
+        return redirect('collateral:summary', loan_request_id=loan_request_id)
     loan_request.collateral_submitted_at = timezone.now()
     loan_request.collateral_submitted_by = request.user
     loan_request.save(update_fields=['collateral_submitted_at', 'collateral_submitted_by'])
+    log_collateral_event(
+        loan_request,
+        'collateral_submitted',
+        user=request.user,
+        payload={'submitted_at': loan_request.collateral_submitted_at.isoformat()},
+    )
+    from loans.models import LoanAppraisal
+    from loans.services.appraisal_prefill import sync_collateral_to_appraisal
+
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    if appraisal:
+        synced = sync_collateral_to_appraisal(loan_request, appraisal, only_empty=False)
+        if synced:
+            messages.info(request, 'Appraisal updated: ' + '; '.join(synced))
     messages.success(
         request,
         'Collateral estimation submitted. All collateral data (buildings, valuations, land, other) is saved.',

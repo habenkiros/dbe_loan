@@ -119,12 +119,15 @@ class BuildingValuationForm(forms.ModelForm):
 class BuildingImageForm(forms.ModelForm):
     class Meta:
         model = BuildingImage
-        fields = ['image', 'caption', 'gps_lat', 'gps_lon']
+        fields = ['image', 'caption', 'photo_type']
         widgets = {
-            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'capture': 'environment',
+            }),
             'caption': forms.TextInput(attrs={'class': 'form-control'}),
-            'gps_lat': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any', 'placeholder': 'Latitude'}),
-            'gps_lon': forms.NumberInput(attrs={'class': 'form-control', 'step': 'any', 'placeholder': 'Longitude'}),
+            'photo_type': forms.Select(attrs={'class': 'form-control'}),
         }
 
 

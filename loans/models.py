@@ -91,7 +91,17 @@ class LoanApplicationDocumentType(models.Model):
     )
     enable_ocr_match = models.BooleanField(
         default=False,
-        help_text='Run OCR and match applicant name / TIN from Sheet 1 (recommended for ID, license).',
+        help_text='Match applicant name, phone, TIN, business name from the loan against OCR text in the upload.',
+    )
+    identity_match_fields = models.CharField(
+        max_length=255,
+        blank=True,
+        default='applicant_name,phone_number,tin_number',
+        help_text='Comma-separated fields to verify in the document: applicant_name, phone_number, tin_number, business_name.',
+    )
+    identity_match_strict = models.BooleanField(
+        default=False,
+        help_text='If checked, reject upload when identity fields do not match (otherwise flag for officer review).',
     )
     enable_llm_check = models.BooleanField(
         default=False,
@@ -181,6 +191,10 @@ class LoanApplicationDocumentType(models.Model):
         exts = self.get_allowed_extensions_list()
         return ','.join(f'.{e}' for e in exts)
 
+    def get_identity_match_field_list(self) -> list:
+        raw = (self.identity_match_fields or 'applicant_name,phone_number,tin_number').strip()
+        return [x.strip() for x in raw.split(',') if x.strip()]
+
     def get_content_validation_phrases(self) -> list:
         phrases = []
         for line in (self.content_validation_sample or '').splitlines():
@@ -229,7 +243,10 @@ class LoanApplicationDocumentType(models.Model):
         if self.require_officer_verification:
             parts.append('officer verify')
         if self.enable_ocr_match:
-            parts.append('OCR')
+            fields = ','.join(self.get_identity_match_field_list())
+            parts.append(f'OCR({fields})')
+            if self.identity_match_strict:
+                parts.append('identity strict')
         if self.enable_llm_check:
             parts.append('LLM')
         if self.enable_external_id:

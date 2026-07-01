@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Buildings – {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% endblock %}
 {% block content %}
 <h2>Buildings – {{ loan_request.loan_request_id }}</h2>
 <p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
@@ -19,25 +23,33 @@
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
 
+{% if locked %}
+<p class="field-locked-banner" style="padding:0.75rem;border-radius:8px;background:#fff3cd;">Collateral submitted — buildings are read-only.</p>
+{% endif %}
+
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Type</th>
-                <th>Floors</th>
-                <th>City (Woreda)</th>
+                <th>Woreda</th>
+                <th>Field readiness</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            {% for b in buildings %}
+            {% for row in building_rows %}
+            {% with b=row.building r=row.readiness %}
             <tr>
-                <td>{{ b.name }}</td>
-                <td>{{ b.construction_type|default:"—" }}</td>
-                <td>{{ b.floors|default:"—" }}</td>
+                <td><strong>{{ b.name }}</strong><br><small>{{ b.construction_type|default:"—" }}{% if b.floors %} · {{ b.floors }} fl{% endif %}</small></td>
                 <td>{{ b.city.name|default:"—" }}</td>
                 <td>
+                  {% if r.ready %}<span class="field-check-ok">Ready</span>{% else %}<span class="field-check-fail">Incomplete</span>{% endif %}
+                  <br><small>{{ r.image_count }}/{{ r.min_images }} photos · {{ r.valuation_count }} BOQ · {{ r.building_total|floatformat:0 }}</small>
+                </td>
+                <td>
+                    <a href="{% url 'collateral:field_visit' b.id %}" class="field-btn field-btn-primary" style="padding:0.35rem 0.65rem;font-size:0.85rem;display:inline-block;margin-bottom:0.25rem;">Field visit</a>
+                    <br>
                     <a href="{% url 'collateral:valuation_list' b.id %}">Valuation</a>
                     &nbsp;|&nbsp;
                     <a href="{% url 'collateral:building_images' b.id %}">Images</a>
@@ -45,9 +57,10 @@
                     <a href="{% url 'collateral:building_edit' b.id %}">Edit</a>
                 </td>
             </tr>
+            {% endwith %}
             {% empty %}
             <tr>
-                <td colspan="5">No buildings yet. <a href="{% url 'collateral:building_add' loan_request.id %}">Add one</a>.</td>
+                <td colspan="4">No buildings yet. <a href="{% url 'collateral:building_add' loan_request.id %}">Add one</a> — you will go straight to the field visit.</td>
             </tr>
             {% endfor %}
         </tbody>

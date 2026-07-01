@@ -15,6 +15,7 @@
     {% for k,v in doc.automated_checks.extracted_fields.items %}{{ k }}={{ v|truncatechars:40 }}{% if not forloop.last %}; {% endif %}{% endfor %}
   </p>
   {% endif %}
+  {% if doc.automated_checks.content_validation.reference_match %}
   {% if doc.automated_checks.content_validation.reference_match.enabled %}
   <p style="margin:0.35rem 0 0;">
     <strong>Reference sample match:</strong>
@@ -26,6 +27,7 @@
     {% endif %}
   </p>
   {% endif %}
+  {% endif %}
   {% if doc.automated_checks.content_validation.phrase_match %}
   <p style="margin:0.35rem 0 0;">
     <strong>Content validation:</strong>
@@ -35,18 +37,50 @@
     {% endif %}
   </p>
   {% endif %}
-  {% if doc.automated_checks.ocr_match_sheet1 %}
+  {% if doc.automated_checks.identity_match %}
+  {% with identity=doc.automated_checks.identity_match %}
   <p style="margin:0.35rem 0 0;">
-    <strong>OCR vs Sheet 1:</strong>
-    score {{ doc.automated_checks.ocr_match_sheet1.match_score }}/{{ doc.automated_checks.ocr_match_sheet1.min_score }}
-    — name {% if doc.automated_checks.ocr_match_sheet1.name_match %}✓{% else %}✗{% endif %},
-    TIN {% if doc.automated_checks.ocr_match_sheet1.tin_match %}✓{% else %}✗{% endif %}
+    <strong>Identity match (loan vs document):</strong>
+    {% if identity.passed %}✓ passed{% else %}✗ failed{% endif %}
+    — {{ identity.summary }}
+    {% if identity.checks %}
+    <br>
+    {% for field, check in identity.checks.items %}
+    {{ field }}
+    {% if check.skipped %}(skipped){% elif check.matched %}✓{% else %}✗{% endif %}
+    {% if not forloop.last %}; {% endif %}
+    {% endfor %}
+    {% endif %}
   </p>
+  {% endwith %}
+  {% elif doc.automated_checks.ocr_match_sheet1 %}
+  {% with identity=doc.automated_checks.ocr_match_sheet1 %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Identity match (loan vs document):</strong>
+    {% if identity.passed %}✓ passed{% else %}✗ failed{% endif %}
+    {% if identity.summary %}— {{ identity.summary }}{% else %}
+    — score {{ identity.match_score }}/{{ identity.min_score }}
+    {% endif %}
+    {% if identity.checks %}
+    <br>
+    {% for field, check in identity.checks.items %}
+    {{ field }}
+    {% if check.skipped %}(skipped){% elif check.matched %}✓{% else %}✗{% endif %}
+    {% if not forloop.last %}; {% endif %}
+    {% endfor %}
+    {% else %}
+    — name {% if identity.name_match %}✓{% else %}✗{% endif %},
+    TIN {% if identity.tin_match %}✓{% else %}✗{% endif %}
+    {% endif %}
+  </p>
+  {% endwith %}
   {% endif %}
+  {% if doc.automated_checks.llm_bank_statement %}
   {% if doc.automated_checks.llm_bank_statement.plausible is not None %}
   <p><strong>LLM (bank statement):</strong> plausible={{ doc.automated_checks.llm_bank_statement.plausible }}
     {% if doc.automated_checks.llm_bank_statement.summary %} — {{ doc.automated_checks.llm_bank_statement.summary|truncatewords:25 }}{% endif %}
   </p>
+  {% endif %}
   {% endif %}
 </details>
 {% endif %}

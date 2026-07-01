@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Other collateral – {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% endblock %}
 {% block content %}
 <h2>Other collateral (Vehicle, Machinery, Equipment, etc.)</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
@@ -13,39 +17,46 @@
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
 
+{% if not locked %}
 <h3>Add item</h3>
+<p class="help">After adding, you go to <strong>field visit</strong> on the tablet (GPS + photos).</p>
 <form method="post" style="max-width: 500px;">
     {% csrf_token %}
-    <table>
-        {{ form.as_table }}
-    </table>
-    <button type="submit">Add item</button>
+    <table>{{ form.as_table }}</table>
+    <button type="submit">Add item &amp; start field visit</button>
 </form>
+{% endif %}
 
 <h3>Items</h3>
 <div class="table-container">
     <table>
         <thead>
             <tr>
-                <th>Name / description</th>
-                <th>Estimated value</th>
+                <th>Name</th>
+                <th>Value</th>
+                <th>Field readiness</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in items %}
+            {% for row in item_rows %}
             <tr>
-                <td>{{ item.name }}{% if item.notes %} <span title="{{ item.notes }}">(...)</span>{% endif %}</td>
-                <td>{{ item.estimated_value|floatformat:2 }}</td>
+                <td>{{ row.item.name }}{% if row.item.notes %} <span title="{{ row.item.notes }}">(...)</span>{% endif %}</td>
+                <td>{{ row.item.estimated_value|floatformat:2 }}</td>
+                <td>{% if row.readiness.ready %}<span class="field-check-ok">Ready</span>{% else %}{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos{% endif %}</td>
                 <td>
-                    <a href="{% url 'collateral:other_collateral_edit' item.id %}">Edit</a>
+                    <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
                     &nbsp;|&nbsp;
-                    <a href="{% url 'collateral:other_collateral_delete' item.id %}" onclick="return confirm('Remove this item?');">Delete</a>
+                    <a href="{% url 'collateral:other_collateral_edit' row.item.id %}">Edit</a>
+                    {% if not locked %}
+                    &nbsp;|&nbsp;
+                    <a href="{% url 'collateral:other_collateral_delete' row.item.id %}" onclick="return confirm('Remove this item?');">Delete</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3">No items yet. Add one above.</td>
+                <td colspan="4">No items yet.{% if not locked %} Add one above.{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

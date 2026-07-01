@@ -1,0 +1,15 @@
+{% comment %}Weak GPS officer attestation — photo capture. Expects: gps_weak_threshold_m {% endcomment %}
+<div id="photo-gps-attestation" class="field-gps-attestation" hidden>
+  <p class="field-gps-warn">Photo GPS is weak or missing (threshold {{ gps_weak_threshold_m }}m). Attestation required.</p>
+  <p>
+    <label>
+      <input type="checkbox" name="gps_weak_ack" id="gps_weak_ack" value="1">
+      I attest this photo was taken at the collateral site
+    </label>
+  </p>
+  <p>
+    <label for="gps_attestation_note">Attestation note</label><br>
+    <textarea name="gps_attestation_note" id="gps_attestation_note" class="field-input-lg" rows="2"
+              placeholder="How capture location was verified (min 10 characters)"></textarea>
+  </p>
+</div>

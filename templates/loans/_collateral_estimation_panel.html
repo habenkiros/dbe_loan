@@ -1,0 +1,51 @@
+{% comment %}Collateral field-work readiness. Expects: collateral_readiness, collateral_totals, collateral_blockers {% endcomment %}
+{% if collateral_readiness %}
+<div class="collateral-readiness-panel" style="margin:0.75rem 0; padding:0.75rem 1rem; border-radius:6px; {% if collateral_readiness.locked %}background:#eceff1; border:1px solid #607d8b;{% elif collateral_readiness.all_ready %}background:#e8f5e9; border:1px solid #2e7d32;{% else %}background:#fff8e1; border:1px solid #f9a825;{% endif %}">
+  <strong>Collateral estimation:</strong>
+  {% if collateral_readiness.locked %}
+  Submitted{% if loan_request.collateral_submitted_at %} on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
+  {% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %} — locked for audit.
+  {% elif collateral_readiness.all_ready %}
+  Field work complete — ready to submit from collateral summary.
+  {% else %}
+  Field work in progress.
+  {% endif %}
+
+  {% if collateral_totals and collateral_totals.grand_total %}
+  <br><span class="help">Estimated collateral value: <strong>{{ collateral_totals.grand_total|floatformat:2 }}</strong>
+    {% if collateral_totals.collateral_immovable_value %} (immovable {{ collateral_totals.collateral_immovable_value|floatformat:2 }}{% endif %}
+    {% if collateral_totals.collateral_moveable_value %}, movable {{ collateral_totals.collateral_moveable_value|floatformat:2 }}{% endif %}
+    {% if collateral_totals.collateral_immovable_value %}){% endif %}
+  </span>
+  {% endif %}
+
+  {% if collateral_readiness.buildings %}
+  <ul style="margin:0.5rem 0 0 1.1rem; font-size:0.95rem;">
+    {% for row in collateral_readiness.buildings %}
+    <li>
+      <a href="{% url 'collateral:field_visit' row.building.id %}">{{ row.building.name }}</a>
+      — {% if row.readiness.ready %}ready{% else %}{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if collateral_readiness.land %}
+  <p style="margin:0.35rem 0 0;"><a href="{% url 'collateral:land_field_visit' loan_request.id %}">Land field visit</a>
+    — {% if collateral_readiness.land.readiness.ready %}ready{% else %}incomplete{% endif %}</p>
+  {% endif %}
+  {% for row in collateral_readiness.other_items %}
+  <p style="margin:0.35rem 0 0;"><a href="{% url 'collateral:other_field_visit' row.item.id %}">{{ row.item.name }}</a>
+    — {% if row.readiness.ready %}ready{% else %}incomplete{% endif %}</p>
+  {% endfor %}
+
+  {% if collateral_blockers %}
+  <br><span class="help">Submit blockers: {{ collateral_blockers|join:"; " }}</span>
+  {% endif %}
+
+  <p style="margin:0.75rem 0 0;">
+    <a href="{% url 'collateral:summary' loan_request.id %}">Collateral summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:dashboard' %}">Collateral dashboard</a>
+  </p>
+</div>
+{% endif %}

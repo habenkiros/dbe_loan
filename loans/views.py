@@ -149,9 +149,10 @@ def upload_loan_request_documents(request, loan_request_id):
         from .services.document_auth import (
             replace_documents_for_type,
             run_automated_document_checks,
-            validate_upload_file,
+            validate_upload_bytes,
             _read_upload_bytes,
         )
+        from django.core.files.base import ContentFile
         from .services.document_notifications import notify_document_uploaded
 
         uploaded = 0
@@ -163,16 +164,21 @@ def upload_loan_request_documents(request, loan_request_id):
                     doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
                 except (ValueError, LoanApplicationDocumentType.DoesNotExist):
                     continue
-                ok, errs, raw = validate_upload_file(f, doc_type)
+                raw = _read_upload_bytes(f)
+                if not raw:
+                    rejected += 1
+                    messages.error(
+                        request,
+                        f'{doc_type.name}: Could not read the uploaded file. Try again or use JPG/PNG.',
+                    )
+                    continue
+                ok, errs = validate_upload_bytes(raw, f.name, doc_type, loan_request=loan_request)
                 if not ok:
                     rejected += 1
                     for err in errs:
                         messages.error(request, f'{doc_type.name}: {err}')
                     continue
                 replaced = replace_documents_for_type(loan_request, doc_type)
-                from django.core.files.base import ContentFile
-                if not raw:
-                    raw = _read_upload_bytes(f)
                 save_file = ContentFile(raw, name=f.name)
                 doc = LoanRequestDocument.objects.create(
                     loan_request=loan_request,
@@ -189,13 +195,21 @@ def upload_loan_request_documents(request, loan_request_id):
                 uploaded += 1
                 if replaced:
                     messages.info(request, f'"{doc_type.name}" replaced the previous upload.')
-        if uploaded:
+        if uploaded and rejected:
+            messages.warning(
+                request,
+                f'{uploaded} file(s) uploaded, {rejected} rejected — see errors above.',
+            )
+        elif uploaded:
             messages.success(
                 request,
                 f'{uploaded} document(s) uploaded — automated authentication checks completed.',
             )
-        elif rejected and not uploaded:
-            messages.warning(request, 'No files were uploaded. Fix the errors above and try again.')
+        elif rejected:
+            messages.error(
+                request,
+                f'No files were uploaded ({rejected} rejected). Fix the errors above and try again.',
+            )
         return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
     document_requests = loan_request.document_requests.select_related('document_type', 'requested_by').all()
     return render(request, 'loans/upload_loan_request_documents.html', {
@@ -394,6 +408,17 @@ def loan_request_detail(request, loan_request_id):
 
     doc_readiness = loan_documents_collateral_readiness(loan_request)
     can_authenticate_documents = _is_assigned_officer_or_engineer(user, loan_request)
+    collateral_readiness = None
+    collateral_totals = None
+    collateral_blockers = []
+    if loan_request.documents_reviewed_at or loan_request.queue_approved or (loan_request.status or '').lower() == 'approved':
+        from collateral.field_utils import get_loan_collateral_readiness, collateral_submit_blockers
+        from loans.services.appraisal_prefill import compute_collateral_totals
+
+        collateral_readiness = get_loan_collateral_readiness(loan_request)
+        collateral_totals = compute_collateral_totals(loan_request)
+        if not collateral_readiness.get('locked'):
+            collateral_blockers = collateral_submit_blockers(loan_request)
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -405,6 +430,9 @@ def loan_request_detail(request, loan_request_id):
         'document_types_missing': document_types_missing,
         'requested_type_ids': requested_type_ids,
         'doc_readiness': doc_readiness,
+        'collateral_readiness': collateral_readiness,
+        'collateral_totals': collateral_totals,
+        'collateral_blockers': collateral_blockers,
         'appraisal': appraisal,
         'committee_submit': committee_submit,
         'committee_tally': committee_tally,

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Field visit – {{ building.name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% include "collateral/_map_assets.html" %}
+{% endblock %}
+{% block content %}
+<div class="field-visit-wrap">
+  <div class="field-visit-header">
+    <h1>Field visit — {{ building.name }}</h1>
+    <p class="sub">{{ loan_request.loan_request_id }} · {{ loan_request.applicant_name }}</p>
+  </div>
+
+  {% include "collateral/_field_capture_helpers.html" %}
+
+  {% if locked %}
+  <div class="field-locked-banner">Collateral submitted — this visit is read-only.</div>
+  {% endif %}
+
+  <nav class="field-stepper" aria-label="Field visit steps">
+    {% for s, label in steps %}
+    <a href="{% url 'collateral:field_visit_step' building.id s %}"
+       class="{% if s == step %}active{% elif s < step %}done{% endif %}">
+      {{ s }}. {{ label }}
+    </a>
+    {% endfor %}
+  </nav>
+
+  {% if step == 1 %}
+  <div class="field-card">
+    <h3>Step 1 — Site &amp; building</h3>
+    <form method="post" id="field-step1-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save" id="step1-action">
+      <input type="hidden" name="site_gps_lat" id="site_gps_lat" value="{{ building.site_gps_lat|default:'' }}">
+      <input type="hidden" name="site_gps_lon" id="site_gps_lon" value="{{ building.site_gps_lon|default:'' }}">
+      <input type="hidden" name="site_gps_accuracy_m" id="site_gps_accuracy_m" value="{{ building.site_gps_accuracy_m|default:'' }}">
+
+      <p><label for="id_name">Building name</label><br>
+        <input type="text" name="name" id="id_name" class="field-input-lg" value="{{ building_form.name.value|default:building.name }}" required {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_construction_type">Construction type</label><br>
+        <input type="text" name="construction_type" id="id_construction_type" class="field-input-lg" value="{{ building_form.construction_type.value|default:building.construction_type }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_floors">Floors</label><br>
+        <input type="number" name="floors" id="id_floors" class="field-input-lg" min="0" value="{{ building_form.floors.value|default:building.floors|default:'' }}" {% if locked %}disabled{% endif %}></p>
+
+      <p><strong>Woreda (for unit prices)</strong></p>
+      <p>
+        <select id="id_region" class="field-input-lg" {% if locked %}disabled{% endif %}>
+          <option value="">—— Region ——</option>
+          {% for r in regions %}
+          <option value="{{ r.id }}" {% if building.city and building.city.zone.region_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p>
+        <select id="id_zone" class="field-input-lg" {% if locked %}disabled{% endif %}>
+          <option value="">—— Zone ——</option>
+          {% if building.city %}
+          <option value="{{ building.city.zone_id }}" selected>{{ building.city.zone.name }}</option>
+          {% endif %}
+        </select>
+      </p>
+      <p>
+        <select name="city" id="id_city" class="field-input-lg" required {% if locked %}disabled{% endif %}>
+          <option value="">—— City / Woreda ——</option>
+          {% if building.city %}
+          <option value="{{ building.city_id }}" selected>{{ building.city.name }}</option>
+          {% endif %}
+        </select>
+      </p>
+
+      <h4 style="margin-top:1.25rem;">Building site GPS</h4>
+      <p class="help">Mark the registered collateral location on the map. Field photos will be compared to this pin.</p>
+      <div id="site-gps-status" class="field-gps-status field-gps-none">GPS not captured yet.</div>
+      {% include "collateral/_collateral_location_map.html" with map_id="field-visit-map" map_config_id="field-visit-map-data" map_data=map_data map_title="Registered collateral site" live_site=True %}
+      {% if not locked %}
+      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark site location (GPS)</button>
+      {% include "collateral/_gps_attestation_site.html" %}
+      {% endif %}
+    </form>
+  </div>
+
+  {% elif step == 2 %}
+  <div class="field-card">
+    <h3>Step 2 — BOQ quantities</h3>
+    {% if not building_has_city %}
+    <p class="field-gps-warn field-gps-status">Set woreda on <a href="{% url 'collateral:field_visit_step' building.id 1 %}">step 1</a> first.</p>
+    {% else %}
+    <p>Enter measured quantities. Unit prices come from the catalog for <strong>{{ building.city.name }}</strong>.</p>
+    <p><strong>Building total so far: {{ readiness.building_total|floatformat:2 }}</strong></p>
+    <form method="post" id="boq-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save" id="step2-action">
+      {% for row in boq_rows %}
+      <div class="field-boq-row">
+        <label for="qty_{{ row.index }}">
+          {{ row.label }}
+          {% if row.unit_price %}<br><small>Unit: {{ row.unit_price|floatformat:2 }}</small>{% endif %}
+        </label>
+        <input type="text" name="quantity_{{ row.index }}" id="qty_{{ row.index }}"
+               value="{{ row.quantity }}" placeholder="0" inputmode="decimal" {% if locked %}disabled{% endif %}>
+      </div>
+      {% empty %}
+      <p>No catalog items for this woreda. Ask engineering to add unit prices.</p>
+      {% endfor %}
+    </form>
+    {% endif %}
+  </div>
+
+  {% elif step == 3 %}
+  <div class="field-card">
+    <h3>Step 3 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
+    <p>Capture photos at the collateral site. Each photo GPS is mapped against the registered site from step 1.</p>
+
+    {% include "collateral/_collateral_location_map.html" with map_id="field-visit-verify-map" map_config_id="field-visit-verify-map-data" map_data=map_data map_title="Site vs photo locations" %}
+
+    {% if not locked %}
+    <form method="post" enctype="multipart/form-data" id="field-photo-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="upload_photo">
+      <input type="hidden" name="gps_lat" id="gps_lat" value="">
+      <input type="hidden" name="gps_lon" id="gps_lon" value="">
+      <input type="hidden" name="gps_accuracy_m" id="gps_accuracy_m" value="">
+      <p>
+        <label for="field-photo-type">Photo type</label><br>
+        <select name="photo_type" id="field-photo-type" class="field-input-lg">
+          {% for val, lbl in photo_types %}
+          <option value="{{ val }}">{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p>
+        <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-webcam-open">Use laptop webcam</button>
+      </p>
+      <p>
+        <label for="field-photo-input">Or choose image file</label><br>
+        <input type="file" name="image" id="field-photo-input" accept="image/*" class="field-input-lg" required>
+      </p>
+      <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS will be captured when you take a photo.</div>
+      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-capture-photo-gps">Refresh GPS before upload</button>
+      {% include "collateral/_gps_attestation_photo.html" %}
+      <button type="submit" class="field-btn field-btn-primary field-btn-block">Save photo</button>
+    </form>
+    {% endif %}
+
+    <h4 style="margin-top:1rem;">Photos on file</h4>
+    <div class="field-photo-grid">
+      {% for row in image_rows %}
+      {% with img=row.image %}
+      <div class="field-photo-cell">
+        <a href="{{ img.image.url }}" target="_blank" rel="noopener" title="{{ img.get_photo_type_display }}">
+          <img src="{{ img.image.url }}" alt="{{ img.caption|default:'Photo' }}">
+        </a>
+        <small class="field-photo-meta">
+          {{ img.get_photo_type_display }}
+          {% if row.distance_m is not None %}
+          · <span class="{% if row.far_from_site %}field-gps-warn-text{% endif %}">{{ row.distance_m }} m from site</span>
+          {% elif img.gps_lat %}· GPS saved{% else %}· <span class="field-gps-warn-text">No photo GPS</span>{% endif %}
+        </small>
+        {% if not locked %}
+        <form method="post" action="{% url 'collateral:building_image_delete' img.id %}" class="field-photo-delete" onsubmit="return confirm('Remove this photo?');">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'collateral:field_visit_step' building.id 3 %}">
+          <button type="submit" class="field-btn field-btn-secondary" style="font-size:0.85rem;margin-top:0.25rem;">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endwith %}
+      {% empty %}
+      <p>No photos yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% elif step == 4 %}
+  <div class="field-card">
+    <h3>Step 4 — Review</h3>
+    {% include "collateral/_collateral_location_map.html" with map_id="field-visit-review-map" map_config_id="field-visit-review-map-data" map_data=map_data map_title="Collateral location verification" %}
+    <p><strong>Building total: {{ readiness.building_total|floatformat:2 }}</strong></p>
+    <ul class="field-checklist">
+      {% for check in readiness.checks %}
+      <li>
+        <span>{{ check.label }}<br><small>{{ check.detail }}</small></span>
+        <span class="{% if check.ok %}field-check-ok{% else %}field-check-fail{% endif %}">{% if check.ok %}✓{% else %}✗{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if readiness.ready %}
+    <p style="color:#155724;font-weight:600;margin-top:1rem;">This building is ready for collateral submit.</p>
+    {% else %}
+    <p style="color:#856404;margin-top:1rem;">Complete the items above, then submit collateral from the loan summary.</p>
+    {% endif %}
+    <p style="margin-top:1rem;">
+      <a href="{% url 'collateral:building_estimation_summary' building.id %}" class="field-btn field-btn-secondary field-btn-block">መጠቃለሊ (estimation summary)</a>
+      <a href="{% url 'collateral:summary' loan_request.id %}" class="field-btn field-btn-primary field-btn-block">Loan collateral summary</a>
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="field-sticky-bar">
+    {% if step > 1 %}
+    <a href="{% url 'collateral:field_visit_step' building.id step|add:'-1' %}" class="field-btn field-btn-secondary">← Back</a>
+    {% else %}
+    <a href="{% url 'collateral:building_list' loan_request.id %}" class="field-btn field-btn-secondary">Buildings</a>
+    {% endif %}
+
+    {% if step == 1 and not locked %}
+    <button type="submit" form="field-step1-form" class="field-btn field-btn-secondary" onclick="document.getElementById('step1-action').value='save'">Save</button>
+    <button type="submit" form="field-step1-form" class="field-btn field-btn-primary" onclick="document.getElementById('step1-action').value='save_next'">Next →</button>
+    {% elif step == 2 and building_has_city and not locked %}
+    <button type="submit" form="boq-form" class="field-btn field-btn-secondary" onclick="document.getElementById('step2-action').value='save'">Save</button>
+    <button type="submit" form="boq-form" class="field-btn field-btn-primary" onclick="document.getElementById('step2-action').value='save_next'">Next →</button>
+    {% elif step == 3 %}
+    <a href="{% url 'collateral:field_visit_step' building.id 4 %}" class="field-btn field-btn-primary">Review →</a>
+    {% elif step == 4 %}
+    <a href="{% url 'collateral:building_list' loan_request.id %}" class="field-btn field-btn-primary">All buildings</a>
+    {% endif %}
+  </div>
+</div>
+
+<script>window.COLLATERAL_GPS_WEAK_M = {{ gps_weak_threshold_m|default:100 }};</script>
+{% if step == 1 %}<script>window.COLLATERAL_SITE_MAP_ID = 'field-visit-map';</script>{% endif %}
+<script src="{% static 'js/collateral_field.js' %}"></script>
+{% if step == 1 %}
+<script>
+(function() {
+  var regionSelect = document.getElementById('id_region');
+  var zoneSelect = document.getElementById('id_zone');
+  var citySelect = document.getElementById('id_city');
+  var zonesUrl = "{{ zones_url|escapejs }}";
+  var citiesUrl = "{{ cities_url|escapejs }}";
+  var currentZoneId = {% if building.city %}{{ building.city.zone_id }}{% else %}null{% endif %};
+  var currentCityId = {% if building.city %}{{ building.city_id }}{% else %}null{% endif %};
+
+  function loadZones(regionId) {
+    zoneSelect.innerHTML = '<option value="">—— Zone ——</option>';
+    citySelect.innerHTML = '<option value="">—— City / Woreda ——</option>';
+    if (!regionId) return;
+    fetch(zonesUrl + (zonesUrl.indexOf('?') >= 0 ? '&' : '?') + 'region_id=' + regionId, { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(zones) {
+        zones.forEach(function(z) {
+          var o = document.createElement('option');
+          o.value = z.id;
+          o.textContent = z.name;
+          if (currentZoneId && parseInt(z.id, 10) === currentZoneId) o.selected = true;
+          zoneSelect.appendChild(o);
+        });
+        if (currentZoneId) { loadCities(currentZoneId); currentZoneId = null; }
+      });
+  }
+  function loadCities(zoneId) {
+    citySelect.innerHTML = '<option value="">—— City / Woreda ——</option>';
+    if (!zoneId) return;
+    fetch(citiesUrl + (citiesUrl.indexOf('?') >= 0 ? '&' : '?') + 'zone_id=' + zoneId, { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(cities) {
+        cities.forEach(function(c) {
+          var o = document.createElement('option');
+          o.value = c.id;
+          o.textContent = c.name;
+          if (currentCityId && parseInt(c.id, 10) === currentCityId) o.selected = true;
+          citySelect.appendChild(o);
+        });
+        currentCityId = null;
+      });
+  }
+  if (regionSelect) regionSelect.addEventListener('change', function() { loadZones(this.value); });
+  if (zoneSelect) zoneSelect.addEventListener('change', function() { loadCities(this.value); });
+  if (regionSelect && regionSelect.value) loadZones(regionSelect.value);
+})();
+</script>
+{% endif %}
+{% endblock %}

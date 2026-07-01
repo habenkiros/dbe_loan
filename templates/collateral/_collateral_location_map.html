@@ -1,0 +1,34 @@
+{% comment %}
+Embedded map: registered collateral site vs field-photo GPS.
+Expects: map_data, map_id (unique), map_title (optional), compact (optional bool)
+{% endcomment %}
+{% load static %}
+{% if map_data %}
+<div class="collateral-map-panel{% if compact %} collateral-map-panel-compact{% endif %}">
+  {% if map_title %}
+  <h4 class="collateral-map-title">{{ map_title }}</h4>
+  {% endif %}
+  <div class="collateral-map-meta">
+    {% if map_data.registered_woreda %}
+    <span><strong>Registered woreda:</strong> {{ map_data.registered_woreda }}</span>
+    {% endif %}
+    {% if map_data.registered_address %}
+    <span><strong>Registered address:</strong> {{ map_data.registered_address }}</span>
+    {% endif %}
+    {% if map_data.has_site %}
+    <span class="collateral-map-legend-item"><span class="pin-site">📍</span> Registered site GPS</span>
+    {% else %}
+    <span class="collateral-map-warn">No registered site GPS yet — mark location in step 1.</span>
+    {% endif %}
+    {% if map_data.photo_count %}
+    <span class="collateral-map-legend-item"><span class="pin-photo">📷</span> Field photos ({{ map_data.photo_count }})</span>
+    {% endif %}
+    {% if map_data.photo_warnings %}
+    <span class="collateral-map-warn">{{ map_data.photo_warnings }} photo(s) farther than {{ map_data.max_distance_m }} m from site</span>
+    {% endif %}
+  </div>
+  <div id="{{ map_id }}" class="collateral-map-canvas" data-config-id="{{ map_config_id }}"{% if live_site %} data-live-site="1"{% endif %}></div>
+  {{ map_data|json_script:map_config_id }}
+  <p class="help collateral-map-help">Blue pin = registered collateral site. Camera pins = GPS when each photo was saved. Lines show distance from site to each capture.</p>
+</div>
+{% endif %}

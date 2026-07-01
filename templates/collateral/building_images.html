@@ -1,73 +1,70 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Images – {{ building.name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% include "collateral/_map_assets.html" %}
+{% endblock %}
 {% block content %}
 <h2>Images – {{ building.name }}</h2>
 <p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong></p>
-<p><a href="{% url 'collateral:building_list' building.loan_request.id %}">← Back to buildings</a></p>
+<p>
+  <a href="{% url 'collateral:field_visit_step' building.id 3 %}" class="field-btn field-btn-primary" style="padding:0.4rem 0.8rem;font-size:0.9rem;display:inline-block;">Tablet field visit (recommended)</a>
+  &nbsp;|&nbsp;
+  <a href="{% url 'collateral:building_list' building.loan_request.id %}">← Back to buildings</a>
+</p>
 <p><strong>{{ image_count }} / {{ min_images_required }} images</strong> (minimum {{ min_images_required }} required per building before submitting collateral).</p>
 
-<h3>Upload image</h3>
+{% include "collateral/_collateral_location_map.html" with map_id="building-images-map" map_config_id="building-images-map-data" map_data=map_data map_title="Registered site vs photo captures" %}
+
+{% if locked %}
+<p class="field-locked-banner" style="padding:0.75rem;border-radius:8px;background:#fff3cd;">Collateral submitted — uploads disabled.</p>
+{% else %}
+{% include "collateral/_field_capture_helpers.html" %}
+<h3>Take photo</h3>
 <form method="post" enctype="multipart/form-data" id="upload-form">
     {% csrf_token %}
-    <table>
-        {{ form.as_table }}
-    </table>
-    <div id="image-preview-wrap" style="margin: 10px 0; display: none;">
-        <p>Preview:</p>
-        <img id="image-preview" alt="Preview" style="max-width: 100%; max-height: 300px; border: 1px solid #ccc;">
-    </div>
-    <button type="submit">Upload</button>
+    <input type="hidden" name="action" value="upload_photo">
+    <p>
+      <button type="button" class="field-btn field-btn-secondary" id="btn-webcam-open">Use laptop webcam</button>
+    </p>
+    <p>
+      <label for="id_photo_type">Photo type</label><br>
+      <select name="photo_type" id="id_photo_type" class="field-input-lg">
+        {% for val, lbl in photo_types %}
+        <option value="{{ val }}">{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </p>
+    <p>
+      <label for="id_image">Or choose image file</label><br>
+      {{ form.image }}
+    </p>
+    <p><label for="id_caption">Caption (optional)</label><br>{{ form.caption }}</p>
+    <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS captured when you save (allow location in browser).</div>
+    <button type="button" class="field-btn field-btn-secondary" id="btn-capture-photo-gps">Refresh GPS</button>
+    <button type="submit" class="field-btn field-btn-primary">Save photo</button>
 </form>
+{% endif %}
 
 <h3>Uploaded images</h3>
-<div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th>Caption</th>
-                <th>GPS</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for img in images %}
-            <tr>
-                <td>
-                    {% if img.image %}
-                    <a href="{{ img.image.url }}" target="_blank">View</a>
-                    {% else %}—{% endif %}
-                </td>
-                <td>{{ img.caption|default:"—" }}</td>
-                <td>{% if img.gps_lat and img.gps_lon %}{{ img.gps_lat }}, {{ img.gps_lon }}{% else %}—{% endif %}</td>
-                <td>{{ img.created_at|date:"Y-m-d H:i" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4">No images yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="field-photo-grid">
+    {% for row in image_rows %}
+    {% with img=row.image %}
+    <div>
+      <a href="{{ img.image.url }}" target="_blank" rel="noopener">
+        <img src="{{ img.image.url }}" alt="{{ img.caption|default:'Photo' }}">
+      </a>
+      <small>{{ img.get_photo_type_display }}
+        {% if row.distance_m is not None %} · {{ row.distance_m }} m from site{% if row.far_from_site %} (far){% endif %}
+        {% elif img.gps_lat %} · GPS{% else %} · no GPS{% endif %}
+        <br>{{ img.created_at|date:"Y-m-d H:i" }}</small>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <p>No images yet.</p>
+    {% endfor %}
 </div>
 
-<script>
-(function() {
-    var input = document.getElementById('id_image');
-    var wrap = document.getElementById('image-preview-wrap');
-    var img = document.getElementById('image-preview');
-    if (!input || !wrap || !img) return;
-    input.addEventListener('change', function() {
-        if (img.src && img.src.indexOf('blob:') === 0) URL.revokeObjectURL(img.src);
-        var file = this.files && this.files[0];
-        if (file && file.type.indexOf('image/') === 0) {
-            img.src = URL.createObjectURL(file);
-            wrap.style.display = 'block';
-        } else {
-            img.src = '';
-            wrap.style.display = 'none';
-        }
-    });
-})();
-</script>
+<script src="{% static 'js/collateral_field.js' %}"></script>
 {% endblock %}

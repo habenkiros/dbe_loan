@@ -94,6 +94,8 @@
     <legend>Authentication checks</legend>
     <p><label>{{ form.require_officer_verification }} {{ form.require_officer_verification.label }}</label></p>
     <p><label>{{ form.enable_ocr_match }} {{ form.enable_ocr_match.label }}</label></p>
+    <p>{{ form.identity_match_fields.label_tag }} {{ form.identity_match_fields }}<br><small>{{ form.identity_match_fields.help_text }}</small></p>
+    <p><label>{{ form.identity_match_strict }} {{ form.identity_match_strict.label }}</label><br><small>{{ form.identity_match_strict.help_text }}</small></p>
     <p><label>{{ form.enable_llm_check }} {{ form.enable_llm_check.label }}</label></p>
     <p><label>{{ form.enable_external_id }} {{ form.enable_external_id.label }}</label></p>
   </fieldset>

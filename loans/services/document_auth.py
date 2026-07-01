@@ -43,29 +43,51 @@ def get_document_auth_policy():
 
 
 def _read_upload_bytes(uploaded_file) -> bytes:
-    """Read full upload/file content once; safe for Django TemporaryUploadedFile."""
-    try:
-        if hasattr(uploaded_file, 'seek'):
+    """Read full upload content once without using chunks() on a closed handle."""
+    if isinstance(uploaded_file, (bytes, bytearray)):
+        return bytes(uploaded_file)
+
+    from django.core.files.uploadedfile import TemporaryUploadedFile, InMemoryUploadedFile
+
+    if isinstance(uploaded_file, TemporaryUploadedFile):
+        try:
+            with open(uploaded_file.temporary_file_path(), 'rb') as fp:
+                return fp.read()
+        except (ValueError, OSError, FileNotFoundError):
+            pass
+
+    if isinstance(uploaded_file, InMemoryUploadedFile):
+        try:
+            uploaded_file.open()
             uploaded_file.seek(0)
-    except (ValueError, OSError, AttributeError):
-        pass
-    if hasattr(uploaded_file, 'chunks'):
-        data = b''.join(uploaded_file.chunks())
-    else:
-        data = uploaded_file.read() or b''
-    try:
-        if hasattr(uploaded_file, 'seek'):
-            uploaded_file.seek(0)
-    except (ValueError, OSError, AttributeError):
-        pass
-    return data
+            data = uploaded_file.read()
+            return data if isinstance(data, bytes) else (data or '').encode()
+        except (ValueError, OSError, AttributeError):
+            pass
+
+    if hasattr(uploaded_file, 'read'):
+        try:
+            if hasattr(uploaded_file, 'seek'):
+                try:
+                    uploaded_file.seek(0)
+                except (ValueError, OSError):
+                    pass
+            data = uploaded_file.read()
+            return data if isinstance(data, bytes) else (data or '').encode()
+        except (ValueError, OSError, AttributeError):
+            pass
+    return b''
 
 
-def validate_upload_file(uploaded_file, doc_type) -> Tuple[bool, List[str], bytes]:
-    """Validate extension and size before saving (reject disallowed types immediately)."""
+def validate_upload_bytes(
+    raw: bytes,
+    filename: str,
+    doc_type,
+    loan_request=None,
+) -> Tuple[bool, List[str]]:
+    """Validate pre-read upload bytes (extension, size, magic, content, identity)."""
     errors: List[str] = []
-    raw = b''
-    name = getattr(uploaded_file, 'name', '') or ''
+    name = filename or ''
     ext = (os.path.splitext(name)[1] or '').lower().lstrip('.')
     if not ext:
         errors.append('File has no extension.')
@@ -75,24 +97,14 @@ def validate_upload_file(uploaded_file, doc_type) -> Tuple[bool, List[str], byte
             f'Extension ".{ext}" is not allowed for "{doc_type.name}" '
             f'(allowed: {", ".join(sorted(allowed))}).'
         )
-    try:
-        size = uploaded_file.size
-    except Exception:
-        size = None
+
+    size = len(raw)
     max_mb = doc_type.get_max_file_size_mb()
     max_bytes = int(max_mb) * 1024 * 1024
-    if size is None:
-        errors.append('Could not read file size.')
+    if size == 0:
+        errors.append('File is empty.')
     elif size > max_bytes:
         errors.append(f'File is too large ({size / (1024 * 1024):.1f} MB). Maximum for this type is {max_mb} MB.')
-    elif size == 0:
-        errors.append('File is empty.')
-
-    needs_bytes = not errors and ext and (
-        ext in _MAGIC or ext in ('doc', 'docx') or doc_type.has_content_validation()
-    )
-    if needs_bytes:
-        raw = _read_upload_bytes(uploaded_file)
 
     if not errors and ext and raw:
         head = raw[:16]
@@ -103,14 +115,56 @@ def validate_upload_file(uploaded_file, doc_type) -> Tuple[bool, List[str], byte
                     '(possible wrong type or renamed file).'
                 )
 
-    if not errors and doc_type.has_content_validation():
-        if not raw:
-            raw = _read_upload_bytes(uploaded_file)
-        content_ok, content_errors, _ = validate_upload_content_from_bytes(raw, doc_type, ext)
+    extracted_text = ''
+    needs_text = (
+        (not errors and doc_type.has_content_validation() and raw)
+        or (not errors and loan_request and doc_type.enable_ocr_match and raw and _is_content_scannable(ext))
+    )
+    if needs_text:
+        extracted_text = (_extract_text_from_bytes(raw, ext).get('text') or '')
+
+    if not errors and doc_type.has_content_validation() and raw:
+        content_ok, content_errors, _ = validate_upload_content_from_bytes(
+            raw, doc_type, ext, pre_extracted_text=extracted_text,
+        )
         if not content_ok and doc_type.content_validation_strict:
             errors.extend(content_errors)
 
-    return (not errors, errors, raw)
+    if not errors and loan_request and doc_type.enable_ocr_match:
+        if not extracted_text and raw and _is_content_scannable(ext):
+            extracted_text = (_extract_text_from_bytes(raw, ext).get('text') or '')
+        if not extracted_text.strip():
+            if doc_type.identity_match_strict:
+                errors.append(
+                    f'"{doc_type.name}": could not read text for identity check — use a clearer scan or JPG/PNG.'
+                )
+        else:
+            identity = _loan_identity_match(
+                loan_request,
+                extracted_text,
+                doc_type.get_identity_match_field_list(),
+            )
+            if not identity.get('passed') and doc_type.identity_match_strict:
+                failed = [
+                    f'{k} ({v.get("detail", "no match")})'
+                    for k, v in (identity.get('checks') or {}).items()
+                    if v.get('matched') is False
+                ]
+                errors.append(
+                    f'"{doc_type.name}": identity check failed — document does not match loan data. '
+                    f'Failed: {"; ".join(failed) or identity.get("summary", "see checks")}.'
+                )
+
+    return (not errors, errors)
+
+
+def validate_upload_file(uploaded_file, doc_type, loan_request=None) -> Tuple[bool, List[str], bytes]:
+    """Read upload once, then validate."""
+    raw = _read_upload_bytes(uploaded_file)
+    ok, errors = validate_upload_bytes(
+        raw, getattr(uploaded_file, 'name', '') or '', doc_type, loan_request=loan_request,
+    )
+    return ok, errors, raw
 
 
 def _peek_upload_head(uploaded_file, nbytes: int = 16) -> bytes:
@@ -140,6 +194,8 @@ def get_type_auth_rules(document) -> Dict[str, Any]:
         'max_file_size_mb': doc_type.get_max_file_size_mb(),
         'require_officer_verification': doc_type.require_officer_verification,
         'enable_ocr_match': doc_type.enable_ocr_match,
+        'identity_match_fields': doc_type.get_identity_match_field_list(),
+        'identity_match_strict': getattr(doc_type, 'identity_match_strict', False),
         'enable_llm_check': doc_type.enable_llm_check,
         'enable_external_id': doc_type.enable_external_id,
         'content_validation': doc_type.has_content_validation(),
@@ -326,6 +382,7 @@ def validate_upload_content_from_bytes(
     raw: bytes,
     doc_type,
     ext: str,
+    pre_extracted_text: str = '',
 ) -> Tuple[bool, List[str], Dict[str, Any]]:
     """Check extracted document text against phrases and/or reference sample."""
     phrases = doc_type.get_effective_validation_phrases()
@@ -352,7 +409,15 @@ def validate_upload_content_from_bytes(
         report.update({'passed': False, 'error': msg})
         return False, [msg], report
 
-    extraction = _extract_text_from_bytes(raw, ext)
+    if pre_extracted_text:
+        extraction = {
+            'text': pre_extracted_text,
+            'method': 'pre_extracted',
+            'error': None,
+            'char_count': len(pre_extracted_text),
+        }
+    else:
+        extraction = _extract_text_from_bytes(raw, ext)
     report['extract'] = {
         'method': extraction.get('method'),
         'error': extraction.get('error'),
@@ -405,52 +470,125 @@ def validate_upload_content(uploaded_file, doc_type, ext: str) -> Tuple[bool, Li
     return validate_upload_content_from_bytes(raw, doc_type, ext)
 
 
-def _sheet1_identity_match(document, extracted_text: str) -> Dict[str, Any]:
-    lr = document.loan_request
-    applicant = getattr(lr, "applicant_name", "") or ""
-    tin = ""
+def _get_loan_basic_info(loan_request):
     try:
         from loans.models import LoanRequestBasicInfo
-        bi = LoanRequestBasicInfo.objects.filter(loan_request=lr).first()
-        tin = getattr(bi, "tin_number", "") or ""
+        return LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
     except Exception:
-        tin = ""
+        return None
 
+
+def _match_name_tokens(name: str, text_norm: str) -> Tuple[bool, str]:
+    if not name:
+        return False, 'No name provided.'
+    tokens = [t for t in _normalize(name).split() if len(t) > 2]
+    if tokens:
+        hits = sum(1 for t in tokens if t in text_norm)
+        matched = hits >= max(1, len(tokens) // 2)
+        return matched, f'Matched {hits}/{len(tokens)} name tokens.'
+    matched = _normalize(name) in text_norm
+    return matched, 'Full-name substring match.' if matched else 'Name not found in document.'
+
+
+def _loan_identity_match(loan_request, extracted_text: str, field_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Compare loan registration data against OCR text from an upload."""
+    fields = field_names or ['applicant_name', 'phone_number', 'tin_number']
     text_norm = _normalize(extracted_text)
     text_digits = _digits_only(extracted_text)
+    basic_info = _get_loan_basic_info(loan_request)
 
-    name_match = False
-    name_detail = "No applicant name on loan request."
-    if applicant:
-        tokens = [t for t in _normalize(applicant).split() if len(t) > 2]
-        if tokens:
-            hits = sum(1 for t in tokens if t in text_norm)
-            name_match = hits >= max(1, len(tokens) // 2)
-            name_detail = f"Matched {hits}/{len(tokens)} name tokens."
+    checks: Dict[str, Any] = {}
+    for field in fields:
+        if field == 'applicant_name':
+            value = getattr(loan_request, 'applicant_name', '') or ''
+            if not value:
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No applicant name on loan request.', 'value': None}
+            else:
+                matched, detail = _match_name_tokens(value, text_norm)
+                checks[field] = {'matched': matched, 'skipped': False, 'detail': detail, 'value': value}
+        elif field == 'phone_number':
+            value = getattr(loan_request, 'phone_number', '') or ''
+            digits = _digits_only(value)
+            if not digits or len(digits) < 8:
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No phone number on loan request.', 'value': value or None}
+            else:
+                matched = digits in text_digits
+                checks[field] = {
+                    'matched': matched,
+                    'skipped': False,
+                    'detail': 'Phone digits found in document.' if matched else 'Phone number not found in document.',
+                    'value': value,
+                }
+        elif field == 'tin_number':
+            value = getattr(basic_info, 'tin_number', '') if basic_info else ''
+            value = value or ''
+            digits = _digits_only(value)
+            if not digits:
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No TIN on loan request.', 'value': None}
+            else:
+                matched = digits in text_digits
+                checks[field] = {
+                    'matched': matched,
+                    'skipped': False,
+                    'detail': 'TIN found in document.' if matched else 'TIN not found in document.',
+                    'value': value,
+                }
+        elif field == 'business_name':
+            value = ''
+            if basic_info:
+                value = getattr(basic_info, 'business_name', '') or ''
+            if not value:
+                value = getattr(loan_request, 'applicant_name', '') or ''
+            if not value:
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No business name on loan request.', 'value': None}
+            else:
+                matched, detail = _match_name_tokens(value, text_norm)
+                checks[field] = {'matched': matched, 'skipped': False, 'detail': detail, 'value': value}
         else:
-            name_match = _normalize(applicant) in text_norm
-            name_detail = "Full-name substring match." if name_match else "Name not found."
+            checks[field] = {'matched': None, 'skipped': True, 'detail': f'Unknown field "{field}".', 'value': None}
 
-    tin_digits = _digits_only(tin)
-    tin_match = bool(tin_digits and tin_digits in text_digits)
+    active = [f for f in fields if f in checks and not checks[f].get('skipped')]
+    if not active:
+        passed = True
+        summary = 'No identity data on loan request to compare.'
+    else:
+        passed = all(checks[f].get('matched') for f in active)
+        failed = [f for f in active if not checks[f].get('matched')]
+        matched = [f for f in active if checks[f].get('matched')]
+        summary = f'Matched {len(matched)}/{len(active)} fields'
+        if failed:
+            summary += f' — failed: {", ".join(failed)}'
 
     score = 0
-    if name_match:
+    if checks.get('applicant_name', {}).get('matched'):
         score += 60
-    if tin_match:
+    if checks.get('tin_number', {}).get('matched'):
         score += 40
+    if checks.get('phone_number', {}).get('matched'):
+        score += 25
+    if checks.get('business_name', {}).get('matched'):
+        score += 35
+    min_score = int(getattr(settings, 'DOCUMENT_OCR_MATCH_MIN_SCORE', 60) or 60)
 
-    min_score = int(getattr(settings, "DOCUMENT_OCR_MATCH_MIN_SCORE", 60) or 60)
     return {
-        "applicant_name": applicant,
-        "tin_number": tin or None,
-        "name_match": name_match,
-        "name_detail": name_detail,
-        "tin_match": tin_match,
-        "match_score": score,
-        "passed": score >= min_score,
-        "min_score": min_score,
+        'fields': fields,
+        'checks': checks,
+        'passed': passed,
+        'summary': summary,
+        'match_score': score,
+        'min_score': min_score,
+        'applicant_name': getattr(loan_request, 'applicant_name', '') or None,
+        'tin_number': (getattr(basic_info, 'tin_number', '') if basic_info else '') or None,
+        'name_match': checks.get('applicant_name', {}).get('matched'),
+        'name_detail': checks.get('applicant_name', {}).get('detail'),
+        'tin_match': checks.get('tin_number', {}).get('matched'),
     }
+
+
+def _sheet1_identity_match(document, extracted_text: str) -> Dict[str, Any]:
+    doc_type = document.document_type
+    fields = doc_type.get_identity_match_field_list() if hasattr(doc_type, 'get_identity_match_field_list') else None
+    return _loan_identity_match(document.loan_request, extracted_text, fields)
 
 
 def _llm_bank_statement_plausibility(document, ocr_text_preview: str) -> Dict[str, Any]:
@@ -714,12 +852,22 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
         text = extraction.get("text") or ""
 
         if rules['enable_ocr_match']:
-            report["ocr_match_sheet1"] = _sheet1_identity_match(document, text)
-            if extraction.get("error"):
-                report["messages"].append(f"OCR: {extraction['error']}")
-            if report["ocr_match_sheet1"].get("passed") is False:
-                report["messages"].append(
-                    "OCR identity match failed for this document type — verify name/TIN manually."
+            identity_fields = document.document_type.get_identity_match_field_list()
+            identity = _loan_identity_match(document.loan_request, text, identity_fields)
+            report['identity_match'] = identity
+            report['ocr_match_sheet1'] = identity
+            if extraction.get('error'):
+                report['messages'].append(f'OCR: {extraction["error"]}')
+            if identity.get('passed') is False:
+                failed = [
+                    f'{k} ({v.get("detail", "no match")})'
+                    for k, v in (identity.get('checks') or {}).items()
+                    if v.get('matched') is False
+                ]
+                report['messages'].append(
+                    'Identity match failed — document does not match loan data'
+                    + (f': {"; ".join(failed)}' if failed else '.')
+                    + ' — verify manually.'
                 )
                 ocr_failed_needs_review = True
 

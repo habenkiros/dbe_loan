@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ visit_title }} – {{ visit_subject }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% include "collateral/_map_assets.html" %}
+{% endblock %}
+{% block content %}
+<div class="field-visit-wrap">
+  <div class="field-visit-header">
+    <h1>{{ visit_title }}</h1>
+    <p class="sub">{{ visit_subject }} · {{ loan_request.applicant_name }}</p>
+  </div>
+
+  {% include "collateral/_field_capture_helpers.html" %}
+
+  {% if locked %}
+  <div class="field-locked-banner">Collateral submitted — read-only.</div>
+  {% endif %}
+
+  <nav class="field-stepper">
+    {% for s, label in steps %}
+    {% if visit_kind == 'land' %}
+    <a href="{% url 'collateral:land_field_visit_step' loan_request.id s %}" class="{% if s == step %}active{% elif s < step %}done{% endif %}">{{ s }}. {{ label }}</a>
+    {% else %}
+    <a href="{% url 'collateral:other_field_visit_step' item.id s %}" class="{% if s == step %}active{% elif s < step %}done{% endif %}">{{ s }}. {{ label }}</a>
+    {% endif %}
+    {% endfor %}
+  </nav>
+
+  {% if step == 1 %}
+  <div class="field-card">
+    <h3>Step 1 — {% if visit_kind == 'land' %}Land &amp; site{% else %}Asset &amp; site{% endif %}</h3>
+    <form method="post" id="asset-step1-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save" id="asset-step1-action">
+      <input type="hidden" name="site_gps_lat" id="site_gps_lat" value="{% if visit_kind == 'land' %}{{ land.site_gps_lat|default:'' }}{% else %}{{ item.site_gps_lat|default:'' }}{% endif %}">
+      <input type="hidden" name="site_gps_lon" id="site_gps_lon" value="{% if visit_kind == 'land' %}{{ land.site_gps_lon|default:'' }}{% else %}{{ item.site_gps_lon|default:'' }}{% endif %}">
+      <input type="hidden" name="site_gps_accuracy_m" id="site_gps_accuracy_m" value="{% if visit_kind == 'land' %}{{ land.site_gps_accuracy_m|default:'' }}{% else %}{{ item.site_gps_accuracy_m|default:'' }}{% endif %}">
+
+      {% if visit_kind == 'land' %}
+      <p><label for="id_land_size_sqm">Land size (sqm)</label><br>
+        <input type="text" name="land_size_sqm" id="id_land_size_sqm" class="field-input-lg" inputmode="decimal"
+               value="{{ land_form.land_size_sqm.value|default:land.land_size_sqm|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_unit_price_per_sqm">Unit price per sqm</label><br>
+        <input type="text" name="unit_price_per_sqm" id="id_unit_price_per_sqm" class="field-input-lg" inputmode="decimal"
+               value="{{ land_form.unit_price_per_sqm.value|default:land.unit_price_per_sqm|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_notes">Notes</label><br>
+        <textarea name="notes" id="id_notes" class="field-input-lg" rows="3" {% if locked %}disabled{% endif %}>{{ land_form.notes.value|default:land.notes|default:'' }}</textarea></p>
+      {% else %}
+      <p><label for="id_name">Asset name</label><br>
+        <input type="text" name="name" id="id_name" class="field-input-lg" required
+               value="{{ item_form.name.value|default:item.name }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_estimated_value">Estimated value</label><br>
+        <input type="text" name="estimated_value" id="id_estimated_value" class="field-input-lg" inputmode="decimal" required
+               value="{{ item_form.estimated_value.value|default:item.estimated_value }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_notes">Notes</label><br>
+        <textarea name="notes" id="id_notes" class="field-input-lg" rows="2" {% if locked %}disabled{% endif %}>{{ item_form.notes.value|default:item.notes|default:'' }}</textarea></p>
+      {% endif %}
+
+      <h4>Site GPS</h4>
+      <p class="help">Registered collateral location — photos are verified against this map pin.</p>
+      <div id="site-gps-status" class="field-gps-status field-gps-none">GPS not captured yet.</div>
+      {% if visit_kind == 'land' %}
+      {% include "collateral/_collateral_location_map.html" with map_id="land-field-map" map_config_id="land-field-map-data" map_data=map_data map_title="Registered plot site" live_site=True %}
+      {% else %}
+      {% include "collateral/_collateral_location_map.html" with map_id="other-field-map" map_config_id="other-field-map-data" map_data=map_data map_title="Registered asset site" live_site=True %}
+      {% endif %}
+      {% if not locked %}
+      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark site location (GPS)</button>
+      {% include "collateral/_gps_attestation_site.html" %}
+      {% endif %}
+    </form>
+  </div>
+
+  {% elif step == 2 %}
+  <div class="field-card">
+    <h3>Step 2 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
+    {% include "collateral/_collateral_location_map.html" with map_id="asset-verify-map" map_config_id="asset-verify-map-data" map_data=map_data map_title="Site vs photo locations" %}
+    {% if not locked %}
+    <form method="post" enctype="multipart/form-data" id="field-photo-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="upload_photo">
+      <input type="hidden" name="gps_lat" id="gps_lat" value="">
+      <input type="hidden" name="gps_lon" id="gps_lon" value="">
+      <input type="hidden" name="gps_accuracy_m" id="gps_accuracy_m" value="">
+      <p><label for="field-photo-type">Photo type</label><br>
+        <select name="photo_type" id="field-photo-type" class="field-input-lg">
+          {% for val, lbl in photo_types %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}
+        </select></p>
+      <p>
+        <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-webcam-open">Use laptop webcam</button>
+      </p>
+      <p><label for="field-photo-input">Or choose image file</label><br>
+        <input type="file" name="image" id="field-photo-input" accept="image/*" class="field-input-lg" required></p>
+      <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS captured when you save a photo.</div>
+      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-capture-photo-gps">Refresh GPS before upload</button>
+      {% include "collateral/_gps_attestation_photo.html" %}
+      <button type="submit" class="field-btn field-btn-primary field-btn-block">Save photo</button>
+    </form>
+    {% endif %}
+    <div class="field-photo-grid">
+      {% for row in image_rows %}
+      {% with img=row.image %}
+      <div class="field-photo-cell">
+        <a href="{{ img.image.url }}" target="_blank" rel="noopener"><img src="{{ img.image.url }}" alt=""></a>
+        <small class="field-photo-meta">
+          {{ img.get_photo_type_display }}
+          {% if row.distance_m is not None %}
+          · <span class="{% if row.far_from_site %}field-gps-warn-text{% endif %}">{{ row.distance_m }} m from site</span>
+          {% elif img.gps_lat %}· GPS saved{% else %}· <span class="field-gps-warn-text">No photo GPS</span>{% endif %}
+        </small>
+        {% if not locked %}
+        <form method="post" action="{% if visit_kind == 'land' %}{% url 'collateral:land_image_delete' img.id %}{% else %}{% url 'collateral:other_image_delete' img.id %}{% endif %}" onsubmit="return confirm('Remove this photo?');">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% if visit_kind == 'land' %}{% url 'collateral:land_field_visit_step' loan_request.id 2 %}{% else %}{% url 'collateral:other_field_visit_step' item.id 2 %}{% endif %}">
+          <button type="submit" class="field-btn field-btn-secondary" style="font-size:0.85rem;margin-top:0.25rem;">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endwith %}
+      {% empty %}<p>No photos yet.</p>{% endfor %}
+    </div>
+  </div>
+
+  {% elif step == 3 %}
+  <div class="field-card">
+    <h3>Step 3 — Review</h3>
+    {% include "collateral/_collateral_location_map.html" with map_id="asset-review-map" map_config_id="asset-review-map-data" map_data=map_data map_title="Collateral location verification" %}
+    {% if visit_kind == 'land' and land.total_value %}
+    <p><strong>Land total: {{ land.total_value|floatformat:2 }}</strong></p>
+    {% elif visit_kind == 'other' %}
+    <p><strong>Estimated value: {{ item.estimated_value|floatformat:2 }}</strong></p>
+    {% endif %}
+    <ul class="field-checklist">
+      {% for check in readiness.checks %}
+      <li><span>{{ check.label }}<br><small>{{ check.detail }}</small></span>
+        <span class="{% if check.ok %}field-check-ok{% else %}field-check-fail{% endif %}">{% if check.ok %}✓{% else %}✗{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    <a href="{{ summary_url }}" class="field-btn field-btn-primary field-btn-block" style="margin-top:1rem;">Collateral summary</a>
+  </div>
+  {% endif %}
+
+  <div class="field-sticky-bar">
+    {% if step > 1 %}
+    {% if visit_kind == 'land' %}
+    <a href="{% url 'collateral:land_field_visit_step' loan_request.id step|add:'-1' %}" class="field-btn field-btn-secondary">← Back</a>
+    {% else %}
+    <a href="{% url 'collateral:other_field_visit_step' item.id step|add:'-1' %}" class="field-btn field-btn-secondary">← Back</a>
+    {% endif %}
+    {% else %}
+    <a href="{{ back_url }}" class="field-btn field-btn-secondary">← List</a>
+    {% endif %}
+    {% if step == 1 and not locked %}
+    <button type="submit" form="asset-step1-form" class="field-btn field-btn-secondary" onclick="document.getElementById('asset-step1-action').value='save'">Save</button>
+    <button type="submit" form="asset-step1-form" class="field-btn field-btn-primary" onclick="document.getElementById('asset-step1-action').value='save_next'">Next →</button>
+    {% elif step == 2 %}
+    {% if visit_kind == 'land' %}
+    <a href="{% url 'collateral:land_field_visit_step' loan_request.id 3 %}" class="field-btn field-btn-primary">Review →</a>
+    {% else %}
+    <a href="{% url 'collateral:other_field_visit_step' item.id 3 %}" class="field-btn field-btn-primary">Review →</a>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+<script>window.COLLATERAL_GPS_WEAK_M = {{ gps_weak_threshold_m|default:100 }};</script>
+{% if step == 1 %}
+<script>window.COLLATERAL_SITE_MAP_ID = '{% if visit_kind == "land" %}land-field-map{% else %}other-field-map{% endif %}';</script>
+{% endif %}
+<script src="{% static 'js/collateral_field.js' %}"></script>
+{% endblock %}

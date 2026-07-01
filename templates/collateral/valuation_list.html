@@ -23,6 +23,7 @@
                 <th>Quantity</th>
                 <th>Unit price</th>
                 <th>Total</th>
+                {% if not locked %}<th>Actions</th>{% endif %}
             </tr>
         </thead>
         <tbody>
@@ -34,10 +35,19 @@
                 <td>{{ r.quantity|floatformat:2 }}</td>
                 <td>{{ r.unit_price|floatformat:2 }}</td>
                 <td>{{ r.total|floatformat:2 }}</td>
+                {% if not locked %}
+                <td>
+                    <a href="{% url 'collateral:valuation_edit' r.id %}">Edit</a>
+                    <form method="post" action="{% url 'collateral:valuation_delete' r.id %}" style="display:inline;" onsubmit="return confirm('Remove this BOQ line?');">
+                        {% csrf_token %}
+                        <button type="submit" style="background:none;border:none;color:#c00;cursor:pointer;padding:0;">Delete</button>
+                    </form>
+                </td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
+                <td colspan="{% if locked %}6{% else %}7{% endif %}">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
             </tr>
             {% endfor %}
         </tbody>

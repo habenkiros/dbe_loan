@@ -16,9 +16,17 @@ Expects: map_data, map_id (unique), map_title (optional), compact (optional bool
     <span><strong>Registered address:</strong> {{ map_data.registered_address }}</span>
     {% endif %}
     {% if map_data.has_site %}
-    <span class="collateral-map-legend-item"><span class="pin-site">📍</span> Registered site GPS</span>
+    <span class="collateral-map-legend-item"><span class="pin-site">📍</span> Field site GPS</span>
     {% else %}
-    <span class="collateral-map-warn">No registered site GPS yet — mark location in step 1.</span>
+    <span class="collateral-map-warn">No field site GPS yet — mark location in step 1.</span>
+    {% endif %}
+    {% if map_data.declared_address_geocoded %}
+    <span class="collateral-map-legend-item"><span class="pin-declared">🏠</span> Declared address (geocoded)</span>
+    {% elif map_data.registered_address %}
+    <span class="collateral-map-warn">Declared address on file — geocoding pending or unavailable.</span>
+    {% endif %}
+    {% if map_data.declared_address_far %}
+    <span class="collateral-map-warn">Declared address is {{ map_data.declared_address_distance_m }} m from field site (max {{ map_data.declared_address_max_distance_m }} m)</span>
     {% endif %}
     {% if map_data.photo_count %}
     <span class="collateral-map-legend-item"><span class="pin-photo">📷</span> Field photos ({{ map_data.photo_count }})</span>
@@ -29,6 +37,6 @@ Expects: map_data, map_id (unique), map_title (optional), compact (optional bool
   </div>
   <div id="{{ map_id }}" class="collateral-map-canvas" data-config-id="{{ map_config_id }}"{% if live_site %} data-live-site="1"{% endif %}></div>
   {{ map_data|json_script:map_config_id }}
-  <p class="help collateral-map-help">Blue pin = registered collateral site. Camera pins = GPS when each photo was saved. Lines show distance from site to each capture.</p>
+  <p class="help collateral-map-help">Blue pin = field site GPS. House pin = declared address from Sheet 1 (geocoded). Camera pins = photo capture GPS.</p>
 </div>
 {% endif %}

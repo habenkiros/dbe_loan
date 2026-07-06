@@ -8,7 +8,19 @@
 <p>Queue-approved loans. On site use <strong>Field visit</strong> (tablet: GPS, camera, BOQ). <strong>Summary</strong> → submit when ready.</p>
 {% endif %}
 
+<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+  {% for pf in pipeline_filters %}
+  <a href="?stage={{ pf.stage }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}"
+     class="btn {% if stage_filter == pf.stage %}btn-green{% else %}btn-blue{% endif %}"
+     style="font-size:0.85rem;">{{ pf.label }} ({{ pf.count }})</a>
+  {% endfor %}
+  {% if stage_filter %}
+  <a href="?{% if query %}q={{ query|urlencode }}{% endif %}" class="btn btn-gray" style="font-size:0.85rem;">Clear filter</a>
+  {% endif %}
+</div>
+
 <form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
+    {% if stage_filter %}<input type="hidden" name="stage" value="{{ stage_filter }}">{% endif %}
     <label for="id_q">Search:</label>
     <input type="text" id="id_q" name="q" placeholder="ID, name, phone" value="{{ query }}" style="width: 200px;">
     <button type="submit">Search</button>
@@ -23,17 +35,20 @@
                 <th>Collateral type</th>
                 <th>Amount</th>
                 <th>Branch</th>
+                <th>Pipeline</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            {% for lr in loan_requests %}
+            {% for row in pipeline_rows %}
+            {% with lr=row.loan_request %}
             <tr>
                 <td>{{ lr.loan_request_id }}</td>
                 <td>{{ lr.applicant_name }}</td>
                 <td>{{ lr.collateral.name }}</td>
                 <td>{{ lr.amount_requested|floatformat:2 }}</td>
                 <td>{{ lr.branch.name }}</td>
+                <td>{{ row.pipeline_label }}</td>
                 <td>
                     {% with ct=lr.collateral.name|lower %}
                     {% if "building" in ct or "house" in ct or "construction" in ct %}
@@ -46,13 +61,14 @@
                     <a href="{% url 'collateral:other_collateral_list' lr.id %}">Other</a>
                     &nbsp;|&nbsp;
                     {% endif %}
-                    <a href="{% url 'collateral:summary' lr.id %}">Summary</a>{% if lr.collateral_submitted_at %} <span title="Submitted {{ lr.collateral_submitted_at|date:'M j, Y' }}">✓</span>{% endif %}
+                    <a href="{% url 'collateral:summary' lr.id %}">Summary</a>
                     {% endwith %}
                 </td>
             </tr>
+            {% endwith %}
             {% empty %}
             <tr>
-                <td colspan="6">{% if is_engineer %}No loans assigned to you for collateral estimation yet.{% else %}No queue-approved or Approved loan requests found.{% endif %}</td>
+                <td colspan="7">{% if is_engineer %}No loans assigned to you for collateral estimation yet.{% else %}No queue-approved or Approved loan requests found.{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

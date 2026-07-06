@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import tier1_views
+from . import tier2_views
 
 app_name = 'collateral'
 urlpatterns = [
@@ -45,4 +47,11 @@ urlpatterns = [
     path('other-collateral/<int:item_id>/delete/', views.other_collateral_delete, name='other_collateral_delete'),
     path('loan/<int:loan_request_id>/summary/', views.summary, name='summary'),
     path('loan/<int:loan_request_id>/collateral-submit/', views.collateral_submit, name='collateral_submit'),
+    path('loan/<int:loan_request_id>/evidence-pack/', tier1_views.collateral_evidence_pack, name='evidence_pack'),
+    path('loan/<int:loan_request_id>/unlock-request/', tier1_views.collateral_unlock_request, name='unlock_request'),
+    path('unlock-queue/', tier1_views.collateral_unlock_queue, name='unlock_queue'),
+    path('unlock/<int:request_id>/review/', tier1_views.collateral_unlock_review, name='unlock_review'),
+    path('settings/policy/', tier1_views.collateral_policy_config, name='collateral_policy_config'),
+    path('engineering-qa/', tier2_views.engineering_qa_queue, name='engineering_qa_queue'),
+    path('loan/<int:loan_request_id>/engineering-qa/', tier2_views.engineering_qa_review, name='engineering_qa_review'),
 ]

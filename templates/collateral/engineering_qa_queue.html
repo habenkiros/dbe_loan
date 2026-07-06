@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Engineering QA queue{% endblock %}
+{% block content %}
+<h2>Collateral — engineering QA queue</h2>
+<p class="help">Submitted collateral awaiting engineering review (when engineering team mode is enabled).</p>
+{% if pending_loans %}
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Loan</th>
+        <th>Applicant</th>
+        <th>Branch</th>
+        <th>Submitted</th>
+        <th>By</th>
+        <th>Engineer</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lr in pending_loans %}
+      <tr>
+        <td>{{ lr.loan_request_id }}</td>
+        <td>{{ lr.applicant_name }}</td>
+        <td>{{ lr.branch.name }}</td>
+        <td>{{ lr.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+        <td>{% if lr.collateral_submitted_by %}{{ lr.collateral_submitted_by.username }}{% else %}—{% endif %}</td>
+        <td>{% if lr.assigned_engineer %}{{ lr.assigned_engineer.username }}{% else %}—{% endif %}</td>
+        <td><a href="{% url 'collateral:engineering_qa_review' lr.id %}" class="btn btn-blue">Review</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No collateral submissions pending engineering review.</p>
+{% endif %}
+<p><a href="{% url 'collateral:dashboard' %}">← Collateral dashboard</a></p>
+{% endblock %}

@@ -7,9 +7,15 @@ import math
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from collateral.policy import get_collateral_policy
 
-# Flag photos farther than this from registered site (metres) — policy for field verification.
-PHOTO_MAX_DISTANCE_FROM_SITE_M = 200
+
+def _photo_max_distance_m() -> int:
+    return get_collateral_policy().photo_max_distance_from_site_m
+
+
+def _declared_address_max_distance_m() -> int:
+    return get_collateral_policy().declared_address_max_distance_from_site_m
 
 
 def _to_float(value) -> Optional[float]:
@@ -34,6 +40,33 @@ def haversine_m(lat1, lon1, lat2, lon2) -> Optional[float]:
     return 2 * r * math.asin(math.sqrt(x))
 
 
+def _declared_address_marker(loan_request) -> Optional[Dict[str, Any]]:
+    from collateral.geocoding import declared_address_for_loan, resolve_declared_address_coords
+
+    address = declared_address_for_loan(loan_request)
+    if not address:
+        return None
+    coords = resolve_declared_address_coords(loan_request)
+    if not coords:
+        return {
+            'kind': 'declared_address',
+            'lat': None,
+            'lon': None,
+            'label': f'Declared address (not geocoded): {address[:80]}',
+            'address_text': address,
+            'geocoded': False,
+        }
+    lat, lon = coords
+    return {
+        'kind': 'declared_address',
+        'lat': _to_float(lat),
+        'lon': _to_float(lon),
+        'label': 'Declared address (Sheet 1)',
+        'address_text': address,
+        'geocoded': True,
+    }
+
+
 def build_collateral_map_data(
     *,
     site_lat=None,
@@ -42,6 +75,7 @@ def build_collateral_map_data(
     site_label: str = 'Registered collateral site',
     registered_woreda: str = '',
     registered_address: str = '',
+    declared_address_marker: Optional[Dict[str, Any]] = None,
     photos: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
@@ -62,14 +96,38 @@ def build_collateral_map_data(
             'accuracy_m': _to_float(site_accuracy_m),
         })
 
+    declared_far = False
+    declared_distance_m = None
+    max_declared = _declared_address_max_distance_m()
+    if declared_address_marker:
+        dlat = declared_address_marker.get('lat')
+        dlon = declared_address_marker.get('lon')
+        if dlat is not None and dlon is not None:
+            dist = haversine_m(site_f_lat, site_f_lon, dlat, dlon) if site_f_lat is not None else None
+            declared_distance_m = round(dist) if dist is not None else None
+            declared_far = dist is not None and dist > max_declared
+            markers.append({
+                'kind': 'declared_address',
+                'lat': dlat,
+                'lon': dlon,
+                'label': declared_address_marker.get('label') or 'Declared address',
+                'address_text': declared_address_marker.get('address_text') or '',
+                'geocoded': True,
+                'distance_from_site_m': declared_distance_m,
+                'far_from_site': declared_far,
+            })
+        elif declared_address_marker.get('address_text'):
+            pass  # ungeocoded — shown in meta only
+
     photo_warnings = 0
+    max_dist = _photo_max_distance_m()
     for p in photos:
         plat = _to_float(p.get('lat'))
         plon = _to_float(p.get('lon'))
         if plat is None or plon is None:
             continue
         dist = haversine_m(site_f_lat, site_f_lon, plat, plon) if site_f_lat is not None else None
-        far = dist is not None and dist > PHOTO_MAX_DISTANCE_FROM_SITE_M
+        far = dist is not None and dist > max_dist
         if far:
             photo_warnings += 1
         markers.append({
@@ -84,12 +142,20 @@ def build_collateral_map_data(
             'far_from_site': far,
         })
 
+    addr_text = registered_address or (declared_address_marker or {}).get('address_text') or ''
+
     return {
         'markers': markers,
         'registered_woreda': registered_woreda or '',
-        'registered_address': registered_address or '',
-        'max_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+        'registered_address': addr_text,
+        'max_distance_m': max_dist,
+        'declared_address_max_distance_m': max_declared,
         'photo_warnings': photo_warnings,
+        'declared_address_far': declared_far,
+        'declared_address_distance_m': declared_distance_m,
+        'declared_address_geocoded': bool(
+            declared_address_marker and declared_address_marker.get('geocoded')
+        ),
         'has_site': site_f_lat is not None and site_f_lon is not None,
         'photo_count': sum(1 for m in markers if m['kind'] == 'photo'),
     }
@@ -99,9 +165,14 @@ def map_data_json(data: Dict[str, Any]) -> str:
     return json.dumps(data)
 
 
+def _loan_declared_marker(loan_request):
+    return _declared_address_marker(loan_request)
+
+
 def building_map_data(building) -> Dict[str, Any]:
     from collateral.models import BuildingImage
 
+    loan = building.loan_request
     woreda = ''
     if building.city_id:
         city = building.city
@@ -109,6 +180,13 @@ def building_map_data(building) -> Dict[str, Any]:
         zone = getattr(city, 'zone', None)
         parts = [p.name for p in (region, zone, city) if p is not None]
         woreda = ' → '.join(parts)
+
+    registered_address = ''
+    try:
+        bi = loan.basic_info
+        registered_address = (bi.business_address or bi.home_address or '').strip()
+    except Exception:
+        pass
 
     photos = []
     for img in BuildingImage.objects.filter(building=building).order_by('created_at'):
@@ -127,6 +205,8 @@ def building_map_data(building) -> Dict[str, Any]:
         site_accuracy_m=building.site_gps_accuracy_m,
         site_label=f'Registered site — {building.name}',
         registered_woreda=woreda,
+        registered_address=registered_address,
+        declared_address_marker=_loan_declared_marker(loan),
         photos=photos,
     )
 
@@ -159,12 +239,21 @@ def land_map_data(land) -> Dict[str, Any]:
         site_accuracy_m=land.site_gps_accuracy_m,
         site_label='Registered plot site',
         registered_address=registered_address,
+        declared_address_marker=_loan_declared_marker(loan),
         photos=photos,
     )
 
 
 def other_item_map_data(item) -> Dict[str, Any]:
     from collateral.models import OtherCollateralItemImage
+
+    loan = item.loan_request
+    registered_address = ''
+    try:
+        bi = loan.basic_info
+        registered_address = (bi.business_address or bi.home_address or '').strip()
+    except Exception:
+        pass
 
     photos = []
     for img in OtherCollateralItemImage.objects.filter(item=item).order_by('created_at'):
@@ -182,5 +271,7 @@ def other_item_map_data(item) -> Dict[str, Any]:
         site_lon=item.site_gps_lon,
         site_accuracy_m=item.site_gps_accuracy_m,
         site_label=f'Registered asset — {item.name}',
+        registered_address=registered_address,
+        declared_address_marker=_loan_declared_marker(loan),
         photos=photos,
     )

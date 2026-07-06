@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Collateral policy{% endblock %}
+{% block content %}
+<h2>Collateral field-work policy</h2>
+<p class="help">Bank-wide thresholds for photos, GPS, coverage ratio, and submit rules. One configuration applies to all branches.</p>
+<form method="post">
+  {% csrf_token %}
+  <table>
+    {% for field in form %}
+    <tr>
+      <th>{{ field.label_tag }}</th>
+      <td>{{ field }}{% if field.help_text %}<br><small>{{ field.help_text }}</small>{% endif %}
+        {% for e in field.errors %}<div class="error">{{ e }}</div>{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p style="margin-top:1rem;"><button type="submit" class="btn btn-green">Save policy</button>
+  <a href="{% url 'collateral:dashboard' %}" class="btn btn-gray">Cancel</a></p>
+</form>
+<p class="help">Coverage ratio 1.0 = 100% of loan amount. Use 1.2 for 120% minimum collateral coverage.</p>
+{% endblock %}

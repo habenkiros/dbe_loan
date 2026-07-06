@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Review unlock — {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Review collateral unlock</h2>
+<p>
+  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+  · Branch {{ loan_request.branch.name }}
+</p>
+{% if loan_request.collateral_submitted_at %}
+<p>Currently submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
+  {% if loan_request.collateral_submitted_by %}by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}
+</p>
+{% endif %}
+
+<div style="margin:1rem 0;padding:1rem;border:1px solid #dee2e6;border-radius:8px;background:#f8f9fa;">
+  <h3 style="margin-top:0;">Request</h3>
+  <p><strong>Requested:</strong> {{ unlock_req.requested_at|date:"SHORT_DATETIME_FORMAT" }}
+    by {{ unlock_req.requested_by.get_full_name|default:unlock_req.requested_by.username }}</p>
+  <p><strong>Reason:</strong></p>
+  <p style="white-space:pre-wrap;">{{ unlock_req.reason }}</p>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <p>
+    <label for="id_review_note">Supervisor note (optional)</label><br>
+    {{ form.review_note }}
+  </p>
+  <p style="margin-top:1rem;">
+    <button type="submit" name="action" value="approve" class="btn btn-green">Approve unlock</button>
+    <button type="submit" name="action" value="reject" class="btn btn-red">Reject</button>
+    <a href="{% url 'collateral:unlock_queue' %}" class="btn btn-gray">Cancel</a>
+  </p>
+</form>
+<p class="help">Approving clears the collateral submit lock so field data and BOQ can be edited again. Audit log records the prior submit snapshot.</p>
+<p><a href="{% url 'collateral:summary' loan_request.id %}">View collateral summary</a></p>
+{% endblock %}

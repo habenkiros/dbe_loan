@@ -100,8 +100,19 @@
       navigator.geolocation.getCurrentPosition(
         function (pos) {
           var c = pos.coords;
-          setHidden(prefix, c.latitude, c.longitude, c.accuracy);
-          updateGpsStatus(statusEl, c.latitude, c.longitude, c.accuracy, 'Captured');
+        setHidden(prefix, c.latitude, c.longitude, c.accuracy);
+        updateGpsStatus(statusEl, c.latitude, c.longitude, c.accuracy, 'Captured');
+        if (prefix === 'site' && window.COLLATERAL_SITE_MAP_ID) {
+          document.dispatchEvent(new CustomEvent('collateral:site-gps-updated', {
+            detail: {
+              mapId: window.COLLATERAL_SITE_MAP_ID,
+              lat: c.latitude,
+              lon: c.longitude,
+              accuracy: c.accuracy,
+              label: 'Registered site (captured)',
+            },
+          }));
+        }
           if (btn) {
             btn.disabled = false;
             btn.textContent = 'Refresh location';

@@ -284,11 +284,30 @@ class OtherCollateralItem(models.Model):
     Simple collateral item for non-building types (vehicle, machinery, equipment, etc.).
     One or more items per loan; each has name/description and estimated value.
     """
+    CONDITION_EXCELLENT = 'excellent'
+    CONDITION_GOOD = 'good'
+    CONDITION_FAIR = 'fair'
+    CONDITION_POOR = 'poor'
+    CONDITION_CHOICES = [
+        (CONDITION_EXCELLENT, 'Excellent'),
+        (CONDITION_GOOD, 'Good'),
+        (CONDITION_FAIR, 'Fair'),
+        (CONDITION_POOR, 'Poor'),
+    ]
+
     loan_request = models.ForeignKey(
         'loans.LoanRequest', on_delete=models.CASCADE, related_name='other_collateral_items',
     )
     name = models.CharField(max_length=255, help_text="e.g. Toyota Pickup, Tractor, Machinery")
     estimated_value = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal('0'))
+    plate_number = models.CharField(max_length=50, blank=True, help_text='Plate / registration number.')
+    chassis_vin = models.CharField(max_length=80, blank=True, help_text='Chassis or VIN.')
+    year_made = models.PositiveSmallIntegerField(null=True, blank=True)
+    make_model = models.CharField(max_length=255, blank=True)
+    odometer_or_hours = models.CharField(
+        max_length=50, blank=True, help_text='Odometer (km) or operating hours.',
+    )
+    condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
     notes = models.TextField(blank=True)
     site_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
     site_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
@@ -351,6 +370,11 @@ class CollateralFieldAuditLog(models.Model):
     EVT_VALUATION_DELETED = 'valuation_deleted'
     EVT_COLLATERAL_SUBMITTED = 'collateral_submitted'
     EVT_WEAK_GPS_ATTESTED = 'weak_gps_attested'
+    EVT_UNLOCK_REQUESTED = 'unlock_requested'
+    EVT_UNLOCK_APPROVED = 'unlock_approved'
+    EVT_UNLOCK_REJECTED = 'unlock_rejected'
+    EVT_ENGINEERING_APPROVED = 'engineering_approved'
+    EVT_ENGINEERING_RETURNED = 'engineering_returned'
     EVENT_CHOICES = [
         (EVT_SITE_GPS, 'Site GPS marked'),
         (EVT_PHOTO_UPLOADED, 'Photo uploaded'),
@@ -360,6 +384,11 @@ class CollateralFieldAuditLog(models.Model):
         (EVT_VALUATION_DELETED, 'Valuation row deleted'),
         (EVT_COLLATERAL_SUBMITTED, 'Collateral submitted'),
         (EVT_WEAK_GPS_ATTESTED, 'Weak GPS attested'),
+        (EVT_UNLOCK_REQUESTED, 'Unlock requested'),
+        (EVT_UNLOCK_APPROVED, 'Unlock approved'),
+        (EVT_UNLOCK_REJECTED, 'Unlock rejected'),
+        (EVT_ENGINEERING_APPROVED, 'Engineering approved'),
+        (EVT_ENGINEERING_RETURNED, 'Engineering returned'),
     ]
 
     loan_request = models.ForeignKey(
@@ -382,3 +411,97 @@ class CollateralFieldAuditLog(models.Model):
 
     def __str__(self):
         return f'{self.event_type} — {self.loan_request_id} @ {self.performed_at}'
+
+
+class CollateralPolicyConfig(models.Model):
+    """
+    Bank-wide collateral field-work policy. Single row (superadmin settings).
+    """
+    min_images_per_building = models.PositiveSmallIntegerField(default=5)
+    min_images_per_land = models.PositiveSmallIntegerField(default=3)
+    min_images_per_other_item = models.PositiveSmallIntegerField(default=3)
+    gps_accuracy_weak_threshold_m = models.PositiveIntegerField(
+        default=100,
+        help_text='Above this GPS accuracy (metres), officer attestation is required.',
+    )
+    photo_max_distance_from_site_m = models.PositiveIntegerField(
+        default=200,
+        help_text='Flag photos farther than this from registered site GPS.',
+    )
+    block_submit_on_far_photos = models.BooleanField(
+        default=False,
+        help_text='If enabled, photos beyond max distance block collateral submit.',
+    )
+    block_submit_on_missing_photo_gps = models.BooleanField(
+        default=False,
+        help_text='If enabled, photos without GPS block collateral submit.',
+    )
+    min_coverage_ratio = models.DecimalField(
+        max_digits=6, decimal_places=4, default=1.0,
+        help_text='Minimum collateral value ÷ loan amount (1.0 = 100%). Blocks submit if below.',
+    )
+    flag_coverage_below_ratio = models.DecimalField(
+        max_digits=6, decimal_places=4, default=1.0,
+        help_text='Advisory warning when coverage is below this ratio.',
+    )
+    declared_address_max_distance_from_site_m = models.PositiveIntegerField(
+        default=3000,
+        help_text='Flag when geocoded declared address is farther than this from field site GPS.',
+    )
+    block_submit_on_declared_address_mismatch = models.BooleanField(
+        default=False,
+        help_text='If enabled, large declared-address vs site GPS gap blocks collateral submit.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Collateral policy config'
+        verbose_name_plural = 'Collateral policy config'
+
+    def __str__(self):
+        return 'Collateral field-work policy'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from collateral.policy import clear_policy_cache
+        clear_policy_cache()
+
+
+class CollateralUnlockRequest(models.Model):
+    """Supervisor-approved unlock after collateral submit (corrections workflow)."""
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending review'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    loan_request = models.ForeignKey(
+        'loans.LoanRequest', on_delete=models.CASCADE, related_name='collateral_unlock_requests',
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='collateral_unlock_requests',
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(help_text='Why collateral must be corrected.')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='collateral_unlock_reviews',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    previous_submitted_at = models.DateTimeField(null=True, blank=True)
+    previous_submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+',
+    )
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f'Unlock {self.loan_request_id} ({self.status})'

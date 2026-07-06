@@ -7,11 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.utils import timezone
 
-from collateral.constants import (
-    MIN_IMAGES_PER_BUILDING,
-    MIN_IMAGES_PER_LAND,
-    MIN_IMAGES_PER_OTHER_ITEM,
-)
+from collateral.policy import get_collateral_policy
 
 
 def _collateral_type_lower(loan_request) -> str:
@@ -122,6 +118,8 @@ def _save_field_image(
 def get_land_readiness(land) -> Dict[str, Any]:
     from collateral.models import LandValuationImage
 
+    policy = get_collateral_policy()
+    min_img = policy.min_images_per_land
     loan_request = land.loan_request
     image_count = LandValuationImage.objects.filter(land_valuation=land).count()
     total = land.total_value
@@ -146,16 +144,16 @@ def get_land_readiness(land) -> Dict[str, Any]:
         },
         {
             'key': 'photos',
-            'label': f'At least {MIN_IMAGES_PER_LAND} photos',
-            'ok': image_count >= MIN_IMAGES_PER_LAND,
-            'detail': f'{image_count} / {MIN_IMAGES_PER_LAND}',
+            'label': f'At least {min_img} photos',
+            'ok': image_count >= min_img,
+            'detail': f'{image_count} / {min_img}',
         },
     ]
     required_ok = all(c['ok'] for c in checks)
     return {
         'locked': collateral_is_locked(loan_request),
         'image_count': image_count,
-        'min_images': MIN_IMAGES_PER_LAND,
+        'min_images': min_img,
         'total_value': total,
         'checks': checks,
         'ready': required_ok and not collateral_is_locked(loan_request),
@@ -165,6 +163,8 @@ def get_land_readiness(land) -> Dict[str, Any]:
 def get_other_item_readiness(item) -> Dict[str, Any]:
     from collateral.models import OtherCollateralItemImage
 
+    policy = get_collateral_policy()
+    min_img = policy.min_images_per_other_item
     loan_request = item.loan_request
     image_count = OtherCollateralItemImage.objects.filter(item=item).count()
     checks = [
@@ -188,16 +188,16 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
         },
         {
             'key': 'photos',
-            'label': f'At least {MIN_IMAGES_PER_OTHER_ITEM} photos',
-            'ok': image_count >= MIN_IMAGES_PER_OTHER_ITEM,
-            'detail': f'{image_count} / {MIN_IMAGES_PER_OTHER_ITEM}',
+            'label': f'At least {min_img} photos',
+            'ok': image_count >= min_img,
+            'detail': f'{image_count} / {min_img}',
         },
     ]
     required_ok = all(c['ok'] for c in checks)
     return {
         'locked': collateral_is_locked(loan_request),
         'image_count': image_count,
-        'min_images': MIN_IMAGES_PER_OTHER_ITEM,
+        'min_images': min_img,
         'total_value': item.estimated_value,
         'checks': checks,
         'ready': required_ok and not collateral_is_locked(loan_request),
@@ -245,6 +245,8 @@ def get_building_readiness(building) -> Dict[str, Any]:
     """Checklist for one building before collateral submit."""
     from collateral.models import BuildingImage, BuildingValuation
 
+    policy = get_collateral_policy()
+    min_img = policy.min_images_per_building
     loan_request = building.loan_request
     locked = collateral_is_locked(loan_request)
     image_count = BuildingImage.objects.filter(building=building).count()
@@ -279,16 +281,16 @@ def get_building_readiness(building) -> Dict[str, Any]:
         },
         {
             'key': 'photos',
-            'label': f'At least {MIN_IMAGES_PER_BUILDING} photos',
-            'ok': image_count >= MIN_IMAGES_PER_BUILDING,
-            'detail': f'{image_count} / {MIN_IMAGES_PER_BUILDING}',
+            'label': f'At least {min_img} photos',
+            'ok': image_count >= min_img,
+            'detail': f'{image_count} / {min_img}',
         },
         {
             'key': 'photo_gps',
             'label': 'Photos include GPS',
-            'ok': images_with_gps >= min(image_count, MIN_IMAGES_PER_BUILDING) if image_count else False,
+            'ok': images_with_gps >= min(image_count, min_img) if image_count else False,
             'detail': f'{images_with_gps} photo(s) with GPS',
-            'optional': image_count < MIN_IMAGES_PER_BUILDING,
+            'optional': image_count < min_img,
         },
     ]
 
@@ -296,7 +298,7 @@ def get_building_readiness(building) -> Dict[str, Any]:
     return {
         'locked': locked,
         'image_count': image_count,
-        'min_images': MIN_IMAGES_PER_BUILDING,
+        'min_images': min_img,
         'valuation_count': valuation_count,
         'building_total': building_total,
         'checks': checks,
@@ -378,6 +380,10 @@ def collateral_submit_blockers(loan_request) -> List[str]:
             blockers.append(f'"{item.name}": {r["image_count"]}/{r["min_images"]} photos — complete field visit')
     if readiness['applies'] and not readiness.get('buildings') and not readiness.get('land') and not readiness.get('other_items'):
         blockers.append('Add collateral data before submitting.')
+
+    from collateral.coverage import compute_coverage_adequacy
+    coverage = compute_coverage_adequacy(loan_request)
+    blockers.extend(coverage.get('blockers', []))
     return blockers
 
 

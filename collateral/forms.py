@@ -132,12 +132,21 @@ class BuildingImageForm(forms.ModelForm):
 
 
 class OtherCollateralItemForm(forms.ModelForm):
-    """For vehicle, machinery, equipment, etc. – name and estimated value."""
+    """For vehicle, machinery, equipment, etc."""
     class Meta:
         model = OtherCollateralItem
-        fields = ['name', 'estimated_value', 'notes']
+        fields = [
+            'name', 'make_model', 'year_made', 'plate_number', 'chassis_vin',
+            'odometer_or_hours', 'condition_grade', 'estimated_value', 'notes',
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Toyota Pickup, Tractor'}),
+            'make_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Make / model'}),
+            'year_made': forms.NumberInput(attrs={'class': 'form-control', 'min': 1950, 'max': 2100}),
+            'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'chassis_vin': forms.TextInput(attrs={'class': 'form-control'}),
+            'odometer_or_hours': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'km or hours'}),
+            'condition_grade': forms.Select(attrs={'class': 'form-control'}),
             'estimated_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
@@ -197,3 +206,49 @@ class SubWorkUnitPriceForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class CollateralPolicyConfigForm(forms.ModelForm):
+    class Meta:
+        from collateral.models import CollateralPolicyConfig
+        model = CollateralPolicyConfig
+        fields = [
+            'min_images_per_building', 'min_images_per_land', 'min_images_per_other_item',
+            'gps_accuracy_weak_threshold_m', 'photo_max_distance_from_site_m',
+            'block_submit_on_far_photos', 'block_submit_on_missing_photo_gps',
+            'min_coverage_ratio', 'flag_coverage_below_ratio',
+            'declared_address_max_distance_from_site_m', 'block_submit_on_declared_address_mismatch',
+        ]
+        widgets = {
+            'min_coverage_ratio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+            'flag_coverage_below_ratio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
+        }
+
+
+class CollateralUnlockRequestForm(forms.Form):
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        min_length=20,
+        help_text='Explain what must be corrected (min 20 characters).',
+    )
+
+
+class CollateralUnlockReviewForm(forms.Form):
+    review_note = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        label='Supervisor note',
+    )
+
+
+class CollateralEngineeringReviewForm(forms.Form):
+    review_note = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        label='Engineering note',
+        help_text='Required when returning collateral for correction.',
+    )
+
+    def clean(self):
+        data = super().clean()
+        return data

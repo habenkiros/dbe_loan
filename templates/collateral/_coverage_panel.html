@@ -1,0 +1,35 @@
+{% comment %}Coverage vs loan amount and policy flags. Expects: coverage, collateral_policy (optional) {% endcomment %}
+{% if coverage %}
+<div class="collateral-coverage-panel" style="margin:1rem 0;padding:1rem;border-radius:8px;{% if coverage.blockers %}background:#fdecea;border:1px solid #e57373;{% elif coverage.warnings %}background:#fff8e1;border:1px solid #f9a825;{% else %}background:#e8f5e9;border:1px solid #2e7d32;{% endif %}">
+  <h3 style="margin-top:0;">Collateral coverage &amp; adequacy</h3>
+  <p>
+    <strong>Loan requested:</strong> {{ coverage.amount_requested|floatformat:2 }}
+    &nbsp;|&nbsp;
+    <strong>Collateral total:</strong> {{ coverage.grand_total|floatformat:2 }}
+    {% if coverage.coverage_pct %}
+    &nbsp;|&nbsp;
+    <strong>Coverage:</strong> {{ coverage.coverage_pct }}%
+    {% endif %}
+  </p>
+  {% if coverage.immovable or coverage.moveable %}
+  <p class="help">Immovable {{ coverage.immovable|floatformat:2 }} · Movable {{ coverage.moveable|floatformat:2 }}</p>
+  {% endif %}
+  <ul style="margin:0.5rem 0 0 1.1rem;">
+    {% for flag in coverage.flags %}
+    <li style="{% if flag.level == 'block' %}color:#c62828;font-weight:600;{% elif flag.level == 'warn' %}color:#856404;{% else %}color:#155724;{% endif %}">
+      {{ flag.message }}
+    </li>
+    {% empty %}
+    <li>No policy flags.</li>
+    {% endfor %}
+  </ul>
+  {% if collateral_policy %}
+  <p class="help" style="margin-top:0.75rem;">
+    Policy: min coverage {{ collateral_policy.min_coverage_ratio|floatformat:2 }}× loan;
+    photo distance flag {{ collateral_policy.photo_max_distance_from_site_m }} m
+    {% if collateral_policy.block_submit_on_far_photos %}(blocks submit){% else %}(warning only){% endif %};
+    declared address gap {{ collateral_policy.declared_address_max_distance_from_site_m }} m.
+  </p>
+  {% endif %}
+</div>
+{% endif %}

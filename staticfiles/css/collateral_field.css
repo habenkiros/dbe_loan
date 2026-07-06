@@ -211,6 +211,65 @@
   margin-top: 0.5rem;
   flex-wrap: wrap;
 }
+.collateral-map-panel {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.collateral-map-panel-compact {
+  margin: 0.75rem 0;
+}
+.collateral-map-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.collateral-map-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+.collateral-map-warn {
+  color: #c62828;
+  font-weight: 600;
+}
+.collateral-map-canvas {
+  width: 100%;
+  height: 280px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  z-index: 1;
+}
+.collateral-map-panel-compact .collateral-map-canvas {
+  height: 220px;
+}
+.collateral-map-help {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+}
+.field-photo-meta {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+}
+.field-gps-warn-text {
+  color: #c62828;
+  font-weight: 600;
+}
+.collateral-map-pin span {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+.collateral-map-pin-photo.far span {
+  filter: hue-rotate(-40deg) drop-shadow(0 0 2px #c62828);
+}
+.collateral-map-popup img {
+  display: block;
+}
 @media (min-width: 768px) {
   .field-visit-header { margin-left: 0; margin-right: 0; border-radius: 8px; }
 }

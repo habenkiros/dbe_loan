@@ -19,6 +19,16 @@
   </span>
   {% endif %}
 
+  {% if coverage %}
+  <br><span class="help">
+    Coverage vs loan:
+    {% if coverage.coverage_pct %}<strong>{{ coverage.coverage_pct }}%</strong>{% else %}—{% endif %}
+    {% if coverage.blockers %}<span style="color:#c62828;"> — below policy minimum</span>
+    {% elif coverage.warnings %}<span style="color:#856404;"> — advisory flags</span>
+    {% elif coverage.coverage_pct %}<span style="color:#155724;"> — meets policy</span>{% endif %}
+  </span>
+  {% endif %}
+
   {% if collateral_readiness.buildings %}
   <ul style="margin:0.5rem 0 0 1.1rem; font-size:0.95rem;">
     {% for row in collateral_readiness.buildings %}
@@ -44,6 +54,8 @@
 
   <p style="margin:0.75rem 0 0;">
     <a href="{% url 'collateral:summary' loan_request.id %}">Collateral summary</a>
+    &nbsp;|&nbsp;
+    <a href="{% url 'collateral:evidence_pack' loan_request.id %}">Evidence pack</a>
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:dashboard' %}">Collateral dashboard</a>
   </p>

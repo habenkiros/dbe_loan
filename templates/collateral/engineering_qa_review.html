@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Engineering QA — {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<h2>Engineering collateral review</h2>
+<p>
+  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+  · {{ loan_request.collateral.name }} · Branch {{ loan_request.branch.name }}
+</p>
+<p>Submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
+  {% if loan_request.collateral_submitted_by %}by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}
+  · Status: {{ pipeline_label }}</p>
+
+{% include "collateral/_coverage_panel.html" %}
+
+<form method="post" style="margin-top:1rem;">
+  {% csrf_token %}
+  <p>
+    <label for="id_review_note">Engineering note</label><br>
+    {{ form.review_note }}
+    <br><small class="help">Include reason when returning for correction.</small>
+  </p>
+  <p>
+    <button type="submit" name="action" value="approve" class="btn btn-green">Approve collateral</button>
+    <button type="submit" name="action" value="return" class="btn btn-orange">Return for correction</button>
+    <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">View summary</a>
+    <a href="{% url 'collateral:engineering_qa_queue' %}" class="btn btn-gray">Back to queue</a>
+  </p>
+</form>
+<p class="help">Approve keeps the submit lock. Return clears submit so the officer can edit field data and re-submit.</p>
+{% endblock %}

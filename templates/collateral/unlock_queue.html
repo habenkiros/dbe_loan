@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Collateral unlock queue{% endblock %}
+{% block content %}
+<h2>Pending collateral unlock requests</h2>
+<p class="help">Officers request unlock when submitted collateral must be corrected. Approve to clear the submit lock and allow re-editing.</p>
+{% if requests %}
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Loan</th>
+        <th>Applicant</th>
+        <th>Branch</th>
+        <th>Requested</th>
+        <th>By</th>
+        <th>Reason</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests %}
+      <tr>
+        <td><a href="{% url 'collateral:summary' req.loan_request_id %}">{{ req.loan_request.loan_request_id }}</a></td>
+        <td>{{ req.loan_request.applicant_name }}</td>
+        <td>{{ req.loan_request.branch.name }}</td>
+        <td>{{ req.requested_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+        <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
+        <td>{{ req.reason|truncatewords:25 }}</td>
+        <td><a href="{% url 'collateral:unlock_review' req.id %}" class="btn btn-blue">Review</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No pending unlock requests.</p>
+{% endif %}
+<p><a href="{% url 'collateral:dashboard' %}">← Collateral dashboard</a></p>
+{% endblock %}

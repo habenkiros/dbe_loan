@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from collateral.field_utils import collateral_is_locked, collateral_submit_blockers, get_building_readiness
-from collateral.governance import gps_is_weak, log_collateral_event
+from collateral.field_utils import collateral_submit_blockers, get_building_readiness
+from collateral.governance import collateral_is_locked, gps_is_weak, log_collateral_event
 from collateral.models import Building, BuildingImage, CollateralFieldAuditLog
 from loans.models import Branch, CollateralType, District, LoanCategory, LoanRequest, Region, Zone, City
 
@@ -20,16 +20,16 @@ class CollateralGovernanceTests(TestCase):
         region = Region.objects.create(name='Addis')
         zone = Zone.objects.create(name='Kirkos', region=region)
         city = City.objects.create(name='Woreda 1', zone=zone)
-        district = District.objects.create(name='Central', region=region)
+        district = District.objects.create(name='Central')
         branch = Branch.objects.create(name='Main', district=district)
         collateral = CollateralType.objects.create(name='Building')
         category = LoanCategory.objects.create(name='MSME')
-        self.user = User.objects.create_user(username='officer1', password='pass')
+        self.user = User.objects.create_user(username='officer1', password='pass', phone_number='0911000000')
         self.loan = LoanRequest.objects.create(
             loan_request_id='LR-GOV-001',
             applicant_name='Test Applicant',
             phone_number='0911000000',
-            amount_requested=Decimal('500000'),
+            amount_requested=Decimal('8000'),
             reason='Working capital',
             category=category,
             branch=branch,

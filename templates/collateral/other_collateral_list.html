@@ -32,7 +32,7 @@
     <table>
         <thead>
             <tr>
-                <th>Name</th>
+                <th>Name / details</th>
                 <th>Value</th>
                 <th>Field readiness</th>
                 <th>Actions</th>
@@ -41,7 +41,12 @@
         <tbody>
             {% for row in item_rows %}
             <tr>
-                <td>{{ row.item.name }}{% if row.item.notes %} <span title="{{ row.item.notes }}">(...)</span>{% endif %}</td>
+                <td>
+                  <strong>{{ row.item.name }}</strong>
+                  {% if row.item.make_model %}<br><small>{{ row.item.make_model }}{% if row.item.year_made %} · {{ row.item.year_made }}{% endif %}</small>{% endif %}
+                  {% if row.item.plate_number %}<br><small>Plate: {{ row.item.plate_number }}</small>{% endif %}
+                  {% if row.item.condition_grade %}<br><small>Condition: {{ row.item.get_condition_grade_display }}</small>{% endif %}
+                </td>
                 <td>{{ row.item.estimated_value|floatformat:2 }}</td>
                 <td>{% if row.readiness.ready %}<span class="field-check-ok">Ready</span>{% else %}{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos{% endif %}</td>
                 <td>

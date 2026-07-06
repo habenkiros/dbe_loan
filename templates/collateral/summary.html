@@ -54,6 +54,12 @@
 </div>
 {% endif %}
 
+{% include "collateral/_coverage_panel.html" %}
+
+<p style="margin:0.75rem 0;">
+  <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack (print/PDF)</a>
+</p>
+
 {% if building_map_sections or land_map_section or other_map_sections %}
 {% load static %}
 <h3 style="margin-top:1.5rem;">Collateral location verification maps</h3>
@@ -129,6 +135,23 @@
 <p>
     {% if loan_request.collateral_submitted_at %}
     <strong>Submitted</strong> on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}.
+    {% if loan_request.collateral_engineering_status == 'pending_review' %}
+    <em style="color:#856404;"> — Pending engineering QA.</em>
+    {% elif loan_request.collateral_engineering_status == 'approved' %}
+    <em style="color:#155724;"> — Engineering approved.</em>
+    {% elif loan_request.collateral_engineering_status == 'returned' and loan_request.collateral_engineering_return_note %}
+    <br><em style="color:#c62828;">Returned: {{ loan_request.collateral_engineering_return_note|truncatewords:30 }}</em>
+    {% endif %}
+    {% if can_request_unlock %}
+    <form method="post" action="{% url 'collateral:unlock_request' loan_request.id %}" style="margin-top:0.75rem;padding:0.75rem;border:1px solid #ffc107;border-radius:6px;background:#fff8e1;">
+      {% csrf_token %}
+      <label for="unlock-reason"><strong>Request supervisor unlock</strong> (corrections needed)</label><br>
+      <textarea id="unlock-reason" name="reason" rows="3" cols="60" required minlength="20" placeholder="Describe what must be corrected (min 20 characters)"></textarea><br>
+      <button type="submit" class="btn btn-orange" style="margin-top:0.5rem;">Submit unlock request</button>
+    </form>
+    {% elif pending_unlock %}
+    <em style="color:#856404;">Unlock request pending supervisor review.</em>
+    {% endif %}
     {% else %}
     All collateral data (buildings, valuations, land, other) is saved in the system as you add or edit.
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}

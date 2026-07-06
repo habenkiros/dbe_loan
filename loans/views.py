@@ -419,6 +419,10 @@ def loan_request_detail(request, loan_request_id):
         collateral_totals = compute_collateral_totals(loan_request)
         if not collateral_readiness.get('locked'):
             collateral_blockers = collateral_submit_blockers(loan_request)
+    coverage = None
+    if collateral_readiness:
+        from collateral.coverage import compute_coverage_adequacy
+        coverage = compute_coverage_adequacy(loan_request)
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -433,6 +437,7 @@ def loan_request_detail(request, loan_request_id):
         'collateral_readiness': collateral_readiness,
         'collateral_totals': collateral_totals,
         'collateral_blockers': collateral_blockers,
+        'coverage': coverage,
         'appraisal': appraisal,
         'committee_submit': committee_submit,
         'committee_tally': committee_tally,
@@ -934,6 +939,9 @@ def assign_engineer(request, loan_request_id):
         if form.is_valid():
             loan_request.assigned_engineer_id = form.cleaned_data.get('assigned_engineer') or None
             loan_request.save(update_fields=['assigned_engineer_id'])
+            if loan_request.assigned_engineer_id:
+                from collateral.services.notifications import notify_collateral_assigned
+                notify_collateral_assigned(loan_request, loan_request.assigned_engineer)
             messages.success(request, 'Assigned engineer updated.')
             return redirect('loan_request_detail', loan_request_id=loan_request.id)
     else:

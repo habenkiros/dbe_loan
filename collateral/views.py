@@ -15,6 +15,7 @@ from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
     Building, BuildingValuation, BuildingImage, LandValuation, LandValuationImage,
     OtherCollateralItem, OtherCollateralItemImage,
+    CollateralUnlockRequest,
 )
 from .forms import (
     BuildingForm, BuildingValuationForm, BuildingImageForm, LandValuationForm,
@@ -23,10 +24,10 @@ from .forms import (
     OtherCollateralItemForm,
 )
 from .constants import (
-    MIN_IMAGES_PER_BUILDING, MIN_IMAGES_PER_LAND, MIN_IMAGES_PER_OTHER_ITEM,
     FIELD_VISIT_STEPS, LAND_FIELD_STEPS, OTHER_FIELD_STEPS,
-    GPS_ACCURACY_WEAK_THRESHOLD_M,
 )
+from .coverage import compute_coverage_adequacy
+from .policy import get_collateral_policy
 from .field_utils import (
     apply_site_gps_from_post,
     apply_site_gps_to_instance,
@@ -44,7 +45,47 @@ from .field_utils import (
     save_other_field_photo,
 )
 from .governance import block_if_collateral_locked, log_collateral_event
-from .map_utils import building_map_data, haversine_m, land_map_data, other_item_map_data, PHOTO_MAX_DISTANCE_FROM_SITE_M
+from .map_utils import building_map_data, haversine_m, land_map_data, other_item_map_data
+
+
+def _policy_template_context():
+    p = get_collateral_policy()
+    return {
+        'min_images': p.min_images_per_building,
+        'min_images_per_building': p.min_images_per_building,
+        'min_images_per_land': p.min_images_per_land,
+        'min_images_per_other_item': p.min_images_per_other_item,
+        'gps_weak_threshold_m': p.gps_accuracy_weak_threshold_m,
+        'max_photo_distance_m': p.photo_max_distance_from_site_m,
+        'collateral_policy': p,
+    }
+
+
+def _can_request_collateral_unlock(user, loan_request) -> bool:
+    if not collateral_is_locked(loan_request):
+        return False
+    if CollateralUnlockRequest.objects.filter(
+        loan_request=loan_request, status=CollateralUnlockRequest.STATUS_PENDING,
+    ).exists():
+        return False
+    if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+        return True
+    if user.role == 'engineer' and loan_request.assigned_engineer_id == user.id:
+        return True
+    if loan_request.collateral_submitted_by_id == user.id:
+        return True
+    return False
+
+
+def _can_review_collateral_unlock(user, loan_request) -> bool:
+    role = getattr(user, 'role', None)
+    if role in ('superadmin', 'admin'):
+        return True
+    if role == 'engineering_head':
+        return True
+    if role == 'branch_manager' and getattr(user, 'branch_id', None) == loan_request.branch_id:
+        return True
+    return False
 
 
 def _can_access_collateral(user):
@@ -102,8 +143,23 @@ def dashboard(request):
         )
     is_engineer = getattr(request.user, 'role', None) == 'engineer'
     is_loan_officer = getattr(request.user, 'role', None) == 'loan_officer'
+    from .pipeline import STAGE_LABELS, annotate_loans_pipeline, pipeline_counts
+
+    loan_list = list(loan_requests)
+    pipeline_rows = annotate_loans_pipeline(loan_list)
+    stage_filter = (request.GET.get('stage') or '').strip()
+    if stage_filter:
+        pipeline_rows = [r for r in pipeline_rows if r['pipeline_stage'] == stage_filter]
+    counts = pipeline_counts(loan_list)
+    pipeline_filters = [
+        {'stage': stage, 'label': STAGE_LABELS.get(stage, stage), 'count': counts.get(stage, 0)}
+        for stage in STAGE_LABELS
+        if counts.get(stage, 0)
+    ]
     return render(request, 'collateral/dashboard.html', {
-        'loan_requests': loan_requests,
+        'pipeline_rows': pipeline_rows,
+        'pipeline_filters': pipeline_filters,
+        'stage_filter': stage_filter,
         'query': q or '',
         'is_engineer': is_engineer,
         'is_loan_officer': is_loan_officer,
@@ -586,10 +642,11 @@ def valuation_add_multiple(request, building_id):
 
 
 def _annotate_image_distances(site_lat, site_lon, images):
+    max_d = get_collateral_policy().photo_max_distance_from_site_m
     rows = []
     for img in images:
         dist = haversine_m(site_lat, site_lon, img.gps_lat, img.gps_lon)
-        far = dist is not None and dist > PHOTO_MAX_DISTANCE_FROM_SITE_M
+        far = dist is not None and dist > max_d
         rows.append({
             'image': img,
             'distance_m': round(dist) if dist is not None else None,
@@ -684,6 +741,7 @@ def field_visit(request, building_id, step=1):
     photo_types = BuildingImage.PHOTO_TYPE_CHOICES
     map_data = building_map_data(building)
     image_rows = _annotate_image_distances(building.site_gps_lat, building.site_gps_lon, images)
+    pctx = _policy_template_context()
 
     return render(request, 'collateral/field_visit.html', {
         'building': building,
@@ -701,11 +759,11 @@ def field_visit(request, building_id, step=1):
         'can_edit_unit_price': can_edit_unit_price,
         'images': images,
         'photo_types': photo_types,
-        'min_images': MIN_IMAGES_PER_BUILDING,
-        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'min_images': pctx['min_images_per_building'],
+        'gps_weak_threshold_m': pctx['gps_weak_threshold_m'],
         'map_data': map_data,
         'image_rows': image_rows,
-        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+        'max_photo_distance_m': pctx['max_photo_distance_m'],
     })
 
 
@@ -751,6 +809,7 @@ def land_field_visit(request, loan_request_id, step=1):
     images = LandValuationImage.objects.filter(land_valuation=land).order_by('-created_at')
     map_data = land_map_data(land)
     image_rows = _annotate_image_distances(land.site_gps_lat, land.site_gps_lon, images)
+    pctx = _policy_template_context()
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'land',
@@ -765,13 +824,13 @@ def land_field_visit(request, loan_request_id, step=1):
         'land_form': land_form,
         'images': images,
         'photo_types': LandValuationImage.PHOTO_TYPE_CHOICES,
-        'min_images': MIN_IMAGES_PER_LAND,
+        'min_images': pctx['min_images_per_land'],
         'back_url': reverse('collateral:land_valuation', args=[loan_request_id]),
         'summary_url': reverse('collateral:summary', args=[loan_request_id]),
-        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'gps_weak_threshold_m': pctx['gps_weak_threshold_m'],
         'map_data': map_data,
         'image_rows': image_rows,
-        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+        'max_photo_distance_m': pctx['max_photo_distance_m'],
     })
 
 
@@ -818,6 +877,7 @@ def other_field_visit(request, item_id, step=1):
     images = OtherCollateralItemImage.objects.filter(item=item).order_by('-created_at')
     map_data = other_item_map_data(item)
     image_rows = _annotate_image_distances(item.site_gps_lat, item.site_gps_lon, images)
+    pctx = _policy_template_context()
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'other',
@@ -832,13 +892,13 @@ def other_field_visit(request, item_id, step=1):
         'item_form': item_form,
         'images': images,
         'photo_types': OtherCollateralItemImage.PHOTO_TYPE_CHOICES,
-        'min_images': MIN_IMAGES_PER_OTHER_ITEM,
+        'min_images': pctx['min_images_per_other_item'],
         'back_url': reverse('collateral:other_collateral_list', args=[loan_request.id]),
         'summary_url': reverse('collateral:summary', args=[loan_request.id]),
-        'gps_weak_threshold_m': GPS_ACCURACY_WEAK_THRESHOLD_M,
+        'gps_weak_threshold_m': pctx['gps_weak_threshold_m'],
         'map_data': map_data,
         'image_rows': image_rows,
-        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+        'max_photo_distance_m': pctx['max_photo_distance_m'],
     })
 
 
@@ -949,13 +1009,13 @@ def building_images(request, building_id):
         'images': images,
         'form': form,
         'image_count': images.count(),
-        'min_images_required': MIN_IMAGES_PER_BUILDING,
+        'min_images_required': _policy_template_context()['min_images_per_building'],
         'photo_types': BuildingImage.PHOTO_TYPE_CHOICES,
         'locked': locked,
         'field_visit_url': reverse('collateral:field_visit', args=[building_id]),
         'map_data': map_data,
         'image_rows': image_rows,
-        'max_photo_distance_m': PHOTO_MAX_DISTANCE_FROM_SITE_M,
+        'max_photo_distance_m': _policy_template_context()['max_photo_distance_m'],
     })
 
 
@@ -982,6 +1042,8 @@ def land_valuation(request, loan_request_id):
         'land': land,
         'readiness': get_land_readiness(land),
         'locked': collateral_is_locked(loan_request),
+        'map_data': land_map_data(land),
+        'land_images': list(land.images.select_related('uploaded_by').order_by('-created_at')),
     })
 
 
@@ -1093,19 +1155,30 @@ def summary(request, loan_request_id):
     else:
         grand_total = total_buildings + land_value + total_other
     # For building collateral: require at least 5 images per building before submit
+    policy_ctx = _policy_template_context()
+    min_bldg = policy_ctx['min_images_per_building']
     buildings_below_image_min = []
     loan_readiness = get_loan_collateral_readiness(loan_request)
     if loan_readiness['applies']:
         buildings_below_image_min = [
             item['building'] for item in loan_readiness['buildings']
-            if item['readiness']['image_count'] < MIN_IMAGES_PER_BUILDING
+            if item['readiness']['image_count'] < min_bldg
         ]
-    can_submit_collateral = loan_readiness.get('all_ready', True) and loan_readiness.get('applies', False)
+    coverage = compute_coverage_adequacy(loan_request)
+    submit_blockers = collateral_submit_blockers(loan_request)
+    can_submit_collateral = (
+        loan_readiness.get('all_ready', True)
+        and loan_readiness.get('applies', False)
+        and coverage.get('adequate_for_submit', True)
+        and not submit_blockers
+    )
     if not loan_readiness.get('applies'):
         can_submit_collateral = True
     if loan_readiness.get('locked'):
         can_submit_collateral = False
-    submit_blockers = collateral_submit_blockers(loan_request)
+    pending_unlock = CollateralUnlockRequest.objects.filter(
+        loan_request=loan_request, status=CollateralUnlockRequest.STATUS_PENDING,
+    ).first()
     building_map_sections = [
         {
             'building': b,
@@ -1140,10 +1213,14 @@ def summary(request, loan_request_id):
         'total_buildings': total_buildings,
         'grand_total': grand_total,
         'buildings_below_image_min': buildings_below_image_min,
-        'min_images_per_building': MIN_IMAGES_PER_BUILDING,
+        'min_images_per_building': min_bldg,
         'can_submit_collateral': can_submit_collateral,
         'loan_readiness': loan_readiness,
         'submit_blockers': submit_blockers,
+        'coverage': coverage,
+        'collateral_policy': policy_ctx['collateral_policy'],
+        'can_request_unlock': _can_request_collateral_unlock(request.user, loan_request),
+        'pending_unlock': pending_unlock,
         'building_map_sections': building_map_sections,
         'land_map_section': land_map_section,
         'other_map_sections': other_map_sections,
@@ -1164,13 +1241,32 @@ def collateral_submit(request, loan_request_id):
         return redirect('collateral:summary', loan_request_id=loan_request_id)
     loan_request.collateral_submitted_at = timezone.now()
     loan_request.collateral_submitted_by = request.user
-    loan_request.save(update_fields=['collateral_submitted_at', 'collateral_submitted_by'])
+    from .engineering_qa import initial_engineering_status
+    from loans.models import LoanRequest
+
+    eng_status = initial_engineering_status(request.user)
+    loan_request.collateral_engineering_status = eng_status
+    if eng_status == LoanRequest.ENG_COLLATERAL_APPROVED:
+        loan_request.collateral_engineering_reviewed_at = timezone.now()
+        loan_request.collateral_engineering_reviewed_by = request.user
+    update_fields = [
+        'collateral_submitted_at', 'collateral_submitted_by', 'collateral_engineering_status',
+    ]
+    if eng_status == LoanRequest.ENG_COLLATERAL_APPROVED:
+        update_fields.extend(['collateral_engineering_reviewed_at', 'collateral_engineering_reviewed_by'])
+    loan_request.save(update_fields=update_fields)
     log_collateral_event(
         loan_request,
         'collateral_submitted',
         user=request.user,
-        payload={'submitted_at': loan_request.collateral_submitted_at.isoformat()},
+        payload={
+            'submitted_at': loan_request.collateral_submitted_at.isoformat(),
+            'engineering_status': eng_status,
+        },
     )
+    if eng_status == LoanRequest.ENG_COLLATERAL_PENDING:
+        from .services.notifications import engineering_review_recipients, notify_collateral_submitted
+        notify_collateral_submitted(loan_request, recipients=engineering_review_recipients(loan_request))
     from loans.models import LoanAppraisal
     from loans.services.appraisal_prefill import sync_collateral_to_appraisal
 

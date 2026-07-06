@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 from django.contrib import messages
 from django.shortcuts import redirect
 
-from collateral.constants import GPS_ACCURACY_WEAK_THRESHOLD_M
+from collateral.policy import get_collateral_policy
 
 
 def collateral_is_locked(loan_request) -> bool:
@@ -21,10 +21,11 @@ def collateral_is_locked(loan_request) -> bool:
 
 
 def gps_is_weak(accuracy_m) -> bool:
+    threshold = get_collateral_policy().gps_accuracy_weak_threshold_m
     if accuracy_m is None:
         return True
     try:
-        return float(accuracy_m) > GPS_ACCURACY_WEAK_THRESHOLD_M
+        return float(accuracy_m) > threshold
     except (TypeError, ValueError):
         return True
 
@@ -102,8 +103,9 @@ def apply_site_gps_with_attestation(instance, post) -> tuple[bool, Optional[str]
     note = (post.get('site_gps_attestation_note') or '').strip()
 
     if weak and not ack:
+        threshold = get_collateral_policy().gps_accuracy_weak_threshold_m
         return False, (
-            f'GPS accuracy is weak (>{GPS_ACCURACY_WEAK_THRESHOLD_M}m or unavailable). '
+            f'GPS accuracy is weak (>{threshold}m or unavailable). '
             'Check the attestation box and explain how the location was verified.'
         )
     if weak and len(note) < 10:

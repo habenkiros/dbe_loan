@@ -273,6 +273,7 @@
                     </div>
                 </div>
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
+                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
                 <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
                 <a href="{% url 'loan_notifications_list' %}">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
                 <a href="{% url 'view_report_options' %}">Generate Report</a>
@@ -297,10 +298,13 @@
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
                 <a href="{% url 'loans_sent_for_collateral' %}">Loans sent for collateral</a>
+                <a href="{% url 'collateral:engineering_qa_queue' %}">Engineering QA</a>
+                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
             {% elif user.role == 'engineer' %}
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
                 <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
                 <a href="{% url 'collateral:dashboard' %}">Collateral (loans assigned to you)</a>
+                <a href="{% url 'collateral:engineering_qa_queue' %}">Engineering QA</a>
             {% elif user.role == 'admin' or user.role == 'superadmin' %}
                 <a href="{% url 'view_loan_requests' %}">loan requests</a>
                 <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
@@ -308,8 +312,11 @@
                 {% if user.role == 'superadmin' %}
                 <a href="{% url 'collateral:collateral_list_superadmin' %}">Collateral</a>
                 <a href="{% url 'collateral_estimation_config' %}">Estimation config</a>
+                <a href="{% url 'collateral:collateral_policy_config' %}">Collateral policy</a>
+                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
                 {% else %}
                 <a href="{% url 'collateral:dashboard' %}">Collateral</a>
+                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
                 {% endif %}
             {% endif %}
 
@@ -331,6 +338,7 @@
                         <a href="{% url 'manage_loan_categories' %}">Loan categories</a>
                         <a href="{% url 'manage_collateral_types' %}">Collateral types</a>
                         <a href="{% url 'manage_loan_application_document_types' %}">Application document types</a>
+                        <a href="{% url 'collateral:collateral_policy_config' %}">Collateral policy</a>
                     </div>
                 </div>
             {% endif %}

@@ -3,6 +3,7 @@ from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
     Building, BuildingValuation, BuildingImage, LandValuation, LandValuationImage,
     OtherCollateralItem, OtherCollateralItemImage, CollateralFieldAuditLog,
+    CollateralPolicyConfig, CollateralUnlockRequest,
 )
 
 
@@ -99,3 +100,19 @@ class CollateralFieldAuditLogAdmin(admin.ModelAdmin):
     search_fields = ('loan_request__loan_request_id', 'performed_by__username')
     readonly_fields = ('loan_request', 'event_type', 'subject_type', 'subject_id', 'payload', 'performed_by', 'performed_at')
     date_hierarchy = 'performed_at'
+
+
+@admin.register(CollateralPolicyConfig)
+class CollateralPolicyConfigAdmin(admin.ModelAdmin):
+    list_display = (
+        'min_images_per_building', 'min_coverage_ratio', 'photo_max_distance_from_site_m',
+        'declared_address_max_distance_from_site_m', 'block_submit_on_far_photos', 'updated_at',
+    )
+
+
+@admin.register(CollateralUnlockRequest)
+class CollateralUnlockRequestAdmin(admin.ModelAdmin):
+    list_display = ('loan_request', 'status', 'requested_by', 'requested_at', 'reviewed_by', 'reviewed_at')
+    list_filter = ('status',)
+    search_fields = ('loan_request__loan_request_id', 'requested_by__username', 'reason')
+    readonly_fields = ('requested_at', 'previous_submitted_at', 'previous_submitted_by')

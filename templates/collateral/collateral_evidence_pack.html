@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Collateral evidence — {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
+{% include "collateral/_map_assets.html" %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .pack-section { break-inside: avoid; page-break-inside: avoid; }
+}
+.pack-section { margin: 1.25rem 0; padding: 1rem; border: 1px solid #dee2e6; border-radius: 8px; background: #fafafa; }
+.pack-header { border-bottom: 2px solid #064420; padding-bottom: 0.75rem; margin-bottom: 1rem; }
+.pack-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
+.pack-photo-grid img { width: 100%; border-radius: 4px; }
+.audit-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+.audit-table th, .audit-table td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="no-print" style="margin-bottom:1rem;">
+  <button type="button" class="field-btn field-btn-primary" onclick="window.print()">Print / Save as PDF</button>
+  <a href="{% url 'collateral:summary' loan_request.id %}" class="field-btn field-btn-secondary">← Summary</a>
+</div>
+
+<div class="pack-header">
+  <h1 style="margin:0;">Collateral evidence pack</h1>
+  <p><strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+    · Branch {{ loan_request.branch.name }}
+    · Collateral type: {{ loan_request.collateral.name }}</p>
+  {% if loan_request.collateral_submitted_at %}
+  <p>Submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
+    {% if loan_request.collateral_submitted_by %}by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}</p>
+  {% endif %}
+</div>
+
+{% include "collateral/_coverage_panel.html" with collateral_policy=policy %}
+
+{% for bdata in buildings_data %}
+<div class="pack-section">
+  <h2>Building — {{ bdata.building.name }}</h2>
+  <p>Total: <strong>{{ bdata.total|floatformat:2 }}</strong>
+    {% if bdata.building.city %} · Woreda {{ bdata.building.city.name }}{% endif %}
+    {% if bdata.building.site_gps_lat %} · Site GPS {{ bdata.building.site_gps_lat }}, {{ bdata.building.site_gps_lon }}{% endif %}
+  </p>
+  {% with bid=bdata.building.id %}
+  {% include "collateral/_collateral_location_map.html" with map_id="pack-bmap-"|add:bid map_config_id="pack-bmap-data-"|add:bid map_data=bdata.map_data map_title="Location verification" compact=True %}
+  {% endwith %}
+  {% if bdata.valuations %}
+  <h3>BOQ summary</h3>
+  <ul>{% for v in bdata.valuations %}<li>{% if v.sub_work_id %}{{ v.sub_work.name }}{% else %}{{ v.sub_sub_work.name }}{% endif %} — qty {{ v.quantity|floatformat:2 }} × {{ v.unit_price|floatformat:2 }} = {{ v.total|floatformat:2 }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if bdata.images %}
+  <h3>Field photos ({{ bdata.images|length }})</h3>
+  <div class="pack-photo-grid">
+    {% for img in bdata.images %}
+    <div><img src="{{ img.image.url }}" alt=""><small>{{ img.get_photo_type_display }}{% if img.gps_lat %} · GPS{% endif %}</small></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% if land_data %}
+<div class="pack-section">
+  <h2>Land collateral</h2>
+  <p>Size {{ land_data.land.land_size_sqm|default:"—" }} sqm × {{ land_data.land.unit_price_per_sqm|default:"—" }}/sqm
+    = <strong>{{ land_data.land.total_value|floatformat:2|default:"—" }}</strong></p>
+  {% include "collateral/_collateral_location_map.html" with map_id="pack-land-map" map_config_id="pack-land-map-data" map_data=land_data.map_data map_title="Plot location" compact=True %}
+  <div class="pack-photo-grid">{% for img in land_data.images %}<div><img src="{{ img.image.url }}" alt=""></div>{% endfor %}</div>
+</div>
+{% endif %}
+
+{% for o in other_data %}
+<div class="pack-section">
+  <h2>{{ o.item.name }}</h2>
+  <p>Value: <strong>{{ o.item.estimated_value|floatformat:2 }}</strong></p>
+  {% with oid=o.item.id %}
+  {% include "collateral/_collateral_location_map.html" with map_id="pack-other-"|add:oid map_config_id="pack-other-data-"|add:oid map_data=o.map_data compact=True %}
+  {% endwith %}
+  <div class="pack-photo-grid">{% for img in o.images %}<div><img src="{{ img.image.url }}" alt=""></div>{% endfor %}</div>
+</div>
+{% endfor %}
+
+<div class="pack-section">
+  <h2>Audit trail (recent)</h2>
+  <table class="audit-table">
+    <thead><tr><th>When</th><th>Event</th><th>By</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for log in audit_logs %}
+      <tr>
+        <td>{{ log.performed_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ log.get_event_type_display }}</td>
+        <td>{% if log.performed_by %}{{ log.performed_by.username }}{% else %}—{% endif %}</td>
+        <td><small>{{ log.payload }}</small></td>
+      </tr>
+      {% empty %}<tr><td colspan="4">No audit events.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

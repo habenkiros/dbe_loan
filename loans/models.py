@@ -360,6 +360,47 @@ class LoanRequest(models.Model):
         related_name='collateral_submissions',
         help_text='User (e.g. loan officer) who submitted the collateral estimation.',
     )
+    ENG_COLLATERAL_NA = ''
+    ENG_COLLATERAL_PENDING = 'pending_review'
+    ENG_COLLATERAL_APPROVED = 'approved'
+    ENG_COLLATERAL_RETURNED = 'returned'
+    COLLATERAL_ENGINEERING_STATUS_CHOICES = [
+        (ENG_COLLATERAL_NA, 'Not applicable'),
+        (ENG_COLLATERAL_PENDING, 'Pending engineering review'),
+        (ENG_COLLATERAL_APPROVED, 'Engineering approved'),
+        (ENG_COLLATERAL_RETURNED, 'Returned for correction'),
+    ]
+    collateral_engineering_status = models.CharField(
+        max_length=30,
+        choices=COLLATERAL_ENGINEERING_STATUS_CHOICES,
+        default=ENG_COLLATERAL_NA,
+        blank=True,
+        help_text='Engineering QA after collateral submit (when engineering team mode is enabled).',
+    )
+    collateral_engineering_reviewed_at = models.DateTimeField(null=True, blank=True)
+    collateral_engineering_reviewed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collateral_engineering_reviews',
+    )
+    collateral_engineering_return_note = models.TextField(blank=True)
+    declared_address_text = models.TextField(
+        blank=True,
+        help_text='Cached address text used for geocoding (from Sheet 1).',
+    )
+    declared_address_lat = models.DecimalField(
+        max_digits=12, decimal_places=8, null=True, blank=True,
+    )
+    declared_address_lon = models.DecimalField(
+        max_digits=12, decimal_places=8, null=True, blank=True,
+    )
+    declared_address_geocoded_at = models.DateTimeField(null=True, blank=True)
+    declared_address_source = models.CharField(
+        max_length=20, blank=True,
+        help_text='business or home — which Sheet 1 address was geocoded.',
+    )
     sent_to_engineering_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -1678,6 +1719,10 @@ class LoanNotification(models.Model):
     KIND_DOCUMENT_VERIFIED = 'document_verified'
     KIND_DOCUMENT_REJECTED = 'document_rejected'
     KIND_DOCUMENT_REQUESTED = 'document_requested'
+    KIND_COLLATERAL_ASSIGNED = 'collateral_assigned'
+    KIND_COLLATERAL_SUBMITTED = 'collateral_submitted'
+    KIND_COLLATERAL_ENGINEERING_RETURN = 'collateral_engineering_return'
+    KIND_COLLATERAL_ENGINEERING_APPROVED = 'collateral_engineering_approved'
     KIND_CHOICES = [
         (KIND_VOTE_NEEDED, 'Vote needed'),
         (KIND_LEVEL_ADVANCED, 'Advanced to next level'),
@@ -1689,6 +1734,10 @@ class LoanNotification(models.Model):
         (KIND_DOCUMENT_VERIFIED, 'Document verified'),
         (KIND_DOCUMENT_REJECTED, 'Document rejected'),
         (KIND_DOCUMENT_REQUESTED, 'Document requested'),
+        (KIND_COLLATERAL_ASSIGNED, 'Collateral assigned'),
+        (KIND_COLLATERAL_SUBMITTED, 'Collateral submitted'),
+        (KIND_COLLATERAL_ENGINEERING_RETURN, 'Collateral returned by engineering'),
+        (KIND_COLLATERAL_ENGINEERING_APPROVED, 'Collateral approved by engineering'),
     ]
 
     user = models.ForeignKey(
@@ -1703,7 +1752,7 @@ class LoanNotification(models.Model):
         null=True,
         blank=True,
     )
-    kind = models.CharField(max_length=30, choices=KIND_CHOICES)
+    kind = models.CharField(max_length=40, choices=KIND_CHOICES)
     title = models.CharField(max_length=200)
     message = models.TextField()
     url = models.CharField(max_length=500, blank=True)

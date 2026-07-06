@@ -186,7 +186,9 @@
       </li>
       {% endfor %}
     </ul>
-    {% if readiness.ready %}
+    {% if readiness.locked and readiness.ready %}
+    <p style="color:#155724;font-weight:600;margin-top:1rem;">Field visit complete — collateral submitted.</p>
+    {% elif readiness.ready %}
     <p style="color:#155724;font-weight:600;margin-top:1rem;">This building is ready for collateral submit.</p>
     {% else %}
     <p style="color:#856404;margin-top:1rem;">Complete the items above, then submit collateral from the loan summary.</p>

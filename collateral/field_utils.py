@@ -156,7 +156,7 @@ def get_land_readiness(land) -> Dict[str, Any]:
         'min_images': min_img,
         'total_value': total,
         'checks': checks,
-        'ready': required_ok and not collateral_is_locked(loan_request),
+        'ready': required_ok,
     }
 
 
@@ -200,7 +200,7 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
         'min_images': min_img,
         'total_value': item.estimated_value,
         'checks': checks,
-        'ready': required_ok and not collateral_is_locked(loan_request),
+        'ready': required_ok,
     }
 
 
@@ -302,7 +302,7 @@ def get_building_readiness(building) -> Dict[str, Any]:
         'valuation_count': valuation_count,
         'building_total': building_total,
         'checks': checks,
-        'ready': required_ok and not locked,
+        'ready': required_ok,
     }
 
 

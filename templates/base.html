@@ -99,150 +99,296 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 0;
+            gap: 8px;
             align-items: center;
-            background-color: #056c06ff;
+            background: linear-gradient(135deg, #053d1e 0%, #064420 50%, #053d1e 100%);
             overflow: visible;
-            padding: 0 20px;
+            padding: 12px 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
-        nav a {
-            padding: 10px 15px;
-            text-align: center;
-            color: white;
+        /* Override styles.css float rules that break flex layout */
+        nav a,
+        nav .dropdown {
+            float: none !important;
+        }
+        .nav-link,
+        .dropbtn,
+        nav a.nav-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            height: 38px;
+            padding: 0 16px !important;
+            border-radius: 8px;
+            color: #fff !important;
             text-decoration: none;
-            display: inline-block;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            line-height: 1;
+            box-sizing: border-box;
+            background: #0a6b2e;
+            border: 1px solid #085a26;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: center;
         }
-        nav a:hover {
-            background-color: #ddd;
-            color: black;
+        .nav-link:hover,
+        .dropbtn:hover,
+        nav a.nav-link:hover,
+        .dropdown.show .dropbtn {
+            background: #0d8038 !important;
+            color: #fff !important;
+            border-color: #0a6b2e;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
         }
-        nav a.selected {
-            background-color: #777;
-            color: white;
+        .nav-link:active,
+        .dropbtn:active {
+            background: #085a26;
         }
-        /* Base button style */
-        .btn {
-            display: inline-block;
-            padding: 6px 12px;
+        .nav-link.selected,
+        .dropdown.show .dropbtn {
+            background: #064420 !important;
+            border-color: #043318;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .nav-ico {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            opacity: 0.95;
+        }
+        .nav-ico svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+        .nav-divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.25);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+        .nav-group-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.55);
+            padding: 0 4px;
+            align-self: center;
+        }
+        /* Page action buttons */
+        .btn,
+        button.btn,
+        input.btn[type="submit"] {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
             margin: 2px;
             font-size: 14px;
-            border-radius: 5px;
+            font-weight: 600;
+            line-height: 1.3;
+            border-radius: 8px;
+            border: 1px solid transparent;
             text-decoration: none;
-            color: white;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
-
-        /* Button colors */
-        .btn-blue {
-            background-color: #007bff;
+        .btn:hover,
+        button.btn:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
         }
-        .btn-blue:hover {
-            background-color: #0056b3;
-        }
-
         .btn-green {
-            background-color: #28a745;
+            background-color: #0a6b2e;
+            border-color: #085a26;
         }
         .btn-green:hover {
-            background-color: #1e7e34;
+            background-color: #0d8038;
+            border-color: #0a6b2e;
         }
-
+        .btn-blue {
+            background-color: #1565c0;
+            border-color: #0d47a1;
+        }
+        .btn-blue:hover {
+            background-color: #1976d2;
+            border-color: #1565c0;
+        }
         .btn-orange {
-            background-color: #fd7e14;
+            background-color: #e65100;
+            border-color: #bf360c;
         }
         .btn-orange:hover {
-            background-color: #c75b08;
+            background-color: #f57c00;
+            border-color: #e65100;
         }
-
         .btn-red {
-            background-color: #dc3545;
+            background-color: #c62828;
+            border-color: #b71c1c;
         }
         .btn-red:hover {
-            background-color: #a71d2a;
+            background-color: #d32f2f;
+            border-color: #c62828;
+        }
+        .btn-gray {
+            background-color: #5f6368;
+            border-color: #494c50;
+        }
+        .btn-gray:hover {
+            background-color: #6f7378;
+            border-color: #5f6368;
+        }
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 0.85rem;
+        }
+        form input[type="submit"]:not(.btn),
+        form button[type="submit"]:not(.btn) {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: 1px solid #085a26;
+            background: #0a6b2e;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        form input[type="submit"]:not(.btn):hover,
+        form button[type="submit"]:not(.btn):hover {
+            background: #0d8038;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+        }
+        .quicklinks-card {
+            background: #f1f8f4;
+            border: 1px solid #b8dfc4;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+        }
+        .quicklinks-card h3 {
+            margin-top: 0;
+            color: #064420;
+        }
+        .quicklinks-card p {
+            margin-bottom: 12px;
+            color: #2c4a34;
         }
         /* Dropdown container */
         .dropdown {
             position: relative;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
         }
 
-        /* Dropdown button (matches nav links) */
-        .dropbtn {
-            background-color: #056c06ff;
-            color: white;
-            padding: 10px 15px;
-            font-size: inherit;
-            border: none;
-            border-radius: 0;
-            cursor: pointer;
-            font-weight: inherit;
+        .dropbtn-chevron {
+            font-size: 10px;
+            opacity: 0.85;
+            margin-left: 2px;
+            transition: transform 0.2s ease;
         }
-        .dropbtn:hover {
-            background-color: #ddd;
-            color: black;
+        .dropdown.show .dropbtn-chevron {
+            transform: rotate(180deg);
         }
 
         /* Dropdown content (hidden by default) – vertical list */
         .dropdown-content {
             display: none;
             position: absolute;
-            top: 100%;
+            top: calc(100% + 6px);
             left: 0;
-            margin-top: 0;
+            margin: 0;
             background-color: #fff;
-            min-width: 200px;
+            min-width: 240px;
             box-sizing: border-box;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            border-radius: 5px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+            border-radius: 8px;
             z-index: 1000;
-            border: 1px solid #ddd;
+            border: 1px solid #d4e8d9;
+            overflow: hidden;
+            padding: 4px;
         }
 
-        /* Links inside the dropdown – one per line, full width */
-        .dropdown-content a {
-            display: block;
+        /* Links inside the dropdown */
+        nav .dropdown-content a {
+            display: flex !important;
+            align-items: center;
+            gap: 12px;
             width: 100%;
             box-sizing: border-box;
-            padding: 10px 14px;
+            padding: 10px 12px;
             text-decoration: none;
             font-size: 14px;
-            font-weight: bold;
-            color: #333;
-            background-color: #f9f9f9;
-            border-radius: 0;
-            border-bottom: 1px solid #eee;
-            white-space: nowrap;
-        }
-        .dropdown-content a:last-child {
+            font-weight: 600;
+            color: #1a3d24;
+            background-color: transparent;
+            border-radius: 6px;
             border-bottom: none;
+            white-space: nowrap;
+            float: none !important;
+            text-align: left;
+            transition: background 0.15s ease, color 0.15s ease;
         }
-        .dropdown-content a:hover {
-            background-color: #e0e0e0;
-            color: #000;
+        nav .dropdown-content a:hover {
+            background-color: #e8f5e9;
+            color: #064420;
+        }
+        .dropdown-content .dropdown-ico {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: #e8f5e9;
+            color: #064420;
+            flex-shrink: 0;
+        }
+        .dropdown-content .dropdown-ico svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            display: block;
+        }
+        .dropdown-content .dropdown-label {
+            flex: 1;
+            line-height: 1.3;
         }
 
-        /* Button colors */
-        .dropdown-content .btn-blue { background-color: #007bff; }
-        .dropdown-content .btn-green { background-color: #28a745; }
-        .dropdown-content .btn-orange { background-color: #fd7e14; }
-        .dropdown-content .btn-red { background-color: #dc3545; }
-
-        /* Hover effects */
-        .dropdown-content .btn-blue:hover { background-color: #0056b3; }
-        .dropdown-content .btn-green:hover { background-color: #1e7e34; }
-        .dropdown-content .btn-orange:hover { background-color: #c75b08; }
-        .dropdown-content .btn-red:hover { background-color: #a71d2a; }
+        /* Dropdown btn-* legacy inside menus */
+        .dropdown-content .btn-blue { background-color: #1565c0; }
+        .dropdown-content .btn-green { background-color: #0a6b2e; }
+        .dropdown-content .btn-orange { background-color: #e65100; }
+        .dropdown-content .btn-red { background-color: #c62828; }
+        .dropdown-content .btn-blue:hover { background-color: #1976d2; }
+        .dropdown-content .btn-green:hover { background-color: #0d8038; }
+        .dropdown-content .btn-orange:hover { background-color: #f57c00; }
+        .dropdown-content .btn-red:hover { background-color: #d32f2f; }
 
         /* Show dropdown on hover */
         .dropdown:hover .dropdown-content,
         .dropdown.show .dropdown-content {
             display: block;
-        }
-
-        /* Optional: change button color on hover */
-        .dropdown:hover .dropbtn {
-            background-color: #056c06ff;
         }
     </style>
 </head>
@@ -259,86 +405,231 @@
     </header>
 
     <nav>
-        <a href="{% url 'home' %}">Home</a>
+        <a href="{% url 'home' %}" class="nav-link">
+            {% include "includes/nav_icon.html" with icon="home" only %}
+            Home
+        </a>
 
         {% if user.is_authenticated %}
             {% if user.role == 'branch_manager' or user.role == 'loan_officer' %}
+                {% if user.role == 'loan_officer' %}
+                <a href="{% url 'view_loan_requests' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Loan requests
+                </a>
+                {% else %}
                 <div class="dropdown">
-                    <button class="dropbtn">Loan requests ▾</button>
+                    <button type="button" class="dropbtn">
+                        {% include "includes/nav_icon.html" with icon="loan" only %}
+                        Loan requests
+                        <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+                    </button>
                     <div class="dropdown-content">
-                        <a href="{% url 'view_loan_requests' %}">View loan requests</a>
-                        {% if user.role == 'branch_manager' and not user.is_superuser %}
-                        <a href="{% url 'create_loan_request' %}">Add loan request</a>
+                        {% url 'view_loan_requests' as loan_list_url %}
+                        {% include "includes/dropdown_link.html" with href=loan_list_url icon="list" label="View loan requests" only %}
+                        {% if not user.is_superuser %}
+                        {% url 'create_loan_request' as create_loan_url %}
+                        {% include "includes/dropdown_link.html" with href=create_loan_url icon="add" label="Add loan request" only %}
                         {% endif %}
                     </div>
                 </div>
-                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
-                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
-                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
-                <a href="{% url 'loan_notifications_list' %}">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
-                <a href="{% url 'view_report_options' %}">Generate Report</a>
+                {% endif %}
+                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
+                {% if user.role == 'branch_manager' %}
+                <a href="{% url 'collateral:unlock_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="unlock" only %}
+                    Unlock queue
+                </a>
+                {% endif %}
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="approval" only %}
+                    Approval queue
+                </a>
+                <a href="{% url 'loan_notifications_list' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="notifications" only %}
+                    Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}
+                </a>
+                <a href="{% url 'view_report_options' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Generate Report
+                </a>
 
             {% elif user.role == 'operation_manager' %}
-                <a href="{% url 'view_loan_requests_operation_manager' %}">View Loan Requests</a>
-                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
-                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
-                <a href="{% url 'view_report_options' %}">Generate Report</a>
+                <a href="{% url 'view_loan_requests_operation_manager' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    View Loan Requests
+                </a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="approval" only %}
+                    Approval queue
+                </a>
+                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
+                <a href="{% url 'view_report_options' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Generate Report
+                </a>
 
             {% elif user.role == 'finance_manager' %}
-                <a href="{% url 'view_loan_requests_finance_manager' %}">View Loan Requests</a>
-                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
-                <a href="{% url 'view_report_options' %}">Generate Report</a>
+                <a href="{% url 'view_loan_requests_finance_manager' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    View Loan Requests
+                </a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="approval" only %}
+                    Approval queue
+                </a>
+                <a href="{% url 'view_report_options' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Generate Report
+                </a>
 
             {% elif user.role == 'credit_committee' or user.role == 'accountant' or user.role == 'district_manager' or user.role == 'ceo' or user.role == 'vp' or user.role == 'board_member' %}
-                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes">Approval queue</a>
-                <a href="{% url 'view_loan_requests_manager' %}">Committee loans (my scope)</a>
-                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
-                <a href="{% url 'view_report_options' %}">Generate Report</a>
+                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="approval" only %}
+                    Approval queue
+                </a>
+                <a href="{% url 'view_loan_requests_manager' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="committee" only %}
+                    Committee loans
+                </a>
+                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
+                <a href="{% url 'view_report_options' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Generate Report
+                </a>
+
             {% elif user.role == 'engineering_head' or user.role == 'Engineering Head' %}
-                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
-                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
-                <a href="{% url 'loans_sent_for_collateral' %}">Loans sent for collateral</a>
-                <a href="{% url 'collateral:engineering_qa_queue' %}">Engineering QA</a>
-                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
+                <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="catalog" only %}
+                    Catalog
+                </a>
+                <a href="{% url 'collateral:unit_price_list' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Unit prices
+                </a>
+                <a href="{% url 'loans_sent_for_collateral' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Loans sent for collateral
+                </a>
+                <a href="{% url 'collateral:engineering_qa_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="engineering" only %}
+                    Engineering QA
+                </a>
+                <a href="{% url 'collateral:unlock_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="unlock" only %}
+                    Unlock queue
+                </a>
+
             {% elif user.role == 'engineer' %}
-                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
-                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
-                <a href="{% url 'collateral:dashboard' %}">Collateral (loans assigned to you)</a>
-                <a href="{% url 'collateral:engineering_qa_queue' %}">Engineering QA</a>
+                <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="catalog" only %}
+                    Catalog
+                </a>
+                <a href="{% url 'collateral:unit_price_list' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Unit prices
+                </a>
+                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
+                <a href="{% url 'collateral:engineering_qa_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="engineering" only %}
+                    Engineering QA
+                </a>
+
             {% elif user.role == 'admin' or user.role == 'superadmin' %}
-                <a href="{% url 'view_loan_requests' %}">loan requests</a>
-                <a href="{% url 'collateral:catalog_index' %}">Catalog (Main/Sub work)</a>
-                <a href="{% url 'collateral:unit_price_list' %}">Unit prices (Woreda)</a>
+                <a href="{% url 'view_loan_requests' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Loan requests
+                </a>
+                <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="catalog" only %}
+                    Catalog
+                </a>
+                <a href="{% url 'collateral:unit_price_list' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Unit prices
+                </a>
                 {% if user.role == 'superadmin' %}
-                <a href="{% url 'collateral:collateral_list_superadmin' %}">Collateral</a>
-                <a href="{% url 'collateral_estimation_config' %}">Estimation config</a>
-                <a href="{% url 'collateral:collateral_policy_config' %}">Collateral policy</a>
-                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
+                <a href="{% url 'collateral:collateral_list_superadmin' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
                 {% else %}
-                <a href="{% url 'collateral:dashboard' %}">Collateral</a>
-                <a href="{% url 'collateral:unlock_queue' %}">Unlock queue</a>
+                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Collateral
+                </a>
+                {% if not user.is_superuser %}
+                <a href="{% url 'collateral:unlock_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="unlock" only %}
+                    Unlock queue
+                </a>
+                {% endif %}
                 {% endif %}
             {% endif %}
 
             {% if user.is_authenticated and user.is_superuser %}
-                <a href="{% url 'manage_users' %}">Users</a>
-                <a href="{% url 'manage_districts' %}">Districts</a>
-                <a href="{% url 'manage_branches' %}">Branches</a>
+                <a href="{% url 'manage_users' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="users" only %}
+                    Users
+                </a>
+                <a href="{% url 'manage_districts' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="location" only %}
+                    Districts
+                </a>
+                <a href="{% url 'manage_branches' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="building" only %}
+                    Branches
+                </a>
                 <div class="dropdown">
-                    <button class="dropbtn">Area ▾</button>
+                    <button type="button" class="dropbtn">
+                        {% include "includes/nav_icon.html" with icon="location" only %}
+                        Area
+                        <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+                    </button>
                     <div class="dropdown-content">
-                        <a href="{% url 'manage_regions' %}">Regions</a>
-                        <a href="{% url 'manage_geo_zones' %}">Zones</a>
-                        <a href="{% url 'manage_cities' %}">Cities (Woredas)</a>
+                        {% url 'manage_regions' as regions_url %}
+                        {% include "includes/dropdown_link.html" with href=regions_url icon="globe" label="Regions" only %}
+                        {% url 'manage_geo_zones' as zones_url %}
+                        {% include "includes/dropdown_link.html" with href=zones_url icon="zone" label="Zones" only %}
+                        {% url 'manage_cities' as cities_url %}
+                        {% include "includes/dropdown_link.html" with href=cities_url icon="city" label="Cities (Woredas)" only %}
                     </div>
                 </div>
                 <div class="dropdown">
-                    <button class="dropbtn">Settings ▾</button>
+                    <button type="button" class="dropbtn">
+                        {% include "includes/nav_icon.html" with icon="settings" only %}
+                        Settings
+                        <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+                    </button>
                     <div class="dropdown-content">
-                        <a href="{% url 'manage_loan_categories' %}">Loan categories</a>
-                        <a href="{% url 'manage_collateral_types' %}">Collateral types</a>
-                        <a href="{% url 'manage_loan_application_document_types' %}">Application document types</a>
-                        <a href="{% url 'collateral:collateral_policy_config' %}">Collateral policy</a>
+                        {% url 'manage_loan_categories' as categories_url %}
+                        {% include "includes/dropdown_link.html" with href=categories_url icon="catalog" label="Loan categories" only %}
+                        {% url 'manage_collateral_types' as collateral_types_url %}
+                        {% include "includes/dropdown_link.html" with href=collateral_types_url icon="book" label="Collateral types" only %}
+                        {% url 'manage_loan_application_document_types' as doc_types_url %}
+                        {% include "includes/dropdown_link.html" with href=doc_types_url icon="loan" label="Document types" only %}
+                        {% url 'collateral:collateral_policy_config' as policy_url %}
+                        {% include "includes/dropdown_link.html" with href=policy_url icon="shield" label="Collateral policy" only %}
+                        {% if user.role == 'superadmin' %}
+                        {% url 'collateral_estimation_config' as estimation_url %}
+                        {% include "includes/dropdown_link.html" with href=estimation_url icon="settings" label="Estimation config" only %}
+                        {% endif %}
+                        {% if user.role == 'superadmin' or user.role == 'admin' %}
+                        {% url 'collateral:unlock_queue' as unlock_url %}
+                        {% include "includes/dropdown_link.html" with href=unlock_url icon="unlock" label="Unlock queue" only %}
+                        {% endif %}
                     </div>
                 </div>
             {% endif %}
@@ -358,7 +649,7 @@
     </div>
 
     <footer>
-        <p>&copy; <a href="https://seqela.com">Haben Kiros</a>. All rights reserved.</p>
+        <p>&copy; <a href="https://seqela.com">Seqela Technologies</a>. All rights reserved.</p>
     </footer>
 
     {% block extra_scripts %}

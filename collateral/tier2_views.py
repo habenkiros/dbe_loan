@@ -5,12 +5,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from loans.models import LoanRequest
+
 from .engineering_qa import can_review_engineering, engineering_pending_loans, engineering_review_required
 from .forms import CollateralEngineeringReviewForm
 from .governance import log_collateral_event
 from .models import CollateralFieldAuditLog
 from .services.notifications import notify_engineering_approved, notify_engineering_returned
-from .views import _can_access_collateral, _collateral_eligible_loans
 
 
 @login_required
@@ -31,7 +32,7 @@ def engineering_qa_queue(request):
 @login_required
 def engineering_qa_review(request, loan_request_id):
     loan_request = get_object_or_404(
-        _collateral_eligible_loans(request.user).select_related(
+        LoanRequest.objects.select_related(
             'branch', 'collateral', 'assigned_engineer', 'collateral_submitted_by',
         ),
         pk=loan_request_id,
@@ -47,7 +48,6 @@ def engineering_qa_review(request, loan_request_id):
             messages.error(request, 'Invalid form.')
             return redirect('collateral:engineering_qa_review', loan_request_id=loan_request_id)
         note = form.cleaned_data.get('review_note', '')
-        from loans.models import LoanRequest
 
         if action == 'approve':
             loan_request.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_APPROVED

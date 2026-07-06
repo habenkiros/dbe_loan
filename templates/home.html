@@ -5,9 +5,9 @@
 
 {% block content %}
 {% if user.role == 'engineer' or user.role == 'engineering_head' or user.role == 'Engineering Head' %}
-<div class="engineering-quicklinks" style="background:#e8f5e9; border:1px solid #2e7d32; border-radius:8px; padding:16px; margin-bottom:24px;">
-    <h3 style="margin-top:0;">Engineering &amp; Collateral</h3>
-    <p style="margin-bottom:12px;">Use <strong>Field visit</strong> on a tablet at the property (GPS + camera). Desktop: Buildings → Valuation / Images.</p>
+<div class="quicklinks-card">
+    <h3>Engineering &amp; Collateral</h3>
+    <p>Use <strong>Field visit</strong> on a tablet at the property (GPS + camera). Desktop: Buildings → Valuation / Images.</p>
     <p>
         <a href="{% url 'collateral:catalog_index' %}" class="btn btn-green">Catalog (Main/Sub work)</a>
         <a href="{% url 'collateral:unit_price_list' %}" class="btn btn-blue">Unit prices (Woreda)</a>

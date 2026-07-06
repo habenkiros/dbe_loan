@@ -93,7 +93,30 @@ class CollateralGovernanceTests(TestCase):
         readiness = get_building_readiness(self.building)
         self.assertTrue(readiness['ready'])
 
-    def test_submit_blockers_empty_when_ready(self):
+    def test_building_stays_ready_when_collateral_locked(self):
+        from collateral.models import BuildingValuation, SubWork, MainWork
+
+        mw = MainWork.objects.create(name='Structure2', order=1)
+        sw = SubWork.objects.create(name='Foundation2', main_work=mw, order=1)
+        BuildingValuation.objects.create(
+            building=self.building,
+            sub_work=sw,
+            quantity=Decimal('10'),
+            unit_price=Decimal('1000'),
+        )
+        tiny = SimpleUploadedFile('p.jpg', b'fake-image-bytes', content_type='image/jpeg')
+        for i in range(5):
+            BuildingImage.objects.create(
+                building=self.building,
+                image=tiny,
+                gps_lat=Decimal('9.01'),
+                gps_lon=Decimal('38.75'),
+            )
+        self.loan.collateral_submitted_at = timezone.now()
+        self.loan.save(update_fields=['collateral_submitted_at'])
+        readiness = get_building_readiness(self.building)
+        self.assertTrue(readiness['ready'])
+        self.assertTrue(readiness['locked'])
         from collateral.models import BuildingValuation, SubWork, MainWork
 
         mw = MainWork.objects.create(name='Structure', order=1)

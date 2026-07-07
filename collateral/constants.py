@@ -18,7 +18,7 @@ LAND_FIELD_STEPS = (
 )
 
 OTHER_FIELD_STEPS = (
-    (1, 'Asset & site'),
+    (1, 'Asset details'),
     (2, 'Photos'),
     (3, 'Review'),
 )

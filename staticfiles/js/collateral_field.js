@@ -86,6 +86,20 @@
     panel.hidden = !weak;
   }
 
+  function applyGpsReading(prefix, statusEl, lat, lon, accuracy, label) {
+    setHidden(prefix, lat, lon, accuracy);
+    updateGpsStatus(statusEl, lat, lon, accuracy, label);
+    if (prefix === 'site' && window.COLLATERAL_SITE_MAP_ID && window.CollateralMap) {
+      window.CollateralMap.updateLiveSite(
+        window.COLLATERAL_SITE_MAP_ID,
+        lat,
+        lon,
+        accuracy,
+        label || 'Registered site'
+      );
+    }
+  }
+
   function captureGpsPromise(prefix, statusEl, btn) {
     var blocked = geoBlockedReason();
     if (blocked) {
@@ -97,39 +111,73 @@
       btn.textContent = 'Getting location…';
     }
     return new Promise(function (resolve, reject) {
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          var c = pos.coords;
-        setHidden(prefix, c.latitude, c.longitude, c.accuracy);
-        updateGpsStatus(statusEl, c.latitude, c.longitude, c.accuracy, 'Captured');
-        if (prefix === 'site' && window.COLLATERAL_SITE_MAP_ID) {
-          document.dispatchEvent(new CustomEvent('collateral:site-gps-updated', {
-            detail: {
-              mapId: window.COLLATERAL_SITE_MAP_ID,
-              lat: c.latitude,
-              lon: c.longitude,
-              accuracy: c.accuracy,
-              label: 'Registered site (captured)',
-            },
-          }));
+      var best = null;
+      var samples = 0;
+      var settled = false;
+      var watchId = null;
+
+      function finish(pos, err) {
+        if (settled) return;
+        settled = true;
+        if (watchId != null && navigator.geolocation.clearWatch) {
+          navigator.geolocation.clearWatch(watchId);
         }
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Refresh location';
-          }
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = pos ? 'Refresh location' : 'Try again';
+        }
+        if (pos) {
+          var c = pos.coords;
+          applyGpsReading(prefix, statusEl, c.latitude, c.longitude, c.accuracy, 'Captured');
           resolve(pos);
-        },
-        function (err) {
+        } else {
           var msg = geoErrorText(err);
           updateGpsStatus(statusEl, null, null, null, msg);
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Try again';
+          reject(err || new Error(msg));
+        }
+      }
+
+      function onPosition(pos) {
+        samples += 1;
+        if (!best || pos.coords.accuracy < best.coords.accuracy) {
+          best = pos;
+          applyGpsReading(
+            prefix,
+            statusEl,
+            pos.coords.latitude,
+            pos.coords.longitude,
+            pos.coords.accuracy,
+            'Capturing…'
+          );
+        }
+        var targetAccuracy = 35;
+        if (best && (best.coords.accuracy <= targetAccuracy || samples >= 6)) {
+          finish(best, null);
+        }
+      }
+
+      if (navigator.geolocation.watchPosition) {
+        watchId = navigator.geolocation.watchPosition(
+          onPosition,
+          function (err) { finish(null, err); },
+          { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+        );
+        setTimeout(function () {
+          if (!settled) {
+            if (best) {
+              finish(best, null);
+            } else {
+              finish(null, { code: 3, message: 'Location timed out' });
+            }
           }
-          reject(err);
-        },
-        { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
-      );
+        }, 28000);
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          function (pos) { finish(pos, null); },
+          function (err) { finish(null, err); },
+          { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
+        );
+      }
     });
   }
 
@@ -195,6 +243,8 @@
       var coords = readHidden(prefix);
       if (coords.lat != null && coords.lon != null) return;
 
+      if (opts.optional) return;
+
       var blocked = geoBlockedReason();
       if (blocked) {
         if (opts.optional) return;
@@ -235,13 +285,26 @@
     }
   }
 
+  function initLiveSitePreview() {
+    var liveMap = document.querySelector('.collateral-map-canvas[data-live-site="1"]');
+    if (!liveMap || !window.CollateralMap) return;
+    if (liveMap.getAttribute('data-auto-live-gps') === '0') return;
+    var status = byId('site-gps-status');
+    var saved = readHidden('site');
+    if (saved.lat != null && saved.lon != null) {
+      applyGpsReading('site', status, saved.lat, saved.lon, saved.accuracy, 'Saved site');
+    }
+  }
+
   function initSiteGps() {
     var btn = byId('btn-mark-site-gps');
     var status = byId('site-gps-status');
     var form = byId('field-step1-form') || byId('asset-step1-form');
     var saved = readHidden('site');
     if (status && saved.lat != null && saved.lon != null) {
-      updateGpsStatus(status, saved.lat, saved.lon, saved.accuracy, 'Saved site');
+      applyGpsReading('site', status, saved.lat, saved.lon, saved.accuracy, 'Saved site');
+    } else {
+      initLiveSitePreview();
     }
     if (btn) {
       btn.addEventListener('click', function () {

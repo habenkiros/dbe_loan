@@ -41,6 +41,7 @@ urlpatterns = [
     path('loan/<int:loan_request_id>/land/field-visit/<int:step>/', views.land_field_visit, name='land_field_visit_step'),
     path('loan/<int:loan_request_id>/land/', views.land_valuation, name='land_valuation'),
     path('loan/<int:loan_request_id>/other-collateral/', views.other_collateral_list, name='other_collateral_list'),
+    path('loan/<int:loan_request_id>/other-collateral/add/', views.other_collateral_add, name='other_collateral_add'),
     path('other-collateral/<int:item_id>/field-visit/', views.other_field_visit, {'step': 1}, name='other_field_visit'),
     path('other-collateral/<int:item_id>/field-visit/<int:step>/', views.other_field_visit, name='other_field_visit_step'),
     path('other-collateral/<int:item_id>/edit/', views.other_collateral_edit, name='other_collateral_edit'),

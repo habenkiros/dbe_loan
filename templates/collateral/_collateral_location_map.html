@@ -20,6 +20,9 @@ Expects: map_data, map_id (unique), map_title (optional), compact (optional bool
     {% else %}
     <span class="collateral-map-warn">No field site GPS yet — mark location in step 1.</span>
     {% endif %}
+    {% if site_gps_optional and not map_data.has_site %}
+    <span class="help">Site pin optional for vehicles/machinery — photo GPS on step 2 is enough.</span>
+    {% endif %}
     {% if map_data.declared_address_geocoded %}
     <span class="collateral-map-legend-item"><span class="pin-declared">🏠</span> Declared address (geocoded)</span>
     {% elif map_data.registered_address %}
@@ -35,7 +38,7 @@ Expects: map_data, map_id (unique), map_title (optional), compact (optional bool
     <span class="collateral-map-warn">{{ map_data.photo_warnings }} photo(s) farther than {{ map_data.max_distance_m }} m from site</span>
     {% endif %}
   </div>
-  <div id="{{ map_id }}" class="collateral-map-canvas" data-config-id="{{ map_config_id }}"{% if live_site %} data-live-site="1"{% endif %}></div>
+  <div id="{{ map_id }}" class="collateral-map-canvas" data-config-id="{{ map_config_id }}"{% if live_site %} data-live-site="1"{% endif %}{% if auto_live_gps == False %} data-auto-live-gps="0"{% endif %}></div>
   {{ map_data|json_script:map_config_id }}
   <p class="help collateral-map-help">Blue pin = field site GPS. House pin = declared address from Sheet 1 (geocoded). Camera pins = photo capture GPS.</p>
 </div>

@@ -1,38 +1,48 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Other collateral – {{ loan_request.loan_request_id }}{% endblock %}
+{% block title %}{{ collateral_label }} – {{ loan_request.loan_request_id }}{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/collateral_field.css' %}">
 {% endblock %}
 {% block content %}
-<h2>Other collateral (Vehicle, Machinery, Equipment, etc.)</h2>
-<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
+<h2>{{ collateral_label }}</h2>
+<p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
 <p>
+    {% if "building" in loan_request.collateral.name|lower or "house" in loan_request.collateral.name|lower %}
     <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
     &nbsp;|&nbsp;
+    {% endif %}
+    {% if "land" in loan_request.collateral.name|lower %}
     <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
     &nbsp;|&nbsp;
+    {% endif %}
     <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
 
-{% if not locked %}
-<h3>Add item</h3>
-<p class="help">After adding, you go to <strong>field visit</strong> on the tablet (GPS + photos).</p>
-<form method="post" style="max-width: 500px;">
-    {% csrf_token %}
-    <table>{{ form.as_table }}</table>
-    <button type="submit">Add item &amp; start field visit</button>
-</form>
+{% if locked %}
+<p class="field-locked-banner" style="padding:0.75rem;border-radius:8px;background:#eceff1;">Collateral submitted — items are read-only.</p>
+{% elif not item_rows %}
+<p class="help">Add each asset separately (e.g. a pickup and a trailer). Details and photos are captured in the field visit.</p>
 {% endif %}
 
-<h3>Items</h3>
+{% if not locked %}
+<p style="margin:1rem 0;">
+  <form method="post" action="{% url 'collateral:other_collateral_add' loan_request.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="field-btn field-btn-primary">+ Add collateral item</button>
+  </form>
+  <span class="help" style="margin-left:0.5rem;">Opens field visit step 1 for a new asset.</span>
+</p>
+{% endif %}
+
+<h3>Collateral items ({{ item_rows|length }})</h3>
 <div class="table-container">
     <table>
         <thead>
             <tr>
-                <th>Name / details</th>
+                <th>Asset</th>
                 <th>Value</th>
                 <th>Field readiness</th>
                 <th>Actions</th>
@@ -45,27 +55,38 @@
                   <strong>{{ row.item.name }}</strong>
                   {% if row.item.make_model %}<br><small>{{ row.item.make_model }}{% if row.item.year_made %} · {{ row.item.year_made }}{% endif %}</small>{% endif %}
                   {% if row.item.plate_number %}<br><small>Plate: {{ row.item.plate_number }}</small>{% endif %}
-                  {% if row.item.condition_grade %}<br><small>Condition: {{ row.item.get_condition_grade_display }}</small>{% endif %}
+                  {% if row.item.condition_grade %}<br><small>{{ row.item.get_condition_grade_display }}</small>{% endif %}
                 </td>
                 <td>{{ row.item.estimated_value|floatformat:2 }}</td>
-                <td>{% if row.readiness.ready %}<span class="field-check-ok">Ready</span>{% else %}{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos{% endif %}</td>
+                <td>
+                  {% if row.readiness.ready %}<span class="field-check-ok">Ready</span>{% else %}<span class="field-check-fail">Incomplete</span>{% endif %}
+                  <br><small>{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos</small>
+                </td>
                 <td>
                     <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
                     &nbsp;|&nbsp;
                     <a href="{% url 'collateral:other_collateral_edit' row.item.id %}">Edit</a>
                     {% if not locked %}
                     &nbsp;|&nbsp;
-                    <a href="{% url 'collateral:other_collateral_delete' row.item.id %}" onclick="return confirm('Remove this item?');">Delete</a>
+                    <a href="{% url 'collateral:other_collateral_delete' row.item.id %}" onclick="return confirm('Remove this collateral item?');">Remove</a>
                     {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4">No items yet.{% if not locked %} Add one above.{% endif %}</td>
+                <td colspan="4">No collateral items yet.{% if not locked %} Use <strong>Add collateral item</strong> above.{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-<p><strong>Total (other collateral): {{ total_other|floatformat:2 }}</strong></p>
+<p><strong>Total ({{ collateral_label|lower }}): {{ total_other|floatformat:2 }}</strong></p>
+{% if not locked and item_rows %}
+<p>
+  <form method="post" action="{% url 'collateral:other_collateral_add' loan_request.id %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-green">+ Add another collateral item</button>
+  </form>
+</p>
+{% endif %}
 {% endblock %}

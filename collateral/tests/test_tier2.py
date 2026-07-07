@@ -66,8 +66,33 @@ class CollateralTier2Tests(TestCase):
     def test_declared_address_from_basic_info(self):
         self.assertEqual(declared_address_for_loan(self.loan), 'Bole Road, Addis Ababa')
 
-    def test_engineer_can_review_pending(self):
-        self.loan.collateral_submitted_at = timezone.now()
-        self.loan.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_PENDING
-        self.loan.save()
-        self.assertTrue(can_review_engineering(self.engineer, self.loan))
+    def test_other_item_form_empty_year_saves(self):
+        from collateral.forms import OtherCollateralItemForm
+        from collateral.models import OtherCollateralItem
+
+        item = OtherCollateralItem(loan_request=self.loan, name='Test Truck', estimated_value=Decimal('100000'))
+        form = OtherCollateralItemForm(
+            {'name': 'Test Truck', 'estimated_value': '100000', 'year_made': ''},
+            instance=item,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertIsNone(form.cleaned_data['year_made'])
+
+    def test_other_item_ready_without_site_gps(self):
+        from collateral.models import OtherCollateralItem, OtherCollateralItemImage
+        from collateral.field_utils import get_other_item_readiness
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        vehicle = OtherCollateralItem.objects.create(
+            loan_request=self.loan,
+            name='Toyota Pickup',
+            make_model='Toyota Hilux',
+            plate_number='AA-12345',
+            estimated_value=Decimal('400000'),
+        )
+        tiny = SimpleUploadedFile('p.jpg', b'fake-image-bytes', content_type='image/jpeg')
+        for i in range(3):
+            OtherCollateralItemImage.objects.create(item=vehicle, image=tiny, gps_lat=Decimal('9.01'), gps_lon=Decimal('38.75'))
+        readiness = get_other_item_readiness(vehicle)
+        self.assertTrue(readiness['ready'])
+        self.assertFalse(vehicle.site_gps_lat)

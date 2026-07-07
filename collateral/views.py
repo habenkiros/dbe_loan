@@ -864,7 +864,10 @@ def other_field_visit(request, item_id, step=1):
                 if action == 'save_next':
                     return redirect('collateral:other_field_visit_step', item_id=item_id, step=2)
             else:
-                messages.error(request, 'Please fix the errors below.')
+                for field, errs in item_form.errors.items():
+                    for e in errs:
+                        messages.error(request, f'{field}: {e}')
+                messages.error(request, 'Could not save — check fields below.')
         elif step == 2 and action == 'upload_photo':
             ok, msg = save_other_field_photo(item, request.POST, request.FILES, request.user)
             messages.success(request, msg) if ok else messages.error(request, msg)
@@ -1051,32 +1054,39 @@ def land_valuation(request, loan_request_id):
 
 @login_required
 @user_passes_test(_can_access_collateral)
+def other_collateral_add(request, loan_request_id):
+    """Start field visit for a new movable collateral item (vehicle, machinery, etc.)."""
+    if request.method != 'POST':
+        return redirect('collateral:other_collateral_list', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request_id)
+    if blocked:
+        return blocked
+    item = OtherCollateralItem.objects.create(
+        loan_request=loan_request,
+        name='Collateral item',
+        estimated_value=Decimal('0'),
+    )
+    messages.info(request, 'Enter asset details on step 1, then add photos.')
+    return redirect('collateral:other_field_visit', item_id=item.pk)
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
 def other_collateral_list(request, loan_request_id):
-    """List and add other collateral items (vehicle, machinery, etc.) for a loan."""
+    """List movable collateral items for a loan."""
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     items = OtherCollateralItem.objects.filter(loan_request=loan_request).order_by('name')
     total_other = sum(item.estimated_value for item in items)
     item_rows = [{'item': i, 'readiness': get_other_item_readiness(i)} for i in items]
-    if request.method == 'POST':
-        blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request_id)
-        if blocked:
-            return blocked
-        form = OtherCollateralItemForm(request.POST)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            obj.loan_request = loan_request
-            obj.save()
-            messages.success(request, 'Collateral item added.')
-            return redirect('collateral:other_field_visit', item_id=obj.pk)
-    else:
-        form = OtherCollateralItemForm()
+    collateral_label = loan_request.collateral.name if loan_request.collateral_id else 'Collateral'
     return render(request, 'collateral/other_collateral_list.html', {
         'loan_request': loan_request,
         'items': items,
         'item_rows': item_rows,
         'total_other': total_other,
-        'form': form,
         'locked': collateral_is_locked(loan_request),
+        'collateral_label': collateral_label,
     })
 
 

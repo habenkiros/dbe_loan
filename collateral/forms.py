@@ -1,4 +1,6 @@
 # collateral/forms.py
+from decimal import Decimal
+
 from django import forms
 from .models import (
     Building, BuildingValuation, BuildingImage, LandValuation,
@@ -150,6 +152,34 @@ class OtherCollateralItemForm(forms.ModelForm):
             'estimated_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['year_made'].required = False
+        self.fields['make_model'].required = False
+        self.fields['plate_number'].required = False
+        self.fields['chassis_vin'].required = False
+        self.fields['odometer_or_hours'].required = False
+        self.fields['condition_grade'].required = False
+        self.fields['notes'].required = False
+        self.fields['year_made'] = forms.IntegerField(
+            required=False,
+            min_value=1950,
+            max_value=2100,
+            widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1950, 'max': 2100}),
+        )
+
+    def clean_year_made(self):
+        val = self.cleaned_data.get('year_made')
+        if val in (None, ''):
+            return None
+        return val
+
+    def clean_estimated_value(self):
+        val = self.cleaned_data.get('estimated_value')
+        if val is None:
+            return Decimal('0')
+        return val
 
 
 class LandValuationForm(forms.ModelForm):

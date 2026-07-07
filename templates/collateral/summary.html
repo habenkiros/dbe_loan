@@ -14,7 +14,7 @@
     &nbsp;|&nbsp;
     {% endif %}
     {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
-    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery, etc.)</a>
+    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">{{ loan_request.collateral.name }}</a>
     &nbsp;|&nbsp;
     {% endif %}
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>

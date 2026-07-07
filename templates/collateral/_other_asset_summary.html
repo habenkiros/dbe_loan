@@ -1,0 +1,13 @@
+{% comment %}Saved movable collateral item summary. Expects: item {% endcomment %}
+<div class="other-asset-summary" style="margin:0 0 1rem;padding:0.75rem 1rem;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;">
+  <strong>{{ item.name }}</strong>
+  {% if item.make_model %} · {{ item.make_model }}{% endif %}
+  {% if item.year_made %} · {{ item.year_made }}{% endif %}
+  <br>
+  {% if item.plate_number %}<span class="help">Plate: {{ item.plate_number }}</span>{% endif %}
+  {% if item.chassis_vin %}<span class="help">{% if item.plate_number %} · {% endif %}Chassis/VIN: {{ item.chassis_vin }}</span>{% endif %}
+  {% if item.odometer_or_hours %}<br><span class="help">Odometer/hours: {{ item.odometer_or_hours }}</span>{% endif %}
+  {% if item.condition_grade %}<span class="help"> · {{ item.get_condition_grade_display }}</span>{% endif %}
+  <br><span class="help">Estimated value: <strong>{{ item.estimated_value|floatformat:2 }}</strong></span>
+  {% if item.notes %}<br><span class="help">{{ item.notes }}</span>{% endif %}
+</div>

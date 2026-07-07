@@ -30,7 +30,7 @@
 
   {% if step == 1 %}
   <div class="field-card">
-    <h3>Step 1 — {% if visit_kind == 'land' %}Land &amp; site{% else %}Asset &amp; site{% endif %}</h3>
+    <h3>Step 1 — {% if visit_kind == 'land' %}Land &amp; site{% else %}Asset details{% endif %}</h3>
     <form method="post" id="asset-step1-form">
       {% csrf_token %}
       <input type="hidden" name="action" value="save" id="asset-step1-action">
@@ -48,9 +48,37 @@
       <p><label for="id_notes">Notes</label><br>
         <textarea name="notes" id="id_notes" class="field-input-lg" rows="3" {% if locked %}disabled{% endif %}>{{ land_form.notes.value|default:land.notes|default:'' }}</textarea></p>
       {% else %}
+      {% if item_form.errors %}
+      <div class="field-form-errors" style="margin-bottom:1rem;padding:0.75rem;background:#fdecea;border:1px solid #e57373;border-radius:6px;">
+        <strong>Please fix:</strong>
+        <ul style="margin:0.35rem 0 0 1.1rem;">{% for field, errs in item_form.errors.items %}{% for e in errs %}<li>{{ field }}: {{ e }}</li>{% endfor %}{% endfor %}</ul>
+      </div>
+      {% endif %}
       <p><label for="id_name">Asset name</label><br>
         <input type="text" name="name" id="id_name" class="field-input-lg" required
                value="{{ item_form.name.value|default:item.name }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_make_model">Make / model</label><br>
+        <input type="text" name="make_model" id="id_make_model" class="field-input-lg"
+               value="{{ item_form.make_model.value|default:item.make_model|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_year_made">Year</label><br>
+        <input type="number" name="year_made" id="id_year_made" class="field-input-lg" min="1950" max="2100"
+               value="{{ item_form.year_made.value|default:item.year_made|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_plate_number">Plate / registration</label><br>
+        <input type="text" name="plate_number" id="id_plate_number" class="field-input-lg"
+               value="{{ item_form.plate_number.value|default:item.plate_number|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_chassis_vin">Chassis / VIN</label><br>
+        <input type="text" name="chassis_vin" id="id_chassis_vin" class="field-input-lg"
+               value="{{ item_form.chassis_vin.value|default:item.chassis_vin|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_odometer_or_hours">Odometer (km) or hours</label><br>
+        <input type="text" name="odometer_or_hours" id="id_odometer_or_hours" class="field-input-lg"
+               value="{{ item_form.odometer_or_hours.value|default:item.odometer_or_hours|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      <p><label for="id_condition_grade">Condition</label><br>
+        <select name="condition_grade" id="id_condition_grade" class="field-input-lg" {% if locked %}disabled{% endif %}>
+          <option value="">——</option>
+          {% for val, lbl in item_form.fields.condition_grade.choices %}
+          <option value="{{ val }}" {% if item.condition_grade == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select></p>
       <p><label for="id_estimated_value">Estimated value</label><br>
         <input type="text" name="estimated_value" id="id_estimated_value" class="field-input-lg" inputmode="decimal" required
                value="{{ item_form.estimated_value.value|default:item.estimated_value }}" {% if locked %}disabled{% endif %}></p>
@@ -58,16 +86,25 @@
         <textarea name="notes" id="id_notes" class="field-input-lg" rows="2" {% if locked %}disabled{% endif %}>{{ item_form.notes.value|default:item.notes|default:'' }}</textarea></p>
       {% endif %}
 
-      <h4>Site GPS</h4>
+      {% if visit_kind == 'land' %}
+      <h4>Plot site GPS</h4>
       <p class="help">Registered collateral location — photos are verified against this map pin.</p>
+      {% else %}
+      <h4>Storage / yard location (optional)</h4>
+      <p class="help">Vehicles and machinery move — <strong>photo GPS on step 2</strong> is what matters for verification. Mark a yard or branch location here only if useful; you can skip and go to Next.</p>
+      {% endif %}
       <div id="site-gps-status" class="field-gps-status field-gps-none">GPS not captured yet.</div>
       {% if visit_kind == 'land' %}
       {% include "collateral/_collateral_location_map.html" with map_id="land-field-map" map_config_id="land-field-map-data" map_data=map_data map_title="Registered plot site" live_site=True %}
       {% else %}
-      {% include "collateral/_collateral_location_map.html" with map_id="other-field-map" map_config_id="other-field-map-data" map_data=map_data map_title="Registered asset site" live_site=True %}
+      {% include "collateral/_collateral_location_map.html" with map_id="other-field-map" map_config_id="other-field-map-data" map_data=map_data map_title="Optional storage location" live_site=True auto_live_gps=False site_gps_optional=True %}
       {% endif %}
       {% if not locked %}
+      {% if visit_kind == 'land' %}
       <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark site location (GPS)</button>
+      {% else %}
+      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark storage location (optional)</button>
+      {% endif %}
       {% include "collateral/_gps_attestation_site.html" %}
       {% endif %}
     </form>
@@ -76,6 +113,10 @@
   {% elif step == 2 %}
   <div class="field-card">
     <h3>Step 2 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
+    {% if visit_kind == 'other' %}
+    {% include "collateral/_other_asset_summary.html" %}
+    <p class="help">Capture plate, full vehicle, and serial/chassis photos. GPS is taken when you save each photo.</p>
+    {% endif %}
     {% include "collateral/_collateral_location_map.html" with map_id="asset-verify-map" map_config_id="asset-verify-map-data" map_data=map_data map_title="Site vs photo locations" %}
     {% if not locked %}
     <form method="post" enctype="multipart/form-data" id="field-photo-form">
@@ -126,6 +167,9 @@
   {% elif step == 3 %}
   <div class="field-card">
     <h3>Step 3 — Review</h3>
+    {% if visit_kind == 'other' %}
+    {% include "collateral/_other_asset_summary.html" %}
+    {% endif %}
     {% include "collateral/_collateral_location_map.html" with map_id="asset-review-map" map_config_id="asset-review-map-data" map_data=map_data map_title="Collateral location verification" %}
     {% if visit_kind == 'land' and land.total_value %}
     <p><strong>Land total: {{ land.total_value|floatformat:2 }}</strong></p>
@@ -139,6 +183,13 @@
       {% endfor %}
     </ul>
     <a href="{{ summary_url }}" class="field-btn field-btn-primary field-btn-block" style="margin-top:1rem;">Collateral summary</a>
+    {% if visit_kind == 'other' and not locked %}
+    <form method="post" action="{% url 'collateral:other_collateral_add' loan_request.id %}" style="margin-top:0.75rem;">
+      {% csrf_token %}
+      <button type="submit" class="field-btn field-btn-secondary field-btn-block">+ Add another collateral item</button>
+    </form>
+    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}" class="field-btn field-btn-secondary field-btn-block" style="margin-top:0.5rem;text-align:center;">All collateral items</a>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -161,6 +212,11 @@
     {% else %}
     <a href="{% url 'collateral:other_field_visit_step' item.id 3 %}" class="field-btn field-btn-primary">Review →</a>
     {% endif %}
+    {% elif step == 3 and visit_kind == 'other' and not locked %}
+    <form method="post" action="{% url 'collateral:other_collateral_add' loan_request.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="field-btn field-btn-secondary">+ Another item</button>
+    </form>
     {% endif %}
   </div>
 </div>

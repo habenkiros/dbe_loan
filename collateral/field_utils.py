@@ -167,6 +167,10 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
     min_img = policy.min_images_per_other_item
     loan_request = item.loan_request
     image_count = OtherCollateralItemImage.objects.filter(item=item).count()
+    photos_with_gps = OtherCollateralItemImage.objects.filter(
+        item=item, gps_lat__isnull=False, gps_lon__isnull=False,
+    ).count()
+    has_site = item.site_gps_lat is not None and item.site_gps_lon is not None
     checks = [
         {
             'key': 'name',
@@ -181,19 +185,29 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
             'detail': str(item.estimated_value),
         },
         {
-            'key': 'site_gps',
-            'label': 'Asset location GPS marked',
-            'ok': item.site_gps_lat is not None and item.site_gps_lon is not None,
-            'detail': 'Mark location on step 1' if item.site_gps_lat is None else f'{item.site_gps_lat}, {item.site_gps_lon}',
-        },
-        {
             'key': 'photos',
             'label': f'At least {min_img} photos',
             'ok': image_count >= min_img,
             'detail': f'{image_count} / {min_img}',
         },
+        {
+            'key': 'photo_gps',
+            'label': 'Photo GPS (recommended)',
+            'ok': photos_with_gps >= 1 or image_count == 0,
+            'detail': (
+                f'{photos_with_gps} photo(s) with GPS — capture on step 2'
+                if photos_with_gps < 1 else f'{photos_with_gps} with GPS'
+            ),
+        },
     ]
-    required_ok = all(c['ok'] for c in checks)
+    if has_site:
+        checks.insert(2, {
+            'key': 'site_gps',
+            'label': 'Storage / yard location (optional)',
+            'ok': True,
+            'detail': f'{item.site_gps_lat}, {item.site_gps_lon}',
+        })
+    required_ok = all(c['ok'] for c in checks if c['key'] != 'photo_gps')
     return {
         'locked': collateral_is_locked(loan_request),
         'image_count': image_count,

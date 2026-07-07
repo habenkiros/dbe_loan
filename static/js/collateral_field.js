@@ -243,6 +243,8 @@
       var coords = readHidden(prefix);
       if (coords.lat != null && coords.lon != null) return;
 
+      if (opts.optional) return;
+
       var blocked = geoBlockedReason();
       if (blocked) {
         if (opts.optional) return;
@@ -286,28 +288,12 @@
   function initLiveSitePreview() {
     var liveMap = document.querySelector('.collateral-map-canvas[data-live-site="1"]');
     if (!liveMap || !window.CollateralMap) return;
+    if (liveMap.getAttribute('data-auto-live-gps') === '0') return;
     var status = byId('site-gps-status');
     var saved = readHidden('site');
     if (saved.lat != null && saved.lon != null) {
       applyGpsReading('site', status, saved.lat, saved.lon, saved.accuracy, 'Saved site');
-      return;
     }
-    var blocked = geoBlockedReason();
-    if (blocked || !navigator.geolocation || !navigator.geolocation.watchPosition) return;
-    navigator.geolocation.watchPosition(
-      function (pos) {
-        applyGpsReading(
-          'site',
-          status,
-          pos.coords.latitude,
-          pos.coords.longitude,
-          pos.coords.accuracy,
-          'Live location'
-        );
-      },
-      function () { /* user can tap Mark site location */ },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
-    );
   }
 
   function initSiteGps() {

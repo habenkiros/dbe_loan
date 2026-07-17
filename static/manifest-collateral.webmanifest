@@ -1,0 +1,26 @@
+{
+  "name": "DECSI Collateral Field Visit",
+  "short_name": "Collateral Field",
+  "description": "Offline-capable collateral field visit for loan officers and engineers",
+  "start_url": "/collateral/",
+  "scope": "/collateral/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#064420",
+  "theme_color": "#064420",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/static/img/collateral-pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/img/collateral-pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

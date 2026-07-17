@@ -90,6 +90,8 @@ def _save_field_image(
     err = apply_photo_gps_attestation(img, post)
     if err:
         return False, err
+    from collateral.exif_gps import apply_exif_gps_to_image
+    exif_warn = apply_exif_gps_to_image(img, upload)
     img.save()
     log_collateral_event(
         loan_request,
@@ -101,6 +103,11 @@ def _save_field_image(
             'photo_type': photo_type,
             'gps_lat': str(img.gps_lat) if img.gps_lat is not None else None,
             'gps_weak_acknowledged': img.gps_weak_acknowledged,
+            'exif_gps_lat': str(img.exif_gps_lat) if img.exif_gps_lat is not None else None,
+            'browser_vs_exif_distance_m': (
+                str(img.browser_vs_exif_distance_m)
+                if img.browser_vs_exif_distance_m is not None else None
+            ),
         },
     )
     if img.gps_weak_acknowledged:
@@ -112,7 +119,10 @@ def _save_field_image(
             subject_id=img.pk,
             payload={'context': 'photo', 'note': img.gps_attestation_note[:500]},
         )
-    return True, 'Photo saved.'
+    msg = 'Photo saved.'
+    if exif_warn:
+        msg = f'Photo saved. Warning: {exif_warn}'
+    return True, msg
 
 
 def get_land_readiness(land) -> Dict[str, Any]:
@@ -162,15 +172,22 @@ def get_land_readiness(land) -> Dict[str, Any]:
 
 def get_other_item_readiness(item) -> Dict[str, Any]:
     from collateral.models import OtherCollateralItemImage
+    from collateral import constants
 
     policy = get_collateral_policy()
     min_img = policy.min_images_per_other_item
     loan_request = item.loan_request
-    image_count = OtherCollateralItemImage.objects.filter(item=item).count()
-    photos_with_gps = OtherCollateralItemImage.objects.filter(
-        item=item, gps_lat__isnull=False, gps_lon__isnull=False,
-    ).count()
+    images = list(OtherCollateralItemImage.objects.filter(item=item))
+    image_count = len(images)
+    photos_with_gps = sum(1 for i in images if i.gps_lat is not None and i.gps_lon is not None)
     has_site = item.site_gps_lat is not None and item.site_gps_lon is not None
+    types_present = {i.photo_type for i in images}
+    required_types = [t[0] for t in constants.REQUIRED_MOVABLE_PHOTO_TYPES]
+    missing_types = [t for t in required_types if t not in types_present]
+    type_labels = dict(constants.REQUIRED_MOVABLE_PHOTO_TYPES)
+    missing_labels = [type_labels.get(t, t) for t in missing_types]
+    types_ok = (not policy.require_movable_photo_types) or (len(missing_types) == 0)
+
     checks = [
         {
             'key': 'name',
@@ -191,6 +208,15 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
             'detail': f'{image_count} / {min_img}',
         },
         {
+            'key': 'required_photo_types',
+            'label': 'Required photo types (plate, full asset, chassis)',
+            'ok': types_ok,
+            'detail': (
+                'Complete' if types_ok
+                else f'Missing: {", ".join(missing_labels)}'
+            ),
+        },
+        {
             'key': 'photo_gps',
             'label': 'Photo GPS (recommended)',
             'ok': photos_with_gps >= 1 or image_count == 0,
@@ -207,7 +233,10 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
             'ok': True,
             'detail': f'{item.site_gps_lat}, {item.site_gps_lon}',
         })
-    required_ok = all(c['ok'] for c in checks if c['key'] != 'photo_gps')
+    required_ok = all(
+        c['ok'] for c in checks
+        if c['key'] != 'photo_gps'
+    )
     return {
         'locked': collateral_is_locked(loan_request),
         'image_count': image_count,
@@ -215,6 +244,7 @@ def get_other_item_readiness(item) -> Dict[str, Any]:
         'total_value': item.estimated_value,
         'checks': checks,
         'ready': required_ok,
+        'missing_photo_types': missing_types if policy.require_movable_photo_types else [],
     }
 
 
@@ -391,7 +421,16 @@ def collateral_submit_blockers(loan_request) -> List[str]:
         item = row['item']
         r = row['readiness']
         if not r['ready']:
-            blockers.append(f'"{item.name}": {r["image_count"]}/{r["min_images"]} photos — complete field visit')
+            missing = r.get('missing_photo_types') or []
+            if missing:
+                from collateral import constants
+                labels = dict(constants.REQUIRED_MOVABLE_PHOTO_TYPES)
+                miss_txt = ', '.join(labels.get(t, t) for t in missing)
+                blockers.append(f'"{item.name}": missing required photos — {miss_txt}')
+            else:
+                blockers.append(
+                    f'"{item.name}": {r["image_count"]}/{r["min_images"]} photos — complete field visit'
+                )
     if readiness['applies'] and not readiness.get('buildings') and not readiness.get('land') and not readiness.get('other_items'):
         blockers.append('Add collateral data before submitting.')
 

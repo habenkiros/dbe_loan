@@ -209,6 +209,12 @@ class BuildingImage(models.Model):
     )
     gps_weak_acknowledged = models.BooleanField(default=False)
     gps_attestation_note = models.TextField(blank=True)
+    exif_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    exif_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    browser_vs_exif_distance_m = models.DecimalField(
+        max_digits=12, decimal_places=1, null=True, blank=True,
+        help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
+    )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -268,6 +274,12 @@ class LandValuationImage(models.Model):
     gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gps_weak_acknowledged = models.BooleanField(default=False)
     gps_attestation_note = models.TextField(blank=True)
+    exif_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    exif_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    browser_vs_exif_distance_m = models.DecimalField(
+        max_digits=12, decimal_places=1, null=True, blank=True,
+        help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
+    )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -348,6 +360,12 @@ class OtherCollateralItemImage(models.Model):
     gps_accuracy_m = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gps_weak_acknowledged = models.BooleanField(default=False)
     gps_attestation_note = models.TextField(blank=True)
+    exif_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    exif_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    browser_vs_exif_distance_m = models.DecimalField(
+        max_digits=12, decimal_places=1, null=True, blank=True,
+        help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
+    )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -375,6 +393,7 @@ class CollateralFieldAuditLog(models.Model):
     EVT_UNLOCK_REJECTED = 'unlock_rejected'
     EVT_ENGINEERING_APPROVED = 'engineering_approved'
     EVT_ENGINEERING_RETURNED = 'engineering_returned'
+    EVT_DOSSIER_EXPORTED = 'dossier_exported'
     EVENT_CHOICES = [
         (EVT_SITE_GPS, 'Site GPS marked'),
         (EVT_PHOTO_UPLOADED, 'Photo uploaded'),
@@ -389,6 +408,7 @@ class CollateralFieldAuditLog(models.Model):
         (EVT_UNLOCK_REJECTED, 'Unlock rejected'),
         (EVT_ENGINEERING_APPROVED, 'Engineering approved'),
         (EVT_ENGINEERING_RETURNED, 'Engineering returned'),
+        (EVT_DOSSIER_EXPORTED, 'Dossier exported'),
     ]
 
     loan_request = models.ForeignKey(
@@ -451,6 +471,18 @@ class CollateralPolicyConfig(models.Model):
     block_submit_on_declared_address_mismatch = models.BooleanField(
         default=False,
         help_text='If enabled, large declared-address vs site GPS gap blocks collateral submit.',
+    )
+    require_movable_photo_types = models.BooleanField(
+        default=True,
+        help_text='Require plate, full asset, and chassis/serial photos for vehicle/machinery items.',
+    )
+    exif_gps_mismatch_warn_m = models.PositiveIntegerField(
+        default=200,
+        help_text='Warn when photo EXIF GPS differs from browser GPS by more than this (metres).',
+    )
+    block_submit_on_exif_gps_mismatch = models.BooleanField(
+        default=False,
+        help_text='If enabled, large EXIF vs browser GPS mismatch blocks collateral submit.',
     )
     updated_at = models.DateTimeField(auto_now=True)
 

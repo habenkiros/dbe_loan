@@ -86,6 +86,8 @@
         <div><strong>Annual net cashflow:</strong> {% if appraisal.cf_annual_net_cashflow is not None %}{{ appraisal.cf_annual_net_cashflow|floatformat:2 }}{% else %}—{% endif %}</div>
         <div><strong>Annual debt service:</strong> {% if appraisal.cf_annual_debt_service is not None %}{{ appraisal.cf_annual_debt_service|floatformat:2 }}{% else %}—{% endif %}</div>
         <div><strong>Annual DSCR:</strong> {% if appraisal.dscr_annual is not None %}{{ appraisal.dscr_annual|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Suggested installment</strong> (from Sheet 1 amount/rate/term — not rate workbook): {% if appraisal.suggested_monthly_installment is not None %}{{ appraisal.suggested_monthly_installment|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Max loan capacity</strong> (at policy DSCR {{ loan_analysis_policy.warn_annual_dscr_min }}): {% if appraisal.max_loan_capacity is not None %}{{ appraisal.max_loan_capacity|floatformat:2 }}{% else %}—{% endif %}</div>
       </div>
       <p class="sheet3-hint">Policy hint (configurable in Admin): annual / monthly DSCR below <strong>{{ loan_analysis_policy.warn_annual_dscr_min }}</strong> / <strong>{{ loan_analysis_policy.warn_monthly_dscr_min }}</strong> triggers a warning after save.</p>
     </div>

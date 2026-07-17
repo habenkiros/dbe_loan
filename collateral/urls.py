@@ -2,9 +2,17 @@ from django.urls import path
 from . import views
 from . import tier1_views
 from . import tier2_views
+from . import tier3_views
+from . import offline_views
 
 app_name = 'collateral'
 urlpatterns = [
+    path('sw.js', offline_views.collateral_service_worker, name='offline_sw'),
+    path('offline/manifest.webmanifest', offline_views.collateral_offline_manifest, name='offline_manifest'),
+    path('offline/bundle/<int:loan_request_id>/', offline_views.offline_loan_bundle, name='offline_bundle'),
+    path('offline/sync/', offline_views.offline_sync_item, name='offline_sync'),
+    path('field-checklist/', offline_views.field_tablet_checklist, name='field_checklist'),
+
     path('', views.dashboard, name='dashboard'),
     path('list/', views.collateral_list_superadmin, name='collateral_list_superadmin'),
     path('catalog/', views.catalog_index, name='catalog_index'),
@@ -55,4 +63,6 @@ urlpatterns = [
     path('settings/policy/', tier1_views.collateral_policy_config, name='collateral_policy_config'),
     path('engineering-qa/', tier2_views.engineering_qa_queue, name='engineering_qa_queue'),
     path('loan/<int:loan_request_id>/engineering-qa/', tier2_views.engineering_qa_review, name='engineering_qa_review'),
+    path('loan/<int:loan_request_id>/dossier.json', tier3_views.collateral_dossier_json, name='dossier_json'),
+    path('loan/<int:loan_request_id>/dossier.zip', tier3_views.collateral_dossier_zip, name='dossier_zip'),
 ]

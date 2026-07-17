@@ -59,6 +59,11 @@ def compute_coverage_adequacy(loan_request) -> Dict[str, Any]:
     warnings.extend(declared_flags['warnings'])
     blockers.extend(declared_flags['blockers'])
 
+    exif_flags = _exif_gps_flags(loan_request, policy)
+    flags.extend(exif_flags['flags'])
+    warnings.extend(exif_flags['warnings'])
+    blockers.extend(exif_flags['blockers'])
+
     return {
         'amount_requested': amount,
         'grand_total': grand,
@@ -177,5 +182,48 @@ def _declared_address_flags(loan_request, policy) -> Dict[str, List]:
             warnings.append(msg)
             if policy.block_submit_on_declared_address_mismatch:
                 blockers.append(msg)
+
+    return {'flags': flags, 'warnings': warnings, 'blockers': blockers}
+
+
+def _exif_gps_flags(loan_request, policy) -> Dict[str, List]:
+    from collateral.models import (
+        Building, BuildingImage, LandValuation, LandValuationImage,
+        OtherCollateralItem, OtherCollateralItemImage,
+    )
+
+    flags: List[Dict[str, str]] = []
+    warnings: List[str] = []
+    blockers: List[str] = []
+    max_d = policy.exif_gps_mismatch_warn_m
+
+    def check_imgs(label, qs):
+        for img in qs:
+            dist = img.browser_vs_exif_distance_m
+            if dist is None:
+                continue
+            try:
+                d = float(dist)
+            except (TypeError, ValueError):
+                continue
+            if d > max_d:
+                msg = (
+                    f'{label}: photo "{img.get_photo_type_display()}" EXIF GPS is '
+                    f'{round(d)} m from browser GPS (max {max_d} m).'
+                )
+                flags.append({'level': 'warn', 'key': 'exif_gps_mismatch', 'message': msg})
+                warnings.append(msg)
+                if policy.block_submit_on_exif_gps_mismatch:
+                    blockers.append(msg)
+
+    for b in Building.objects.filter(loan_request=loan_request):
+        check_imgs(f'Building "{b.name}"', BuildingImage.objects.filter(building=b))
+
+    land = LandValuation.objects.filter(loan_request=loan_request).first()
+    if land:
+        check_imgs('Land', LandValuationImage.objects.filter(land_valuation=land))
+
+    for item in OtherCollateralItem.objects.filter(loan_request=loan_request):
+        check_imgs(f'Asset "{item.name}"', OtherCollateralItemImage.objects.filter(item=item))
 
     return {'flags': flags, 'warnings': warnings, 'blockers': blockers}

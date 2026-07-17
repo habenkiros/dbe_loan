@@ -42,6 +42,32 @@
     </div>
     {% endif %}
 
+    {% if scorecard %}
+    <div class="sheet6-section">
+      <h3>Explainable credit scorecard</h3>
+      <p class="meta" style="margin-top:0;">Composite score from Cashflow MSME pillars — assistive only; officer recommendation still required. Rate workbook is not used.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:baseline;margin:0.75rem 0;">
+        <div style="font-size:1.75rem;font-weight:700;color:#064420;">{{ scorecard.total|floatformat:1 }} <span style="font-size:1rem;font-weight:500;">/ 100</span></div>
+        <div><strong>Band:</strong> {{ scorecard.band_label }}</div>
+      </div>
+      <table class="sheet6-table">
+        <thead>
+          <tr><th>Pillar</th><th>Earned</th><th>Max</th><th>Remark</th></tr>
+        </thead>
+        <tbody>
+          {% for p in scorecard.pillars %}
+          <tr>
+            <td>{{ p.label }}</td>
+            <td>{{ p.earned|floatformat:1 }}</td>
+            <td>{{ p.max|floatformat:0 }}</td>
+            <td>{{ p.remark }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
     <div class="sheet6-section">
       <h3>Recommendation &amp; committee</h3>
       <div class="table-container">

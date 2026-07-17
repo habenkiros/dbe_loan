@@ -1,0 +1,15 @@
+{% load static %}
+<script>
+window.COLLATERAL_OFFLINE = {
+  csrfToken: "{{ csrf_token }}",
+  syncUrl: "{% url 'collateral:offline_sync' %}",
+  bundleUrlTpl: "/collateral/offline/bundle/{id}/",
+  swUrl: "{% url 'collateral:offline_sw' %}",
+  loanRequestId: {{ loan_request.id|default:'null' }},
+  visitKind: "{{ visit_kind|default:''|escapejs }}",
+  subjectId: {% if subject_id %}{{ subject_id }}{% else %}null{% endif %},
+  subjectType: "{{ subject_type|default:''|escapejs }}"
+};
+</script>
+<script src="{% static 'js/collateral_offline_db.js' %}"></script>
+<script src="{% static 'js/collateral_offline.js' %}"></script>

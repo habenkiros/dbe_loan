@@ -248,6 +248,8 @@ class CollateralPolicyConfigForm(forms.ModelForm):
             'block_submit_on_far_photos', 'block_submit_on_missing_photo_gps',
             'min_coverage_ratio', 'flag_coverage_below_ratio',
             'declared_address_max_distance_from_site_m', 'block_submit_on_declared_address_mismatch',
+            'require_movable_photo_types', 'exif_gps_mismatch_warn_m',
+            'block_submit_on_exif_gps_mismatch',
         ]
         widgets = {
             'min_coverage_ratio': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),

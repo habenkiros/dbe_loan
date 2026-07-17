@@ -12,6 +12,16 @@
      <strong>Applicant:</strong> {{ loan_request.applicant_name }}</p>
   {% endif %}
 
+  {% if scorecard %}
+  <div style="margin:1rem 0;padding:1rem;background:#f8faf8;border:1px solid #c8dcc8;border-radius:8px;">
+    <strong>Credit scorecard:</strong> {{ scorecard.total|floatformat:1 }}/100 — {{ scorecard.band_label }}
+    {% if feature_snapshot %}
+    <br><small>Feature snapshot <code>{{ feature_snapshot.schema_version }}</code> will refresh when you finish.</small>
+    {% endif %}
+    <br><a href="{% url 'appraisal_features_json' loan_request.id %}">Download appraisal features JSON</a>
+  </div>
+  {% endif %}
+
   {% if appraisal.amortization_entries.exists %}
   <div class="table-container">
     <table>

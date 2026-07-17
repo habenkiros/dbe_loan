@@ -12,6 +12,7 @@
     <p class="sub">{{ loan_request.loan_request_id }} · {{ loan_request.applicant_name }}</p>
   </div>
 
+  {% include "collateral/_offline_bar.html" %}
   {% include "collateral/_field_capture_helpers.html" %}
 
   {% if locked %}
@@ -224,6 +225,7 @@
 <script>window.COLLATERAL_GPS_WEAK_M = {{ gps_weak_threshold_m|default:100 }};</script>
 {% if step == 1 %}<script>window.COLLATERAL_SITE_MAP_ID = 'field-visit-map';</script>{% endif %}
 <script src="{% static 'js/collateral_field.js' %}"></script>
+{% include "collateral/_offline_scripts.html" with visit_kind="building" subject_id=building.id subject_type="Building" %}
 {% if step == 1 %}
 <script>
 (function() {

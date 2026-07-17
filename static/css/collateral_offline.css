@@ -1,0 +1,48 @@
+/* Offline PWA status banner for collateral field visits */
+.offline-status-banner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  background: #eceff1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.offline-status-banner.offline-online {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+}
+.offline-status-banner.offline-offline {
+  background: #fff8e1;
+  border-color: #ffe082;
+}
+.offline-status-banner.offline-syncing {
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+.offline-status-banner .offline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.offline-badge {
+  display: inline-block;
+  min-width: 1.25rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #c62828;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+.offline-help {
+  width: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #546e7a;
+}

@@ -239,6 +239,46 @@ def _set_if_empty(instance, field: str, value, only_empty: bool) -> bool:
     return True
 
 
+def _record_field_source(basic_info: LoanRequestBasicInfo, field: str, meta: Dict[str, Any]) -> None:
+    sources = dict(basic_info.field_sources or {})
+    entry = {'source': meta.get('source') or 'manual', 'label': meta.get('label') or ''}
+    if meta.get('document_id') is not None:
+        entry['document_id'] = meta['document_id']
+    sources[field] = entry
+    basic_info.field_sources = sources
+
+
+def _set_basic_info_field(
+    basic_info: LoanRequestBasicInfo,
+    field: str,
+    value,
+    only_empty: bool,
+    *,
+    source_meta: Optional[Dict[str, Any]] = None,
+) -> bool:
+    if not _set_if_empty(basic_info, field, value, only_empty):
+        return False
+    if source_meta:
+        _record_field_source(basic_info, field, source_meta)
+    return True
+
+
+def mark_manual_field_sources(basic_info: LoanRequestBasicInfo, field_names: List[str]) -> None:
+    """Mark fields the officer edited as manual (keeps audit trail clear)."""
+    if not field_names:
+        return
+    sources = dict(basic_info.field_sources or {})
+    for name in field_names:
+        sources[name] = {'source': 'manual', 'label': 'Officer'}
+    basic_info.field_sources = sources
+    basic_info.save(update_fields=['field_sources'])
+
+
+def field_source_badges_for_template(basic_info: LoanRequestBasicInfo) -> Dict[str, Any]:
+    """Pass-through of stored provenance for Sheet 1 badges."""
+    return dict(basic_info.field_sources or {})
+
+
 def prefill_basic_info_from_registration(
     loan_request: LoanRequest,
     basic_info: LoanRequestBasicInfo,
@@ -246,21 +286,29 @@ def prefill_basic_info_from_registration(
     only_empty: bool = True,
 ) -> List[str]:
     filled: List[str] = []
-    if _set_if_empty(basic_info, 'business_name', loan_request.applicant_name, only_empty):
+    reg = {'source': 'registration', 'label': 'Registration'}
+    if _set_basic_info_field(
+        basic_info, 'business_name', loan_request.applicant_name, only_empty, source_meta=reg,
+    ):
         filled.append('business_name ← applicant name')
-    if loan_request.reason and _set_if_empty(
-        basic_info, 'business_description', loan_request.reason[:4000], only_empty,
+    if loan_request.reason and _set_basic_info_field(
+        basic_info, 'business_description', loan_request.reason[:4000], only_empty, source_meta=reg,
     ):
         filled.append('business_description ← loan reason')
     sector = _guess_sector_from_category(getattr(loan_request.category, 'name', '') or '')
-    if sector and _set_if_empty(basic_info, 'economic_sector', sector, only_empty):
+    if sector and _set_basic_info_field(
+        basic_info, 'economic_sector', sector, only_empty, source_meta=reg,
+    ):
         filled.append(f'economic_sector ← loan category ({sector})')
-    if _set_if_empty(basic_info, 'form_of_ownership', LoanRequestBasicInfo.OWNERSHIP_SOLE, only_empty):
+    default_meta = {'source': 'default', 'label': 'Default'}
+    if _set_basic_info_field(
+        basic_info, 'form_of_ownership', LoanRequestBasicInfo.OWNERSHIP_SOLE, only_empty,
+        source_meta=default_meta,
+    ):
         filled.append('form_of_ownership ← default (Sole Proprietorship)')
     if filled:
         basic_info.save()
     return filled
-
 
 def _document_extracted_text(doc: LoanRequestDocument) -> str:
     checks = doc.automated_checks or {}
@@ -316,6 +364,7 @@ def apply_document_extractions(
     appraisal: LoanAppraisal,
     *,
     only_empty: bool = True,
+    basic_info_only: bool = False,
 ) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     docs = loan_request.application_documents.select_related('document_type').order_by('uploaded_at')
@@ -326,12 +375,19 @@ def apply_document_extractions(
         if not fields:
             continue
         applied: Dict[str, str] = {}
+        doc_meta = {
+            'source': 'document',
+            'label': doc.document_type.name,
+            'document_id': doc.id,
+        }
         for field, raw in fields.items():
             if field in BASIC_INFO_EXTRACT_FIELDS:
                 value = _coerce_basic_info_value(field, raw)
-                if value is not None and _set_if_empty(basic_info, field, value, only_empty):
+                if value is not None and _set_basic_info_field(
+                    basic_info, field, value, only_empty, source_meta=doc_meta,
+                ):
                     applied[field] = str(value)
-            elif field in APPRAISAL_EXTRACT_FIELDS:
+            elif not basic_info_only and field in APPRAISAL_EXTRACT_FIELDS:
                 value = _coerce_appraisal_value(field, raw)
                 if value is not None and _set_if_empty(appraisal, field, value, only_empty):
                     applied[field] = str(value)
@@ -343,9 +399,30 @@ def apply_document_extractions(
             })
     if results:
         basic_info.save()
-        appraisal.save()
+        if not basic_info_only:
+            appraisal.save()
     return results
 
+
+def reimport_sheet1_from_documents(
+    loan_request: LoanRequest,
+    *,
+    only_empty: bool = True,
+) -> Dict[str, Any]:
+    """Explicit Sheet 1 re-import from uploaded documents only (empty fields by default)."""
+    basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
+    appraisal, _ = LoanAppraisal.objects.get_or_create(loan_request=loan_request)
+    documents = apply_document_extractions(
+        loan_request,
+        basic_info,
+        appraisal,
+        only_empty=only_empty,
+        basic_info_only=True,
+    )
+    return {
+        'documents': documents,
+        'total_fields': sum(len(d['fields']) for d in documents),
+    }
 
 def compute_collateral_totals(loan_request: LoanRequest) -> Dict[str, Decimal]:
     from collateral.models import Building, BuildingValuation, LandValuation, OtherCollateralItem
@@ -445,16 +522,27 @@ def sync_appraisal_from_sources(
     *,
     only_empty: bool = True,
     include_collateral: bool = True,
+    include_registration: bool = True,
+    include_documents: bool = True,
 ) -> Dict[str, Any]:
     """Registration + documents + collateral → Sheet 1 / 2 / 5 fields (empty only by default)."""
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     appraisal, _ = LoanAppraisal.objects.get_or_create(loan_request=loan_request)
     report: Dict[str, Any] = {
-        'registration': prefill_basic_info_from_registration(loan_request, basic_info, only_empty=only_empty),
-        'documents': apply_document_extractions(loan_request, basic_info, appraisal, only_empty=only_empty),
-        'nbe_hints': apply_nbe_document_hints(loan_request, appraisal, only_empty=only_empty),
+        'registration': [],
+        'documents': [],
+        'nbe_hints': [],
         'collateral': [],
     }
+    if include_registration:
+        report['registration'] = prefill_basic_info_from_registration(
+            loan_request, basic_info, only_empty=only_empty,
+        )
+    if include_documents:
+        report['documents'] = apply_document_extractions(
+            loan_request, basic_info, appraisal, only_empty=only_empty,
+        )
+        report['nbe_hints'] = apply_nbe_document_hints(loan_request, appraisal, only_empty=only_empty)
     if include_collateral:
         report['collateral'] = sync_collateral_to_appraisal(loan_request, appraisal, only_empty=only_empty)
     report['total_fields'] = (
@@ -463,4 +551,5 @@ def sync_appraisal_from_sources(
         + len(report['nbe_hints'])
         + len(report['collateral'])
     )
+    report['field_sources'] = field_source_badges_for_template(basic_info)
     return report

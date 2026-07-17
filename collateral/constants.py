@@ -25,3 +25,13 @@ OTHER_FIELD_STEPS = (
 
 # Above this accuracy (metres), officer must attest GPS for audit / AI provenance.
 GPS_ACCURACY_WEAK_THRESHOLD_M = 100
+
+# Movable collateral: required photo types before submit (when policy enabled).
+REQUIRED_MOVABLE_PHOTO_TYPES = (
+    ('plate', 'Plate / registration'),
+    ('asset', 'Full asset'),
+    ('serial_label', 'Serial / chassis label'),
+)
+
+# Warn when EXIF embedded GPS differs from browser capture GPS by more than this (metres).
+EXIF_GPS_MISMATCH_WARN_M = 200

@@ -12,6 +12,7 @@
     <p class="sub">{{ visit_subject }} · {{ loan_request.applicant_name }}</p>
   </div>
 
+  {% include "collateral/_offline_bar.html" %}
   {% include "collateral/_field_capture_helpers.html" %}
 
   {% if locked %}
@@ -115,7 +116,17 @@
     <h3>Step 2 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
     {% if visit_kind == 'other' %}
     {% include "collateral/_other_asset_summary.html" %}
-    <p class="help">Capture plate, full vehicle, and serial/chassis photos. GPS is taken when you save each photo.</p>
+    <p class="help">Capture <strong>plate</strong>, <strong>full asset</strong>, and <strong>serial/chassis</strong> photos (required). GPS is taken when you save each photo.</p>
+    {% if required_photo_type_status %}
+    <ul class="field-checklist" style="margin:0.75rem 0;">
+      {% for row in required_photo_type_status %}
+      <li>
+        <span>{{ row.label }}</span>
+        <span class="{% if row.ok %}field-check-ok{% else %}field-check-fail{% endif %}">{% if row.ok %}✓{% else %}✗ needed{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     {% endif %}
     {% include "collateral/_collateral_location_map.html" with map_id="asset-verify-map" map_config_id="asset-verify-map-data" map_data=map_data map_title="Site vs photo locations" %}
     {% if not locked %}
@@ -150,6 +161,9 @@
           {% if row.distance_m is not None %}
           · <span class="{% if row.far_from_site %}field-gps-warn-text{% endif %}">{{ row.distance_m }} m from site</span>
           {% elif img.gps_lat %}· GPS saved{% else %}· <span class="field-gps-warn-text">No photo GPS</span>{% endif %}
+          {% if img.browser_vs_exif_distance_m %}
+          · <span class="{% if img.browser_vs_exif_distance_m > 200 %}field-gps-warn-text{% endif %}">EXIF ±{{ img.browser_vs_exif_distance_m }} m</span>
+          {% endif %}
         </small>
         {% if not locked %}
         <form method="post" action="{% if visit_kind == 'land' %}{% url 'collateral:land_image_delete' img.id %}{% else %}{% url 'collateral:other_image_delete' img.id %}{% endif %}" onsubmit="return confirm('Remove this photo?');">
@@ -225,4 +239,9 @@
 <script>window.COLLATERAL_SITE_MAP_ID = '{% if visit_kind == "land" %}land-field-map{% else %}other-field-map{% endif %}';</script>
 {% endif %}
 <script src="{% static 'js/collateral_field.js' %}"></script>
+{% if visit_kind == 'land' %}
+{% include "collateral/_offline_scripts.html" with visit_kind="land" subject_id=land.id subject_type="LandValuation" %}
+{% else %}
+{% include "collateral/_offline_scripts.html" with visit_kind="other" subject_id=item.id subject_type="OtherCollateralItem" %}
+{% endif %}
 {% endblock %}

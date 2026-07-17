@@ -28,6 +28,11 @@ urlpatterns = [
     path('loan_request/<int:loan_request_id>/proceed_to_collateral/', views.proceed_to_collateral, name='proceed_to_collateral'),
     path('loan_request/<int:loan_request_id>/appraisal/', views.loan_appraisal_edit, name='loan_appraisal_edit'),
     path('loan_request/<int:loan_request_id>/appraisal/step/<int:step>/', views.loan_appraisal_step, name='loan_appraisal_step'),
+    path(
+        'loan_request/<int:loan_request_id>/appraisal/features.json',
+        views.appraisal_features_json,
+        name='appraisal_features_json',
+    ),
     path('loan_appraisal_steps/', views.loan_appraisal_steps, name='loan_appraisal_steps'),
     path('view_loan_requests/', views.view_loan_requests, name='view_loan_requests'),
     path('view_loan_requests_operation_manager/', views.view_loan_requests_operation_manager, name='view_loan_requests_operation_manager'),

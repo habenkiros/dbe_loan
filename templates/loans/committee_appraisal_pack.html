@@ -96,6 +96,13 @@
 
   <div id="sheet6" class="pack-section">
     <h2>Sheet 6 — Summary &amp; decision</h2>
+    {% if scorecard %}
+    <h3>Explainable credit scorecard</h3>
+    <div class="pack-grid">
+      <span class="lbl">Total</span><span>{{ scorecard.total }} / 100 ({{ scorecard.band_label }})</span>
+    </div>
+    <ul>{% for p in scorecard.pillars %}<li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.remark }}</li>{% endfor %}</ul>
+    {% endif %}
     <div class="pack-grid">
       <span class="lbl">Recommendation</span><span>{{ appraisal.get_recommendation_display|default:"—" }}</span>
       <span class="lbl">Recommended amount</span><span>{{ appraisal.amount_approved|default:"—" }}</span>
@@ -103,6 +110,7 @@
     </div>
     {% if risks %}<h3>Risks</h3><ul>{% for r in risks %}<li><strong>{{ r.risk }}</strong> — {{ r.mitigation|default:"—" }}</li>{% endfor %}</ul>{% endif %}
     {% if conditions %}<h3>Conditions</h3><ul>{% for c in conditions %}<li>{{ c.description }}</li>{% endfor %}</ul>{% endif %}
+    <p><a href="{% url 'appraisal_features_json' loan_request.id %}">Download features JSON</a></p>
   </div>
 
   <div id="sheet7" class="pack-section">

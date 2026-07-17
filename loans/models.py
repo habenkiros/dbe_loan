@@ -749,6 +749,10 @@ class LoanRequestBasicInfo(models.Model):
     instalments_per_year = models.PositiveIntegerField(null=True, blank=True)
     cash_contribution = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
 
+    # Per-field provenance for Sheet 1 (registration / document / banking / manual / default).
+    # Shape: {field_name: {"source": "...", "label": "...", "document_id": optional}}
+    field_sources = models.JSONField(default=dict, blank=True)
+
     def __str__(self):
         return f'Basic info – {self.loan_request.loan_request_id}'
 
@@ -968,6 +972,29 @@ class LoanAppraisal(models.Model):
     rate_approved = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True,
         help_text='Interest rate approved (%).',
+    )
+
+    # Credit scorecard (explainable, AI-ready) — computed on Sheet 6 / finish
+    credit_score_total = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Composite 0–100 explainable credit score.',
+    )
+    credit_score_band = models.CharField(max_length=20, null=True, blank=True)
+    scorecard_detail = models.JSONField(
+        null=True, blank=True, default=dict,
+        help_text='Pillars + contributions for explainability / training.',
+    )
+    feature_snapshot = models.JSONField(
+        null=True, blank=True,
+        help_text='Versioned appraisal_features_v1 JSON for future ML.',
+    )
+    suggested_monthly_installment = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True,
+        help_text='Suggested installment from Sheet 1 terms (not from rate workbook).',
+    )
+    max_loan_capacity = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Max loan capacity from cashflow at target DSCR.',
     )
 
     def __str__(self):

@@ -20,6 +20,8 @@
 {% block content %}
 <div class="no-print" style="margin-bottom:1rem;">
   <button type="button" class="field-btn field-btn-primary" onclick="window.print()">Print / Save as PDF</button>
+  <a href="{% url 'collateral:dossier_json' loan_request.id %}" class="field-btn field-btn-secondary">Export JSON</a>
+  <a href="{% url 'collateral:dossier_zip' loan_request.id %}" class="field-btn field-btn-secondary">Export ZIP</a>
   <a href="{% url 'collateral:summary' loan_request.id %}" class="field-btn field-btn-secondary">← Summary</a>
 </div>
 

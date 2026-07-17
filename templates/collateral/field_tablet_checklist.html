@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Tablet field checklist{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/collateral_offline.css' %}">
+<link rel="manifest" href="{% url 'collateral:offline_manifest' %}">
+<meta name="theme-color" content="#064420">
+<style>
+  .field-check-page { max-width: 720px; margin: 0 auto; padding: 0 0.5rem 2rem; }
+  .field-check-page h1 { font-size: 1.4rem; margin-bottom: 0.35rem; }
+  .field-check-page .lead { color: #455a64; margin-bottom: 1.25rem; }
+  .check-card { border: 1px solid #cfd8dc; border-radius: 8px; padding: 1rem 1.1rem; margin-bottom: 1rem; background: #fafafa; }
+  .check-card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  .check-card ol, .check-card ul { margin: 0.35rem 0 0; padding-left: 1.25rem; }
+  .check-card li { margin: 0.35rem 0; }
+  .ctx-ok { color: #1b5e20; font-weight: 600; }
+  .ctx-bad { color: #b71c1c; font-weight: 600; }
+  .ctx-warn { color: #e65100; font-weight: 600; }
+  .code-block { font-family: ui-monospace, monospace; font-size: 0.8rem; background: #eceff1; padding: 0.75rem; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="field-check-page">
+  <h1>Tablet field checklist</h1>
+  <p class="lead">Use this before leaving the branch and on site. GPS and camera need a <strong>secure page</strong> (HTTPS or localhost).</p>
+
+  <div id="secure-context-banner" class="offline-status-banner offline-syncing" role="status">
+    <span id="secure-context-text">Checking this device…</span>
+  </div>
+
+  <div class="check-card">
+    <h2>1. This browser page</h2>
+    <ul>
+      <li>Host: <code>{{ page_host }}</code></li>
+      <li>Server sees HTTPS: {% if page_is_secure %}<span class="ctx-ok">yes</span>{% else %}<span class="ctx-warn">no</span> (ok on <code>http://localhost</code>){% endif %}</li>
+      <li>HTTPS proxy mode: {% if https_proxy_enabled %}<span class="ctx-ok">on</span>{% else %}<span class="ctx-warn">off</span> — use HTTP on localhost, or start the HTTPS compose overlay for phones{% endif %}</li>
+    </ul>
+  </div>
+
+  <div class="check-card">
+    <h2>2. Before leaving the branch (online)</h2>
+    <ol>
+      <li>Open the app on the tablet via <strong>HTTPS</strong> (or <code>http://localhost</code> only on the laptop itself — phones need HTTPS).</li>
+      <li>Accept the certificate warning once if using the local self-signed cert.</li>
+      <li>Log in, open the loan → <strong>Field visit</strong> (or Summary).</li>
+      <li>Tap <strong>Prepare offline</strong> so the loan is cached on this device.</li>
+      <li>Optional: add the PWA to the home screen (browser menu → Install / Add to Home Screen).</li>
+    </ol>
+  </div>
+
+  <div class="check-card">
+    <h2>3. On site (weak or no signal)</h2>
+    <ol>
+      <li>Keep using the same tablet browser / installed PWA.</li>
+      <li>Mark site GPS, take photos, enter BOQ / asset details — they queue on the device when offline.</li>
+      <li>Do <strong>not</strong> expect final <strong>Submit collateral</strong> offline (policy and coverage stay online).</li>
+    </ol>
+  </div>
+
+  <div class="check-card">
+    <h2>4. Back online</h2>
+    <ol>
+      <li>Reconnect to branch Wi‑Fi or mobile data.</li>
+      <li>Tap <strong>Sync now</strong> (or wait for auto-sync) until the pending badge clears.</li>
+      <li>Finish review, then <strong>Submit collateral</strong> from Summary.</li>
+    </ol>
+  </div>
+
+  <div class="check-card">
+    <h2>5. Ops: enable HTTPS for LAN tablets</h2>
+    <p>On the server / laptop that runs Docker:</p>
+    <div class="code-block">./scripts/gen_field_https_certs.sh
+docker compose -f docker-compose.yml -f docker-compose.https.yml up --build</div>
+    <p style="margin-top:0.75rem;">Then open <code>https://&lt;this-machine-lan-ip&gt;:8443</code> on the tablet. Laptop testing can stay on <code>http://localhost:8000</code>.</p>
+  </div>
+
+  <p>
+    <a href="{% url 'collateral:dashboard' %}" class="btn btn-blue">Collateral dashboard</a>
+    <a href="{% url 'collateral:offline_manifest' %}" class="btn btn-gray">PWA manifest</a>
+  </p>
+</div>
+<script>
+(function () {
+  var el = document.getElementById('secure-context-text');
+  var banner = document.getElementById('secure-context-banner');
+  if (!el || !banner) return;
+  var secure = window.isSecureContext === true;
+  var host = window.location.hostname || '';
+  var isLocal = host === 'localhost' || host === '127.0.0.1';
+  if (secure) {
+    el.textContent = 'Secure context OK — GPS and camera are allowed by the browser on this page.';
+    banner.classList.remove('offline-syncing');
+    banner.classList.add('offline-online');
+  } else if (isLocal) {
+    el.textContent = 'On localhost without HTTPS — usually OK on this machine only. Phones on LAN need HTTPS.';
+    banner.classList.remove('offline-syncing');
+    banner.classList.add('offline-offline');
+  } else {
+    el.textContent = 'Not a secure context — GPS/camera will be blocked. Use HTTPS (port 8443 overlay) or open via localhost on the laptop.';
+    banner.classList.remove('offline-syncing');
+    banner.classList.add('offline-offline');
+  }
+})();
+</script>
+{% endblock %}

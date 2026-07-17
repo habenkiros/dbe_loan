@@ -1,0 +1,17 @@
+{% comment %}Offline PWA status bar for field visits. Expects optional: loan_request, offline_ctx {% endcomment %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/collateral_offline.css' %}">
+<link rel="manifest" href="{% url 'collateral:offline_manifest' %}">
+<meta name="theme-color" content="#064420">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+
+<div id="offline-status-banner" class="offline-status-banner offline-online" role="status">
+  <span id="offline-status-text">Checking connection…</span>
+  <span id="offline-pending-count" class="offline-badge" hidden>0</span>
+  <div class="offline-actions">
+    <button type="button" class="field-btn field-btn-secondary" id="offline-prep-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;">Prepare offline</button>
+    <button type="button" class="field-btn field-btn-primary" id="offline-sync-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;" disabled>Sync now</button>
+  </div>
+  <p class="offline-help">While online, tap <strong>Prepare offline</strong> before leaving the branch. On site without signal, captures queue on this device; tap <strong>Sync now</strong> when connected again. Final collateral submit stays online. <a href="{% url 'collateral:field_checklist' %}">Tablet field checklist</a> (HTTPS / GPS).</p>
+</div>

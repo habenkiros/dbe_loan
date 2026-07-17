@@ -881,6 +881,12 @@ def other_field_visit(request, item_id, step=1):
     map_data = other_item_map_data(item)
     image_rows = _annotate_image_distances(item.site_gps_lat, item.site_gps_lon, images)
     pctx = _policy_template_context()
+    from collateral import constants
+    types_present = set(images.values_list('photo_type', flat=True))
+    required_photo_type_status = [
+        {'key': key, 'label': label, 'ok': key in types_present}
+        for key, label in constants.REQUIRED_MOVABLE_PHOTO_TYPES
+    ]
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'other',
@@ -902,6 +908,7 @@ def other_field_visit(request, item_id, step=1):
         'map_data': map_data,
         'image_rows': image_rows,
         'max_photo_distance_m': pctx['max_photo_distance_m'],
+        'required_photo_type_status': required_photo_type_status,
     })
 
 

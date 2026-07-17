@@ -288,6 +288,17 @@ docker compose exec web python manage.py createsuperuser
 
 The application is available at **http://localhost:8000**.
 
+#### HTTPS for tablets (GPS / camera on LAN)
+
+Phones and tablets block geolocation on plain `http://192.168.x.x`. For field testing on the LAN:
+
+```bash
+./scripts/gen_field_https_certs.sh          # self-signed cert + CSRF origins for your LAN IP
+docker compose -f docker-compose.yml -f docker-compose.https.yml up --build
+```
+
+Open **https://YOUR-LAN-IP:8443** on the tablet (accept the certificate warning once). Laptop GPS testing can stay on **http://localhost:8000**. In-app steps: **Collateral → Tablet field checklist**.
+
 Default database credentials (from `docker-compose.yml`):
 
 | Variable | Default |

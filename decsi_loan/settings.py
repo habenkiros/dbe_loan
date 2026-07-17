@@ -156,3 +156,13 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 
 # Document OCR (Tesseract language packs: eng, amh, or eng+amh)
 DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
+
+# HTTPS reverse proxy for tablet field visits (see docker-compose.https.yml)
+if os.getenv('USE_HTTPS_PROXY', '') == '1':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+_csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '').strip()
+if _csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]

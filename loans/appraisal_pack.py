@@ -79,4 +79,6 @@ def build_committee_appraisal_pack(loan_request: LoanRequest) -> Dict[str, Any]:
         'amortization': amortization,
         'documents': documents,
         'display': _display,
+        'scorecard': getattr(appraisal, 'scorecard_detail', None) if appraisal else None,
+        'feature_snapshot': getattr(appraisal, 'feature_snapshot', None) if appraisal else None,
     }

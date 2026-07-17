@@ -6,25 +6,33 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from .services import fetch_customer_by_number
 from django.utils import timezone
-from .models import (
-    Region, Zone, City, District, Branch, LoanCategory, CollateralType,
-    LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
-    LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
-    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
-    AppraisalAmortizationEntry,
-)
 from .forms import (
     CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm, AssignEngineerForm,
     DistrictForm, BranchForm, RegionForm, ZoneForm, CityForm,
     LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm,
     DocumentAuthenticationDefaultsForm, LoanApplicationDocumentTypeEditForm, LoanAppraisalForm,
     LoanRequestBasicInfoForm, get_credit_history_formset, get_qualitative_factors_formset,
+    get_es_checklist_formset, get_risk_mitigation_formset, get_conditions_formset,
     CollateralEstimationConfigForm,
     AppraisalSheet2Form, AppraisalSheet3Form,
     AppraisalESForm, AppraisalCollateralForm, AppraisalSummaryForm,
     CommitteeVoteForm,
 )
 from .appraisal_pack import build_committee_appraisal_pack
+from .appraisal_policy import get_loan_analysis_policy
+from .appraisal_scorecard import (
+    build_credit_scorecard, evaluate_analysis_gates, persist_credit_scorecard,
+)
+from .appraisal_features import persist_feature_snapshot
+from .qualitative_scoring import update_appraisal_qualitative_totals
+from .cashflow_utils import payments_per_year_from_repayment_frequency
+from .models import (
+    Region, Zone, City, District, Branch, LoanCategory, CollateralType,
+    LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
+    LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
+    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
+    AppraisalAmortizationEntry, AppraisalESChecklistItem, ES_CHECKLIST_STRUCTURE,
+)
 from .committee import (
     committee_filter_branches,
     committee_filter_districts,
@@ -598,6 +606,42 @@ def _ensure_qualitative_factors(appraisal):
             )
 
 
+def _ensure_es_checklist_items(appraisal):
+    """Seed 21 E&S checklist rows from ES_CHECKLIST_STRUCTURE."""
+    existing = set(appraisal.es_checklist_items.values_list('item_key', flat=True))
+    order = 0
+    for section_key, section_label, rows in ES_CHECKLIST_STRUCTURE:
+        for item_key, question in rows:
+            order += 1
+            if item_key in existing:
+                continue
+            AppraisalESChecklistItem.objects.create(
+                appraisal=appraisal,
+                section_key=section_key,
+                section_label=section_label,
+                item_key=item_key,
+                question_text=question,
+                display_order=order,
+            )
+
+
+def _es_checklist_groups(appraisal):
+    """Group checklist items for Sheet 4 template."""
+    groups = []
+    by_section = {}
+    for item in appraisal.es_checklist_items.all().order_by('display_order', 'id'):
+        by_section.setdefault(item.section_key, {
+            'section_key': item.section_key,
+            'section_label': item.section_label,
+            'items': [],
+        })
+        by_section[item.section_key]['items'].append(item)
+    for section_key, _label, _rows in ES_CHECKLIST_STRUCTURE:
+        if section_key in by_section:
+            groups.append(by_section[section_key])
+    return groups
+
+
 APPRAISAL_STEPS = [
     (1, 'Basic Info & loan request'),
     (2, 'Business & character assessment'),
@@ -621,7 +665,7 @@ def loan_appraisal_edit(request, loan_request_id):
 @user_passes_test(lambda u: u.role == 'loan_officer')
 def loan_appraisal_step(request, loan_request_id, step):
     """
-    Page-based loan appraisal: one sheet per step (1–4).
+    Page-based loan appraisal: one sheet per step (1–7).
     GET: show that step's form. POST: save and redirect to next step (or stay on error).
     """
     if step < 1 or step > TOTAL_APPRAISAL_STEPS:
@@ -634,9 +678,15 @@ def loan_appraisal_step(request, loan_request_id, step):
         defaults={'created_by': request.user},
     )
     _ensure_qualitative_factors(appraisal)
+    _ensure_es_checklist_items(appraisal)
 
     CreditHistoryFormSet = get_credit_history_formset()
     QualitativeFormSet = get_qualitative_factors_formset()
+    ESFormSet = get_es_checklist_formset()
+    RiskFormSet = get_risk_mitigation_formset()
+    CondFormSet = get_conditions_formset()
+    policy = get_loan_analysis_policy()
+    ppy = payments_per_year_from_repayment_frequency(basic_info.repayment_frequency)
 
     common_ctx = {
         'loan_request': loan_request,
@@ -646,9 +696,44 @@ def loan_appraisal_step(request, loan_request_id, step):
         'total_steps': TOTAL_APPRAISAL_STEPS,
         'steps': APPRAISAL_STEPS,
         'step_title': APPRAISAL_STEPS[step - 1][1],
+        'loan_analysis_policy': policy,
+        'payments_per_year': ppy,
     }
 
+    def _step6_context(form=None, risk_formset=None, cond_formset=None):
+        card = build_credit_scorecard(appraisal)
+        blocks, warnings = evaluate_analysis_gates(appraisal, basic_info)
+        return {
+            **common_ctx,
+            'form': form or AppraisalSummaryForm(instance=appraisal),
+            'risk_formset': risk_formset or RiskFormSet(instance=appraisal, prefix='risk'),
+            'cond_formset': cond_formset or CondFormSet(instance=appraisal, prefix='cond'),
+            'scorecard': card,
+            'analysis_blocks': blocks,
+            'analysis_warnings': warnings,
+        }
+
     if request.method == 'POST':
+        if step == 1 and request.POST.get('import_documents'):
+            from .services.appraisal_prefill import reimport_sheet1_from_documents
+
+            prefill_report = reimport_sheet1_from_documents(loan_request, only_empty=True)
+            n = prefill_report.get('total_fields', 0)
+            if n:
+                messages.success(request, f'Re-imported {n} Sheet 1 field(s) from documents.')
+            else:
+                messages.info(
+                    request,
+                    'No new document fields to import — existing values kept, or documents have no extractable data.',
+                )
+            basic_info.refresh_from_db()
+            return render(request, 'loans/loan_appraisal_step1.html', {
+                **common_ctx,
+                'basic_form': LoanRequestBasicInfoForm(instance=basic_info),
+                'prefill_report': prefill_report,
+                'field_sources': dict(basic_info.field_sources or {}),
+            })
+
         if step == 1 and request.POST.get('import_sources'):
             from .services.appraisal_prefill import sync_appraisal_from_sources
 
@@ -664,6 +749,7 @@ def loan_appraisal_step(request, loan_request_id, step):
                 **common_ctx,
                 'basic_form': LoanRequestBasicInfoForm(instance=basic_info),
                 'prefill_report': prefill_report,
+                'field_sources': dict(basic_info.field_sources or {}),
             })
 
         if step == 1:
@@ -673,7 +759,9 @@ def loan_appraisal_step(request, loan_request_id, step):
                 messages.success(request, 'Sheet 1 saved.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=2)
             return render(request, 'loans/loan_appraisal_step1.html', {
-                **common_ctx, 'basic_form': basic_form,
+                **common_ctx,
+                'basic_form': basic_form,
+                'field_sources': dict(basic_info.field_sources or {}),
             })
 
         if step == 2:
@@ -684,17 +772,22 @@ def loan_appraisal_step(request, loan_request_id, step):
                 form.save()
                 credit_formset.save()
                 qual_formset.save()
-                messages.success(request, 'Sheet 2 saved.')
+                total, passed = update_appraisal_qualitative_totals(appraisal)
+                messages.success(
+                    request,
+                    f'Sheet 2 saved. Character score {total}/100 '
+                    f'({"passed" if passed else "below 75% gate"}).',
+                )
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=3)
             return render(request, 'loans/loan_appraisal_step2.html', {
                 **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
             })
 
         if step == 3:
-            form = AppraisalSheet3Form(request.POST, instance=appraisal)
+            form = AppraisalSheet3Form(request.POST, instance=appraisal, basic_info=basic_info)
             if form.is_valid():
                 form.save()
-                messages.success(request, 'Sheet 3 saved.')
+                messages.success(request, 'Sheet 3 saved (cashflow, DSCR, capacity).')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=4)
             return render(request, 'loans/loan_appraisal_step3.html', {
                 **common_ctx, 'form': form,
@@ -702,30 +795,59 @@ def loan_appraisal_step(request, loan_request_id, step):
 
         if step == 4:
             form = AppraisalESForm(request.POST, instance=appraisal)
-            if form.is_valid():
+            es_formset = ESFormSet(request.POST, instance=appraisal, prefix='es')
+            if form.is_valid() and es_formset.is_valid():
                 form.save()
+                es_formset.save()
                 messages.success(request, 'Sheet 4 (E&S) saved.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=5)
-            return render(request, 'loans/loan_appraisal_step4.html', { **common_ctx, 'form': form })
+            return render(request, 'loans/loan_appraisal_step4.html', {
+                **common_ctx,
+                'form': form,
+                'es_formset': es_formset,
+                'es_checklist_groups': _group_es_formset(es_formset),
+            })
 
         if step == 5:
             form = AppraisalCollateralForm(request.POST, instance=appraisal)
             if form.is_valid():
-                form.save()
+                obj = form.save(commit=False)
+                ask = loan_request.amount_requested
+                if obj.collateral_total_value and ask and ask > 0 and not obj.collateral_coverage_ratio:
+                    from decimal import Decimal
+                    obj.collateral_coverage_ratio = (
+                        Decimal(str(obj.collateral_total_value)) / Decimal(str(ask))
+                    ).quantize(Decimal('0.01'))
+                obj.save()
                 messages.success(request, 'Sheet 5 (Collateral) saved.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=6)
             return render(request, 'loans/loan_appraisal_step5.html', { **common_ctx, 'form': form })
 
         if step == 6:
             form = AppraisalSummaryForm(request.POST, instance=appraisal)
-            if form.is_valid():
+            risk_formset = RiskFormSet(request.POST, instance=appraisal, prefix='risk')
+            cond_formset = CondFormSet(request.POST, instance=appraisal, prefix='cond')
+            blocks, _warnings = evaluate_analysis_gates(appraisal, basic_info)
+            if blocks and request.POST.get('force_continue') != '1':
+                messages.error(request, 'Hard blocks must be resolved before saving recommendation.')
+                return render(
+                    request, 'loans/loan_appraisal_step6.html',
+                    _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
+                )
+            if form.is_valid() and risk_formset.is_valid() and cond_formset.is_valid():
                 obj = form.save(commit=False)
                 if not obj.created_by_id:
                     obj.created_by = request.user
                 obj.save()
-                messages.success(request, 'Sheet 6 (Summary & decision) saved.')
+                risk_formset.save()
+                cond_formset.save()
+                persist_credit_scorecard(appraisal)
+                messages.success(request, 'Sheet 6 saved. Credit scorecard updated.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
-            return render(request, 'loans/loan_appraisal_step6.html', { **common_ctx, 'form': form })
+            return render(
+                request, 'loans/loan_appraisal_step6.html',
+                _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
+            )
 
         if step == 7:
             if request.POST.get('generate_schedule'):
@@ -733,16 +855,30 @@ def loan_appraisal_step(request, loan_request_id, step):
                 messages.success(request, 'Repayment schedule generated.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
             if request.POST.get('finish'):
+                blocks, _w = evaluate_analysis_gates(appraisal, basic_info)
+                if policy.require_sheets_complete_before_finish:
+                    from .sheet_requirements import get_appraisal_sheet_status, sheets_blocking_completion
+                    status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
+                    sheet_blocks = sheets_blocking_completion(status, max_step=6)
+                    if sheet_blocks:
+                        messages.error(request, 'Cannot finish: ' + '; '.join(sheet_blocks[:3]))
+                        return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
+                if blocks:
+                    messages.error(request, 'Cannot finish while hard blocks remain: ' + '; '.join(blocks[:3]))
+                    return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=6)
+                persist_credit_scorecard(appraisal)
+                persist_feature_snapshot(loan_request, appraisal=appraisal, basic_info=basic_info)
                 loan_request.appraisal_completed_at = timezone.now()
                 loan_request.save(update_fields=['appraisal_completed_at'])
                 messages.success(
                     request,
-                    'Appraisal complete. Review Sheet 6 recommended amount, then submit to the approval committee from the loan detail page.',
+                    'Appraisal complete. Feature snapshot saved for credit analysis. '
+                    'Submit to the approval committee from the loan detail page.',
                 )
                 return redirect('loan_request_detail', loan_request_id=loan_request_id)
             return render(request, 'loans/loan_appraisal_step7.html', common_ctx)
 
-    # GET — auto-import empty appraisal fields from registration / documents / collateral
+    # GET
     if step == 1:
         from .services.appraisal_prefill import sync_appraisal_from_sources
 
@@ -753,7 +889,9 @@ def loan_appraisal_step(request, loan_request_id, step):
         common_ctx['prefill_report'] = prefill_report
         basic_form = LoanRequestBasicInfoForm(instance=basic_info)
         return render(request, 'loans/loan_appraisal_step1.html', {
-            **common_ctx, 'basic_form': basic_form,
+            **common_ctx,
+            'basic_form': basic_form,
+            'field_sources': dict(basic_info.field_sources or {}),
         })
     if step == 2:
         form = AppraisalSheet2Form(instance=appraisal)
@@ -763,11 +901,17 @@ def loan_appraisal_step(request, loan_request_id, step):
             **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
         })
     if step == 3:
-        form = AppraisalSheet3Form(instance=appraisal)
+        form = AppraisalSheet3Form(instance=appraisal, basic_info=basic_info)
         return render(request, 'loans/loan_appraisal_step3.html', { **common_ctx, 'form': form })
     if step == 4:
         form = AppraisalESForm(instance=appraisal)
-        return render(request, 'loans/loan_appraisal_step4.html', { **common_ctx, 'form': form })
+        es_formset = ESFormSet(instance=appraisal, prefix='es')
+        return render(request, 'loans/loan_appraisal_step4.html', {
+            **common_ctx,
+            'form': form,
+            'es_formset': es_formset,
+            'es_checklist_groups': _group_es_formset(es_formset),
+        })
     if step == 5:
         from .services.appraisal_prefill import sync_collateral_to_appraisal
 
@@ -778,12 +922,37 @@ def loan_appraisal_step(request, loan_request_id, step):
         form = AppraisalCollateralForm(instance=appraisal)
         return render(request, 'loans/loan_appraisal_step5.html', { **common_ctx, 'form': form })
     if step == 6:
-        form = AppraisalSummaryForm(instance=appraisal)
-        return render(request, 'loans/loan_appraisal_step6.html', { **common_ctx, 'form': form })
+        return render(request, 'loans/loan_appraisal_step6.html', _step6_context())
     if step == 7:
-        return render(request, 'loans/loan_appraisal_step7.html', common_ctx)
+        return render(request, 'loans/loan_appraisal_step7.html', {
+            **common_ctx,
+            'scorecard': build_credit_scorecard(appraisal),
+            'feature_snapshot': appraisal.feature_snapshot,
+        })
 
     return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
+
+
+def _group_es_formset(es_formset):
+    """Attach forms to section groups for Sheet 4 template."""
+    forms_by_key = {}
+    for f in es_formset.forms:
+        key = f.instance.item_key or f.initial.get('item_key')
+        if key:
+            forms_by_key[key] = f
+    groups = []
+    for section_key, section_label, rows in ES_CHECKLIST_STRUCTURE:
+        items = []
+        for item_key, _q in rows:
+            if item_key in forms_by_key:
+                items.append(forms_by_key[item_key])
+        if items:
+            groups.append({
+                'section_key': section_key,
+                'section_label': section_label,
+                'forms': items,
+            })
+    return groups
 
 
 def _add_months(date, months):
@@ -1121,6 +1290,38 @@ def committee_appraisal_pack(request, loan_request_id):
         messages.warning(request, 'No appraisal record found for this loan.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
     return render(request, 'loans/committee_appraisal_pack.html', pack)
+
+
+@login_required
+def appraisal_features_json(request, loan_request_id):
+    """Download appraisal_features_v1 JSON (officer assigned or committee viewer)."""
+    from django.http import JsonResponse
+    from .appraisal_features import build_appraisal_features
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    role = getattr(request.user, 'role', None)
+    allowed = False
+    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == request.user.id:
+        allowed = True
+    elif user_can_view_committee_loan(request.user, loan_request):
+        allowed = True
+    elif role in ('admin', 'superadmin'):
+        allowed = True
+    if not allowed:
+        messages.warning(request, 'You do not have access to this appraisal feature export.')
+        return redirect('view_loan_requests')
+
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    basic_info = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
+    snap = None
+    if appraisal and appraisal.feature_snapshot:
+        snap = appraisal.feature_snapshot
+    else:
+        snap = build_appraisal_features(loan_request, appraisal=appraisal, basic_info=basic_info)
+    filename = f'appraisal-features-{loan_request.loan_request_id}.json'
+    response = JsonResponse(snap, json_dumps_params={'indent': 2, 'ensure_ascii': False})
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required

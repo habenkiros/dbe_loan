@@ -90,9 +90,14 @@ class CollateralTier2Tests(TestCase):
             plate_number='AA-12345',
             estimated_value=Decimal('400000'),
         )
-        tiny = SimpleUploadedFile('p.jpg', b'fake-image-bytes', content_type='image/jpeg')
-        for i in range(3):
-            OtherCollateralItemImage.objects.create(item=vehicle, image=tiny, gps_lat=Decimal('9.01'), gps_lon=Decimal('38.75'))
+        for i, ptype in enumerate(('plate', 'asset', 'serial_label')):
+            OtherCollateralItemImage.objects.create(
+                item=vehicle,
+                image=SimpleUploadedFile(f'p{i}.jpg', b'fake-image-bytes', content_type='image/jpeg'),
+                photo_type=ptype,
+                gps_lat=Decimal('9.01'),
+                gps_lon=Decimal('38.75'),
+            )
         readiness = get_other_item_readiness(vehicle)
         self.assertTrue(readiness['ready'])
         self.assertFalse(vehicle.site_gps_lat)

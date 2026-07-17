@@ -58,7 +58,13 @@
 
 <p style="margin:0.75rem 0;">
   <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack (print/PDF)</a>
+  <a href="{% url 'collateral:dossier_json' loan_request.id %}" class="btn btn-green">Export dossier (JSON)</a>
+  <a href="{% url 'collateral:dossier_zip' loan_request.id %}" class="btn btn-green">Export dossier (ZIP + photos)</a>
 </p>
+
+{% load static %}
+{% include "collateral/_offline_bar.html" %}
+{% include "collateral/_offline_scripts.html" with visit_kind="" subject_id="" subject_type="" %}
 
 {% if building_map_sections or land_map_section or other_map_sections %}
 {% load static %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load appraisal_extras %}
 {% block title %}Appraisal Step 1 – {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
@@ -8,8 +9,34 @@
 .sheet1-section h3 { margin: 0 0 1rem 0; color: #064420; font-size: 1.1rem; border-bottom: 2px solid #064420; padding-bottom: 0.4rem; }
 .sheet1-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 2rem; }
 .sheet1-grid .field { display: flex; flex-direction: column; gap: 0.25rem; }
-.sheet1-grid .field label { font-weight: 600; color: #333; font-size: 0.9rem; }
+.sheet1-grid .field label { font-weight: 600; color: #333; font-size: 0.9rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
 .sheet1-grid .field.full { grid-column: 1 / -1; }
+.src-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.3;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.src-registration { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+.src-document { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.src-banking { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.src-manual { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
+.src-default { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.sheet1-import-bar {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+  margin-bottom: 1rem; padding: 0.75rem 1rem;
+  background: #f4f7f5; border: 1px solid #d5e0d8; border-radius: 8px;
+}
+.sheet1-import-bar .help { color: #555; font-size: 0.85rem; }
+.sheet1-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem 0; font-size: 0.8rem; color: #555; }
 @media (max-width: 768px) { .sheet1-grid { grid-template-columns: 1fr; } }
 </style>
 
@@ -17,74 +44,85 @@
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 1: {{ step_title }}</h2>
-    <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request.</p>
+    <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request. Badges show where each value came from.</p>
 
     {% if prefill_report and prefill_report.total_fields %}
     <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px; font-size:0.9rem;">
-      <strong>Auto-filled {{ prefill_report.total_fields }} field(s)</strong> from registration, uploaded documents, and collateral.
+      <strong>Auto-filled {{ prefill_report.total_fields }} field(s)</strong>
       {% if prefill_report.registration %}<br>Registration: {{ prefill_report.registration|join:", " }}{% endif %}
       {% for doc in prefill_report.documents %}<br>{{ doc.document_type }}: {% for k,v in doc.fields.items %}{{ k }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endfor %}
       {% if prefill_report.collateral %}<br>Collateral: {{ prefill_report.collateral|join:", " }}{% endif %}
     </div>
     {% endif %}
 
-    <p style="margin-bottom:1rem;">
-      <button type="submit" name="import_sources" value="1" class="btn btn-blue" formnovalidate>
-        Re-import from registration &amp; documents
+    <div class="sheet1-import-bar">
+      <button type="submit" name="import_documents" value="1" class="btn btn-green" formnovalidate>
+        Re-import from documents
       </button>
-      <span class="help" style="margin-left:0.5rem;">Fills empty fields only — your edits are kept.</span>
-    </p>
+      <button type="submit" name="import_sources" value="1" class="btn btn-blue" formnovalidate>
+        Re-import registration &amp; docs
+      </button>
+      <span class="help">Fills empty fields only — your edits are kept.</span>
+    </div>
+
+    <div class="sheet1-legend">
+      <span class="src-badge src-document">Document</span>
+      <span class="src-badge src-registration">Registration</span>
+      <span class="src-badge src-banking">Core banking</span>
+      <span class="src-badge src-manual">Officer</span>
+      <span class="src-badge src-default">Default</span>
+    </div>
 
     {% if basic_form.errors %}<div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">{{ basic_form.errors }}</div>{% endif %}
 
     <div class="sheet1-section">
       <h3>Personal (client)</h3>
       <div class="sheet1-grid">
-        <div class="field">{{ basic_form.tin_number.label_tag }}{{ basic_form.tin_number }}</div>
-        <div class="field">{{ basic_form.gender.label_tag }}{{ basic_form.gender }}</div>
-        <div class="field">{{ basic_form.age.label_tag }}{{ basic_form.age }}</div>
-        <div class="field">{{ basic_form.marital_status.label_tag }}{{ basic_form.marital_status }}</div>
-        <div class="field">{{ basic_form.education_level.label_tag }}{{ basic_form.education_level }}</div>
-        <div class="field full">{{ basic_form.home_address.label_tag }}{{ basic_form.home_address }}</div>
-        <div class="field">{{ basic_form.spouse_name.label_tag }}{{ basic_form.spouse_name }}</div>
-        <div class="field">{{ basic_form.spouse_occupation.label_tag }}{{ basic_form.spouse_occupation }}</div>
-        <div class="field">{{ basic_form.father_name.label_tag }}{{ basic_form.father_name }}</div>
-        <div class="field">{{ basic_form.grandfather_name.label_tag }}{{ basic_form.grandfather_name }}</div>
+        {% field_with_badge basic_form field_sources "tin_number" %}
+        {% field_with_badge basic_form field_sources "gender" %}
+        {% field_with_badge basic_form field_sources "age" %}
+        {% field_with_badge basic_form field_sources "marital_status" %}
+        {% field_with_badge basic_form field_sources "education_level" %}
+        {% field_with_badge basic_form field_sources "home_address" full=True %}
+        {% field_with_badge basic_form field_sources "spouse_name" %}
+        {% field_with_badge basic_form field_sources "spouse_occupation" %}
+        {% field_with_badge basic_form field_sources "father_name" %}
+        {% field_with_badge basic_form field_sources "grandfather_name" %}
       </div>
     </div>
 
     <div class="sheet1-section">
       <h3>Business</h3>
       <div class="sheet1-grid">
-        <div class="field full">{{ basic_form.business_name.label_tag }}{{ basic_form.business_name }}</div>
-        <div class="field full">{{ basic_form.business_description.label_tag }}{{ basic_form.business_description }}</div>
-        <div class="field full">{{ basic_form.business_address.label_tag }}{{ basic_form.business_address }}</div>
-        <div class="field">{{ basic_form.date_business_started.label_tag }}{{ basic_form.date_business_started }}</div>
-        <div class="field">{{ basic_form.form_of_ownership.label_tag }}{{ basic_form.form_of_ownership }}</div>
-        <div class="field">{{ basic_form.economic_sector.label_tag }}{{ basic_form.economic_sector }}</div>
-        <div class="field">{{ basic_form.subsector_activity.label_tag }}{{ basic_form.subsector_activity }}</div>
-        <div class="field">{{ basic_form.employees_full_time.label_tag }}{{ basic_form.employees_full_time }}</div>
-        <div class="field">{{ basic_form.employees_part_time.label_tag }}{{ basic_form.employees_part_time }}</div>
-        <div class="field">{{ basic_form.employees_seasonal.label_tag }}{{ basic_form.employees_seasonal }}</div>
-        <div class="field">{{ basic_form.employees_ft_equivalent.label_tag }}{{ basic_form.employees_ft_equivalent }}</div>
-        <div class="field">{{ basic_form.family_members_employed.label_tag }}{{ basic_form.family_members_employed }}</div>
-        <div class="field">{{ basic_form.peak_sales_months.label_tag }}{{ basic_form.peak_sales_months }}</div>
-        <div class="field">{{ basic_form.lowest_sales_months.label_tag }}{{ basic_form.lowest_sales_months }}</div>
-        <div class="field">{{ basic_form.number_business_owners.label_tag }}{{ basic_form.number_business_owners }}</div>
+        {% field_with_badge basic_form field_sources "business_name" full=True %}
+        {% field_with_badge basic_form field_sources "business_description" full=True %}
+        {% field_with_badge basic_form field_sources "business_address" full=True %}
+        {% field_with_badge basic_form field_sources "date_business_started" %}
+        {% field_with_badge basic_form field_sources "form_of_ownership" %}
+        {% field_with_badge basic_form field_sources "economic_sector" %}
+        {% field_with_badge basic_form field_sources "subsector_activity" %}
+        {% field_with_badge basic_form field_sources "employees_full_time" %}
+        {% field_with_badge basic_form field_sources "employees_part_time" %}
+        {% field_with_badge basic_form field_sources "employees_seasonal" %}
+        {% field_with_badge basic_form field_sources "employees_ft_equivalent" %}
+        {% field_with_badge basic_form field_sources "family_members_employed" %}
+        {% field_with_badge basic_form field_sources "peak_sales_months" %}
+        {% field_with_badge basic_form field_sources "lowest_sales_months" %}
+        {% field_with_badge basic_form field_sources "number_business_owners" %}
       </div>
     </div>
 
     <div class="sheet1-section">
       <h3>Loan request (additional)</h3>
       <div class="sheet1-grid">
-        <div class="field">{{ basic_form.term_months.label_tag }}{{ basic_form.term_months }}</div>
-        <div class="field">{{ basic_form.repayment_frequency.label_tag }}{{ basic_form.repayment_frequency }}</div>
-        <div class="field">{{ basic_form.interest_rate.label_tag }}{{ basic_form.interest_rate }}</div>
-        <div class="field">{{ basic_form.interest_basis.label_tag }}{{ basic_form.interest_basis }}</div>
-        <div class="field">{{ basic_form.grace_period_months.label_tag }}{{ basic_form.grace_period_months }}</div>
-        <div class="field">{{ basic_form.interest_only_months.label_tag }}{{ basic_form.interest_only_months }}</div>
-        <div class="field">{{ basic_form.instalments_per_year.label_tag }}{{ basic_form.instalments_per_year }}</div>
-        <div class="field">{{ basic_form.cash_contribution.label_tag }}{{ basic_form.cash_contribution }}</div>
+        {% field_with_badge basic_form field_sources "term_months" %}
+        {% field_with_badge basic_form field_sources "repayment_frequency" %}
+        {% field_with_badge basic_form field_sources "interest_rate" %}
+        {% field_with_badge basic_form field_sources "interest_basis" %}
+        {% field_with_badge basic_form field_sources "grace_period_months" %}
+        {% field_with_badge basic_form field_sources "interest_only_months" %}
+        {% field_with_badge basic_form field_sources "instalments_per_year" %}
+        {% field_with_badge basic_form field_sources "cash_contribution" %}
       </div>
     </div>
 

@@ -293,6 +293,22 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
             if self.fields[name].widget.attrs.get('class') != 'form-control':
                 self.fields[name].widget.attrs.setdefault('class', 'form-control')
 
+    def changed_data_for_sources(self):
+        """Fields the officer changed (or newly filled) for provenance badges."""
+        return list(self.changed_data)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        changed = self.changed_data_for_sources()
+        if changed:
+            sources = dict(instance.field_sources or {})
+            for name in changed:
+                sources[name] = {'source': 'manual', 'label': 'Officer'}
+            instance.field_sources = sources
+        if commit:
+            instance.save()
+        return instance
+
 
 class AppraisalCreditHistoryEntryForm(forms.ModelForm):
     """One row of credit history (Sheet 2). Dropdowns per Excel: Status, Purpose, Repayment, Letter from lender."""
@@ -628,6 +644,13 @@ class AppraisalSheet3Form(forms.ModelForm):
         return data
 
     def save(self, commit=True):
+        from decimal import Decimal
+        from .cashflow_utils import (
+            max_loan_capacity_from_cashflow,
+            suggested_installment_declining,
+        )
+        from .appraisal_policy import get_loan_analysis_policy
+
         obj = super().save(commit=False)
         obj.net_monthly_cashflow = self._computed_net_monthly
         obj.dscr = self._computed_dscr_monthly
@@ -636,6 +659,21 @@ class AppraisalSheet3Form(forms.ModelForm):
         obj.dscr_annual = self._computed_dscr_annual
         obj.stressed_net_monthly_cashflow = getattr(self, '_computed_stressed_net', None)
         obj.stressed_dscr = getattr(self, '_computed_stressed_dscr', None)
+
+        bi = self.basic_info
+        loan = obj.loan_request
+        ppy = getattr(self, '_payments_per_year', 12) or 12
+        term = getattr(bi, 'term_months', None) if bi else None
+        rate = getattr(bi, 'interest_rate', None) if bi else None
+        principal = getattr(loan, 'amount_requested', None) if loan else None
+        obj.suggested_monthly_installment = suggested_installment_declining(
+            principal, rate, term, payments_per_year=ppy,
+        )
+        policy = get_loan_analysis_policy()
+        target = getattr(policy, 'warn_annual_dscr_min', None) or Decimal('1.2')
+        obj.max_loan_capacity = max_loan_capacity_from_cashflow(
+            self._computed_annual_net, rate, term, target_dscr=target, payments_per_year=ppy,
+        )
         if commit:
             obj.save()
         return obj

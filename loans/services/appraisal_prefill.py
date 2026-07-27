@@ -279,6 +279,165 @@ def field_source_badges_for_template(basic_info: LoanRequestBasicInfo) -> Dict[s
     return dict(basic_info.field_sources or {})
 
 
+BANKING_FIELD_LABELS = {
+    'applicant_name': 'Applicant name',
+    'phone_number': 'Phone number',
+    'customer_number': 'Customer number',
+    'business_name': 'Business name',
+    'tin_number': 'TIN',
+    'home_address': 'Home address',
+    'gender': 'Gender',
+}
+
+
+def _norm_compare(value) -> str:
+    if value is None:
+        return ''
+    return str(value).strip().lower()
+
+
+def _set_loan_request_field(loan_request: LoanRequest, field: str, value, only_empty: bool) -> bool:
+    if value is None or value == '':
+        return False
+    current = getattr(loan_request, field, None)
+    if only_empty and current not in (None, ''):
+        return False
+    setattr(loan_request, field, value)
+    return True
+
+
+def apply_banking_profile(
+    loan_request: LoanRequest,
+    basic_info: LoanRequestBasicInfo,
+    profile: Dict[str, Any],
+    *,
+    only_empty: bool = True,
+    accept_fields: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Apply core-banking profile to loan request + Sheet 1.
+    Empty-only by default; differing non-empty values become conflicts unless
+    listed in accept_fields (force apply; banking wins).
+    """
+    accept = set(accept_fields or [])
+    banking_meta = {'source': 'banking', 'label': 'Core banking'}
+    applied: List[str] = []
+    conflicts: List[Dict[str, Any]] = []
+    lr_dirty = False
+    bi_dirty = False
+
+    loan_map = [
+        ('applicant_name', profile.get('name')),
+        ('phone_number', profile.get('phone_number')),
+        ('customer_number', profile.get('customer_number')),
+    ]
+    for field, value in loan_map:
+        if value in (None, ''):
+            continue
+        current = getattr(loan_request, field, None)
+        force = field in accept or f'loan_request.{field}' in accept
+        if current not in (None, '') and _norm_compare(current) != _norm_compare(value) and not force:
+            if only_empty:
+                conflicts.append({
+                    'target': 'loan_request',
+                    'field': field,
+                    'label': BANKING_FIELD_LABELS.get(field, field),
+                    'current': str(current),
+                    'proposed': str(value),
+                })
+                continue
+        if _set_loan_request_field(loan_request, field, value, only_empty=False if force else only_empty):
+            applied.append(f'{field} ← banking')
+            lr_dirty = True
+
+    basic_map = [
+        ('business_name', profile.get('name')),
+        ('tin_number', profile.get('tin_number')),
+        ('home_address', profile.get('home_address')),
+        ('gender', profile.get('gender')),
+    ]
+    for field, value in basic_map:
+        if value in (None, ''):
+            continue
+        # Normalize gender to model choices when possible
+        if field == 'gender':
+            coerced = _coerce_basic_info_value('gender', str(value))
+            value = coerced if coerced else value
+        current = getattr(basic_info, field, None)
+        force = field in accept or f'basic_info.{field}' in accept
+        if current not in (None, '') and _norm_compare(current) != _norm_compare(value) and not force:
+            if only_empty:
+                conflicts.append({
+                    'target': 'basic_info',
+                    'field': field,
+                    'label': BANKING_FIELD_LABELS.get(field, field),
+                    'current': str(current),
+                    'proposed': str(value),
+                })
+                continue
+        if _set_basic_info_field(
+            basic_info, field, value, only_empty=False if force else only_empty, source_meta=banking_meta,
+        ):
+            applied.append(f'{field} ← banking')
+            bi_dirty = True
+
+    if lr_dirty:
+        loan_request.save(update_fields=['applicant_name', 'phone_number', 'customer_number'])
+    if bi_dirty or applied:
+        basic_info.save()
+
+    return {
+        'applied': applied,
+        'conflicts': conflicts,
+        'profile': profile,
+        'provider': profile.get('provider') or 'core_banking',
+    }
+
+
+def lookup_and_apply_banking(
+    loan_request: LoanRequest,
+    *,
+    customer_number: Optional[str] = None,
+    only_empty: bool = True,
+    accept_fields: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Fetch core-banking profile and apply to Sheet 1 / loan identity."""
+    from loans.services.customer import fetch_customer_by_number
+
+    basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
+    cid = (customer_number or loan_request.customer_number or '').strip()
+    # Fall back to TIN digits as lookup key when no customer number yet
+    if not cid and basic_info.tin_number:
+        cid = ''.join(ch for ch in str(basic_info.tin_number) if ch.isdigit())
+    if not cid:
+        return {
+            'applied': [],
+            'conflicts': [],
+            'profile': None,
+            'error': 'Enter a core banking customer number (or TIN) to look up.',
+            'total_fields': 0,
+        }
+    profile = fetch_customer_by_number(cid)
+    if not profile:
+        return {
+            'applied': [],
+            'conflicts': [],
+            'profile': None,
+            'error': f'No customer found for “{cid}”.',
+            'total_fields': 0,
+        }
+    # Persist looked-up customer number even before field apply
+    if profile.get('customer_number') and loan_request.customer_number != profile['customer_number']:
+        loan_request.customer_number = profile['customer_number']
+        loan_request.save(update_fields=['customer_number'])
+    result = apply_banking_profile(
+        loan_request, basic_info, profile, only_empty=only_empty, accept_fields=accept_fields,
+    )
+    result['total_fields'] = len(result['applied'])
+    result['error'] = None
+    return result
+
+
 def prefill_basic_info_from_registration(
     loan_request: LoanRequest,
     basic_info: LoanRequestBasicInfo,
@@ -365,12 +524,17 @@ def apply_document_extractions(
     *,
     only_empty: bool = True,
     basic_info_only: bool = False,
-) -> List[Dict[str, Any]]:
+    accept_fields: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Apply OCR/extraction mappings into Sheet 1 (and optionally appraisal).
+    Returns {documents, conflicts, total_fields}. Conflicts are differing non-empty fields.
+    """
+    accept = set(accept_fields or [])
     results: List[Dict[str, Any]] = []
+    conflicts: List[Dict[str, Any]] = []
     docs = loan_request.application_documents.select_related('document_type').order_by('uploaded_at')
     for doc in docs:
-        if not doc.document_type.content_extraction_mappings.strip():
-            continue
         fields = extract_fields_for_document(doc)
         if not fields:
             continue
@@ -383,8 +547,30 @@ def apply_document_extractions(
         for field, raw in fields.items():
             if field in BASIC_INFO_EXTRACT_FIELDS:
                 value = _coerce_basic_info_value(field, raw)
-                if value is not None and _set_basic_info_field(
-                    basic_info, field, value, only_empty, source_meta=doc_meta,
+                if value is None or value == '':
+                    continue
+                current = getattr(basic_info, field, None)
+                force = field in accept or f'basic_info.{field}' in accept
+                if (
+                    only_empty
+                    and current not in (None, '')
+                    and _norm_compare(current) != _norm_compare(value)
+                    and not force
+                ):
+                    conflicts.append({
+                        'target': 'basic_info',
+                        'field': field,
+                        'label': field.replace('_', ' ').title(),
+                        'current': str(current),
+                        'proposed': str(value),
+                        'document_type': doc.document_type.name,
+                        'document_id': doc.id,
+                    })
+                    continue
+                if _set_basic_info_field(
+                    basic_info, field, value,
+                    only_empty=False if force else only_empty,
+                    source_meta=doc_meta,
                 ):
                     applied[field] = str(value)
             elif not basic_info_only and field in APPRAISAL_EXTRACT_FIELDS:
@@ -401,28 +587,34 @@ def apply_document_extractions(
         basic_info.save()
         if not basic_info_only:
             appraisal.save()
-    return results
+    # De-dupe conflicts by field (last document wins as proposed)
+    by_field: Dict[str, Dict[str, Any]] = {}
+    for c in conflicts:
+        by_field[c['field']] = c
+    return {
+        'documents': results,
+        'conflicts': list(by_field.values()),
+        'total_fields': sum(len(d['fields']) for d in results),
+    }
 
 
 def reimport_sheet1_from_documents(
     loan_request: LoanRequest,
     *,
     only_empty: bool = True,
+    accept_fields: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Explicit Sheet 1 re-import from uploaded documents only (empty fields by default)."""
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     appraisal, _ = LoanAppraisal.objects.get_or_create(loan_request=loan_request)
-    documents = apply_document_extractions(
+    return apply_document_extractions(
         loan_request,
         basic_info,
         appraisal,
         only_empty=only_empty,
         basic_info_only=True,
+        accept_fields=accept_fields,
     )
-    return {
-        'documents': documents,
-        'total_fields': sum(len(d['fields']) for d in documents),
-    }
 
 def compute_collateral_totals(loan_request: LoanRequest) -> Dict[str, Decimal]:
     from collateral.models import Building, BuildingValuation, LandValuation, OtherCollateralItem
@@ -524,32 +716,46 @@ def sync_appraisal_from_sources(
     include_collateral: bool = True,
     include_registration: bool = True,
     include_documents: bool = True,
+    include_banking: bool = True,
 ) -> Dict[str, Any]:
-    """Registration + documents + collateral → Sheet 1 / 2 / 5 fields (empty only by default)."""
+    """Banking → registration → documents → collateral (empty only by default)."""
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     appraisal, _ = LoanAppraisal.objects.get_or_create(loan_request=loan_request)
     report: Dict[str, Any] = {
+        'banking': {'applied': [], 'conflicts': [], 'error': None},
         'registration': [],
         'documents': [],
         'nbe_hints': [],
         'collateral': [],
     }
+    if include_banking and (loan_request.customer_number or (basic_info.tin_number or '').strip()):
+        report['banking'] = lookup_and_apply_banking(loan_request, only_empty=only_empty)
+        basic_info.refresh_from_db()
+        loan_request.refresh_from_db()
     if include_registration:
         report['registration'] = prefill_basic_info_from_registration(
             loan_request, basic_info, only_empty=only_empty,
         )
     if include_documents:
-        report['documents'] = apply_document_extractions(
+        doc_report = apply_document_extractions(
             loan_request, basic_info, appraisal, only_empty=only_empty,
         )
+        report['documents'] = doc_report.get('documents') or []
+        report['document_conflicts'] = doc_report.get('conflicts') or []
         report['nbe_hints'] = apply_nbe_document_hints(loan_request, appraisal, only_empty=only_empty)
     if include_collateral:
         report['collateral'] = sync_collateral_to_appraisal(loan_request, appraisal, only_empty=only_empty)
+    banking_applied = len((report.get('banking') or {}).get('applied') or [])
     report['total_fields'] = (
-        len(report['registration'])
+        banking_applied
+        + len(report['registration'])
         + sum(len(d['fields']) for d in report['documents'])
         + len(report['nbe_hints'])
         + len(report['collateral'])
     )
     report['field_sources'] = field_source_badges_for_template(basic_info)
+    banking_conflicts = list((report.get('banking') or {}).get('conflicts') or [])
+    doc_conflicts = list(report.get('document_conflicts') or [])
+    report['conflicts'] = banking_conflicts  # banking conflicts (existing UI)
+    report['all_conflicts'] = banking_conflicts + doc_conflicts
     return report

@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from .dossier import dossier_json_bytes, dossier_zip_bytes
+from .governance import log_collateral_event
 from .models import CollateralFieldAuditLog
 from .views import _can_access_collateral, _collateral_eligible_loans
 

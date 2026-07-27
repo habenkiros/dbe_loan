@@ -55,7 +55,20 @@ class Branch(models.Model):
         return f"{self.name} ({self.district.name})"
 
 class LoanCategory(models.Model):
+    MODE_MSME = 'msme'
+    MODE_CORPORATE = 'corporate'
+    APPRAISAL_MODE_CHOICES = [
+        (MODE_MSME, 'MSME / cashflow'),
+        (MODE_CORPORATE, 'Corporate'),
+    ]
+
     name = models.CharField(max_length=255, unique=True)
+    appraisal_mode = models.CharField(
+        max_length=20,
+        choices=APPRAISAL_MODE_CHOICES,
+        default=MODE_MSME,
+        help_text='Which appraisal wizard content to use for loans in this category.',
+    )
 
     def __str__(self):
         return self.name
@@ -138,6 +151,17 @@ class LoanApplicationDocumentType(models.Model):
             'field_name=Label in document, or field_name=regex:pattern. '
             'Example: tin_number=TIN  business_name=Business Name'
         ),
+    )
+    for_appraisal_mode = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        choices=[
+            ('', 'All modes'),
+            ('msme', 'MSME only'),
+            ('corporate', 'Corporate only'),
+        ],
+        help_text='Limit this document type to MSME or Corporate loans (blank = both).',
     )
     reference_sample = models.FileField(
         upload_to='document_type_samples/%Y/%m/',
@@ -320,6 +344,13 @@ class LoanRequest(models.Model):
     loan_request_id = models.CharField(max_length=22, unique=True)
     applicant_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15, default='0953333311')
+    customer_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Core banking / Temenos-style customer id for party lookup.',
+    )
     email = models.EmailField(null=True, blank=True)
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
@@ -728,6 +759,14 @@ class LoanRequestBasicInfo(models.Model):
     family_members_employed = models.PositiveIntegerField(null=True, blank=True)
     peak_sales_months = models.CharField(max_length=100, null=True, blank=True)
     lowest_sales_months = models.CharField(max_length=100, null=True, blank=True)
+    peak_sales_percent = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Peak-season sales as % of average (Excel seasonality).',
+    )
+    lowest_sales_percent = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Low-season sales as % of average (Excel seasonality).',
+    )
     number_business_owners = models.PositiveIntegerField(null=True, blank=True)
 
     # ----- Loan request (additional to LoanRequest.amount_requested, etc.) -----
@@ -753,8 +792,47 @@ class LoanRequestBasicInfo(models.Model):
     # Shape: {field_name: {"source": "...", "label": "...", "document_id": optional}}
     field_sources = models.JSONField(default=dict, blank=True)
 
+    # Corporate / entity KYC (shown when appraisal_mode=corporate)
+    legal_registration_number = models.CharField(
+        max_length=100, null=True, blank=True,
+        help_text='Company registration / CR number.',
+    )
+    directors_summary = models.TextField(
+        null=True, blank=True,
+        help_text='Directors / board summary.',
+    )
+    ubo_summary = models.TextField(
+        null=True, blank=True,
+        help_text='Ultimate beneficial owners (UBO) summary.',
+    )
+
     def __str__(self):
         return f'Basic info – {self.loan_request.loan_request_id}'
+
+
+class AppraisalPurposeLine(models.Model):
+    """Sheet 1 purpose / investment breakdown (qty × unit price → value)."""
+    basic_info = models.ForeignKey(
+        LoanRequestBasicInfo,
+        on_delete=models.CASCADE,
+        related_name='purpose_lines',
+    )
+    description = models.CharField(max_length=255, blank=True)
+    quantity = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    unit_price = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'id']
+
+    def __str__(self):
+        return self.description or f'Purpose line {self.pk}'
+
+    def compute_value(self):
+        if self.quantity is not None and self.unit_price is not None:
+            return (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        return self.value
 
 
 class LoanAppraisal(models.Model):
@@ -786,6 +864,18 @@ class LoanAppraisal(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Locked at appraisal create from LoanCategory.appraisal_mode
+    appraisal_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('msme', 'MSME / cashflow'),
+            ('corporate', 'Corporate'),
+        ],
+        default='msme',
+        db_index=True,
+        help_text='MSME vs Corporate sheet content (copied from category at create).',
+    )
 
     # Financial / cashflow analysis
     monthly_business_income = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
@@ -850,6 +940,35 @@ class LoanAppraisal(models.Model):
     stress_cost_increase_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     stressed_net_monthly_cashflow = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     stressed_dscr = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Sheet (3) balance sheet / ratios (Excel depth)
+    bs_current_assets = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bs_current_liabilities = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bs_inventory = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bs_total_assets = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bs_total_liabilities = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bs_equity = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    ratio_current = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Current assets / current liabilities.',
+    )
+    ratio_acid_test = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='(Current assets − inventory) / current liabilities.',
+    )
+    ratio_debt_equity = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Total liabilities / equity.',
+    )
+    # 12-month cashflow grid: [{month, sales, expenses, net}, ...]
+    monthly_cashflow_grid = models.JSONField(default=list, blank=True)
+
+    # Corporate statement highlights (also usable for MSME when filled)
+    corp_annual_revenue = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    corp_operating_profit = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='EBIT / operating profit.',
+    )
 
     # ----- Sheet (2) Business & character assessment -----
     nbe_credit_report_obtained = models.BooleanField(null=True, blank=True, help_text='NBE Credit Report obtained (Y/N).')
@@ -1160,6 +1279,17 @@ QUALITATIVE_RATING_CHOICES_BY_FACTOR = {
         'inconsistent record of daily sales/ expenses',
     ],
     'third_party_opinion': ['Positive, Respected', 'Moderate', 'No feedback received'],
+    # Corporate governance factors
+    'board_governance': ['Strong board / clear oversight', 'Adequate governance', 'Weak / informal board'],
+    'management_depth': ['Deep bench / succession ready', 'Adequate management', 'Key-person risk'],
+    'financial_discipline': ['Strong controls & reporting', 'Adequate discipline', 'Weak controls'],
+    'transparency': ['High transparency', 'Adequate disclosure', 'Opaque / delayed reporting'],
+    'related_party': ['Low / well managed', 'Moderate exposure', 'High / poorly controlled'],
+    'industry_position': ['Market leader / strong niche', 'Average position', 'Weak / declining'],
+    'shareholder_stability': ['Stable ownership', 'Some changes', 'Unstable / contested'],
+    'audit_quality': ['Clean audited statements', 'Qualified / limited scope', 'Unaudited / unreliable'],
+    'covenant_compliance': ['Full compliance history', 'Minor breaches resolved', 'Material breaches'],
+    'reputation': ['Strong market/bank reputation', 'Neutral', 'Adverse reputation signals'],
 }
 
 
@@ -1175,7 +1305,7 @@ QUALITATIVE_RATING_CHOICES = [
     ('Professional', 'Professional'),
 ]
 
-# 10 factors from Sheet (2) Bus. and Character Assess. – fixed list
+# 10 factors from Sheet (2) Bus. and Character Assess. – MSME
 QUALITATIVE_FACTOR_KEYS = [
     ('years_operation', 'Years of business operation'),
     ('management_competence', 'Management competence'),
@@ -1187,6 +1317,20 @@ QUALITATIVE_FACTOR_KEYS = [
     ('asset_management', 'Record keeping and asset management'),
     ('record_keeping', 'Record keeping'),
     ('third_party_opinion', '3rd party opinion'),
+]
+
+# Corporate Sheet 2 – governance / character (10 factors, same 0–100 scoring scale)
+CORPORATE_QUALITATIVE_FACTOR_KEYS = [
+    ('board_governance', 'Board / governance quality'),
+    ('management_depth', 'Management depth & succession'),
+    ('financial_discipline', 'Financial discipline / controls'),
+    ('transparency', 'Transparency & disclosure'),
+    ('related_party', 'Related-party exposure'),
+    ('industry_position', 'Industry / competitive position'),
+    ('shareholder_stability', 'Shareholder / ownership stability'),
+    ('audit_quality', 'Audit quality & reporting'),
+    ('covenant_compliance', 'Covenant / regulatory compliance'),
+    ('reputation', 'Market / bank reputation'),
 ]
 
 

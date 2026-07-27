@@ -59,10 +59,7 @@ SHEET_1 = SheetRequirementSpec(
         SheetFieldRequirement('Repayment frequency', lambda c: _filled(c['basic_info'].repayment_frequency)),
         SheetFieldRequirement('Interest rate', lambda c: _filled(c['basic_info'].interest_rate)),
     ),
-    excel_only_notes=(
-        'Purpose breakdown (quantity, unit price, value) per investment line',
-        'Peak / lowest sales months % (seasonality on cashflow sheet)',
-    ),
+    excel_only_notes=(),
 )
 
 SHEET_2 = SheetRequirementSpec(
@@ -131,9 +128,7 @@ SHEET_3 = SheetRequirementSpec(
         ),
     ),
     excel_only_notes=(
-        'Sales/purchases cash vs credit %, ending inventory',
-        'Full balance sheet and key ratios (acid test, debt/equity)',
-        '12-month cashflow grid and max loan capacity',
+        'Sales/purchases cash vs credit % (optional deeper P&L detail)',
     ),
 )
 
@@ -270,6 +265,18 @@ def get_appraisal_sheet_status(
     ctx = _ctx(loan_request, appraisal, basic_info)
     specs = [s for s in APPRAISAL_SHEET_SPECS if s.step <= max_step]
     status = {spec.step: evaluate_sheet(spec, ctx) for spec in specs}
+
+    # Corporate Sheet 1: require legal registration when mode is corporate
+    from .appraisal_mode import is_corporate
+    if is_corporate(loan_request, appraisal) and 1 in status:
+        if not _filled(getattr(basic_info, 'legal_registration_number', None)):
+            status[1]['complete'] = False
+            status[1]['missing'] = list(status[1]['missing']) + [
+                'Legal registration / CR number (corporate)',
+            ]
+        if status[1].get('title'):
+            status[1]['title'] = 'Entity & loan request (corporate)'
+
     # Attach collateral BOQ detail under sheet 5
     boq = _collateral_boq_status(loan_request)
     status[5]['collateral_boq'] = boq

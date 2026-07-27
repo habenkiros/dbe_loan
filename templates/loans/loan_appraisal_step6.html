@@ -18,7 +18,9 @@
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 6: {{ step_title }}</h2>
-    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms. Warnings and hard blocks use thresholds from <strong>Admin → Loan analysis policy</strong>.</p>
+    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms.
+      The <strong>explainable credit scorecard</strong> below is the system source of truth for committee (not the Excel key-indicator matrix).
+      Warnings and hard blocks use thresholds from <strong>Admin → Loan analysis policy</strong>.</p>
 
     {% if analysis_blocks %}
     <div style="background:#ffecec; border:1px solid #e28b8b; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
@@ -37,6 +39,33 @@
       <ul style="margin:0.5rem 0 0 1.25rem;">
         {% for w in analysis_warnings %}
         <li>{{ w }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if analysis_assist and analysis_assist.insights %}
+    <div class="sheet6-section" style="background:#f0f7fb; border-color:#b6d4e8;">
+      <h3 style="border-color:#1e4a6e; color:#1e4a6e;">Analysis assist</h3>
+      <p class="meta" style="margin-top:0;">Read-only prompts from scorecard, bureau, and mode — not an auto-approve decision.</p>
+      <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
+        {% for tip in analysis_assist.insights %}
+        <li style="margin-bottom:0.4rem;">
+          <strong style="{% if tip.severity == 'high' %}color:#9b1c1c;{% elif tip.severity == 'medium' %}color:#92400e;{% else %}color:#1e40af;{% endif %}">{{ tip.title }}</strong>
+          — {{ tip.detail }}
+          {% if tip.sheet %}<a href="{% url 'loan_appraisal_step' loan_request.id tip.sheet %}">Sheet {{ tip.sheet }}</a>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if officer_checklist %}
+    <div class="sheet6-section">
+      <h3>Officer checklist ({{ mode_label }})</h3>
+      <ul style="margin:0.35rem 0 0 1.1rem;">
+        {% for item in officer_checklist %}
+        <li>{{ item }}</li>
         {% endfor %}
       </ul>
     </div>

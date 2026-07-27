@@ -10,17 +10,30 @@
 .pack-grid .lbl { font-weight: 600; color: #555; }
 .pack-banner { background: #e8f4ec; border: 1px solid #064420; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
 .pack-nav a { margin-right: 1rem; }
+.pack-section table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.pack-section th, .pack-section td { border: 1px solid #ddd; padding: 0.35rem 0.5rem; text-align: left; }
+@media print {
+  .no-print { display: none !important; }
+  .pack-section { break-inside: avoid; background: #fff; border-color: #ccc; }
+  .pack-banner { border: 1px solid #333; }
+  a[href]::after { content: ""; }
+}
 </style>
 
 <div class="pack-readonly">
-  <p class="pack-banner"><strong>Read-only appraisal pack</strong> — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.</p>
+  <div class="no-print" style="margin-bottom:1rem;">
+    <button type="button" class="btn btn-blue" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <p class="pack-banner"><strong>Read-only appraisal pack</strong> — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.
+    {% if mode_label %} · Mode: <strong>{{ mode_label }}</strong>{% endif %}
+  </p>
   <p>
     <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
     &nbsp;|&nbsp; Branch: {{ loan_request.branch.name }}
     &nbsp;|&nbsp; Requested: {{ loan_request.amount_requested|floatformat:2 }}
     {% if appraisal.created_by %}&nbsp;|&nbsp; Officer: {{ appraisal.created_by.username }}{% endif %}
   </p>
-  <p class="pack-nav">
+  <p class="pack-nav no-print">
     <a href="#sheet1">Sheet 1</a><a href="#sheet2">Sheet 2</a><a href="#sheet3">Sheet 3</a>
     <a href="#sheet4">Sheet 4</a><a href="#sheet5">Sheet 5</a><a href="#sheet6">Sheet 6</a><a href="#sheet7">Sheet 7</a>
     &nbsp;|&nbsp;<a href="{% url 'loan_request_detail_manager' loan_request.id %}">← Committee review</a>

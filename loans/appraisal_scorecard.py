@@ -117,8 +117,42 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
             'reason': f'Max capacity / ask = {ratio}',
         })
 
+    # Balance-sheet / leverage signals (Excel + corporate)
+    current_r = _d(getattr(appraisal, 'ratio_current', None))
+    de = _d(getattr(appraisal, 'ratio_debt_equity', None))
+    ratio_pts = Decimal('0')
+    if current_r is not None:
+        if current_r >= Decimal('1.5'):
+            ratio_pts += Decimal('3')
+        elif current_r >= Decimal('1.0'):
+            ratio_pts += Decimal('2')
+        else:
+            ratio_pts += Decimal('0.5')
+        contrib.append({
+            'feature_key': 'fin.current_ratio',
+            'value': float(current_r),
+            'points': float(ratio_pts),
+            'reason': 'Current ratio',
+        })
+    de_pts = Decimal('0')
+    if de is not None:
+        if de <= Decimal('1.0'):
+            de_pts = Decimal('2')
+        elif de <= Decimal('2.0'):
+            de_pts = Decimal('1')
+        else:
+            de_pts = Decimal('0.5')
+        contrib.append({
+            'feature_key': 'fin.debt_equity',
+            'value': float(de),
+            'points': float(de_pts),
+            'reason': 'Debt / equity',
+        })
+    points += ratio_pts + de_pts
+
     earned = min(points, max_pts)
-    remark = f'DSCR-focused financial pillar ({earned}/{max_pts})'
+    mode = getattr(appraisal, 'appraisal_mode', None) or 'msme'
+    remark = f'DSCR + ratios financial pillar ({earned}/{max_pts}) [{mode}]'
     return earned, contrib, remark
 
 
@@ -256,13 +290,13 @@ def persist_credit_scorecard(appraisal) -> Dict[str, Any]:
 
 
 def evaluate_analysis_gates(appraisal, basic_info=None) -> Tuple[List[str], List[str]]:
-    """Return (hard_blocks, warnings) using LoanAnalysisPolicyConfig."""
+    """Return (hard_blocks, warnings) using LoanAnalysisPolicyConfig + mode rules."""
     policy = get_loan_analysis_policy()
     blocks: List[str] = []
     warnings: List[str] = []
 
     if policy.hard_block_qualitative_fail and appraisal.qualitative_passed is False:
-        blocks.append('Qualitative assessment failed (<75%). Do not proceed without remediation.')
+        blocks.append('Qualitative / governance assessment failed (<75%). Do not proceed without remediation.')
 
     if policy.hard_block_es_reject and appraisal.es_eligibility_decision == appraisal.ES_ELIGIBILITY_REJECT:
         blocks.append('E&S eligibility is REJECT.')
@@ -289,7 +323,21 @@ def evaluate_analysis_gates(appraisal, basic_info=None) -> Tuple[List[str], List
         if appraisal.bureau_inquiries_6m >= policy.hard_bureau_inquiries_count:
             blocks.append(f'Bureau inquiries in 6m ({appraisal.bureau_inquiries_6m}) exceed hard limit.')
 
-    # Warnings
+    # Mode-aware gates
+    from .appraisal_mode import is_corporate
+    loan = appraisal.loan_request
+    if is_corporate(loan, appraisal):
+        if basic_info and not (getattr(basic_info, 'legal_registration_number', None) or '').strip():
+            blocks.append('Corporate: legal registration / CR number is required on Sheet 1.')
+        if not _corporate_has_verified_audit_doc(loan):
+            warnings.append('Corporate: no verified audited-accounts (or similar) document found.')
+        if not _d(getattr(appraisal, 'corp_annual_revenue', None)):
+            warnings.append('Corporate: annual revenue not entered on Sheet 3.')
+    else:
+        if appraisal.nbe_credit_report_obtained is None:
+            warnings.append('MSME: NBE credit report obtained (Y/N) not set on Sheet 2.')
+
+    # Warnings (DSCR / collateral)
     warn_a = _d(policy.warn_annual_dscr_min) or Decimal('1.2')
     warn_m = _d(policy.warn_monthly_dscr_min) or Decimal('1.2')
     if dscr_a is not None and dscr_a < warn_a:
@@ -307,8 +355,24 @@ def evaluate_analysis_gates(appraisal, basic_info=None) -> Tuple[List[str], List
             status = get_appraisal_sheet_status(appraisal.loan_request, appraisal, basic_info)
             blockers = sheets_blocking_completion(status, max_step=6)
             if blockers:
-                warnings.append('Incomplete sheets: ' + '; '.join(str(b) for b in blockers[:5]))
+                # Hard blocks (policy), not soft warnings
+                for b in blockers[:5]:
+                    blocks.append(str(b))
         except Exception:
             pass
 
     return blocks, warnings
+
+
+def _corporate_has_verified_audit_doc(loan_request) -> bool:
+    from .models import LoanRequestDocument
+
+    for doc in loan_request.application_documents.select_related('document_type'):
+        name = (doc.document_type.name or '').lower()
+        if any(k in name for k in ('audit', 'financial statement', 'annual report', 'accounts')):
+            if doc.auth_status in (
+                LoanRequestDocument.AUTH_AUTO_PASSED,
+                LoanRequestDocument.AUTH_VERIFIED,
+            ):
+                return True
+    return False

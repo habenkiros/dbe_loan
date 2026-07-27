@@ -33,6 +33,7 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
         'schema_version': FEATURE_SCHEMA_VERSION,
         'captured_at': timezone.now().isoformat(),
         'sample_bible': SAMPLE_BIBLE,
+        'appraisal_mode': getattr(appraisal, 'appraisal_mode', None) if appraisal else None,
         'loan': {
             'id': loan_request.pk,
             'loan_request_id': loan_request.loan_request_id,
@@ -40,6 +41,7 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
             'amount_requested': _num(loan_request.amount_requested),
             'branch_id': loan_request.branch_id,
             'collateral_type': getattr(getattr(loan_request, 'collateral', None), 'name', None),
+            'category': getattr(getattr(loan_request, 'category', None), 'name', None),
         },
         'basic_info': {},
         'qualitative': {},
@@ -61,6 +63,8 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
             'loan_purpose': getattr(basic_info, 'purpose_of_loan', None) or getattr(basic_info, 'loan_purpose', None),
             'peak_sales_months': getattr(basic_info, 'peak_sales_months', None),
             'lowest_sales_months': getattr(basic_info, 'lowest_sales_months', None),
+            'legal_registration_number': getattr(basic_info, 'legal_registration_number', None),
+            'form_of_ownership': getattr(basic_info, 'form_of_ownership', None),
         }
 
     if not appraisal:
@@ -90,6 +94,11 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
         'max_loan_capacity': _num(getattr(appraisal, 'max_loan_capacity', None)),
         'suggested_monthly_installment': _num(getattr(appraisal, 'suggested_monthly_installment', None)),
         'proposed_monthly_installment': _num(appraisal.proposed_monthly_installment),
+        'corp_annual_revenue': _num(getattr(appraisal, 'corp_annual_revenue', None)),
+        'corp_operating_profit': _num(getattr(appraisal, 'corp_operating_profit', None)),
+        'ratio_current': _num(getattr(appraisal, 'ratio_current', None)),
+        'ratio_acid_test': _num(getattr(appraisal, 'ratio_acid_test', None)),
+        'ratio_debt_equity': _num(getattr(appraisal, 'ratio_debt_equity', None)),
     }
     features['es'] = {
         'risk_category': appraisal.es_risk_category,

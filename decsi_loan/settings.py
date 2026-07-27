@@ -157,6 +157,12 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 # Document OCR (Tesseract language packs: eng, amh, or eng+amh)
 DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
 
+# Core banking / party customer lookup (Sheet 1 intake)
+DECSI_BASE_URL = os.getenv('DECSI_BASE_URL', '').rstrip('/')
+DECSI_CUSTOMER_TIMEOUT = int(os.getenv('DECSI_CUSTOMER_TIMEOUT', '8'))
+DECSI_CUSTOMER_FORCE_MOCK = os.getenv('DECSI_CUSTOMER_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
+DECSI_CUSTOMER_FALLBACK_MOCK = os.getenv('DECSI_CUSTOMER_FALLBACK_MOCK', 'True').lower() in ('1', 'true', 'yes')
+
 # HTTPS reverse proxy for tablet field visits (see docker-compose.https.yml)
 if os.getenv('USE_HTTPS_PROXY', '') == '1':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

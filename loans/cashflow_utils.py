@@ -90,3 +90,74 @@ def max_loan_capacity_from_cashflow(
         return principal.quantize(Decimal('0.01'))
     except (InvalidOperation, ZeroDivisionError, ValueError):
         return None
+
+
+def compute_balance_sheet_ratios(
+    current_assets=None,
+    current_liabilities=None,
+    inventory=None,
+    total_liabilities=None,
+    equity=None,
+):
+    """Return current ratio, acid test, and debt/equity when inputs allow."""
+    ratios = {'ratio_current': None, 'ratio_acid_test': None, 'ratio_debt_equity': None}
+    try:
+        ca = Decimal(str(current_assets)) if current_assets is not None else None
+        cl = Decimal(str(current_liabilities)) if current_liabilities is not None else None
+        inv = Decimal(str(inventory or 0))
+        tl = Decimal(str(total_liabilities)) if total_liabilities is not None else None
+        eq = Decimal(str(equity)) if equity is not None else None
+        if ca is not None and cl is not None and cl > 0:
+            ratios['ratio_current'] = (ca / cl).quantize(Decimal('0.01'))
+            ratios['ratio_acid_test'] = ((ca - inv) / cl).quantize(Decimal('0.01'))
+        if tl is not None and eq is not None and eq > 0:
+            ratios['ratio_debt_equity'] = (tl / eq).quantize(Decimal('0.01'))
+    except (InvalidOperation, ZeroDivisionError, ValueError, TypeError):
+        pass
+    return ratios
+
+
+def parse_monthly_cashflow_grid_from_post(post_data):
+    """Build a 12-row grid from POST keys grid_sales_1..12, grid_expenses_1..12."""
+    rows = []
+    for month in range(1, 13):
+        sales_raw = (post_data.get(f'grid_sales_{month}') or '').strip()
+        exp_raw = (post_data.get(f'grid_expenses_{month}') or '').strip()
+        sales = None
+        expenses = None
+        try:
+            if sales_raw:
+                sales = Decimal(sales_raw)
+            if exp_raw:
+                expenses = Decimal(exp_raw)
+        except (InvalidOperation, ValueError):
+            sales = None
+            expenses = None
+        net = None
+        if sales is not None or expenses is not None:
+            net = (Decimal(sales or 0) - Decimal(expenses or 0)).quantize(Decimal('0.01'))
+        rows.append({
+            'month': month,
+            'sales': str(sales) if sales is not None else None,
+            'expenses': str(expenses) if expenses is not None else None,
+            'net': str(net) if net is not None else None,
+        })
+    return rows
+
+
+def seed_monthly_grid_from_averages(monthly_sales=None, monthly_expenses=None):
+    """Pre-fill 12 equal months from average monthly sales/expenses."""
+    rows = []
+    for month in range(1, 13):
+        sales = Decimal(str(monthly_sales)) if monthly_sales is not None else None
+        expenses = Decimal(str(monthly_expenses)) if monthly_expenses is not None else None
+        net = None
+        if sales is not None or expenses is not None:
+            net = (Decimal(sales or 0) - Decimal(expenses or 0)).quantize(Decimal('0.01'))
+        rows.append({
+            'month': month,
+            'sales': str(sales) if sales is not None else None,
+            'expenses': str(expenses) if expenses is not None else None,
+            'net': str(net) if net is not None else None,
+        })
+    return rows

@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-powered Credit Intelligence — Proposal for Lion International Bank</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+
+    :root {
+      --ob-green: #0b6b3a;
+      --ob-green-deep: #064528;
+      --ob-green-mid: #128a4c;
+      --ob-gold: #c4a035;
+      --ob-gold-soft: #e8d48a;
+      --ink: #14201a;
+      --muted: #5a6b62;
+      --line: rgba(11, 107, 58, 0.14);
+      --white: #ffffff;
+      --danger: #b42318;
+      --ok: #0f7a45;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #dfe8e2; color: var(--ink);
+    }
+
+    .slide {
+      display: none;
+      position: absolute; inset: 0;
+      padding: 2rem 2.75rem 4.75rem;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(11, 107, 58, 0.07), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(196, 160, 53, 0.08), transparent 50%),
+        linear-gradient(165deg, #f7faf8 0%, #eef4f0 55%, #e6efe9 100%);
+    }
+    .slide::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--ob-green-deep), var(--ob-green-mid), var(--ob-gold), var(--ob-green-mid), var(--ob-green-deep));
+    }
+    .slide.active { display: flex; animation: fadeIn 0.28s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-content { width: 100%; max-width: 60rem; margin: 0 auto; }
+    .slide h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 2.35rem; font-weight: 700;
+      color: var(--ob-green-deep); letter-spacing: -0.02em;
+      line-height: 1.15; margin-bottom: 0.65rem;
+    }
+    .slide h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.7rem; font-weight: 700;
+      color: var(--ob-green-deep); letter-spacing: -0.015em;
+      margin-bottom: 0.55rem;
+    }
+    .slide h3 { font-size: 0.98rem; font-weight: 700; color: var(--ob-green); margin-bottom: 0.3rem; }
+    .slide p, .slide li { font-size: 0.95rem; line-height: 1.55; color: #2c3b34; margin-bottom: 0.35rem; }
+    .slide ul, .slide ol { margin: 0 auto 0.6rem; padding-left: 1.2rem; text-align: left; display: inline-block; }
+    .slide .sub { font-size: 0.88rem; color: var(--muted); margin-top: 0.35rem; }
+    .slide .confidential {
+      position: absolute; top: 0.85rem; right: 1.75rem;
+      font-size: 0.65rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+    }
+    .slide .big-message {
+      font-size: 1.08rem; font-weight: 600; color: var(--ob-green-deep);
+      margin: 0 auto 0.85rem; line-height: 1.45; max-width: 48rem;
+    }
+    .eyebrow {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--ob-gold); margin-bottom: 0.35rem;
+    }
+
+    .title-slide {
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 25%, rgba(255,255,255,0.1), transparent 55%),
+        linear-gradient(165deg, #053820 0%, #0b6b3a 42%, #064528 100%);
+    }
+    .title-slide::before { background: linear-gradient(90deg, transparent, var(--ob-gold-soft), transparent); }
+    .title-slide h1 { color: #fff; font-size: 2.7rem; max-width: 18ch; margin-left: auto; margin-right: auto; }
+    .title-slide .for {
+      font-size: 0.85rem; color: var(--ob-gold-soft); text-transform: uppercase;
+      letter-spacing: 0.22em; margin-bottom: 0.45rem; font-weight: 600;
+    }
+    .title-slide .bank-name {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.45rem; color: #fff; font-weight: 600; margin-bottom: 0.9rem;
+    }
+    .title-slide .tagline { font-size: 1.1rem; color: #d7ebe0; max-width: 40rem; margin: 0 auto; line-height: 1.5; }
+    .title-slide .meta { margin-top: 1.75rem; font-size: 0.9rem; color: #a8cbb8; }
+    .title-slide .badge-row { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.35rem; }
+    .title-slide .badge {
+      border: 1px solid rgba(232, 212, 138, 0.35); color: var(--ob-gold-soft);
+      padding: 0.32rem 0.8rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600;
+    }
+
+    .stats { display: flex; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .stat {
+      background: var(--white); border: 1px solid var(--line);
+      padding: 0.9rem 1.1rem; border-radius: 10px; min-width: 118px; position: relative; overflow: hidden;
+    }
+    .stat::after {
+      content: ''; position: absolute; bottom: 0; left: 0; height: 3px; width: 100%;
+      background: linear-gradient(90deg, var(--ob-green), var(--ob-gold));
+    }
+    .stat .value { font-family: 'Fraunces', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ob-green-deep); }
+    .stat .label { font-size: 0.76rem; color: var(--muted); margin-top: 0.15rem; }
+    .stat.big .value { font-size: 1.6rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; width: 100%; max-width: 58rem; margin-top: 0.55rem; text-align: left; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; width: 100%; max-width: 58rem; margin-top: 0.55rem; text-align: left; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.65rem; width: 100%; max-width: 58rem; margin-top: 0.55rem; text-align: left; }
+
+    .card {
+      background: var(--white); border: 1px solid var(--line);
+      border-radius: 10px; padding: 0.85rem 1rem;
+    }
+    .card p { margin: 0; font-size: 0.88rem; color: #3d4f46; line-height: 1.45; }
+    .card strong { color: var(--ob-green-deep); display: block; margin-bottom: 0.2rem; font-size: 0.92rem; }
+    .card .tag {
+      display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--ob-gold); margin-bottom: 0.25rem;
+    }
+
+    .ps {
+      display: grid; grid-template-columns: 1fr 1.15fr 0.9fr; gap: 0;
+      width: 100%; max-width: 58rem; margin-top: 0.5rem;
+      background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: left;
+    }
+    .ps-head { display: contents; }
+    .ps-head > div {
+      background: var(--ob-green-deep); color: #fff; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; padding: 0.55rem 0.85rem;
+    }
+    .ps-row { display: contents; }
+    .ps-row > div {
+      padding: 0.65rem 0.85rem; font-size: 0.84rem; line-height: 1.4; color: #2c3b34;
+      border-top: 1px solid var(--line);
+    }
+    .ps-row .prob { color: #7a2e22; background: #fffaf9; }
+    .ps-row .sol { color: #1a4d32; }
+    .ps-row .ben { color: var(--ob-green-deep); font-weight: 600; background: #f3faf6; }
+
+    .before-after {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+      width: 100%; max-width: 58rem; margin-top: 0.6rem; text-align: left;
+    }
+    .ba {
+      background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem;
+    }
+    .ba.before { border-top: 3px solid var(--danger); }
+    .ba.after { border-top: 3px solid var(--ok); }
+    .ba h3 { font-size: 1rem; margin-bottom: 0.55rem; }
+    .ba.before h3 { color: var(--danger); }
+    .ba.after h3 { color: var(--ok); }
+    .ba li { font-size: 0.88rem; margin-bottom: 0.4rem; }
+    .ba .time {
+      margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--line);
+      font-weight: 700; font-size: 0.92rem;
+    }
+
+    .problem-item, .solution-item {
+      display: flex; gap: 0.65rem; align-items: flex-start;
+      background: var(--white); border-radius: 8px; padding: 0.75rem 0.9rem; text-align: left;
+    }
+    .problem-item { border-left: 4px solid var(--danger); }
+    .solution-item { border-left: 4px solid var(--ok); }
+    .problem-item .n, .solution-item .n {
+      min-width: 1.55rem; height: 1.55rem; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .problem-item .n { background: #fef3f2; color: var(--danger); }
+    .solution-item .n { background: #ecfdf3; color: var(--ok); }
+    .problem-item strong { color: #912018; font-size: 0.9rem; }
+    .solution-item strong { color: #065f36; font-size: 0.9rem; }
+    .problem-item p, .solution-item p { margin: 0.1rem 0 0; font-size: 0.84rem; color: #4a5c54; }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin: 0.65rem 0 0.25rem; }
+    .pill {
+      background: var(--white); border: 1px solid var(--line); color: var(--ob-green-deep);
+      padding: 0.38rem 0.75rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+    }
+    .pill::after { content: ' →'; color: #9aada2; font-weight: 400; }
+    .pill:last-child::after { content: ''; }
+
+    .step-list { width: 100%; max-width: 56rem; text-align: left; margin-top: 0.35rem; }
+    .step-list .row {
+      display: grid; grid-template-columns: 2.6rem 1fr; gap: 0.7rem;
+      padding: 0.48rem 0; border-bottom: 1px solid var(--line); align-items: start;
+    }
+    .step-list .row:last-child { border-bottom: none; }
+    .step-list .num {
+      font-family: 'Fraunces', Georgia, serif; font-size: 1.15rem;
+      font-weight: 700; color: var(--ob-green); line-height: 1.2;
+    }
+    .step-list .title { font-weight: 700; color: var(--ob-green-deep); font-size: 0.92rem; }
+    .step-list .desc { font-size: 0.84rem; color: #4a5c54; margin-top: 0.08rem; }
+
+    .compare {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.85rem;
+      width: 100%; max-width: 56rem; align-items: stretch; margin-top: 0.55rem; text-align: left;
+    }
+    .compare .vs {
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; color: var(--ob-gold); font-size: 0.8rem; letter-spacing: 0.08em;
+    }
+    .compare .side { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+    .compare .side.milkii { border-top: 3px solid var(--ob-gold); }
+    .compare .side.hub { border-top: 3px solid var(--ob-green); }
+    .compare li { font-size: 0.88rem; margin-bottom: 0.3rem; }
+
+    .timeline {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem;
+      width: 100%; max-width: 58rem; margin-top: 0.7rem; text-align: left;
+    }
+    .timeline .phase {
+      background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 0.85rem 0.9rem;
+    }
+    .timeline .phase .when {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--ob-gold); font-weight: 700; margin-bottom: 0.25rem;
+    }
+    .timeline .phase h3 { font-size: 0.92rem; margin-bottom: 0.3rem; }
+    .timeline .phase p { font-size: 0.82rem; margin: 0; color: #4a5c54; }
+
+    .quote {
+      border-left: 4px solid var(--ob-gold); background: rgba(255,255,255,0.72);
+      padding: 0.85rem 1rem; border-radius: 0 10px 10px 0;
+      max-width: 44rem; margin: 0.65rem auto; text-align: left;
+      font-style: italic; color: #334940; font-size: 0.98rem; line-height: 1.5;
+    }
+
+    .bar-chart { width: 100%; max-width: 32rem; margin: 0.75rem auto 0; text-align: left; }
+    .bar-row { margin-bottom: 0.6rem; }
+    .bar-row .bar-label {
+      font-size: 0.85rem; color: #334940; margin-bottom: 0.2rem;
+      display: flex; justify-content: space-between;
+    }
+    .bar-row .bar-track { height: 8px; background: #d9e5de; border-radius: 8px; overflow: hidden; }
+    .bar-row .bar-fill {
+      height: 100%; border-radius: 8px;
+      background: linear-gradient(90deg, var(--ob-green-mid), var(--ob-green-deep));
+    }
+    .bar-row .bar-fill.gold { background: linear-gradient(90deg, var(--ob-gold), #a68520); }
+
+    .feature-table {
+      width: 100%; max-width: 58rem; border-collapse: collapse; margin-top: 0.5rem;
+      background: var(--white); border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--line); text-align: left; font-size: 0.84rem;
+    }
+    .feature-table th {
+      background: var(--ob-green-deep); color: #fff; padding: 0.5rem 0.75rem;
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .feature-table td { padding: 0.5rem 0.75rem; border-top: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+    .feature-table tr:nth-child(even) td { background: #f7faf8; }
+    .feature-table .f { font-weight: 700; color: var(--ob-green-deep); white-space: nowrap; }
+
+    .checklist {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1.25rem;
+      width: 100%; max-width: 52rem; margin: 0.6rem auto 0; text-align: left;
+    }
+    .checklist li {
+      list-style: none; font-size: 0.9rem; padding-left: 1.5rem; position: relative;
+      color: #2c3b34;
+    }
+    .checklist li::before {
+      content: '✓'; position: absolute; left: 0; color: var(--ok); font-weight: 700;
+    }
+
+    .cta-box {
+      background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+      padding: 1.25rem 1.5rem; max-width: 40rem; margin: 0.9rem auto 0; text-align: center;
+    }
+    .cta-box a { color: var(--ob-green); font-weight: 600; text-decoration: none; }
+    .cta-box a:hover { text-decoration: underline; }
+
+    .agenda-list {
+      list-style: none; padding: 0; margin: 0.4rem auto 0; text-align: left; display: block; max-width: 40rem;
+    }
+    .agenda-list li {
+      display: flex; gap: 0.75rem; align-items: baseline;
+      padding: 0.42rem 0; border-bottom: 1px solid var(--line); font-size: 1rem;
+    }
+    .agenda-list .ix {
+      font-family: 'Fraunces', Georgia, serif; color: var(--ob-green); font-weight: 700; min-width: 1.5rem;
+    }
+
+    .hook {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.55rem; font-weight: 700; color: var(--ob-green-deep);
+      max-width: 40rem; margin: 0.5rem auto 1rem; line-height: 1.3;
+    }
+
+    .nav {
+      position: fixed; bottom: 1.25rem; right: 1.75rem;
+      display: flex; gap: 0.45rem; z-index: 100;
+    }
+    .nav button {
+      background: var(--ob-green-deep); border: none; color: #fff;
+      padding: 0.5rem 0.95rem; border-radius: 8px; cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    }
+    .nav button:hover { background: var(--ob-green); }
+    .slide-counter {
+      position: fixed; bottom: 1.35rem; left: 1.75rem;
+      font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em;
+    }
+
+    @media (max-width: 960px) {
+      .grid-2, .grid-3, .grid-4, .timeline, .compare, .before-after, .checklist, .ps { grid-template-columns: 1fr; }
+      .ps { display: block; }
+      .ps-head { display: none; }
+      .compare .vs { display: none; }
+      .slide { padding: 1.5rem 1.1rem 4.75rem; }
+      .title-slide h1 { font-size: 1.9rem; }
+    }
+
+    @media print {
+      html, body { overflow: visible; height: auto; background: #fff; }
+      .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; animation: none; }
+      .nav, .slide-counter { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1 Title -->
+  <div class="slide title-slide active" data-slide="1">
+    <p class="for">Confidential proposal prepared for</p>
+    <p class="bank-name">Lion International Bank · Anbesa Bank</p>
+    <h1>AI-powered Credit Intelligence</h1>
+    <p class="tagline">
+      Turn weeks of paper, Excel, and chasing files into a controlled digital credit factory —
+      from document intake to cashflow appraisal, GPS collateral, and committee decision.
+    </p>
+    <div class="badge-row">
+      <span class="badge">Complements Anbesa Plus</span>
+      <span class="badge">SBS digital stack</span>
+      <span class="badge">DBE Excel digitized</span>
+      <span class="badge">NBE-ready controls</span>
+      <span class="badge">Proven at DECSI scale</span>
+    </div>
+    <p class="meta">Presented by Seqela · July 2026</p>
+  </div>
+
+  <!-- 2 The ask -->
+  <div class="slide" data-slide="2">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">The opportunity in one slide</p>
+    <h2>What We Are Asking Lion Bank To Decide</h2>
+    <p class="hook">
+      Digitize secured MSME &amp; corporate credit with the same ambition as Anbesa Plus and HelloCash.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <span class="tag">Outcome 1</span>
+        <strong>Faster decisions</strong>
+        <p>Compress multi-level approvals from weeks toward days — without weakening credit standards.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Outcome 2</span>
+        <strong>Stronger portfolio</strong>
+        <p>Enforce DSCR, qualitative, E&amp;S, and collateral coverage gates before a file reaches committee.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Outcome 3</span>
+        <strong>Audit-ready files</strong>
+        <p>One dossier: documents, scores, GPS evidence, votes, and lock history — ready for NBE and internal audit.</p>
+      </div>
+    </div>
+    <div class="stats" style="margin-top:1.1rem;">
+      <div class="stat big"><span class="value">50–70%</span><br><span class="label">Wait-time reduction target</span></div>
+      <div class="stat big"><span class="value">Weeks → Days</span><br><span class="label">Approval cycle</span></div>
+      <div class="stat big"><span class="value">95%+</span><br><span class="label">Document completeness goal</span></div>
+      <div class="stat big"><span class="value">6 months</span><br><span class="label">Pilot-ready delivery</span></div>
+    </div>
+  </div>
+
+  <!-- 3 Agenda -->
+  <div class="slide" data-slide="3">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+      <h2>Agenda</h2>
+      <ol class="agenda-list">
+        <li><span class="ix">01</span> Why now — and how this fits Anbesa Plus &amp; SBS</li>
+        <li><span class="ix">02</span> A day in the life: today vs with the Hub</li>
+        <li><span class="ix">03</span> Problems → solutions → bank benefits (detail)</li>
+        <li><span class="ix">04</span> Full feature deep-dive (appraisal, docs, collateral, committee)</li>
+        <li><span class="ix">05</span> Controls, roles, CBS integration &amp; compliance</li>
+        <li><span class="ix">06</span> Proof, ROI, roadmap &amp; decision path</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- 4 Why now -->
+  <div class="slide" data-slide="4">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Strategic fit</p>
+    <h2>Why This Matters for Lion International Bank Now</h2>
+    <p class="big-message">
+      You already lead in digital retail credit. The next competitive edge is digitizing
+      <em>secured, cashflow-based institutional lending</em> — where most portfolio risk and most operational cost still live.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <strong>Digital strategy 2026–2028</strong>
+        <p>Corporate strategy prioritizes digital expansion, operational excellence, and inclusion beyond brick-and-mortar growth.</p>
+      </div>
+      <div class="card">
+        <strong>Two lending realities</strong>
+        <p>Anbesa Plus serves everyday digital banking. Branch MSME/corporate loans still need appraisal, collateral, and committees.</p>
+      </div>
+      <div class="card">
+        <strong>Regulatory confidence</strong>
+        <p>NBE expectations demand consistent methodology, E&amp;S screening, identity assurance, and full decision audit trails.</p>
+      </div>
+    </div>
+    <div class="quote">
+      “We have reached a point where physical expansion alone is no longer sufficient.
+      The future lies in digital transformation and mindset change.”
+      <div class="sub" style="font-style:normal;margin-top:0.4rem;">— Direction reflected in Lion Bank’s digital transformation</div>
+    </div>
+  </div>
+
+  <!-- 5 Anbesa complement -->
+  <div class="slide" data-slide="5">
+    <span class="confidential">Confidential</span>
+    <h2>Complements Anbesa Plus — Does Not Compete</h2>
+    <p class="big-message">One bank. Two credit engines. Clear roles. Shared digital brand promise.</p>
+    <div class="compare">
+      <div class="side milkii">
+        <h3>Anbesa Plus — existing strength</h3>
+        <ul>
+          <li>Mobile &amp; internet banking at scale</li>
+          <li>HelloCash agency banking network</li>
+          <li>Loyalty &amp; data-driven scoring</li>
+          <li>Card banking &amp; digital onboarding</li>
+          <li>Speed &amp; inclusion at massive scale</li>
+        </ul>
+      </div>
+      <div class="vs">AND</div>
+      <div class="side hub">
+        <h3>AI-powered Credit Intelligence — proposed</h3>
+        <ul>
+          <li>Secured MSME &amp; corporate facilities</li>
+          <li>Cashflow / DSCR appraisal methodology</li>
+          <li>GPS collateral valuation &amp; evidence packs</li>
+          <li>Officer → manager → committee workflow</li>
+          <li>Policy gates, E&amp;S, and audit governance</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:0.9rem;max-width:46rem;">
+      Message to the board: Anbesa Plus grows everyday banking; AI-powered Credit Intelligence professionalizes the institutional credit factory —
+      protecting asset quality while accelerating turnaround.
+    </p>
+  </div>
+
+  <!-- 6 Day in life before/after -->
+  <div class="slide" data-slide="6">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Make it real</p>
+    <h2>A Day in the Life of One MSME Loan</h2>
+    <div class="before-after">
+      <div class="ba before">
+        <h3>Today — without the Hub</h3>
+        <ul>
+          <li>Customer returns 2–3 times with missing documents</li>
+          <li>Officer re-keys CBS data into Excel appraisal</li>
+          <li>Different officers apply different spreadsheet logic</li>
+          <li>Field photos on WhatsApp; GPS unclear; coverage debated</li>
+          <li>File sits on desks waiting for sign-offs</li>
+          <li>“Where is my loan?” — no single answer</li>
+          <li>Committee gets incomplete packs; asks for more info</li>
+          <li>Audit reconstruction takes days of file hunting</li>
+        </ul>
+        <div class="time">Typical cycle: <strong>2–6+ weeks</strong></div>
+      </div>
+      <div class="ba after">
+        <h3>With the AI-powered Credit Intelligence</h3>
+        <ul>
+          <li>Guided checklist + OCR blocks incomplete packs early</li>
+          <li>Customer number prefills Sheet 1 from core banking</li>
+          <li>One enforced 7-step cashflow methodology for all branches</li>
+          <li>GPS-attested field visits; evidence pack for committee</li>
+          <li>Digital queues: ops → finance → amount-routed committee</li>
+          <li>Live status for staff; fewer customer callbacks</li>
+          <li>Committee sees scorecard, DSCR, E&amp;S, collateral in one pack</li>
+          <li>Full audit trail: who did what, when, and why</li>
+        </ul>
+        <div class="time">Target cycle: <strong>days, not weeks</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 Problem solution matrix -->
+  <div class="slide" data-slide="7">
+    <span class="confidential">Confidential</span>
+    <h2>How AI-powered Credit Intelligence Solves Your Exact Pain Points</h2>
+    <p class="sub" style="margin-bottom:0.4rem;">Problem → Platform response → Bank benefit</p>
+    <div class="ps">
+      <div class="ps-head"><div>Problem</div><div>How AI-powered Credit Intelligence solves it</div><div>Benefit</div></div>
+      <div class="ps-row">
+        <div class="prob">Slow multi-level approvals</div>
+        <div class="sol">Digital queues, notifications, amount-based committee routing, return-to-officer with notes</div>
+        <div class="ben">Weeks → days</div>
+      </div>
+      <div class="ps-row">
+        <div class="prob">Inconsistent Excel appraisal</div>
+        <div class="sol">Mandatory 7-step wizard (MSME + corporate) with completeness gates before progression</div>
+        <div class="ben">One standard bank-wide</div>
+      </div>
+      <div class="ps-row">
+        <div class="prob">Incomplete / fake documents</div>
+        <div class="sol">Eng+Amharic OCR, identity match (name/phone/TIN), integrity checks, verify/reject trail</div>
+        <div class="ben">Fewer rejections &amp; fraud gaps</div>
+      </div>
+      <div class="ps-row">
+        <div class="prob">Weak collateral evidence</div>
+        <div class="sol">GPS rules, min photos, EXIF vs live location, lock after submit, evidence pack + eng QA</div>
+        <div class="ben">Committee-ready proof</div>
+      </div>
+      <div class="ps-row">
+        <div class="prob">No pipeline visibility</div>
+        <div class="sol">Role dashboards: totals, pending, approved, rejected; status by branch</div>
+        <div class="ben">Manage by exception</div>
+      </div>
+      <div class="ps-row">
+        <div class="prob">Audit &amp; NBE exposure</div>
+        <div class="sol">Scorecard, E&amp;S, votes, field audit log, dossier export — one reconstructable file</div>
+        <div class="ben">Audit in hours, not days</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 Platform overview -->
+  <div class="slide" data-slide="8">
+    <span class="confidential">Confidential</span>
+    <h2>The Platform — End-to-End Credit Factory</h2>
+    <div class="pill-row">
+      <span class="pill">Intake</span>
+      <span class="pill">Documents</span>
+      <span class="pill">7-Step Appraisal</span>
+      <span class="pill">Collateral GPS</span>
+      <span class="pill">Lock &amp; QA</span>
+      <span class="pill">Manager Queues</span>
+      <span class="pill">Committee</span>
+      <span class="pill">CBS Booking</span>
+    </div>
+    <div class="step-list">
+      <div class="row"><div class="num">01</div><div><div class="title">Create request &amp; assign officer</div><div class="desc">Product, amount, customer number; CBS profile pull; branch ownership clear from minute one.</div></div></div>
+      <div class="row"><div class="num">02</div><div><div class="title">Document authentication</div><div class="desc">Checklist by loan type → OCR eng+amh → identity match → Pending / Auto-passed / Needs review / Verified / Rejected.</div></div></div>
+      <div class="row"><div class="num">03</div><div><div class="title">Cashflow appraisal (7 sheets)</div><div class="desc">Character, DSCR, E&amp;S, collateral worksheet, explainable scorecard, amortization — gates block weak files early.</div></div></div>
+      <div class="row"><div class="num">04</div><div><div class="title">Field collateral valuation</div><div class="desc">Building BOQ / land / movable; GPS photos; offline tablet sync for weak connectivity.</div></div></div>
+      <div class="row"><div class="num">05</div><div><div class="title">Submit, lock, engineering QA</div><div class="desc">Immutable after submit; supervised unlock; optional engineering approval before progression.</div></div></div>
+      <div class="row"><div class="num">06</div><div><div class="title">Ops &amp; finance queues → committee</div><div class="desc">Pre-committee controls, then Branch → District → HO → Management voting by amount thresholds.</div></div></div>
+      <div class="row"><div class="num">07</div><div><div class="title">Decision &amp; CBS handoff</div><div class="desc">Approve / decline / return with notes; disbursement &amp; booking remain in core banking.</div></div></div>
+    </div>
+  </div>
+
+  <!-- 9 Documents deep dive -->
+  <div class="slide" data-slide="9">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 01</p>
+    <h2>Documents That Defend the Bank</h2>
+    <p class="big-message">Stop incomplete and suspicious files before appraisal burns officer time.</p>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Bilingual OCR (English + Amharic)</strong>
+        <p>PDFs and images extracted with Tesseract eng+amh — critical for Ethiopian KYC packs, licenses, and IDs.</p>
+      </div>
+      <div class="card">
+        <strong>Identity field matching</strong>
+        <p>Compares OCR text to applicant name, phone, TIN (and optional business name). Weighted score; strict mode can block upload.</p>
+      </div>
+      <div class="card">
+        <strong>Integrity automation</strong>
+        <p>File type/MIME checks, size limits, SHA-256 duplicate detection, content keyword validation — less “trust the attachment.”</p>
+      </div>
+      <div class="card">
+        <strong>Clear auth statuses</strong>
+        <p>Pending → Auto-passed → Needs manual review → Verified authentic → Rejected. Verdicts: Authentic / Suspicious / Not authentic / Inconclusive.</p>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:0.75rem;">
+      <div class="solution-item"><span class="n">→</span><div><strong>Problem solved</strong><p>Customers bouncing between branch visits; officers wasting days on incomplete packs; weak identity assurance.</p></div></div>
+      <div class="solution-item"><span class="n">✓</span><div><strong>Bank benefit</strong><p>Higher first-time completeness (target 95%+), fewer fraud gaps, cleaner files entering credit analysis.</p></div></div>
+    </div>
+  </div>
+
+  <!-- 10 Appraisal deep dive -->
+  <div class="slide" data-slide="10">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 02</p>
+    <h2>7-Step Cashflow Appraisal — The Core Engine</h2>
+    <p class="big-message">Your methodology — digitized, enforced, and auditable. MSME and corporate modes in one wizard.</p>
+    <table class="feature-table">
+      <thead><tr><th>Step</th><th>MSME</th><th>Corporate</th><th>What it locks in</th></tr></thead>
+      <tbody>
+        <tr><td class="f">1</td><td>Basic info &amp; loan request</td><td>Entity KYC / legal registration</td><td>CBS/OCR provenance; no silent re-keying</td></tr>
+        <tr><td class="f">2</td><td>Business &amp; character (10 factors)</td><td>Governance &amp; character</td><td>≥75% qualitative pass gate</td></tr>
+        <tr><td class="f">3</td><td>Cashflow / monthly grid / DSCR</td><td>Financial statements &amp; ratios</td><td>Capacity vs ask; stress DSCR</td></tr>
+        <tr><td class="f">4</td><td colspan="2">E&amp;S — 21 items, 5 sections</td><td>PASS / PASS WITH ACTIONS / REJECT</td></tr>
+        <tr><td class="f">5</td><td colspan="2">Collateral worksheet</td><td>Coverage from field valuation</td></tr>
+        <tr><td class="f">6</td><td colspan="2">Summary, scorecard, recommendation</td><td>Approve / Decline / Escalate + amount</td></tr>
+        <tr><td class="f">7</td><td colspan="2">Repayment &amp; amortization</td><td>Schedule ready for booking</td></tr>
+      </tbody>
+    </table>
+    <p class="sub">Result: every branch speaks the same credit language — no shadow Excel files.</p>
+  </div>
+
+  <!-- 11 Scorecard and gates -->
+  <div class="slide" data-slide="11">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 03</p>
+    <h2>Explainable Scorecard + Hard Policy Gates</h2>
+    <div class="grid-2">
+      <div>
+        <h3 style="text-align:left;margin-bottom:0.5rem;">4-pillar score (/100)</h3>
+        <div class="grid-2" style="max-width:none;margin:0;">
+          <div class="card"><strong>Qualitative — 25</strong><p>Character &amp; business quality from Sheet 2.</p></div>
+          <div class="card"><strong>Financial — 35</strong><p>DSCR, stress, capacity vs ask, ratios.</p></div>
+          <div class="card"><strong>E&amp;S — 15</strong><p>Risk category &amp; eligibility outcome.</p></div>
+          <div class="card"><strong>Collateral — 25</strong><p>Coverage vs ask (e.g. ≥1.5× full points).</p></div>
+        </div>
+        <p class="sub" style="text-align:left;margin-top:0.55rem;">Bands: Strong ≥80 · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40</p>
+      </div>
+      <div>
+        <h3 style="text-align:left;margin-bottom:0.5rem;">Gates that protect portfolio quality</h3>
+        <ul style="display:block;padding-left:1.1rem;text-align:left;">
+          <li>Qualitative &lt;75% → hard block (configurable)</li>
+          <li>E&amp;S REJECT → hard block</li>
+          <li>Annual / stressed DSCR &lt;1.0 → hard block</li>
+          <li>Bureau defaults → hard block option</li>
+          <li>Incomplete sheets 1–6 → cannot finish</li>
+          <li>Collateral coverage warn at policy min (default 1.0×)</li>
+        </ul>
+        <div class="card" style="margin-top:0.55rem;">
+          <strong>Analysis Assist (not auto-approve)</strong>
+          <p>Surfaces weak pillars, ask vs capacity, bureau flags, and hard blocks — so officers fix issues before committee waste.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12 Collateral deep dive -->
+  <div class="slide" data-slide="12">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 04</p>
+    <h2>GPS-Governed Collateral That Committees Trust</h2>
+    <div class="grid-3">
+      <div class="card">
+        <strong>Three asset classes</strong>
+        <p>Buildings (construction BOQ × woreda unit prices), land (m² × unit price), other/movable with required photo types.</p>
+      </div>
+      <div class="card">
+        <strong>Field GPS rules</strong>
+        <p>Min photos (e.g. 5 building / 3 land); weak GPS &gt;100m needs attestation; photo distance &amp; EXIF mismatch warnings.</p>
+      </div>
+      <div class="card">
+        <strong>Offline tablet PWA</strong>
+        <p>Work without signal; sync site GPS, photos, BOQ later — built for rural and weak-connectivity branches.</p>
+      </div>
+      <div class="card">
+        <strong>Lock &amp; unlock</strong>
+        <p>Submit locks valuation; corrections need supervised unlock request — no silent edits after the fact.</p>
+      </div>
+      <div class="card">
+        <strong>Engineering QA</strong>
+        <p>Pipeline: assigned → in progress → submitted → pending eng QA → approved or returned for correction.</p>
+      </div>
+      <div class="card">
+        <strong>Evidence pack</strong>
+        <p>Totals, coverage, readiness, maps, photos, last 100 audit events — exportable for committee &amp; audit.</p>
+      </div>
+    </div>
+    <div class="solution-item" style="max-width:56rem;margin-top:0.75rem;width:100%;">
+      <span class="n">✓</span>
+      <div><strong>Problem → benefit</strong>
+        <p>Ends WhatsApp photo chaos and “was the officer really at the site?” debates. Committee sees verified coverage and location proof in one pack.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13 Committee deep dive -->
+  <div class="slide" data-slide="13">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 05</p>
+    <h2>Committees That Decide Faster — With Better Packs</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Amount-routed levels (configurable)</strong>
+        <p style="margin-bottom:0.45rem;">Default model — mapped to Lion Bank hierarchy:</p>
+        <ul style="padding-left:1.1rem;margin:0;display:block;">
+          <li><strong>Branch</strong> — officer, branch manager, accountant</li>
+          <li><strong>District</strong> — district manager + peers</li>
+          <li><strong>Head office</strong> — ops, finance, credit committee</li>
+          <li><strong>Management</strong> — CEO / VP / board as configured</li>
+        </ul>
+        <p style="margin-top:0.45rem;">Min votes to approve or decline per level (default 2). Levels can be skipped by amount band with explicit reason.</p>
+      </div>
+      <div class="card">
+        <strong>One-screen committee pack</strong>
+        <p style="margin-bottom:0.45rem;">Read-only, print/PDF-ready:</p>
+        <ul style="padding-left:1.1rem;margin:0;display:block;">
+          <li>Sheets 1–7 summary</li>
+          <li>4-pillar scorecard &amp; credit history</li>
+          <li>E&amp;S risk + eligibility</li>
+          <li>Collateral totals &amp; coverage</li>
+          <li>Risks, conditions, amortization</li>
+          <li>Link to GPS evidence pack</li>
+        </ul>
+        <p style="margin-top:0.45rem;">Outcomes: <strong>Approve</strong> · <strong>Decline</strong> · <strong>Return to officer</strong> with feedback for rework.</p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:0.85rem;">No more incomplete paper packs. Voters see the same truth. Returns create a coaching loop, not a black hole.</p>
+  </div>
+
+  <!-- 14 CBS integration -->
+  <div class="slide" data-slide="14">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Feature deep-dive · 06</p>
+    <h2>Works With Core Banking — Does Not Replace It</h2>
+    <p class="big-message">AI-powered Credit Intelligence is the credit factory. CBS remains the system of record for accounts and disbursement.</p>
+    <div class="grid-3">
+      <div class="card">
+        <strong>Customer lookup</strong>
+        <p>Enter customer number → Temenos-style party API returns name, phone, TIN, address, gender, status.</p>
+      </div>
+      <div class="card">
+        <strong>Smart prefill</strong>
+        <p>Fills empty Sheet 1 fields. Conflicts listed for officer Accept (banking wins) — full provenance retained.</p>
+      </div>
+      <div class="card">
+        <strong>Disbursement handoff</strong>
+        <p>After final approval, booking &amp; fund release stay in CBS. Optional e-notification / agreement workflow.</p>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:0.75rem;">
+      <div class="solution-item"><span class="n">→</span><div><strong>Problem solved</strong><p>Double data entry, typos, CBS vs appraisal mismatches that delay approvals.</p></div></div>
+      <div class="solution-item"><span class="n">✓</span><div><strong>Bank benefit</strong><p>Less re-keying, cleaner KYC, faster start of appraisal — without a risky CBS rip-and-replace.</p></div></div>
+    </div>
+  </div>
+
+  <!-- 15 Roles -->
+  <div class="slide" data-slide="15">
+    <span class="confidential">Confidential</span>
+    <h2>Every Stakeholder Gets the Right Work Queue</h2>
+    <div class="grid-4">
+      <div class="card"><strong>Loan officer</strong><p>Docs, 7-step appraisal, committee submit.</p></div>
+      <div class="card"><strong>Branch manager</strong><p>Create requests, assign officers, escalate.</p></div>
+      <div class="card"><strong>Engineer / head</strong><p>Catalog, unit prices, field visits, QA.</p></div>
+      <div class="card"><strong>Ops / finance</strong><p>Pre-committee approval queues.</p></div>
+      <div class="card"><strong>District manager</strong><p>District-level review &amp; oversight.</p></div>
+      <div class="card"><strong>Committee / execs</strong><p>Vote by level; full appraisal pack.</p></div>
+      <div class="card"><strong>Risk / auditor</strong><p>Review access, trails, dossiers.</p></div>
+      <div class="card"><strong>Admin</strong><p>Users, products, geography, policy.</p></div>
+    </div>
+    <p class="sub" style="margin-top:0.9rem;max-width:48rem;">
+      16 role types out of the box — renamed and scoped to Lion Bank’s Branch → District/Region → Head Office model.
+      Home dashboard shows Total / Approved / Pending / Rejected with branch visibility for management.
+    </p>
+  </div>
+
+  <!-- 16 Compliance -->
+  <div class="slide" data-slide="16">
+    <span class="confidential">Confidential</span>
+    <h2>Controls Leadership &amp; Risk Will Respect</h2>
+    <ul class="checklist">
+      <li>Role-based access on every screen</li>
+      <li>Document authentication status trail</li>
+      <li>Field-source provenance (banking / OCR / officer)</li>
+      <li>Hard &amp; soft policy gates (configurable)</li>
+      <li>Collateral lock + supervised unlock</li>
+      <li>Field audit log (GPS, photos, unlocks, QA)</li>
+      <li>Engineering dual control when enabled</li>
+      <li>Committee votes with thresholds &amp; return notes</li>
+      <li>Evidence pack / dossier export</li>
+      <li>E&amp;S screening with eligibility decisions</li>
+      <li>NBE credit-report / bureau flags on file</li>
+      <li>Aligned to NBE credit governance expectations</li>
+    </ul>
+    <p class="sub" style="margin-top:0.9rem;">Designed for reconstructability: if audit asks “why was this approved?”, the answer is in the system — not in someone’s drawer.</p>
+  </div>
+
+  <!-- 17 Feature catalog -->
+  <div class="slide" data-slide="17">
+    <span class="confidential">Confidential</span>
+    <h2>Complete Capability Catalog</h2>
+    <table class="feature-table">
+      <thead><tr><th>Area</th><th>What Lion Bank gets</th></tr></thead>
+      <tbody>
+        <tr><td class="f">Intake</td><td>Loan requests, officer assignment, customer #, product &amp; collateral type, status tracking across branches</td></tr>
+        <tr><td class="f">Documents</td><td>Configurable types, OCR eng+amh, identity match, integrity checks, verify/reject workflow</td></tr>
+        <tr><td class="f">Appraisal</td><td>MSME + corporate 7-step cashflow; 10-factor qualitative; DSCR; E&amp;S 21 items; scorecard; assist; amortization</td></tr>
+        <tr><td class="f">Collateral</td><td>Building BOQ catalog, land, movable; GPS rules; offline PWA; maps; coverage ratio; evidence pack</td></tr>
+        <tr><td class="f">Governance</td><td>Lock/unlock, engineering QA pipeline, audit log, policy config (photos, GPS, coverage)</td></tr>
+        <tr><td class="f">Approvals</td><td>Ops/finance queues; 4-level committee; branch overrides; notifications</td></tr>
+        <tr><td class="f">Admin</td><td>Geography, branches, users, loan categories, bulk CSV imports, analysis policy</td></tr>
+        <tr><td class="f">Tech</td><td>Django + PostgreSQL + Docker; on-prem/private cloud; optional REST API; CBS customer API</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 18 DECSI proof -->
+  <div class="slide" data-slide="18">
+    <span class="confidential">Confidential</span>
+    <h2>Proven at Scale — DECSI Reference</h2>
+    <p class="sub" style="margin-bottom:0.55rem;">Dedebit Credit and Savings Institution · Mekelle · Branch → District → HO</p>
+    <div class="stats">
+      <div class="stat big"><span class="value">50,000+</span><br><span class="label">Loan applicants</span></div>
+      <div class="stat big"><span class="value">30,000+</span><br><span class="label">Approved loans</span></div>
+      <div class="stat big"><span class="value">9+ Bn</span><br><span class="label">Birr disbursed (scale)</span></div>
+    </div>
+    <div class="bar-chart">
+      <div class="bar-row"><div class="bar-label"><span>Physical wait reduction</span><span>50–70%</span></div><div class="bar-track"><div class="bar-fill gold" style="width:70%;"></div></div></div>
+      <div class="bar-row"><div class="bar-label"><span>Approval cycle acceleration</span><span>~80%</span></div><div class="bar-track"><div class="bar-fill" style="width:80%;"></div></div></div>
+      <div class="bar-row"><div class="bar-label"><span>Document completeness target</span><span>95%+</span></div><div class="bar-track"><div class="bar-fill" style="width:95%;"></div></div></div>
+    </div>
+    <p class="sub" style="margin-top:0.75rem;">Reference: Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978</p>
+    <p class="sub">Same operational DNA — adapted to Lion Bank products, policy, hierarchy, and CBS.</p>
+  </div>
+
+  <!-- 19 ROI -->
+  <div class="slide" data-slide="19">
+    <span class="confidential">Confidential</span>
+    <h2>Business Case — Why Leadership Says Yes</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Revenue &amp; growth</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Faster turnaround → higher conversion of MSME applicants</li>
+          <li>More files processed per officer without proportional headcount</li>
+          <li>Competitive edge vs banks still stuck in paper/Excel</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>Cost &amp; risk</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Less courier, printing, rework, and overtime</li>
+          <li>Fewer weak approvals via DSCR / E&amp;S / coverage gates</li>
+          <li>Lower audit cost — reconstructable digital dossiers</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>Strategic</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Extends Anbesa Plus digital story into institutional credit</li>
+          <li>Supports NBE confidence and internal risk appetite</li>
+          <li>Creates data foundation for future credit analytics</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>Indicative ROI framing</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Projected break-even window: <strong>12–18 months</strong></li>
+          <li>Pilot in 6 months → measure cycle time &amp; completeness KPIs</li>
+          <li>Scale network once pilot gates are proven</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 20 Cost of inaction -->
+  <div class="slide" data-slide="20">
+    <span class="confidential">Confidential</span>
+    <h2>The Cost of Waiting</h2>
+    <p class="big-message">Every month without a credit factory, Lion Bank pays in cycle time, rework, and inconsistent risk.</p>
+    <div class="grid-2">
+      <div class="problem-item"><span class="n">1</span><div><strong>Competitors digitize first</strong><p>MSME customers choose banks that answer in days, not weeks.</p></div></div>
+      <div class="problem-item"><span class="n">2</span><div><strong>Portfolio quality drift</strong><p>Excel variance across branches creates invisible underwriting gaps.</p></div></div>
+      <div class="problem-item"><span class="n">3</span><div><strong>Staff burnout &amp; cost</strong><p>Volume grows; headcount and overtime grow with it — without better control.</p></div></div>
+      <div class="problem-item"><span class="n">4</span><div><strong>Audit &amp; regulation pressure</strong><p>Reconstructing decisions from paper gets harder as volume rises.</p></div></div>
+    </div>
+    <div class="quote" style="margin-top:1rem;">
+      Anbesa Plus proves Lion Bank can lead digitally. AI-powered Credit Intelligence is how that leadership reaches secured credit —
+      before the gap becomes a strategic liability.
+    </div>
+  </div>
+
+  <!-- 21 Implementation -->
+  <div class="slide" data-slide="21">
+    <span class="confidential">Confidential</span>
+    <h2>6-Month Path to a Live Pilot</h2>
+    <div class="timeline">
+      <div class="phase">
+        <div class="when">Month 1</div>
+        <h3>Discovery</h3>
+        <p>Credit policy workshop, hierarchy mapping, CBS interface design, pilot branches &amp; products, success KPIs.</p>
+      </div>
+      <div class="phase">
+        <div class="when">Months 2–4</div>
+        <h3>Configure &amp; integrate</h3>
+        <p>Appraisal modes, collateral catalog, committees, customer API, notifications, OB branding.</p>
+      </div>
+      <div class="phase">
+        <div class="when">Month 5</div>
+        <h3>UAT &amp; harden</h3>
+        <p>Credit, engineering, risk UAT; security review; parallel-run on sample loans.</p>
+      </div>
+      <div class="phase">
+        <div class="when">Month 6</div>
+        <h3>Pilot &amp; train</h3>
+        <p>Go-live on pilot scope; role training; hypercare; national rollout plan.</p>
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:0.85rem;">
+      <div class="card"><strong>Hosting</strong><p>On-prem or private cloud (Docker / PostgreSQL). Bank-controlled data residency.</p></div>
+      <div class="card"><strong>What we configure</strong><p>Products, thresholds, catalog, CBS hooks, policy gates, roles, branding.</p></div>
+      <div class="card"><strong>Success metrics</strong><p>Cycle time, completeness %, return rate, coverage adequacy, audit retrieval time.</p></div>
+    </div>
+  </div>
+
+  <!-- 22 Why this vs build -->
+  <div class="slide" data-slide="22">
+    <span class="confidential">Confidential</span>
+    <h2>Why Buy This — Not Build From Scratch</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Build yourself</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>12–24+ months to reach parity</li>
+          <li>Credit + GPS + committee edge cases rediscovered the hard way</li>
+          <li>Opportunity cost: delayed digital credit factory</li>
+          <li>Uncertain audit/control maturity at go-live</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid var(--ob-green);">
+        <strong>Deploy AI-powered Credit Intelligence with Seqela</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Working system already proven in Ethiopian MFI operations</li>
+          <li>DBE Excel digitized + GPS governance already built</li>
+          <li>Pilot in ~6 months; learn from DECSI-scale patterns</li>
+          <li>Configure to OB policy — don’t reinvent credit ops software</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:0.9rem;">You keep control of policy and data. We accelerate time-to-value with a battle-tested credit factory.</p>
+  </div>
+
+  <!-- 23 Decision path -->
+  <div class="slide" data-slide="23">
+    <span class="confidential">Confidential</span>
+    <h2>A Low-Risk Path to “Yes”</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Recommended engagement</strong>
+        <ol style="padding-left:1.2rem;margin:0.4rem 0 0;display:block;">
+          <li>90-minute live demo (Credit + IT + Risk)</li>
+          <li>2–3 week discovery &amp; solution blueprint</li>
+          <li>Fixed-scope pilot (selected products &amp; branches)</li>
+          <li>KPI review → network rollout with SLAs</li>
+        </ol>
+      </div>
+      <div class="card">
+        <strong>What we need from Lion International Bank</strong>
+        <ul style="padding-left:1.2rem;margin:0.4rem 0 0;display:block;">
+          <li>Executive sponsor (Credit / Digital)</li>
+          <li>Sample MSME &amp; corporate policy packs</li>
+          <li>CBS customer API contact / sandbox</li>
+          <li>Pilot branch &amp; product shortlist</li>
+          <li>Success KPIs agreed upfront</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:0.85rem;">Detailed commercial proposal (license, implementation, support) issued after discovery confirms scope.</p>
+  </div>
+
+  <!-- 24 Close -->
+  <div class="slide" data-slide="24">
+    <span class="confidential">Confidential</span>
+    <div class="slide-content">
+      <p class="eyebrow">Call to action</p>
+      <h2>Let’s Build Lion Bank’s Credit Factory</h2>
+      <p class="hook" style="font-size:1.35rem;">
+        Anbesa Plus showed what digital banking can be for customers.
+        AI-powered Credit Intelligence shows what digital credit can be for the bank.
+      </p>
+      <div class="cta-box">
+        <p style="font-size:1rem;font-weight:600;color:var(--ob-green-deep);margin-bottom:0.65rem;">Decide this week</p>
+        <ol style="text-align:left;display:inline-block;margin:0;font-size:0.95rem;">
+          <li>Book the live demo for Credit, IT, and Risk</li>
+          <li>Share sample policy for configuration mapping</li>
+          <li>Name pilot products, branches, and KPIs</li>
+          <li>Receive discovery SOW + commercial quote</li>
+        </ol>
+        <p style="margin-top:1.1rem;">
+          <a href="mailto:info@seqela.com">info@seqela.com</a>
+          &nbsp;·&nbsp;
+          <a href="tel:+251964790724">+251 964 790 724</a>
+          &nbsp;·&nbsp;
+          <a href="https://seqela.com" target="_blank" rel="noopener">seqela.com</a>
+        </p>
+      </div>
+      <p class="sub" style="margin-top:1.25rem;">
+        Companion detailed document (~22 pages with live system UI screenshots):
+        <em>oromia_bank_loan_hub_proposal_document.html</em> — open in Chrome → Print → Save as PDF.
+      </p>
+    </div>
+  </div>
+
+  <div class="slide-counter" aria-live="polite">1 / 24</div>
+  <nav class="nav" aria-label="Slide navigation">
+    <button type="button" id="prev" aria-label="Previous slide">← Previous</button>
+    <button type="button" id="next" aria-label="Next slide">Next →</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    const counterEl = document.querySelector('.slide-counter');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+
+    function go(n) {
+      slides[current].classList.remove('active');
+      current = (current + n + total) % total;
+      slides[current].classList.add('active');
+      counterEl.textContent = (current + 1) + ' / ' + total;
+    }
+    prevBtn.addEventListener('click', () => go(-1));
+    nextBtn.addEventListener('click', () => go(1));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'ArrowRight') go(1);
+    });
+  </script>
+</body>
+</html>

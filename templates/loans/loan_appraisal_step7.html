@@ -22,6 +22,24 @@
   </div>
   {% endif %}
 
+  {% if analysis_assist and analysis_assist.blocks %}
+  <div style="background:#ffecec; border:1px solid #e28b8b; padding:0.75rem 1rem; border-radius:8px; margin:1rem 0;">
+    <strong>Hard blocks still open</strong> — finish is blocked until resolved on Sheet 6.
+    <ul style="margin:0.5rem 0 0 1.25rem;">
+      {% for b in analysis_assist.blocks %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if officer_checklist %}
+  <div style="margin:1rem 0;padding:0.85rem 1rem;background:#f4f8fc;border:1px solid #c5d4f0;border-radius:8px;font-size:0.9rem;">
+    <strong>Officer checklist ({{ mode_label }})</strong>
+    <ul style="margin:0.35rem 0 0 1.1rem;">
+      {% for item in officer_checklist %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   {% if appraisal.amortization_entries.exists %}
   <div class="table-container">
     <table>

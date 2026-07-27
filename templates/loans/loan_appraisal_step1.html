@@ -44,11 +44,89 @@
   {% csrf_token %}
   <div class="appraisal-card">
     <h2>Sheet 1: {{ step_title }}</h2>
-    <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request. Badges show where each value came from.</p>
+    <p class="meta">Client and business information. Applicant name, phone and amount are from the loan request. Badges show where each value came from. Fill order: <strong>core banking → documents → officer</strong>.</p>
+
+    <div class="sheet1-section" style="background:#eff6ff; border-color:#bfdbfe;">
+      <h3 style="border-color:#1e40af; color:#1e40af;">Core banking lookup</h3>
+      <div class="sheet1-grid">
+        <div class="field">
+          <label for="id_customer_number">Customer number</label>
+          <input type="text" id="id_customer_number" name="customer_number" class="form-control"
+                 value="{{ loan_request.customer_number|default:'' }}"
+                 placeholder="e.g. 1001 (use DEMO offline)">
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <button type="submit" name="banking_lookup" value="1" class="btn btn-blue" formnovalidate>
+            Look up &amp; fill from core banking
+          </button>
+        </div>
+      </div>
+      <p class="help" style="margin:0.5rem 0 0; color:#555; font-size:0.85rem;">
+        Empty fields fill automatically. Differing values appear below for confirmation (banking wins when accepted).
+        {% if not loan_request.customer_number %}Without a live API, mock profiles work for any customer number except MISSING.{% endif %}
+      </p>
+    </div>
+
+    {% if banking_conflicts %}
+    <div style="background:#fff7ed; border:1px solid #fdba74; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px;">
+      <strong>Core banking conflicts</strong> — current value differs from banking. Accept to overwrite with banking.
+      {% for c in banking_conflicts %}
+      <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; font-size:0.9rem;">
+        <label style="display:flex; gap:0.35rem; align-items:center; font-weight:600;">
+          <input type="checkbox" name="accept_field" value="{{ c.field }}" checked>
+          {{ c.label }}
+        </label>
+        <input type="hidden" name="all_conflict_field" value="{{ c.field }}">
+        <span style="color:#9a3412;">now: {{ c.current }}</span>
+        <span>→</span>
+        <span style="color:#1e40af;">banking: {{ c.proposed }}</span>
+      </div>
+      {% endfor %}
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="submit" name="accept_banking" value="1" class="btn btn-green" formnovalidate>
+          Accept selected banking values
+        </button>
+        <button type="submit" name="accept_banking" value="1" class="btn btn-blue" formnovalidate
+                onclick="this.form.accept_all_banking.value='1'">
+          Accept all banking values
+        </button>
+        <input type="hidden" name="accept_all_banking" value="">
+      </div>
+    </div>
+    {% endif %}
+
+    {% if document_conflicts %}
+    <div style="background:#ecfdf5; border:1px solid #6ee7b7; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px;">
+      <strong>Document extraction conflicts</strong> — current Sheet 1 value differs from OCR. Accept to overwrite with document.
+      {% for c in document_conflicts %}
+      <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; font-size:0.9rem;">
+        <label style="display:flex; gap:0.35rem; align-items:center; font-weight:600;">
+          <input type="checkbox" name="accept_doc_field" value="{{ c.field }}" checked>
+          {{ c.label }}
+        </label>
+        <input type="hidden" name="all_doc_conflict_field" value="{{ c.field }}">
+        <span style="color:#9a3412;">now: {{ c.current }}</span>
+        <span>→</span>
+        <span style="color:#065f46;">{{ c.document_type|default:"document" }}: {{ c.proposed }}</span>
+      </div>
+      {% endfor %}
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="submit" name="accept_documents" value="1" class="btn btn-green" formnovalidate>
+          Accept selected document values
+        </button>
+        <button type="submit" name="accept_documents" value="1" class="btn btn-blue" formnovalidate
+                onclick="this.form.accept_all_documents.value='1'">
+          Accept all document values
+        </button>
+        <input type="hidden" name="accept_all_documents" value="">
+      </div>
+    </div>
+    {% endif %}
 
     {% if prefill_report and prefill_report.total_fields %}
     <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px; font-size:0.9rem;">
       <strong>Auto-filled {{ prefill_report.total_fields }} field(s)</strong>
+      {% if prefill_report.banking and prefill_report.banking.applied %}<br>Banking: {{ prefill_report.banking.applied|join:", " }}{% endif %}
       {% if prefill_report.registration %}<br>Registration: {{ prefill_report.registration|join:", " }}{% endif %}
       {% for doc in prefill_report.documents %}<br>{{ doc.document_type }}: {% for k,v in doc.fields.items %}{{ k }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endfor %}
       {% if prefill_report.collateral %}<br>Collateral: {{ prefill_report.collateral|join:", " }}{% endif %}
@@ -60,7 +138,7 @@
         Re-import from documents
       </button>
       <button type="submit" name="import_sources" value="1" class="btn btn-blue" formnovalidate>
-        Re-import registration &amp; docs
+        Re-import banking, registration &amp; docs
       </button>
       <span class="help">Fills empty fields only — your edits are kept.</span>
     </div>
@@ -75,6 +153,39 @@
 
     {% if basic_form.errors %}<div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">{{ basic_form.errors }}</div>{% endif %}
 
+    {% if is_corporate %}
+    <div class="sheet1-section">
+      <h3>Entity (corporate)</h3>
+      <div class="sheet1-grid">
+        {% field_with_badge basic_form field_sources "business_name" full=True %}
+        {% field_with_badge basic_form field_sources "legal_registration_number" %}
+        {% field_with_badge basic_form field_sources "tin_number" %}
+        {% field_with_badge basic_form field_sources "form_of_ownership" %}
+        {% field_with_badge basic_form field_sources "economic_sector" %}
+        {% field_with_badge basic_form field_sources "subsector_activity" %}
+        {% field_with_badge basic_form field_sources "business_address" full=True %}
+        {% field_with_badge basic_form field_sources "date_business_started" %}
+        {% field_with_badge basic_form field_sources "business_description" full=True %}
+        {% field_with_badge basic_form field_sources "directors_summary" full=True %}
+        {% field_with_badge basic_form field_sources "ubo_summary" full=True %}
+        {% field_with_badge basic_form field_sources "number_business_owners" %}
+        {% field_with_badge basic_form field_sources "employees_full_time" %}
+        {% field_with_badge basic_form field_sources "employees_part_time" %}
+      </div>
+    </div>
+
+    <div class="sheet1-section">
+      <h3>Contact person (optional)</h3>
+      <p class="help" style="margin:0 0 0.75rem; color:#555; font-size:0.85rem;">Personal demographics are optional for corporate borrowers.</p>
+      <div class="sheet1-grid">
+        {% field_with_badge basic_form field_sources "gender" %}
+        {% field_with_badge basic_form field_sources "age" %}
+        {% field_with_badge basic_form field_sources "home_address" full=True %}
+        {% field_with_badge basic_form field_sources "father_name" %}
+        {% field_with_badge basic_form field_sources "grandfather_name" %}
+      </div>
+    </div>
+    {% else %}
     <div class="sheet1-section">
       <h3>Personal (client)</h3>
       <div class="sheet1-grid">
@@ -108,9 +219,48 @@
         {% field_with_badge basic_form field_sources "family_members_employed" %}
         {% field_with_badge basic_form field_sources "peak_sales_months" %}
         {% field_with_badge basic_form field_sources "lowest_sales_months" %}
+        {% field_with_badge basic_form field_sources "peak_sales_percent" %}
+        {% field_with_badge basic_form field_sources "lowest_sales_percent" %}
         {% field_with_badge basic_form field_sources "number_business_owners" %}
       </div>
     </div>
+    {% endif %}
+
+    {% if not is_corporate %}
+    <div class="sheet1-section">
+      <h3>Purpose / investment lines</h3>
+      <p class="help" style="margin:0 0 0.75rem; color:#555; font-size:0.85rem;">Excel Sheet 1: description, quantity × unit price → value. Leave blank rows empty.</p>
+      {{ purpose_formset.management_form }}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+          <thead>
+            <tr style="text-align:left; border-bottom:2px solid #064420;">
+              <th style="padding:0.35rem;">Description</th>
+              <th style="padding:0.35rem;">Qty</th>
+              <th style="padding:0.35rem;">Unit price</th>
+              <th style="padding:0.35rem;">Value</th>
+              <th style="padding:0.35rem;">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in purpose_formset %}
+            <tr style="border-bottom:1px solid #e0e8e0;">
+              <td style="padding:0.35rem;">{{ f.id }}{{ f.description }}</td>
+              <td style="padding:0.35rem;">{{ f.quantity }}</td>
+              <td style="padding:0.35rem;">{{ f.unit_price }}</td>
+              <td style="padding:0.35rem;">{{ f.value }}</td>
+              <td style="padding:0.35rem;">{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if purpose_formset.errors %}<div class="form-errors" style="margin-top:0.5rem;">{{ purpose_formset.errors }}</div>{% endif %}
+    </div>
+    {% else %}
+      {{ purpose_formset.management_form }}
+      {% for f in purpose_formset %}{{ f.id }}{% endfor %}
+    {% endif %}
 
     <div class="sheet1-section">
       <h3>Loan request (additional)</h3>

@@ -83,8 +83,14 @@
 </style>
 <div class="appraisal-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
   <div>
-    <h1>Loan appraisal – {{ loan_request.loan_request_id }}</h1>
-    <p class="meta">Applicant: <strong>{{ loan_request.applicant_name }}</strong> · Phone: {{ loan_request.phone_number }} · Amount: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong></p>
+    <h1>Loan appraisal – {{ loan_request.loan_request_id }}
+      {% if mode_label %}
+      <span style="font-size:0.85rem; font-weight:600; vertical-align:middle; margin-left:0.5rem; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid {% if is_corporate %}#1e40af{% else %}#064420{% endif %}; color:{% if is_corporate %}#1e40af{% else %}#064420{% endif %}; background:{% if is_corporate %}#eff6ff{% else %}#e8f4ec{% endif %};">{{ mode_label }}</span>
+      {% endif %}
+    </h1>
+    <p class="meta">Applicant: <strong>{{ loan_request.applicant_name }}</strong> · Phone: {{ loan_request.phone_number }} · Amount: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong>
+      {% if is_corporate %} · <em>Entity / corporate appraisal</em>{% endif %}
+    </p>
   </div>
   <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue" style="flex-shrink: 0;">View steps guide</a>
 </div>

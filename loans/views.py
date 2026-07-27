@@ -12,6 +12,7 @@ from .forms import (
     LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm,
     DocumentAuthenticationDefaultsForm, LoanApplicationDocumentTypeEditForm, LoanAppraisalForm,
     LoanRequestBasicInfoForm, get_credit_history_formset, get_qualitative_factors_formset,
+    get_purpose_line_formset,
     get_es_checklist_formset, get_risk_mitigation_formset, get_conditions_formset,
     CollateralEstimationConfigForm,
     AppraisalSheet2Form, AppraisalSheet3Form,
@@ -20,12 +21,18 @@ from .forms import (
 )
 from .appraisal_pack import build_committee_appraisal_pack
 from .appraisal_policy import get_loan_analysis_policy
+from .analysis_assist import build_analysis_assist, officer_checklist_for_mode
 from .appraisal_scorecard import (
     build_credit_scorecard, evaluate_analysis_gates, persist_credit_scorecard,
 )
 from .appraisal_features import persist_feature_snapshot
 from .qualitative_scoring import update_appraisal_qualitative_totals
-from .cashflow_utils import payments_per_year_from_repayment_frequency
+from .cashflow_utils import (
+    payments_per_year_from_repayment_frequency,
+    parse_monthly_cashflow_grid_from_post,
+    seed_monthly_grid_from_averages,
+)
+from .sheet_requirements import get_appraisal_sheet_status, sheets_blocking_completion
 from .models import (
     Region, Zone, City, District, Branch, LoanCategory, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
@@ -51,16 +58,13 @@ from .committee import (
 from .collateral_config import get_collateral_estimation_mode, allows_loan_officer, allows_engineering_team
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
+import json
 from django.http import HttpResponse
 import csv
 from django.core.files.storage import FileSystemStorage
 from django.contrib import messages
 import pandas as pd
-
-@login_required
-def home(request):
-    return render(request, 'loans/home.html')
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -592,11 +596,16 @@ def loan_appraisal_steps(request):
 
 
 def _ensure_qualitative_factors(appraisal):
-    """Ensure exactly 10 qualitative factor rows exist for this appraisal (Sheet 2)."""
-    existing_keys = set(
-        appraisal.qualitative_factors.values_list('factor_key', flat=True)
-    )
-    for order, (key, name) in enumerate(QUALITATIVE_FACTOR_KEYS):
+    """Seed mode-specific qualitative factor rows (MSME or Corporate Sheet 2)."""
+    from .appraisal_mode import ensure_appraisal_mode, qualitative_factor_keys_for_mode
+
+    mode = ensure_appraisal_mode(appraisal, appraisal.loan_request)
+    expected = qualitative_factor_keys_for_mode(mode)
+    expected_keys = {k for k, _ in expected}
+    # Drop factors that belong to the other mode
+    appraisal.qualitative_factors.exclude(factor_key__in=expected_keys).delete()
+    existing_keys = set(appraisal.qualitative_factors.values_list('factor_key', flat=True))
+    for order, (key, name) in enumerate(expected):
         if key not in existing_keys:
             AppraisalQualitativeFactor.objects.create(
                 appraisal=appraisal,
@@ -604,6 +613,10 @@ def _ensure_qualitative_factors(appraisal):
                 factor_name=name,
                 display_order=order,
             )
+        else:
+            AppraisalQualitativeFactor.objects.filter(
+                appraisal=appraisal, factor_key=key,
+            ).update(factor_name=name, display_order=order)
 
 
 def _ensure_es_checklist_items(appraisal):
@@ -673,36 +686,73 @@ def loan_appraisal_step(request, loan_request_id, step):
 
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
-    appraisal, _ = LoanAppraisal.objects.get_or_create(
-        loan_request=loan_request,
-        defaults={'created_by': request.user},
+    from .appraisal_mode import (
+        MODE_CORPORATE, ensure_appraisal_mode, is_corporate, mode_label, resolve_appraisal_mode,
     )
+    category_mode = resolve_appraisal_mode(loan_request)
+    appraisal, created = LoanAppraisal.objects.get_or_create(
+        loan_request=loan_request,
+        defaults={'created_by': request.user, 'appraisal_mode': category_mode},
+    )
+    if not created:
+        ensure_appraisal_mode(appraisal, loan_request)
+    else:
+        appraisal.appraisal_mode = category_mode
+        appraisal.save(update_fields=['appraisal_mode', 'updated_at'])
     _ensure_qualitative_factors(appraisal)
     _ensure_es_checklist_items(appraisal)
 
     CreditHistoryFormSet = get_credit_history_formset()
     QualitativeFormSet = get_qualitative_factors_formset()
+    PurposeLineFormSet = get_purpose_line_formset()
     ESFormSet = get_es_checklist_formset()
     RiskFormSet = get_risk_mitigation_formset()
     CondFormSet = get_conditions_formset()
     policy = get_loan_analysis_policy()
     ppy = payments_per_year_from_repayment_frequency(basic_info.repayment_frequency)
 
+    corp = is_corporate(loan_request, appraisal)
+    steps = list(APPRAISAL_STEPS)
+    if corp:
+        steps[1] = (2, 'Governance & character')
+        steps[2] = (3, 'Financial statements & cashflow')
+
+    sheet_status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
     common_ctx = {
         'loan_request': loan_request,
         'appraisal': appraisal,
         'basic_info': basic_info,
+        'appraisal_mode': appraisal.appraisal_mode or category_mode,
+        'is_corporate': corp,
+        'mode_label': mode_label(appraisal.appraisal_mode or category_mode),
         'step': step,
         'total_steps': TOTAL_APPRAISAL_STEPS,
-        'steps': APPRAISAL_STEPS,
-        'step_title': APPRAISAL_STEPS[step - 1][1],
+        'steps': steps,
+        'step_title': steps[step - 1][1],
         'loan_analysis_policy': policy,
         'payments_per_year': ppy,
+        'sheet_status_list': sorted(sheet_status.items()),
+        'current_sheet_status': sheet_status.get(step),
+        'officer_checklist': officer_checklist_for_mode(appraisal.appraisal_mode or category_mode),
     }
+
+    def _step1_ctx(**extra):
+        return {
+            **common_ctx,
+            'basic_form': extra.pop('basic_form', None) or LoanRequestBasicInfoForm(instance=basic_info),
+            'purpose_formset': extra.pop('purpose_formset', None) or PurposeLineFormSet(
+                instance=basic_info, prefix='purpose',
+            ),
+            'field_sources': dict(basic_info.field_sources or {}),
+            'banking_conflicts': extra.pop('banking_conflicts', []),
+            'document_conflicts': extra.pop('document_conflicts', []),
+            **extra,
+        }
 
     def _step6_context(form=None, risk_formset=None, cond_formset=None):
         card = build_credit_scorecard(appraisal)
         blocks, warnings = evaluate_analysis_gates(appraisal, basic_info)
+        assist = build_analysis_assist(appraisal, basic_info)
         return {
             **common_ctx,
             'form': form or AppraisalSummaryForm(instance=appraisal),
@@ -711,28 +761,106 @@ def loan_appraisal_step(request, loan_request_id, step):
             'scorecard': card,
             'analysis_blocks': blocks,
             'analysis_warnings': warnings,
+            'analysis_assist': assist,
         }
 
     if request.method == 'POST':
+        if step == 1 and request.POST.get('banking_lookup'):
+            from .services.appraisal_prefill import lookup_and_apply_banking
+
+            cid = (request.POST.get('customer_number') or '').strip()
+            banking = lookup_and_apply_banking(
+                loan_request, customer_number=cid or None, only_empty=True,
+            )
+            loan_request.refresh_from_db()
+            basic_info.refresh_from_db()
+            if banking.get('error'):
+                messages.warning(request, banking['error'])
+            elif banking.get('applied'):
+                messages.success(
+                    request,
+                    f'Core banking filled {len(banking["applied"])} field(s)'
+                    f' ({banking.get("provider") or "banking"}).',
+                )
+            if banking.get('conflicts'):
+                messages.info(
+                    request,
+                    f'{len(banking["conflicts"])} field(s) differ from core banking — review and accept below.',
+                )
+            elif not banking.get('error') and not banking.get('applied'):
+                messages.info(request, 'Core banking profile matched; no empty fields to fill.')
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                banking_conflicts=banking.get('conflicts') or [],
+                banking_profile=banking.get('profile'),
+            ))
+
+        if step == 1 and request.POST.get('accept_banking'):
+            from .services.appraisal_prefill import lookup_and_apply_banking
+
+            accept_fields = request.POST.getlist('accept_field')
+            if request.POST.get('accept_all_banking'):
+                accept_fields = request.POST.getlist('all_conflict_field') or accept_fields
+            banking = lookup_and_apply_banking(
+                loan_request,
+                customer_number=(request.POST.get('customer_number') or loan_request.customer_number or None),
+                only_empty=True,
+                accept_fields=accept_fields,
+            )
+            loan_request.refresh_from_db()
+            basic_info.refresh_from_db()
+            n = len(banking.get('applied') or [])
+            if n:
+                messages.success(request, f'Accepted {n} core banking value(s).')
+            else:
+                messages.info(request, 'No banking fields accepted.')
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                banking_conflicts=banking.get('conflicts') or [],
+                banking_profile=banking.get('profile'),
+            ))
+
         if step == 1 and request.POST.get('import_documents'):
             from .services.appraisal_prefill import reimport_sheet1_from_documents
 
             prefill_report = reimport_sheet1_from_documents(loan_request, only_empty=True)
             n = prefill_report.get('total_fields', 0)
+            doc_conflicts = prefill_report.get('conflicts') or []
             if n:
                 messages.success(request, f'Re-imported {n} Sheet 1 field(s) from documents.')
+            elif doc_conflicts:
+                messages.info(
+                    request,
+                    f'{len(doc_conflicts)} document field(s) differ from Sheet 1 — review and accept below.',
+                )
             else:
                 messages.info(
                     request,
                     'No new document fields to import — existing values kept, or documents have no extractable data.',
                 )
             basic_info.refresh_from_db()
-            return render(request, 'loans/loan_appraisal_step1.html', {
-                **common_ctx,
-                'basic_form': LoanRequestBasicInfoForm(instance=basic_info),
-                'prefill_report': prefill_report,
-                'field_sources': dict(basic_info.field_sources or {}),
-            })
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                prefill_report=prefill_report,
+                document_conflicts=doc_conflicts,
+            ))
+
+        if step == 1 and request.POST.get('accept_documents'):
+            from .services.appraisal_prefill import reimport_sheet1_from_documents
+
+            accept_fields = request.POST.getlist('accept_doc_field')
+            if request.POST.get('accept_all_documents'):
+                accept_fields = request.POST.getlist('all_doc_conflict_field') or accept_fields
+            prefill_report = reimport_sheet1_from_documents(
+                loan_request, only_empty=True, accept_fields=accept_fields,
+            )
+            basic_info.refresh_from_db()
+            n = prefill_report.get('total_fields', 0)
+            if n:
+                messages.success(request, f'Accepted {n} document value(s).')
+            else:
+                messages.info(request, 'No document fields accepted.')
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                prefill_report=prefill_report,
+                document_conflicts=prefill_report.get('conflicts') or [],
+            ))
 
         if step == 1 and request.POST.get('import_sources'):
             from .services.appraisal_prefill import sync_appraisal_from_sources
@@ -740,29 +868,32 @@ def loan_appraisal_step(request, loan_request_id, step):
             prefill_report = sync_appraisal_from_sources(loan_request, only_empty=True)
             n = prefill_report.get('total_fields', 0)
             if n:
-                messages.success(request, f'Imported {n} field(s) from registration, documents, and collateral.')
+                messages.success(request, f'Imported {n} field(s) from banking, registration, documents, and collateral.')
             else:
                 messages.info(request, 'No new fields to import — existing data kept, or sources are empty.')
             basic_info.refresh_from_db()
             appraisal.refresh_from_db()
-            return render(request, 'loans/loan_appraisal_step1.html', {
-                **common_ctx,
-                'basic_form': LoanRequestBasicInfoForm(instance=basic_info),
-                'prefill_report': prefill_report,
-                'field_sources': dict(basic_info.field_sources or {}),
-            })
+            loan_request.refresh_from_db()
+            common_ctx['loan_request'] = loan_request
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                prefill_report=prefill_report,
+                banking_conflicts=prefill_report.get('conflicts') or [],
+                document_conflicts=prefill_report.get('document_conflicts') or [],
+                banking_profile=(prefill_report.get('banking') or {}).get('profile'),
+            ))
 
         if step == 1:
             basic_form = LoanRequestBasicInfoForm(request.POST, instance=basic_info)
-            if basic_form.is_valid():
+            purpose_formset = PurposeLineFormSet(request.POST, instance=basic_info, prefix='purpose')
+            if basic_form.is_valid() and purpose_formset.is_valid():
                 basic_form.save()
+                purpose_formset.save()
                 messages.success(request, 'Sheet 1 saved.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=2)
-            return render(request, 'loans/loan_appraisal_step1.html', {
-                **common_ctx,
-                'basic_form': basic_form,
-                'field_sources': dict(basic_info.field_sources or {}),
-            })
+            return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+                basic_form=basic_form,
+                purpose_formset=purpose_formset,
+            ))
 
         if step == 2:
             form = AppraisalSheet2Form(request.POST, instance=appraisal)
@@ -786,11 +917,21 @@ def loan_appraisal_step(request, loan_request_id, step):
         if step == 3:
             form = AppraisalSheet3Form(request.POST, instance=appraisal, basic_info=basic_info)
             if form.is_valid():
-                form.save()
-                messages.success(request, 'Sheet 3 saved (cashflow, DSCR, capacity).')
+                obj = form.save(commit=False)
+                if request.POST.get('seed_monthly_grid'):
+                    sales = obj.cf_monthly_sales or obj.monthly_business_income
+                    expenses = obj.monthly_business_expenses
+                    obj.monthly_cashflow_grid = seed_monthly_grid_from_averages(sales, expenses)
+                    obj.save()
+                    messages.success(request, '12-month grid seeded from monthly averages. Adjust seasonality then save.')
+                    return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=3)
+                obj.monthly_cashflow_grid = parse_monthly_cashflow_grid_from_post(request.POST)
+                obj.save()
+                messages.success(request, 'Sheet 3 saved (cashflow, DSCR, capacity, BS ratios, 12-month grid).')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=4)
             return render(request, 'loans/loan_appraisal_step3.html', {
                 **common_ctx, 'form': form,
+                'monthly_grid': parse_monthly_cashflow_grid_from_post(request.POST),
             })
 
         if step == 4:
@@ -857,7 +998,6 @@ def loan_appraisal_step(request, loan_request_id, step):
             if request.POST.get('finish'):
                 blocks, _w = evaluate_analysis_gates(appraisal, basic_info)
                 if policy.require_sheets_complete_before_finish:
-                    from .sheet_requirements import get_appraisal_sheet_status, sheets_blocking_completion
                     status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
                     sheet_blocks = sheets_blocking_completion(status, max_step=6)
                     if sheet_blocks:
@@ -876,23 +1016,36 @@ def loan_appraisal_step(request, loan_request_id, step):
                     'Submit to the approval committee from the loan detail page.',
                 )
                 return redirect('loan_request_detail', loan_request_id=loan_request_id)
-            return render(request, 'loans/loan_appraisal_step7.html', common_ctx)
+            return render(request, 'loans/loan_appraisal_step7.html', {
+                **common_ctx,
+                'scorecard': build_credit_scorecard(appraisal),
+                'feature_snapshot': appraisal.feature_snapshot,
+                'analysis_assist': build_analysis_assist(appraisal, basic_info),
+            })
 
     # GET
     if step == 1:
         from .services.appraisal_prefill import sync_appraisal_from_sources
 
         prefill_report = sync_appraisal_from_sources(loan_request, only_empty=True)
-        if prefill_report.get('total_fields'):
+        if (
+            prefill_report.get('total_fields')
+            or prefill_report.get('conflicts')
+            or prefill_report.get('document_conflicts')
+        ):
             basic_info.refresh_from_db()
             appraisal.refresh_from_db()
-        common_ctx['prefill_report'] = prefill_report
-        basic_form = LoanRequestBasicInfoForm(instance=basic_info)
-        return render(request, 'loans/loan_appraisal_step1.html', {
-            **common_ctx,
-            'basic_form': basic_form,
-            'field_sources': dict(basic_info.field_sources or {}),
-        })
+            loan_request.refresh_from_db()
+            common_ctx['loan_request'] = loan_request
+            sheet_status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
+            common_ctx['sheet_status_list'] = sorted(sheet_status.items())
+            common_ctx['current_sheet_status'] = sheet_status.get(step)
+        return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
+            prefill_report=prefill_report,
+            banking_conflicts=prefill_report.get('conflicts') or [],
+            document_conflicts=prefill_report.get('document_conflicts') or [],
+            banking_profile=(prefill_report.get('banking') or {}).get('profile'),
+        ))
     if step == 2:
         form = AppraisalSheet2Form(instance=appraisal)
         credit_formset = CreditHistoryFormSet(instance=appraisal, prefix='credit')
@@ -902,7 +1055,12 @@ def loan_appraisal_step(request, loan_request_id, step):
         })
     if step == 3:
         form = AppraisalSheet3Form(instance=appraisal, basic_info=basic_info)
-        return render(request, 'loans/loan_appraisal_step3.html', { **common_ctx, 'form': form })
+        grid = appraisal.monthly_cashflow_grid or []
+        if not grid:
+            grid = [{'month': m, 'sales': None, 'expenses': None, 'net': None} for m in range(1, 13)]
+        return render(request, 'loans/loan_appraisal_step3.html', {
+            **common_ctx, 'form': form, 'monthly_grid': grid,
+        })
     if step == 4:
         form = AppraisalESForm(instance=appraisal)
         es_formset = ESFormSet(instance=appraisal, prefix='es')
@@ -928,6 +1086,7 @@ def loan_appraisal_step(request, loan_request_id, step):
             **common_ctx,
             'scorecard': build_credit_scorecard(appraisal),
             'feature_snapshot': appraisal.feature_snapshot,
+            'analysis_assist': build_analysis_assist(appraisal, basic_info),
         })
 
     return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
@@ -2013,55 +2172,67 @@ def view_report_options(request):
 @login_required(login_url='login')  # redirect to login page if not logged in
 def home(request):
     user = request.user
+    role = getattr(user, 'role', None)
 
-    # Default values
-    total_loans = approved_loans = pending_loans = rejected_loans = 0
-    branch_names, branch_counts = [], []
-
-    # Superadmin / admin / superuser see all loans on dashboard
-    if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
-        total_loans = LoanRequest.objects.count()
-        approved_loans = LoanRequest.objects.filter(status="Approved").count()
-        pending_loans = LoanRequest.objects.filter(status="Pending").count()
-        rejected_loans = LoanRequest.objects.filter(status="Rejected").count()
-        branch_data = LoanRequest.objects.values('branch__name').annotate(total=Count('id'))
-        branch_names = [b['branch__name'] for b in branch_data]
-        branch_counts = [b['total'] for b in branch_data]
-    elif user.role == "loan_officer":
+    if getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin'):
+        loans = LoanRequest.objects.all()
+        scope_label = 'Organization-wide'
+    elif role == 'loan_officer':
         loans = LoanRequest.objects.filter(assigned_loan_officer=user)
-        total_loans = loans.count()
-        approved_loans = loans.filter(status="Approved").count()
-        pending_loans = loans.filter(status="Pending").count()
-        rejected_loans = loans.filter(status="Rejected").count()
-        branch_names = ['Assigned to me']
-        branch_counts = [total_loans]
-    elif user.role == "branch_manager":
+        scope_label = 'Assigned to you'
+    elif role == 'branch_manager':
         branch = getattr(user, 'branch', None)
-        loans = LoanRequest.objects.filter(branch=branch) if branch else LoanRequest.objects.none()
-        if not branch and getattr(user, 'district_id', None):
+        if branch:
+            loans = LoanRequest.objects.filter(branch=branch)
+            scope_label = branch.name
+        elif getattr(user, 'district_id', None):
             loans = LoanRequest.objects.filter(branch__district=user.district)
-        total_loans = loans.count()
-        approved_loans = loans.filter(status="Approved").count()
-        pending_loans = loans.filter(status="Pending").count()
-        rejected_loans = loans.filter(status="Rejected").count()
-        branch_names = [branch.name] if branch else ['No branch assigned']
-        branch_counts = [total_loans]
+            scope_label = getattr(user.district, 'name', 'Your district')
+        else:
+            loans = LoanRequest.objects.none()
+            scope_label = 'No branch assigned'
     else:
-        total_loans = LoanRequest.objects.count()
-        approved_loans = LoanRequest.objects.filter(status="Approved").count()
-        pending_loans = LoanRequest.objects.filter(status="Pending").count()
-        rejected_loans = LoanRequest.objects.filter(status="Rejected").count()
-        branch_data = LoanRequest.objects.values('branch__name').annotate(total=Count('id'))
-        branch_names = [b['branch__name'] for b in branch_data]
+        loans = LoanRequest.objects.all()
+        scope_label = 'Organization-wide'
+
+    loans = loans.select_related('branch', 'category')
+    total_loans = loans.count()
+    approved_loans = loans.filter(status='Approved').count()
+    pending_loans = loans.filter(status='Pending').count()
+    rejected_loans = loans.filter(status='Rejected').count()
+    queue_approved = loans.filter(queue_approved=True).count()
+    in_appraisal = loans.filter(appraisal_completed_at__isnull=True, assigned_loan_officer__isnull=False).exclude(
+        status='Rejected'
+    ).count()
+    total_amount = loans.aggregate(total=Sum('amount_requested'))['total'] or 0
+    approval_rate = round((approved_loans / total_loans) * 100, 1) if total_loans else 0
+
+    if role == 'loan_officer':
+        branch_names, branch_counts = ['Assigned to me'], [total_loans]
+    elif role == 'branch_manager' and getattr(user, 'branch', None):
+        branch_names, branch_counts = [user.branch.name], [total_loans]
+    else:
+        branch_data = list(
+            loans.values('branch__name').annotate(total=Count('id')).order_by('-total')[:12]
+        )
+        branch_names = [b['branch__name'] or 'Unassigned' for b in branch_data]
         branch_counts = [b['total'] for b in branch_data]
+
+    recent_loans = list(loans.order_by('-date_requested')[:8])
 
     context = {
         'total_loans': total_loans,
         'approved_loans': approved_loans,
         'pending_loans': pending_loans,
         'rejected_loans': rejected_loans,
-        'branch_names': branch_names,
-        'branch_counts': branch_counts,
+        'queue_approved': queue_approved,
+        'in_appraisal': in_appraisal,
+        'total_amount': total_amount,
+        'approval_rate': approval_rate,
+        'scope_label': scope_label,
+        'recent_loans': recent_loans,
+        'branch_names_json': json.dumps(branch_names),
+        'branch_counts_json': json.dumps(branch_counts),
     }
     return render(request, 'home.html', context)
 

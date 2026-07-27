@@ -102,7 +102,10 @@ class BranchCommitteeOverrideAdmin(admin.ModelAdmin):
         return obj.member_rules.filter(is_active=True).count()
 
 
-admin.site.register(LoanCategory)
+@admin.register(LoanCategory)
+class LoanCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'appraisal_mode')
+    list_filter = ('appraisal_mode',)
 admin.site.register(CollateralType)
 
 

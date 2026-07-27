@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import (
     CustomUser, LoanRequest, District, Branch, Region, Zone, City,
     LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
-    LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
+    LoanRequestBasicInfo, AppraisalPurposeLine, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
     AppraisalRiskMitigation, AppraisalCondition,
     AppraisalESChecklistItem,
     QUALITATIVE_FACTOR_KEYS, qualitative_rating_field_choices,
@@ -68,7 +68,7 @@ class CityForm(forms.ModelForm):
 class LoanCategoryForm(forms.ModelForm):
     class Meta:
         model = LoanCategory
-        fields = ['name']
+        fields = ['name', 'appraisal_mode']
 
 class CollateralTypeForm(forms.ModelForm):
     class Meta:
@@ -87,7 +87,7 @@ class LoanApplicationDocumentTypeForm(forms.ModelForm):
             'content_validation_strict', 'content_extraction_mappings',
             'require_officer_verification', 'enable_ocr_match',
             'identity_match_fields', 'identity_match_strict',
-            'enable_llm_check', 'enable_external_id',
+            'enable_llm_check', 'enable_external_id', 'for_appraisal_mode',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -251,6 +251,7 @@ class LoanRequestForm(forms.ModelForm):
         fields = [
             'applicant_name',
             'phone_number',
+            'customer_number',
             'category',
             'collateral',
             'amount_requested',
@@ -274,9 +275,12 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
             'spouse_name', 'spouse_occupation', 'father_name', 'grandfather_name',
             'business_name', 'business_description', 'business_address', 'date_business_started',
             'form_of_ownership', 'economic_sector', 'subsector_activity',
+            'legal_registration_number', 'directors_summary', 'ubo_summary',
             'employees_full_time', 'employees_part_time', 'employees_seasonal',
             'employees_ft_equivalent', 'family_members_employed',
-            'peak_sales_months', 'lowest_sales_months', 'number_business_owners',
+            'peak_sales_months', 'lowest_sales_months',
+            'peak_sales_percent', 'lowest_sales_percent',
+            'number_business_owners',
             'term_months', 'repayment_frequency', 'interest_rate', 'interest_basis',
             'grace_period_months', 'interest_only_months', 'instalments_per_year', 'cash_contribution',
         ]
@@ -285,6 +289,8 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
             'home_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'business_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'business_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'directors_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'ubo_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -308,6 +314,39 @@ class LoanRequestBasicInfoForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class AppraisalPurposeLineForm(forms.ModelForm):
+    class Meta:
+        model = AppraisalPurposeLine
+        fields = ['description', 'quantity', 'unit_price', 'value', 'display_order']
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'display_order': forms.HiddenInput(),
+        }
+
+    def clean(self):
+        from decimal import Decimal
+        data = super().clean()
+        qty = data.get('quantity')
+        price = data.get('unit_price')
+        if qty is not None and price is not None and data.get('value') is None:
+            data['value'] = (Decimal(str(qty)) * Decimal(str(price))).quantize(Decimal('0.01'))
+        return data
+
+
+def get_purpose_line_formset():
+    from django.forms import inlineformset_factory
+    return inlineformset_factory(
+        LoanRequestBasicInfo,
+        AppraisalPurposeLine,
+        form=AppraisalPurposeLineForm,
+        extra=2,
+        can_delete=True,
+    )
 
 
 class AppraisalCreditHistoryEntryForm(forms.ModelForm):
@@ -539,6 +578,10 @@ class AppraisalSheet3Form(forms.ModelForm):
             'proposed_monthly_installment',
             # Stress test (sensitivity)
             'stress_sales_drop_pct', 'stress_cost_increase_pct',
+            # Balance sheet / ratios
+            'bs_current_assets', 'bs_current_liabilities', 'bs_inventory',
+            'bs_total_assets', 'bs_total_liabilities', 'bs_equity',
+            'corp_annual_revenue', 'corp_operating_profit',
         ]
         widgets = {
             'cf_monthly_sales': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -556,6 +599,14 @@ class AppraisalSheet3Form(forms.ModelForm):
             'proposed_monthly_installment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'stress_sales_drop_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'stress_cost_increase_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'bs_current_assets': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'bs_current_liabilities': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'bs_inventory': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'bs_total_assets': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'bs_total_liabilities': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'bs_equity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'corp_annual_revenue': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'corp_operating_profit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
     def __init__(self, *args, basic_info=None, **kwargs):
@@ -648,6 +699,7 @@ class AppraisalSheet3Form(forms.ModelForm):
         from .cashflow_utils import (
             max_loan_capacity_from_cashflow,
             suggested_installment_declining,
+            compute_balance_sheet_ratios,
         )
         from .appraisal_policy import get_loan_analysis_policy
 
@@ -659,6 +711,17 @@ class AppraisalSheet3Form(forms.ModelForm):
         obj.dscr_annual = self._computed_dscr_annual
         obj.stressed_net_monthly_cashflow = getattr(self, '_computed_stressed_net', None)
         obj.stressed_dscr = getattr(self, '_computed_stressed_dscr', None)
+
+        ratios = compute_balance_sheet_ratios(
+            current_assets=obj.bs_current_assets,
+            current_liabilities=obj.bs_current_liabilities,
+            inventory=obj.bs_inventory,
+            total_liabilities=obj.bs_total_liabilities,
+            equity=obj.bs_equity,
+        )
+        obj.ratio_current = ratios['ratio_current']
+        obj.ratio_acid_test = ratios['ratio_acid_test']
+        obj.ratio_debt_equity = ratios['ratio_debt_equity']
 
         bi = self.basic_info
         loan = obj.loan_request

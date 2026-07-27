@@ -49,9 +49,12 @@ QUALITATIVE_PASS_THRESHOLD = 75  # percent, Excel Sheet 2
 GAP_MAP = {
     'sheet1_basic_info': {
         'status': 'good',
-        'notes': 'Present; OCR/prefill available.',
+        'notes': 'Present; OCR/prefill + core banking lookup/conflicts available.',
     },
-    'sheet2_per_factor_dropdowns': {
+    'sheet1_banking_intake': {
+        'status': 'implemented_here',
+        'notes': 'Customer number lookup → Sheet 1; empty-fill + conflict accept; mock when DECSI_BASE_URL unset.',
+    },    'sheet2_per_factor_dropdowns': {
         'status': 'done',
         'notes': 'QUALITATIVE_RATING_CHOICES_BY_FACTOR matches Excel lists.',
     },
@@ -68,8 +71,16 @@ GAP_MAP = {
         'notes': 'Max loan capacity + suggested installment from Sheet 1 terms.',
     },
     'sheet3_monthly_grid': {
-        'status': 'deferred',
-        'notes': '12-month cashflow grid only if pilot requires Excel depth.',
+        'status': 'implemented_here',
+        'notes': '12-month sales/expenses/net grid on Sheet 3; seed from averages.',
+    },
+    'sheet3_balance_sheet': {
+        'status': 'implemented_here',
+        'notes': 'Current assets/liabilities, inventory, totals, equity + current/acid/D-E ratios.',
+    },
+    'sheet1_purpose_lines': {
+        'status': 'implemented_here',
+        'notes': 'Purpose/investment lines qty × unit price → value + seasonality %.',
     },
     'sheet4_es': {
         'status': 'wired',
@@ -85,7 +96,11 @@ GAP_MAP = {
     },
     'feature_snapshot': {
         'status': 'implemented_here',
-        'notes': f'{FEATURE_SCHEMA_VERSION} JSON on appraisal complete.',
+        'notes': f'{FEATURE_SCHEMA_VERSION} JSON on appraisal complete (includes appraisal_mode).',
+    },
+    'corporate_mode': {
+        'status': 'implemented_here',
+        'notes': 'appraisal_mode msme|corporate; corporate Sheet 1 entity KYC, Sheet 2 governance factors, FS/ratios.',
     },
     'rate_workbook': {
         'status': 'excluded',

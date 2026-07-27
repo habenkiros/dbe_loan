@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{% block title %}Loan System{% endblock %}</title>
+    <title>{% block title %}AI-powered Credit Intelligence{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     {% block extra_head %}{% endblock %}
@@ -394,7 +394,7 @@
 </head>
 <body>
     <header>
-        <h1 style="color: white;">HK Loan Appraisal</h1>
+        <h1 style="color: white;">AI-powered Credit Intelligence</h1>
         {% if user.is_authenticated %}
             <p>Welcome, {{ user.username }}
             | <a href="{% url 'loan_notifications_list' %}" style="color: white;">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>

@@ -92,6 +92,65 @@
       <p class="sheet3-hint">Policy hint (configurable in Admin): annual / monthly DSCR below <strong>{{ loan_analysis_policy.warn_annual_dscr_min }}</strong> / <strong>{{ loan_analysis_policy.warn_monthly_dscr_min }}</strong> triggers a warning after save.</p>
     </div>
 
+    <div class="sheet3-section">
+      <h3>{% if is_corporate %}Corporate statement highlights{% else %}Statement highlights (optional){% endif %}</h3>
+      <p class="sheet3-hint">{% if is_corporate %}Enter annual revenue and operating profit from audited / management accounts, then complete balance sheet and DSCR below.{% else %}Optional annual figures when available.{% endif %}</p>
+      <div class="sheet3-grid">
+        <div class="field">{{ form.corp_annual_revenue.label_tag }}{{ form.corp_annual_revenue }}</div>
+        <div class="field">{{ form.corp_operating_profit.label_tag }}{{ form.corp_operating_profit }}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>Balance sheet &amp; key ratios</h3>
+      <p class="sheet3-hint">Excel depth: enter statement totals; current / acid-test / debt-equity ratios are computed on save.</p>
+      <div class="sheet3-grid">
+        <div class="field">{{ form.bs_current_assets.label_tag }}{{ form.bs_current_assets }}</div>
+        <div class="field">{{ form.bs_current_liabilities.label_tag }}{{ form.bs_current_liabilities }}</div>
+        <div class="field">{{ form.bs_inventory.label_tag }}{{ form.bs_inventory }}</div>
+        <div class="field">{{ form.bs_total_assets.label_tag }}{{ form.bs_total_assets }}</div>
+        <div class="field">{{ form.bs_total_liabilities.label_tag }}{{ form.bs_total_liabilities }}</div>
+        <div class="field">{{ form.bs_equity.label_tag }}{{ form.bs_equity }}</div>
+      </div>
+      <div class="sheet3-readonly">
+        <div><strong>Current ratio:</strong> {% if appraisal.ratio_current is not None %}{{ appraisal.ratio_current|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Acid test:</strong> {% if appraisal.ratio_acid_test is not None %}{{ appraisal.ratio_acid_test|floatformat:2 }}{% else %}—{% endif %}</div>
+        <div><strong>Debt / equity:</strong> {% if appraisal.ratio_debt_equity is not None %}{{ appraisal.ratio_debt_equity|floatformat:2 }}{% else %}—{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="sheet3-section">
+      <h3>12-month cashflow grid</h3>
+      <p class="sheet3-hint">Enter monthly sales and expenses, or seed from Phase 0/1 averages then adjust seasonality (use Sheet 1 peak/low % as a guide).</p>
+      <p style="margin:0 0 0.75rem;">
+        <button type="submit" name="seed_monthly_grid" value="1" class="btn btn-blue" formnovalidate>
+          Seed grid from monthly averages
+        </button>
+      </p>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+          <thead>
+            <tr style="text-align:left; border-bottom:2px solid #064420;">
+              <th style="padding:0.35rem;">Month</th>
+              <th style="padding:0.35rem;">Sales</th>
+              <th style="padding:0.35rem;">Expenses</th>
+              <th style="padding:0.35rem;">Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in monthly_grid %}
+            <tr style="border-bottom:1px solid #e0e8e0;">
+              <td style="padding:0.35rem;">{{ row.month }}</td>
+              <td style="padding:0.35rem;"><input class="form-control" type="number" step="0.01" name="grid_sales_{{ row.month }}" value="{{ row.sales|default_if_none:'' }}"></td>
+              <td style="padding:0.35rem;"><input class="form-control" type="number" step="0.01" name="grid_expenses_{{ row.month }}" value="{{ row.expenses|default_if_none:'' }}"></td>
+              <td style="padding:0.35rem;">{% if row.net %}{{ row.net }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="appraisal-actions">
       <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 4</button>
       <a href="{% url 'loan_appraisal_step' loan_request.id 2 %}" class="btn btn-blue">Back to Sheet 2</a>

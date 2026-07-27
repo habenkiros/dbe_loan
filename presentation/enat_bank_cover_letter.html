@@ -1,0 +1,158 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Cover Letter — Seqela to Enat Bank</title><style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;}
+*{box-sizing:border-box;}
+@page{size:A4;margin:16mm 15mm 18mm;}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.58;font-size:10.5pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:18mm 16mm;box-shadow:0 4px 24px rgba(6,69,40,.08);} .screen.cover{padding:0;}
+@media print{body{background:#fff;} .screen{margin:0;padding:7mm 10mm 5mm;box-shadow:none;max-width:none;} .screen.letter{padding:7mm 10mm 5mm;page-break-inside:avoid;} .letter p{font-size:9.3pt;margin-bottom:4px;line-height:1.38;} .letter .sign{margin-top:6px;} .letter .sign .name{margin-top:10px;} .letter-head{margin-bottom:6px;padding-bottom:5px;} .letter .date{margin:4px 0 6px;} .letter .addr{margin-bottom:6px;} .letter .re{margin:0 0 6px;padding:5px 7px;font-size:9.4pt;} .letter .encl{font-size:8.4pt;margin-top:6px;line-height:1.35;} .no-print{display:none!important;} a{color:inherit;text-decoration:none;}}
+.screen.cover{padding:0;overflow:hidden;}
+.screen.letter{/* letter uses screen padding */}
+/* Enhanced cover */
+.cover{min-height:262mm;display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:14mm 0 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover-inner{padding:0 16mm;}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;letter-spacing:.02em;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover .for-label{font-size:8pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e8d48a;margin-bottom:6px;}
+.cover .bank{font-family:Fraunces,Georgia,serif;font-size:20pt;font-weight:700;margin:0 0 2px;line-height:1.2;}
+.cover .bank-sub{font-size:10pt;color:#b7d9c6;margin:0 0 14px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:26pt;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.02em;max-width:155mm;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:155mm;line-height:1.5;margin:0;}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:10mm 16mm 12mm;}
+.cover .pillars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
+.cover .pillar{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);}
+.cover .pillar strong{display:block;color:var(--gd);font-size:9.5pt;margin-bottom:2px;}
+.cover .pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+.badge{border:1px solid rgba(11,107,58,.25);color:var(--g);padding:3px 9px;border-radius:999px;font-size:8pt;font-weight:600;}
+.cover-foot{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--line);padding-top:8px;margin-top:8px;font-size:8pt;color:var(--muted);}
+.cover-foot strong{color:var(--gd);}
+
+/* Cover letter */
+.letter{min-height:262mm;display:flex;flex-direction:column;}
+@media print{.letter{min-height:0 !important;}}
+.letter-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--g);padding-bottom:10px;margin-bottom:12px;}
+.letter-head .from-name{font-family:Fraunces,Georgia,serif;font-size:16pt;color:var(--gd);font-weight:700;}
+.letter-head .from-meta{font-size:8.5pt;color:var(--muted);line-height:1.45;margin-top:3px;}
+.letter-head .from-right{text-align:right;font-size:8.5pt;color:var(--muted);line-height:1.45;}
+.letter-head .from-right .goldline{color:var(--gold);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:7.5pt;margin-bottom:4px;}
+.letter .date{margin:10px 0 12px;font-size:10pt;}
+.letter .addr{font-size:10pt;line-height:1.45;margin-bottom:12px;}
+.letter .addr strong{color:var(--gd);}
+.letter .re{background:var(--bg);border-left:3px solid var(--gold);padding:8px 10px;margin:0 0 12px;font-size:10pt;}
+.letter .re strong{color:var(--gd);}
+.letter .salutation{margin:0 0 10px;font-size:10.5pt;}
+.letter p{font-size:10.2pt;text-align:justify;}
+.letter .sign{margin-top:16px;}
+.letter .sign .name{font-weight:700;color:var(--gd);margin-top:28px;margin-bottom:0;}
+.letter .sign .title{font-size:9.5pt;color:var(--muted);margin:2px 0 0;}
+.letter .cc{margin-top:14px;font-size:8.5pt;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;}
+.letter .encl{font-size:9pt;margin-top:8px;}
+h2{font-family:Fraunces,Georgia,serif;font-size:15pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11.5pt;color:var(--g);margin:12px 0 5px;}
+h4{font-size:10.5pt;color:var(--gd);margin:10px 0 4px;}
+p,li{margin:0 0 7px;}
+ul,ol{margin:0 0 9px;padding-left:1.2em;}
+.toc ol{columns:2;column-gap:18px;font-size:9.5pt;}
+.toc li{break-inside:avoid;margin-bottom:4px;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7.5pt;color:var(--muted);margin-top:2px;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:9px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;break-inside:avoid;}
+.box h4{margin:0 0 4px;}
+.box.gold{border-top:3px solid var(--gold);}
+.box.green{border-top:3px solid var(--g);}
+.box.red{border-top:3px solid var(--danger);}
+.box.ok{border-top:3px solid var(--ok);}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:9pt;break-inside:avoid;}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7.5pt;text-transform:uppercase;letter-spacing:.04em;}
+figure.shot{margin:10px 0 12px;break-inside:avoid;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+figure.shot img{display:block;width:100%;height:auto;max-height:145mm;object-fit:contain;object-position:top;background:#f3f6f4;}
+figure.shot.wide img{max-height:160mm;}
+figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg);border-top:1px solid var(--line);}
+.footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+.pn{font-size:8pt;color:var(--muted);text-align:right;margin-top:10px;}
+.small{font-size:9pt;color:var(--muted);}
+
+.logo-img{height:56px;width:auto;display:block;object-fit:contain;}
+.logo-img.lg{height:72px;}
+.letter-head .logo-img{height:64px;margin-bottom:8px;}
+.cover .brand-row .logo-img{height:52px;background:transparent;}
+.cover-hero .brand-row{align-items:center;}
+</style></head><body><div class="doc"><section class="screen letter">
+  <div class="letter-head">
+    <div>
+      <img class="logo-img" src="logo.png" alt="Seqela"/>
+      <div class="from-name" style="margin-top:6px;">Seqela</div>
+      <div class="from-meta">
+        Digital solutions for banks, MFIs &amp; SACCOs<br>
+        Addis Ababa, Ethiopia<br>
+        info@seqela.com · +251 964 790 724<br>
+        seqela.com
+      </div>
+    </div>
+    <div class="from-right">
+      <div class="goldline">Official correspondence</div>
+      Ref: SEQ/EB/CAPH/2026-07<br>
+      Classification: Confidential<br>
+      Enclosure: Detailed proposal (PDF)
+    </div>
+  </div>
+
+  <p class="date">27 July 2026</p>
+
+  <div class="addr">
+    <strong>Enat Bank S.C.</strong><br>
+    Head Office<br>
+    Enat Tower, Jomo Kenyatta Avenue<br>
+    Addis Ababa, Ethiopia
+  </div>
+
+  <div class="re">
+    <strong>Re:</strong> Proposal for AI-powered Credit Intelligence — digitizing secured MSME and corporate lending to complement MALFIYA and the Bank's digital channels
+  </div>
+
+  <p class="salutation">Dear Sir/Madam,</p>
+
+  <p>
+    On behalf of Seqela, we are pleased to submit the enclosed proposal for Enat Bank’s consideration —
+    a proven <strong>AI-powered Credit Intelligence</strong> platform for secured MSME and corporate lending
+    that complements MALFIYA, mobile/internet banking, and the Bank’s women-focused MSME agenda.
+  </p>
+  <p>
+    MALFIYA and Enat’s digital channels have delivered collateral-free credit to thousands of women entrepreneurs, while secured MSME and corporate facilities still run through paper, Excel, and slow committees. The enclosed solution addresses that complementary need with cashflow appraisal, GPS-governed collateral, document authentication, and multi-level committees.
+  </p>
+  <p>
+    The platform digitizes end-to-end secured lending — bilingual (English + Amharic) document authentication,
+    a seven-step cashflow appraisal (MSME and corporate modes), field collateral with offline tablet support,
+    and configurable Branch → District → Head Office committee decisioning — integrating with core banking
+    for customer prefill while leaving disbursement in the Bank’s system of record.
+  </p>
+  <p>
+    The proposal includes live system screenshots, a DECSI reference case, and a six-month path to a controlled pilot. We respectfully request a 90-minute live demonstration for Credit, Digital Banking, IT, and Risk leadership, and are ready to commence discovery upon your guidance.
+  </p>
+  <p>Thank you for your time and consideration.</p>
+
+  <div class="sign">
+    <p>Yours sincerely,</p>
+    <p class="name">For Seqela</p>
+    <p class="title">Business Development · Credit Technology Solutions</p>
+    <p class="title">info@seqela.com · +251 964 790 724 · seqela.com</p>
+  </div>
+
+  <div class="encl"><strong>Enclosure:</strong> AI-powered Credit Intelligence — Detailed Proposal (with UI evidence) · <strong>Attention:</strong> Credit Operation Management · Digital Banking · IT · Enterprise Risk &amp; Compliance</div>
+</section></div></body></html>

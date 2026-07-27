@@ -8,12 +8,14 @@ from typing import Any, Dict, Optional
 from .models import (
     AppraisalCreditHistoryEntry,
     AppraisalQualitativeFactor,
+    CORPORATE_QUALITATIVE_FACTOR_KEYS,
     LoanAppraisal,
     LoanRequest,
     LoanRequestBasicInfo,
     LoanRequestDocument,
     QUALITATIVE_FACTOR_KEYS,
 )
+from .appraisal_mode import is_corporate, mode_label, resolve_appraisal_mode
 
 
 def _display(instance, field_name: str, default='—'):
@@ -65,11 +67,17 @@ def build_committee_appraisal_pack(loan_request: LoanRequest) -> Dict[str, Any]:
     )
 
     qual_labels = dict(QUALITATIVE_FACTOR_KEYS)
+    mode = resolve_appraisal_mode(loan_request, appraisal)
+    if mode == 'corporate':
+        qual_labels = dict(CORPORATE_QUALITATIVE_FACTOR_KEYS)
 
     return {
         'loan_request': loan_request,
         'basic_info': basic_info,
         'appraisal': appraisal,
+        'appraisal_mode': mode,
+        'mode_label': mode_label(mode),
+        'is_corporate': is_corporate(loan_request, appraisal),
         'credit_entries': credit_entries,
         'qualitative': qualitative,
         'qual_labels': qual_labels,

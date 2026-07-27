@@ -100,6 +100,25 @@ class Sheet1FieldSourcesTests(TestCase):
         self.assertEqual(report['total_fields'], 0)
         self.assertEqual(self.basic.tin_number, 'EXISTING')
         self.assertEqual(self.basic.field_sources['tin_number']['source'], 'manual')
+        self.assertEqual(len(report.get('conflicts') or []), 1)
+        self.assertEqual(report['conflicts'][0]['field'], 'tin_number')
+        self.assertEqual(report['conflicts'][0]['proposed'], '999')
+
+    def test_document_accept_overwrites_conflict(self):
+        self.basic.tin_number = 'EXISTING'
+        self.basic.field_sources = {'tin_number': {'source': 'manual', 'label': 'Officer'}}
+        self.basic.save()
+        self._add_doc_with_fields({'tin_number': '999'})
+        with patch('loans.services.appraisal_prefill.extract_fields_for_document') as mock_extract:
+            mock_extract.return_value = {'tin_number': '999'}
+            report = reimport_sheet1_from_documents(
+                self.loan, only_empty=True, accept_fields=['tin_number'],
+            )
+        self.basic.refresh_from_db()
+        self.assertEqual(report['total_fields'], 1)
+        self.assertEqual(self.basic.tin_number, '999')
+        self.assertEqual(self.basic.field_sources['tin_number']['source'], 'document')
+        self.assertFalse(report.get('conflicts'))
 
     def test_form_save_marks_changed_fields_manual(self):
         self.basic.tin_number = '111'

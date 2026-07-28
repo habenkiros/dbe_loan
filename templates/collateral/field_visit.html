@@ -217,7 +217,11 @@
     {% elif step == 3 %}
     <a href="{% url 'collateral:field_visit_step' building.id 4 %}" class="field-btn field-btn-primary">Review →</a>
     {% elif step == 4 %}
+    {% if readiness.ready and not readiness.locked %}
+    <a href="{% url 'collateral:summary' loan_request.id %}" class="field-btn field-btn-primary">Summary &amp; submit →</a>
+    {% else %}
     <a href="{% url 'collateral:building_list' loan_request.id %}" class="field-btn field-btn-primary">All buildings</a>
+    {% endif %}
     {% endif %}
   </div>
 </div>

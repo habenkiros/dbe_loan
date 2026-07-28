@@ -18,7 +18,10 @@ from .forms import (
     AppraisalSheet2Form, AppraisalSheet3Form,
     AppraisalESForm, AppraisalCollateralForm, AppraisalSummaryForm,
     CommitteeVoteForm,
+    ApprovalCommitteeLevelForm, ApprovalCommitteeLevelCreateForm,
+    get_approval_committee_member_rule_formset,
 )
+from .appraisal_lock import appraisal_is_locked, get_appraisal_lock_state
 from .appraisal_pack import build_committee_appraisal_pack
 from .appraisal_policy import get_loan_analysis_policy
 from .analysis_assist import build_analysis_assist, officer_checklist_for_mode
@@ -26,7 +29,11 @@ from .appraisal_scorecard import (
     build_credit_scorecard, evaluate_analysis_gates, persist_credit_scorecard,
 )
 from .appraisal_features import persist_feature_snapshot
-from .qualitative_scoring import update_appraisal_qualitative_totals
+from .qualitative_scoring import (
+    DEFAULT_FACTOR_WEIGHT,
+    qualitative_score_map_for_js,
+    update_appraisal_qualitative_totals,
+)
 from .cashflow_utils import (
     payments_per_year_from_repayment_frequency,
     parse_monthly_cashflow_grid_from_post,
@@ -39,6 +46,7 @@ from .models import (
     LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
     AppraisalAmortizationEntry, AppraisalESChecklistItem, ES_CHECKLIST_STRUCTURE,
+    ApprovalCommitteeLevel,
 )
 from .committee import (
     committee_filter_branches,
@@ -412,6 +420,7 @@ def loan_request_detail(request, loan_request_id):
     can_request_documents = _is_assigned_officer_or_engineer(user, loan_request)
     document_types_missing = [dt for dt in document_types if dt.id not in uploaded_type_ids] if document_types else []
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    lock_state = get_appraisal_lock_state(loan_request)
     committee_submit = officer_can_submit_to_committee(loan_request) if (
         user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id
     ) else None
@@ -423,14 +432,19 @@ def loan_request_detail(request, loan_request_id):
     collateral_readiness = None
     collateral_totals = None
     collateral_blockers = []
+    collateral_pipeline_stage_code = None
+    collateral_pipeline_label = None
     if loan_request.documents_reviewed_at or loan_request.queue_approved or (loan_request.status or '').lower() == 'approved':
         from collateral.field_utils import get_loan_collateral_readiness, collateral_submit_blockers
+        from collateral.pipeline import collateral_pipeline_stage, pipeline_stage_label
         from loans.services.appraisal_prefill import compute_collateral_totals
 
         collateral_readiness = get_loan_collateral_readiness(loan_request)
         collateral_totals = compute_collateral_totals(loan_request)
         if not collateral_readiness.get('locked'):
             collateral_blockers = collateral_submit_blockers(loan_request)
+        collateral_pipeline_stage_code = collateral_pipeline_stage(loan_request)
+        collateral_pipeline_label = pipeline_stage_label(collateral_pipeline_stage_code)
     coverage = None
     if collateral_readiness:
         from collateral.coverage import compute_coverage_adequacy
@@ -450,7 +464,12 @@ def loan_request_detail(request, loan_request_id):
         'collateral_totals': collateral_totals,
         'collateral_blockers': collateral_blockers,
         'coverage': coverage,
+        'pipeline_stage': collateral_pipeline_stage_code,
+        'pipeline_label': collateral_pipeline_label,
         'appraisal': appraisal,
+        'appraisal_locked': lock_state['locked'],
+        'appraisal_lock_reason': lock_state['reason'],
+        'appraisal_lock_code': lock_state['code'],
         'committee_submit': committee_submit,
         'committee_tally': committee_tally,
     })
@@ -662,9 +681,51 @@ APPRAISAL_STEPS = [
     (4, 'E&S assessment'),
     (5, 'Collateral worksheet'),
     (6, 'Summary & decision'),
-    (7, 'Repayment & amortization'),
+    (7, 'Repayment schedule (optional)'),
 ]
 TOTAL_APPRAISAL_STEPS = len(APPRAISAL_STEPS)
+
+
+def _try_finish_appraisal(request, loan_request, appraisal, basic_info, policy):
+    """
+    Mark appraisal complete after Sheets 1–6 gates pass.
+    Auto-generates Sheet 7 schedule if missing (optional pack support).
+    Returns (ok: bool, error_message: str|None).
+    """
+    blocks, _w = evaluate_analysis_gates(appraisal, basic_info)
+    if policy.require_sheets_complete_before_finish:
+        status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
+        sheet_blocks = sheets_blocking_completion(status, max_step=6)
+        if sheet_blocks:
+            return False, 'Cannot finish: ' + '; '.join(sheet_blocks[:3])
+    if blocks:
+        return False, 'Cannot finish while hard blocks remain: ' + '; '.join(blocks[:3])
+    if not appraisal.amortization_entries.exists():
+        _generate_amortization_schedule(appraisal, basic_info, loan_request)
+    persist_credit_scorecard(appraisal)
+    persist_feature_snapshot(loan_request, appraisal=appraisal, basic_info=basic_info)
+    loan_request.appraisal_completed_at = timezone.now()
+    loan_request.save(update_fields=['appraisal_completed_at'])
+    return True, None
+
+
+def _try_submit_to_committee(request, loan_request, notes=''):
+    """Submit finished appraisal to committee. Returns (ok, error_list)."""
+    check = officer_can_submit_to_committee(loan_request)
+    if not check['ok']:
+        return False, check['errors']
+    loan_request.submitted_to_committee_at = timezone.now()
+    loan_request.submitted_to_committee_by = request.user
+    loan_request.committee_submission_notes = (notes or '').strip()
+    loan_request.save(
+        update_fields=[
+            'submitted_to_committee_at',
+            'submitted_to_committee_by',
+            'committee_submission_notes',
+        ]
+    )
+    start_approval_workflow(loan_request)
+    return True, []
 
 
 @login_required
@@ -718,6 +779,7 @@ def loan_appraisal_step(request, loan_request_id, step):
         steps[2] = (3, 'Financial statements & cashflow')
 
     sheet_status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
+    lock_state = get_appraisal_lock_state(loan_request)
     common_ctx = {
         'loan_request': loan_request,
         'appraisal': appraisal,
@@ -734,7 +796,18 @@ def loan_appraisal_step(request, loan_request_id, step):
         'sheet_status_list': sorted(sheet_status.items()),
         'current_sheet_status': sheet_status.get(step),
         'officer_checklist': officer_checklist_for_mode(appraisal.appraisal_mode or category_mode),
+        'appraisal_locked': lock_state['locked'],
+        'appraisal_lock_reason': lock_state['reason'],
+        'appraisal_lock_code': lock_state['code'],
     }
+
+    # Finalized appraisal / in committee / decided — read-only (POST blocked).
+    if request.method == 'POST' and lock_state['locked']:
+        messages.error(
+            request,
+            lock_state['reason'] or 'This appraisal is locked and cannot be edited.',
+        )
+        return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=step)
 
     def _step1_ctx(**extra):
         return {
@@ -883,11 +956,15 @@ def loan_appraisal_step(request, loan_request_id, step):
             ))
 
         if step == 1:
+            from .appraisal_mode import is_corporate as _is_corporate
             basic_form = LoanRequestBasicInfoForm(request.POST, instance=basic_info)
             purpose_formset = PurposeLineFormSet(request.POST, instance=basic_info, prefix='purpose')
-            if basic_form.is_valid() and purpose_formset.is_valid():
+            corp = _is_corporate(loan_request, appraisal)
+            purpose_ok = True if corp else purpose_formset.is_valid()
+            if basic_form.is_valid() and purpose_ok:
                 basic_form.save()
-                purpose_formset.save()
+                if not corp:
+                    purpose_formset.save()
                 messages.success(request, 'Sheet 1 saved.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=2)
             return render(request, 'loans/loan_appraisal_step1.html', _step1_ctx(
@@ -896,6 +973,22 @@ def loan_appraisal_step(request, loan_request_id, step):
             ))
 
         if step == 2:
+            if request.POST.get('refresh_banking'):
+                from .services.banking_transactions import refresh_appraisal_banking
+                if not (loan_request.customer_number or '').strip():
+                    messages.warning(
+                        request,
+                        'Set a core banking customer number on the loan / Sheet 1 before refreshing transactions.',
+                    )
+                else:
+                    metrics = refresh_appraisal_banking(appraisal, loan_request)
+                    messages.success(
+                        request,
+                        f'Banking metrics refreshed ({metrics.get("provider")}: '
+                        f'{metrics.get("tx_count", 0)} txs, '
+                        f'avg credit {metrics.get("avg_monthly_credit")}).',
+                    )
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=2)
             form = AppraisalSheet2Form(request.POST, instance=appraisal)
             credit_formset = CreditHistoryFormSet(request.POST, instance=appraisal, prefix='credit')
             qual_formset = QualitativeFormSet(request.POST, instance=appraisal, prefix='qual')
@@ -911,7 +1004,13 @@ def loan_appraisal_step(request, loan_request_id, step):
                 )
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=3)
             return render(request, 'loans/loan_appraisal_step2.html', {
-                **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
+                **common_ctx,
+                'form': form,
+                'credit_formset': credit_formset,
+                'qual_formset': qual_formset,
+                'qual_score_map_json': json.dumps(qualitative_score_map_for_js()),
+                'qual_factor_weight': float(DEFAULT_FACTOR_WEIGHT),
+                'banking_behavior': appraisal.banking_behavior or {},
             })
 
         if step == 3:
@@ -935,12 +1034,23 @@ def loan_appraisal_step(request, loan_request_id, step):
             })
 
         if step == 4:
-            form = AppraisalESForm(request.POST, instance=appraisal)
+            form = AppraisalESForm(request.POST, instance=appraisal, officer=request.user)
             es_formset = ESFormSet(request.POST, instance=appraisal, prefix='es')
             if form.is_valid() and es_formset.is_valid():
-                form.save()
+                obj = form.save(commit=False)
+                # Loan officer owns E&S screening / check / confirmation on Sheet 4
+                for attr in ('es_screened_by', 'es_checked_by', 'es_approved_by'):
+                    if not getattr(obj, f'{attr}_id', None):
+                        setattr(obj, attr, request.user)
+                if not obj.es_assessment_date:
+                    obj.es_assessment_date = timezone.localdate()
+                obj.save()
                 es_formset.save()
-                messages.success(request, 'Sheet 4 (E&S) saved.')
+                messages.success(
+                    request,
+                    'Sheet 4 (E&S) saved — loan officer screening complete. '
+                    'Credit committee will sign on the committee pack when submitted.',
+                )
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=5)
             return render(request, 'loans/loan_appraisal_step4.html', {
                 **common_ctx,
@@ -983,8 +1093,59 @@ def loan_appraisal_step(request, loan_request_id, step):
                 risk_formset.save()
                 cond_formset.save()
                 persist_credit_scorecard(appraisal)
+                appraisal.refresh_from_db()
+
+                if request.POST.get('finish_and_submit'):
+                    ok, err = _try_finish_appraisal(
+                        request, loan_request, appraisal, basic_info, policy,
+                    )
+                    if not ok:
+                        messages.error(request, err)
+                        return render(
+                            request, 'loans/loan_appraisal_step6.html',
+                            _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
+                        )
+                    loan_request.refresh_from_db()
+                    notes = request.POST.get('committee_submission_notes', '')
+                    submitted, submit_errs = _try_submit_to_committee(request, loan_request, notes=notes)
+                    if submitted:
+                        messages.success(
+                            request,
+                            'Appraisal finished and submitted to the approval committee '
+                            '(branch → district → head office → management as configured).',
+                        )
+                        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+                    messages.success(request, 'Appraisal finished.')
+                    for e in submit_errs:
+                        messages.warning(request, e)
+                    return redirect('loan_request_detail', loan_request_id=loan_request_id)
+
+                if request.POST.get('finish_appraisal'):
+                    ok, err = _try_finish_appraisal(
+                        request, loan_request, appraisal, basic_info, policy,
+                    )
+                    if not ok:
+                        messages.error(request, err)
+                        return render(
+                            request, 'loans/loan_appraisal_step6.html',
+                            _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
+                        )
+                    messages.success(
+                        request,
+                        'Appraisal finished. Submit to the approval committee from the loan detail page '
+                        '(or use “Finish & submit to committee” next time).',
+                    )
+                    return redirect('loan_request_detail', loan_request_id=loan_request_id)
+
+                if request.POST.get('save_and_schedule'):
+                    messages.success(
+                        request,
+                        'Sheet 6 saved. Optional repayment schedule — generate if needed, then return to finish.',
+                    )
+                    return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
+
                 messages.success(request, 'Sheet 6 saved. Credit scorecard updated.')
-                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
+                return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=6)
             return render(
                 request, 'loans/loan_appraisal_step6.html',
                 _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
@@ -995,25 +1156,34 @@ def loan_appraisal_step(request, loan_request_id, step):
                 _generate_amortization_schedule(appraisal, basic_info, loan_request)
                 messages.success(request, 'Repayment schedule generated.')
                 return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
-            if request.POST.get('finish'):
-                blocks, _w = evaluate_analysis_gates(appraisal, basic_info)
-                if policy.require_sheets_complete_before_finish:
-                    status = get_appraisal_sheet_status(loan_request, appraisal, basic_info)
-                    sheet_blocks = sheets_blocking_completion(status, max_step=6)
-                    if sheet_blocks:
-                        messages.error(request, 'Cannot finish: ' + '; '.join(sheet_blocks[:3]))
-                        return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=7)
-                if blocks:
-                    messages.error(request, 'Cannot finish while hard blocks remain: ' + '; '.join(blocks[:3]))
-                    return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=6)
-                persist_credit_scorecard(appraisal)
-                persist_feature_snapshot(loan_request, appraisal=appraisal, basic_info=basic_info)
-                loan_request.appraisal_completed_at = timezone.now()
-                loan_request.save(update_fields=['appraisal_completed_at'])
+            if request.POST.get('finish') or request.POST.get('finish_and_submit'):
+                ok, err = _try_finish_appraisal(
+                    request, loan_request, appraisal, basic_info, policy,
+                )
+                if not ok:
+                    messages.error(request, err)
+                    return redirect(
+                        'loan_appraisal_step',
+                        loan_request_id=loan_request_id,
+                        step=6 if 'hard blocks' in (err or '').lower() else 7,
+                    )
+                if request.POST.get('finish_and_submit'):
+                    loan_request.refresh_from_db()
+                    notes = request.POST.get('committee_submission_notes', '')
+                    submitted, submit_errs = _try_submit_to_committee(request, loan_request, notes=notes)
+                    if submitted:
+                        messages.success(
+                            request,
+                            'Appraisal finished and submitted to the approval committee.',
+                        )
+                        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+                    messages.success(request, 'Appraisal finished.')
+                    for e in submit_errs:
+                        messages.warning(request, e)
+                    return redirect('loan_request_detail', loan_request_id=loan_request_id)
                 messages.success(
                     request,
-                    'Appraisal complete. Feature snapshot saved for credit analysis. '
-                    'Submit to the approval committee from the loan detail page.',
+                    'Appraisal complete. Submit to the approval committee from the loan detail page.',
                 )
                 return redirect('loan_request_detail', loan_request_id=loan_request_id)
             return render(request, 'loans/loan_appraisal_step7.html', {
@@ -1047,11 +1217,32 @@ def loan_appraisal_step(request, loan_request_id, step):
             banking_profile=(prefill_report.get('banking') or {}).get('profile'),
         ))
     if step == 2:
+        # Keep earned scores in sync when ratings already exist (e.g. after seed / partial save).
+        if appraisal.qualitative_factors.filter(rating__isnull=False).exclude(rating='').exists():
+            update_appraisal_qualitative_totals(appraisal)
+            appraisal.refresh_from_db()
+        # Auto-pull banking metrics once when customer number exists and never refreshed.
+        if (
+            (loan_request.customer_number or '').strip()
+            and not (appraisal.banking_behavior or {}).get('tx_count')
+        ):
+            try:
+                from .services.banking_transactions import refresh_appraisal_banking
+                refresh_appraisal_banking(appraisal, loan_request)
+                appraisal.refresh_from_db()
+            except Exception:
+                pass
         form = AppraisalSheet2Form(instance=appraisal)
         credit_formset = CreditHistoryFormSet(instance=appraisal, prefix='credit')
         qual_formset = QualitativeFormSet(instance=appraisal, prefix='qual')
         return render(request, 'loans/loan_appraisal_step2.html', {
-            **common_ctx, 'form': form, 'credit_formset': credit_formset, 'qual_formset': qual_formset,
+            **common_ctx,
+            'form': form,
+            'credit_formset': credit_formset,
+            'qual_formset': qual_formset,
+            'qual_score_map_json': json.dumps(qualitative_score_map_for_js()),
+            'qual_factor_weight': float(DEFAULT_FACTOR_WEIGHT),
+            'banking_behavior': appraisal.banking_behavior or {},
         })
     if step == 3:
         form = AppraisalSheet3Form(instance=appraisal, basic_info=basic_info)
@@ -1062,7 +1253,7 @@ def loan_appraisal_step(request, loan_request_id, step):
             **common_ctx, 'form': form, 'monthly_grid': grid,
         })
     if step == 4:
-        form = AppraisalESForm(instance=appraisal)
+        form = AppraisalESForm(instance=appraisal, officer=request.user)
         es_formset = ESFormSet(instance=appraisal, prefix='es')
         return render(request, 'loans/loan_appraisal_step4.html', {
             **common_ctx,
@@ -1324,6 +1515,9 @@ def loan_request_detail_manager(request, loan_request_id):
         messages.warning(request, 'You do not have access to this approval review.')
         return redirect('view_loan_requests_manager')
     can_return = user_can_return_to_officer(request.user, loan_request)
+    scorecard = None
+    if appraisal:
+        scorecard = appraisal.scorecard_detail or build_credit_scorecard(appraisal)
     return render(request, 'loans/loan_request_detail_manager.html', {
         'loan_request': loan_request,
         'appraisal': appraisal,
@@ -1331,6 +1525,7 @@ def loan_request_detail_manager(request, loan_request_id):
         'committee_tally': committee_tally,
         'vote_form': vote_form,
         'can_return_to_officer': can_return,
+        'scorecard': scorecard,
     })
 
 
@@ -1343,24 +1538,12 @@ def submit_to_committee(request, loan_request_id):
     loan_request = get_object_or_404(
         LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user,
     )
-    check = officer_can_submit_to_committee(loan_request)
-    if not check['ok']:
-        for err in check['errors']:
+    notes = request.POST.get('committee_submission_notes', '').strip()
+    submitted, errors = _try_submit_to_committee(request, loan_request, notes=notes)
+    if not submitted:
+        for err in errors:
             messages.error(request, err)
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-
-    notes = request.POST.get('committee_submission_notes', '').strip()
-    loan_request.submitted_to_committee_at = timezone.now()
-    loan_request.submitted_to_committee_by = request.user
-    loan_request.committee_submission_notes = notes
-    loan_request.save(
-        update_fields=[
-            'submitted_to_committee_at',
-            'submitted_to_committee_by',
-            'committee_submission_notes',
-        ]
-    )
-    start_approval_workflow(loan_request)
     messages.success(
         request,
         'Submitted to the approval committee workflow (branch → district → head office → management as configured).',
@@ -1487,13 +1670,19 @@ def appraisal_features_json(request, loan_request_id):
 def loan_notifications_list(request):
     from .models import LoanNotification
 
-    notifications = LoanNotification.objects.filter(user=request.user).select_related('loan_request')[:100]
+    kind_filter = (request.GET.get('kind') or '').strip()
+    notifications = LoanNotification.objects.filter(user=request.user).select_related('loan_request')
+    if kind_filter:
+        notifications = notifications.filter(kind=kind_filter)
+    notifications = notifications[:100]
     if request.method == 'POST' and request.POST.get('mark_all_read'):
         LoanNotification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         messages.success(request, 'All notifications marked as read.')
         return redirect('loan_notifications_list')
     return render(request, 'loans/loan_notifications.html', {
         'notifications': notifications,
+        'kind_choices': LoanNotification.KIND_CHOICES,
+        'selected_kind': kind_filter,
     })
 
 
@@ -1712,6 +1901,8 @@ def manage_districts(request):
 
 @login_required
 def view_loan_requests_manager(request):
+    from urllib.parse import urlencode
+
     district_id = request.GET.get('district')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
@@ -1730,6 +1921,9 @@ def view_loan_requests_manager(request):
         )
     else:
         loan_requests = committee_loan_requests_queryset(request.user)
+    loan_requests = loan_requests.select_related(
+        'branch', 'current_approval_level', 'appraisal',
+    )
     query = request.GET.get("q")
     if query:
         loan_requests = loan_requests.filter(
@@ -1758,6 +1952,8 @@ def view_loan_requests_manager(request):
         getattr(request.user, 'is_superuser', False)
         or request.user.role in ('superadmin', 'admin')
     )
+    list_params = request.GET.copy()
+    list_params.pop('page', None)
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
@@ -1774,6 +1970,7 @@ def view_loan_requests_manager(request):
         'queue_my_votes': queue == 'my_votes',
         'is_participant': user_is_approval_participant(request.user),
         'scope_limited': scope_limited,
+        'list_query': urlencode(list_params, doseq=True),
     }
     return render(request, 'loans/view_loan_requests_manager.html', context)
 
@@ -2004,6 +2201,120 @@ def edit_collateral_type(request, collateral_type_id):
     else:
         form = CollateralTypeForm(instance=collateral_type)
     return render(request, 'loans/edit_collateral_type.html', {'form': form, 'collateral_type': collateral_type})
+
+
+@login_required
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('superadmin', 'admin'))
+def manage_approval_committees(request):
+    """Settings: list approval committee levels and who may vote at each."""
+    levels = (
+        ApprovalCommitteeLevel.objects.prefetch_related('member_rules')
+        .order_by('sequence_order', 'id')
+    )
+    return render(request, 'loans/manage_approval_committees.html', {
+        'levels': levels,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('superadmin', 'admin'))
+def add_approval_committee_level(request):
+    """Settings: create a level with full options (same as edit, including voters)."""
+    from django.db import transaction
+
+    RuleFormSet = get_approval_committee_member_rule_formset(extra=2)
+    next_order = 1
+    last = ApprovalCommitteeLevel.objects.order_by('-sequence_order').first()
+    if last:
+        next_order = last.sequence_order + 1
+
+    if request.method == 'POST':
+        form = ApprovalCommitteeLevelCreateForm(request.POST)
+        formset = RuleFormSet(request.POST, instance=ApprovalCommitteeLevel())
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                level = form.save()
+                formset.instance = level
+                formset.save()
+            messages.success(request, f'Created level “{level.name}”.')
+            return redirect('manage_approval_committees')
+        messages.error(request, 'Please fix the errors below.')
+        scope_help = dict(ApprovalCommitteeLevel.VOTER_SCOPE_CHOICES).get(
+            form.data.get('voter_scope') or ApprovalCommitteeLevel.SCOPE_ORGANIZATION, ''
+        )
+    else:
+        form = ApprovalCommitteeLevelCreateForm(initial={
+            'sequence_order': next_order,
+            'is_active': True,
+            'min_approvals_required': 2,
+            'min_declines_required': 2,
+            'voter_scope': ApprovalCommitteeLevel.SCOPE_ORGANIZATION,
+        })
+        formset = RuleFormSet(instance=ApprovalCommitteeLevel())
+        scope_help = ApprovalCommitteeLevel(
+            voter_scope=ApprovalCommitteeLevel.SCOPE_ORGANIZATION,
+        ).member_scope_description
+
+    return render(request, 'loans/edit_approval_committee_level.html', {
+        'is_create': True,
+        'level': None,
+        'form': form,
+        'formset': formset,
+        'scope_help': scope_help,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('superadmin', 'admin'))
+def edit_approval_committee_level(request, level_id):
+    """Settings: edit thresholds + member rules for one committee level."""
+    level = get_object_or_404(ApprovalCommitteeLevel, pk=level_id)
+    RuleFormSet = get_approval_committee_member_rule_formset(extra=1)
+    if request.method == 'POST':
+        form = ApprovalCommitteeLevelForm(request.POST, instance=level)
+        formset = RuleFormSet(request.POST, instance=level)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, f'Saved “{level.name}” and its voting rules.')
+            return redirect('manage_approval_committees')
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        form = ApprovalCommitteeLevelForm(instance=level)
+        formset = RuleFormSet(instance=level)
+    return render(request, 'loans/edit_approval_committee_level.html', {
+        'is_create': False,
+        'level': level,
+        'form': form,
+        'formset': formset,
+        'scope_help': level.member_scope_description,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('superadmin', 'admin'))
+def delete_approval_committee_level(request, level_id):
+    """Delete a level only when unused by votes / in-progress loans."""
+    if request.method != 'POST':
+        return redirect('manage_approval_committees')
+    level = get_object_or_404(ApprovalCommitteeLevel, pk=level_id)
+    from .models import LoanCommitteeVote, LoanApprovalLevelProgress, LoanRequest
+
+    in_use = (
+        LoanCommitteeVote.objects.filter(approval_level=level).exists()
+        or LoanApprovalLevelProgress.objects.filter(level=level).exists()
+        or LoanRequest.objects.filter(current_approval_level=level).exists()
+    )
+    if in_use:
+        messages.error(
+            request,
+            f'Cannot delete “{level.name}” — it has votes or loans in progress. Deactivate it instead.',
+        )
+        return redirect('edit_approval_committee_level', level_id=level.id)
+    name = level.name
+    level.delete()
+    messages.success(request, f'Deleted level “{name}”.')
+    return redirect('manage_approval_committees')
 
 
 @login_required

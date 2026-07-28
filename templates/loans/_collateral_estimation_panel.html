@@ -1,32 +1,49 @@
-{% comment %}Collateral field-work readiness. Expects: collateral_readiness, collateral_totals, collateral_blockers {% endcomment %}
+{% comment %}Collateral field-work readiness + handoff strip. Expects: collateral_readiness, collateral_totals, collateral_blockers, coverage, optional pipeline_label / pipeline_stage {% endcomment %}
 {% if collateral_readiness %}
-<div class="collateral-readiness-panel" style="margin:0.75rem 0; padding:0.75rem 1rem; border-radius:6px; {% if collateral_readiness.locked %}background:#eceff1; border:1px solid #607d8b;{% elif collateral_readiness.all_ready %}background:#e8f5e9; border:1px solid #2e7d32;{% else %}background:#fff8e1; border:1px solid #f9a825;{% endif %}">
-  <strong>Collateral estimation:</strong>
-  {% if collateral_readiness.locked %}
-  Submitted{% if loan_request.collateral_submitted_at %} on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
-  {% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %} — locked for audit.
-  {% elif collateral_readiness.all_ready %}
-  Field work complete — ready to submit from collateral summary.
-  {% else %}
-  Field work in progress.
+<style>
+.collateral-status-badge { display:inline-block; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
+.collateral-status-ok { background:#d4edda; color:#155724; }
+.collateral-status-warn { background:#fff3cd; color:#856404; }
+.collateral-status-bad { background:#f8d7da; color:#721c24; }
+.collateral-status-info { background:#e7f1ff; color:#004085; }
+.collateral-status-muted { background:#eceff1; color:#455a64; }
+</style>
+<div class="collateral-readiness-panel" style="margin:0.75rem 0; padding:0.85rem 1.1rem; border-radius:8px; {% if collateral_readiness.locked %}background:#eceff1; border:1px solid #607d8b;{% elif collateral_readiness.all_ready %}background:#e8f5e9; border:1px solid #2e7d32;{% else %}background:#fff8e1; border:1px solid #f9a825;{% endif %}">
+  <div style="display:flex; flex-wrap:wrap; gap:0.5rem 1rem; align-items:center; justify-content:space-between;">
+    <div>
+      <strong>Collateral estimation</strong>
+      {% if pipeline_label %}
+      · <span class="collateral-status-badge {% if pipeline_stage == 'engineering_approved' or pipeline_stage == 'ready_to_submit' %}collateral-status-ok{% elif pipeline_stage == 'returned' %}collateral-status-bad{% elif pipeline_stage == 'engineering_pending' or pipeline_stage == 'in_progress' %}collateral-status-warn{% else %}collateral-status-info{% endif %}">{{ pipeline_label }}</span>
+      {% endif %}
+      <br>
+      {% if collateral_readiness.locked %}
+      <small>Submitted{% if loan_request.collateral_submitted_at %} {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
+        {% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %} — locked for audit.</small>
+      {% elif collateral_readiness.all_ready %}
+      <small>Field work complete — submit from collateral summary.</small>
+      {% else %}
+      <small>Field work in progress.</small>
+      {% endif %}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
+      <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">Summary</a>
+      <a href="{% url 'collateral:dashboard' %}" class="btn btn-gray">Dashboard</a>
+      {% if loan_request.collateral_engineering_status == 'pending_review' %}
+      <a href="{% url 'collateral:engineering_qa_review' loan_request.id %}" class="btn btn-green">Engineering QA</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if loan_request.collateral_engineering_status == 'returned' and loan_request.collateral_engineering_return_note %}
+  <div style="margin-top:0.75rem; padding:0.65rem 0.75rem; background:#fff3cd; border:1px solid #e0b84a; border-radius:6px;">
+    <strong>Returned by engineering:</strong> {{ loan_request.collateral_engineering_return_note|linebreaksbr }}
+  </div>
   {% endif %}
 
   {% if collateral_totals and collateral_totals.grand_total %}
-  <br><span class="help">Estimated collateral value: <strong>{{ collateral_totals.grand_total|floatformat:2 }}</strong>
-    {% if collateral_totals.collateral_immovable_value %} (immovable {{ collateral_totals.collateral_immovable_value|floatformat:2 }}{% endif %}
-    {% if collateral_totals.collateral_moveable_value %}, movable {{ collateral_totals.collateral_moveable_value|floatformat:2 }}{% endif %}
-    {% if collateral_totals.collateral_immovable_value %}){% endif %}
-  </span>
-  {% endif %}
-
-  {% if coverage %}
-  <br><span class="help">
-    Coverage vs loan:
-    {% if coverage.coverage_pct %}<strong>{{ coverage.coverage_pct }}%</strong>{% else %}—{% endif %}
-    {% if coverage.blockers %}<span style="color:#c62828;"> — below policy minimum</span>
-    {% elif coverage.warnings %}<span style="color:#856404;"> — advisory flags</span>
-    {% elif coverage.coverage_pct %}<span style="color:#155724;"> — meets policy</span>{% endif %}
-  </span>
+  <p style="margin:0.5rem 0 0;" class="help">Estimated value: <strong>{{ collateral_totals.grand_total|floatformat:2 }}</strong>
+    {% if coverage and coverage.coverage_pct %} · Coverage <strong>{{ coverage.coverage_pct }}%</strong>{% endif %}
+  </p>
   {% endif %}
 
   {% if collateral_readiness.buildings %}
@@ -49,17 +66,12 @@
   {% endfor %}
 
   {% if collateral_blockers %}
-  <br><span class="help">Submit blockers: {{ collateral_blockers|join:"; " }}</span>
+  <p style="margin:0.5rem 0 0;" class="help"><span style="color:#c62828;">Submit blockers:</span> {{ collateral_blockers|join:"; " }}</p>
   {% endif %}
 
-  <p style="margin:0.75rem 0 0;">
-    <a href="{% url 'collateral:summary' loan_request.id %}">Collateral summary</a>
-    &nbsp;|&nbsp;
+  <p style="margin:0.65rem 0 0;" class="help">
     <a href="{% url 'collateral:evidence_pack' loan_request.id %}">Evidence pack</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:dossier_json' loan_request.id %}">Dossier JSON</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:dashboard' %}">Collateral dashboard</a>
+    · <a href="{% url 'collateral:dossier_json' loan_request.id %}">Dossier JSON</a>
   </p>
 </div>
 {% endif %}

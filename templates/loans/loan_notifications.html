@@ -1,21 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Notifications{% endblock %}
 {% block content %}
+<style>
+.notif-chip {
+  display:inline-block; padding:0.2rem 0.55rem; border-radius:4px;
+  font-size:0.75rem; font-weight:600; background:#eee; color:#444; white-space:nowrap;
+}
+.notif-vote_needed { background:#fff3cd; color:#856404; }
+.notif-committee_approved { background:#d4edda; color:#155724; }
+.notif-committee_declined { background:#f8d7da; color:#721c24; }
+.notif-returned_to_officer { background:#e7f1ff; color:#004085; }
+.notif-level_advanced { background:#e2e3e5; color:#383d41; }
+.notif-document_uploaded, .notif-document_verified, .notif-document_requested { background:#d1ecf1; color:#0c5460; }
+.notif-document_needs_review, .notif-document_rejected { background:#f8d7da; color:#721c24; }
+.notif-collateral_assigned, .notif-collateral_submitted,
+.notif-collateral_engineering_return, .notif-collateral_engineering_approved { background:#e8f4ec; color:#064420; }
+</style>
+
 <h1>Notifications</h1>
+
+<form method="get" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:1rem;">
+  <label for="id_kind"><strong>Type:</strong></label>
+  <select id="id_kind" name="kind" class="form-control" style="width:auto; min-width:200px;">
+    <option value="">All</option>
+    {% for val, label in kind_choices %}
+    <option value="{{ val }}" {% if selected_kind == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-blue">Filter</button>
+  {% if selected_kind %}<a href="{% url 'loan_notifications_list' %}" class="btn btn-gray">Clear</a>{% endif %}
+</form>
+
 <form method="post" style="margin-bottom:1rem;">
   {% csrf_token %}
   <input type="hidden" name="mark_all_read" value="1">
   <button type="submit" class="btn btn-gray">Mark all as read</button>
 </form>
+
 {% if notifications %}
 <table>
   <thead>
-    <tr><th>When</th><th>Title</th><th>Message</th><th></th></tr>
+    <tr><th>When</th><th>Type</th><th>Title</th><th>Message</th><th></th></tr>
   </thead>
   <tbody>
     {% for n in notifications %}
     <tr style="{% if not n.is_read %}font-weight:600; background:#f8f9fa;{% endif %}">
       <td>{{ n.created_at|date:"SHORT_DATETIME_FORMAT" }}</td>
+      <td><span class="notif-chip notif-{{ n.kind }}">{{ n.get_kind_display }}</span></td>
       <td>{{ n.title }}</td>
       <td>{{ n.message|truncatewords:30 }}</td>
       <td>
@@ -26,6 +57,6 @@
   </tbody>
 </table>
 {% else %}
-<p>No notifications yet.</p>
+<p>{% if selected_kind %}No notifications of this type.{% else %}No notifications yet.{% endif %}</p>
 {% endif %}
 {% endblock %}

@@ -620,6 +620,8 @@
                         {% include "includes/dropdown_link.html" with href=collateral_types_url icon="book" label="Collateral types" only %}
                         {% url 'manage_loan_application_document_types' as doc_types_url %}
                         {% include "includes/dropdown_link.html" with href=doc_types_url icon="loan" label="Document types" only %}
+                        {% url 'manage_approval_committees' as committees_url %}
+                        {% include "includes/dropdown_link.html" with href=committees_url icon="users" label="Approval committees" only %}
                         {% url 'collateral:collateral_policy_config' as policy_url %}
                         {% include "includes/dropdown_link.html" with href=policy_url icon="shield" label="Collateral policy" only %}
                         {% if user.role == 'superadmin' %}

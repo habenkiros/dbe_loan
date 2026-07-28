@@ -18,8 +18,11 @@
 .sheet2-table th { background: #064420; color: white; font-weight: 600; }
 .sheet2-table tbody tr:nth-child(even) { background: #f9fbf9; }
 .sheet2-table tbody tr:hover { background: #f0f8f0; }
-.sheet2-table input[type="text"], .sheet2-table input[type="number"], .sheet2-table select { width: 100%; max-width: 120px; }
-.sheet2-table textarea { width: 100%; min-width: 100px; }
+.sheet2-table input[type="text"], .sheet2-table input[type="number"] { width: 100%; max-width: 120px; }
+.sheet2-table select.rating-select,
+.sheet2-table select.form-control { width: 100%; min-width: 220px; max-width: 100%; }
+.sheet2-table .factor-label { font-weight: 600; color: #1a3d28; }
+.sheet2-table textarea { width: 100%; min-width: 140px; }
 .sheet2-table .col-delete { width: 2.5rem; text-align: center; }
 .sheet2-pass-box { background: #e8f5e9; border: 2px solid #28a745; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
 .sheet2-pass-box label { font-weight: 700; color: #155724; }
@@ -85,6 +88,31 @@
         <div class="field">{{ form.total_number_repaid_loans.label_tag }}{{ form.total_number_repaid_loans }}</div>
         <div class="field">{{ form.credit_history_max_score.label_tag }}{{ form.credit_history_max_score }}</div>
       </div>
+    </div>
+
+    <div class="sheet2-section">
+      <h3>Live account transactions (banking conduct)</h3>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">
+        Feeds the <strong>Banking &amp; bureau</strong> pillar on the Sheet 6 scorecard (MSME &amp; corporate).
+        Uses core banking when configured; otherwise a deterministic mock from the customer number.
+      </p>
+      {% with bb=banking_behavior %}
+      <div class="sheet2-grid">
+        <div class="field"><label>Provider</label><div>{{ bb.provider|default:"—" }}</div></div>
+        <div class="field"><label>Transactions</label><div>{{ bb.tx_count|default:"—" }}</div></div>
+        <div class="field"><label>Avg monthly credit</label><div>{{ bb.avg_monthly_credit|default:"—" }}</div></div>
+        <div class="field"><label>Turnover / installment</label><div>{{ bb.turnover_vs_installment|default:"—" }}</div></div>
+        <div class="field"><label>Inflow CV</label><div>{{ bb.inflow_cv|default:"—" }}</div></div>
+        <div class="field"><label>NSF / bounces</label><div>{{ bb.nsf_count|default:"—" }}</div></div>
+        <div class="field"><label>Neg. balance days</label><div>{{ bb.negative_balance_days|default:"—" }}</div></div>
+        <div class="field"><label>Credit months</label><div>{{ bb.credit_months|default:"—" }}</div></div>
+        <div class="field"><label>Last refresh</label><div>{{ appraisal.banking_refreshed_at|default:bb.refreshed_at|default:"—" }}</div></div>
+      </div>
+      {% endwith %}
+      <p style="margin-top:0.75rem;">
+        <button type="submit" name="refresh_banking" value="1" class="btn btn-blue">Refresh banking transactions</button>
+        <span class="help" style="margin-left:0.5rem;">Requires customer number on the loan / Sheet 1.</span>
+      </p>
     </div>
 
     <div class="sheet2-section">
@@ -155,10 +183,10 @@
 
     <div class="sheet2-section">
       <h3>10 qualitative factors (rate and justify each)</h3>
-      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Each factor has its own rating options (per Excel). Add observation / justification in Notes.</p>
+      <p style="margin:0 0 0.5rem 0; font-size:0.9rem;">Each factor has its own rating options (per Excel). Earned score updates when you pick a rating. Add observation / justification in Notes.</p>
       {{ qual_formset.management_form }}
       <div class="table-container">
-        <table class="sheet2-table">
+        <table class="sheet2-table" id="qual-factors-table">
           <thead>
             <tr>
               <th>Factor</th>
@@ -170,17 +198,34 @@
           </thead>
           <tbody>
             {% for f in qual_formset %}
-            <tr>
-              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}</td>
+            <tr class="qual-row" data-factor-key="{{ f.instance.factor_key }}">
+              <td>
+                {% if f.id %}{{ f.id }}{% endif %}{{ f.factor_key }}{{ f.display_order }}{{ f.factor_name }}
+                <span class="factor-label">{{ f.instance.factor_name|default:f.instance.factor_key }}</span>
+                {% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}
+              </td>
               <td>{{ f.rating }}</td>
-              <td>{{ f.weight }}</td>
-              <td>{{ f.earned_score }}</td>
+              <td class="weight-cell">{{ f.instance.weight|default:qual_factor_weight|floatformat:2 }}</td>
+              <td class="earned-cell">
+                <strong class="earned-value">{% if f.instance.earned_score is not None %}{{ f.instance.earned_score|floatformat:2 }}{% else %}—{% endif %}</strong>
+              </td>
               <td>{{ f.notes }}</td>
             </tr>
+            {% empty %}
+            <tr><td colspan="5">No qualitative factors seeded yet. Re-open this step to generate the 10 factors.</td></tr>
             {% endfor %}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right;font-weight:700;">Live total (of 100)</td>
+              <td colspan="2"><strong id="qual-live-total">{{ appraisal.qualitative_total_score|default:"—" }}</strong></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
+      {% if qual_formset.errors %}
+      <div class="form-errors" style="margin-top:0.5rem;background:#fee;border:1px solid #c00;padding:0.5rem;border-radius:6px;">{{ qual_formset.errors }}</div>
+      {% endif %}
     </div>
 
     <div class="sheet2-section">
@@ -208,4 +253,52 @@
     </div>
   </div>
 </form>
+
+<script>
+(function () {
+  var SCORE_MAP = {{ qual_score_map_json|default:"{}"|safe }};
+  var DEFAULT_WEIGHT = {{ qual_factor_weight|default:10 }};
+
+  function earnedFor(factorKey, rating) {
+    if (!rating) return null;
+    var byFactor = SCORE_MAP[factorKey] || {};
+    if (Object.prototype.hasOwnProperty.call(byFactor, rating)) return byFactor[rating];
+    var stripped = String(rating).trim();
+    if (Object.prototype.hasOwnProperty.call(byFactor, stripped)) return byFactor[stripped];
+    return null;
+  }
+
+  function refreshRow(row) {
+    var select = row.querySelector('select.rating-select');
+    var earnedEl = row.querySelector('.earned-value');
+    if (!select || !earnedEl) return 0;
+    var key = select.getAttribute('data-factor-key') || row.getAttribute('data-factor-key') || '';
+    var earned = earnedFor(key, select.value);
+    if (earned == null) {
+      earnedEl.textContent = '—';
+      return 0;
+    }
+    earnedEl.textContent = Number(earned).toFixed(2);
+    return Number(earned);
+  }
+
+  function refreshAll() {
+    var total = 0;
+    document.querySelectorAll('#qual-factors-table tbody tr.qual-row').forEach(function (row) {
+      total += refreshRow(row);
+    });
+    var live = document.getElementById('qual-live-total');
+    if (live) live.textContent = total.toFixed(2);
+    var totalInput = document.getElementById('id_qualitative_total_score');
+    if (totalInput) totalInput.value = total.toFixed(2);
+    var passBox = document.getElementById('id_qualitative_passed');
+    if (passBox) passBox.checked = total >= 75;
+  }
+
+  document.querySelectorAll('#qual-factors-table select.rating-select').forEach(function (sel) {
+    sel.addEventListener('change', refreshAll);
+  });
+  refreshAll();
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{% if is_create %}Add approval level{% else %}Edit {{ level.name }}{% endif %}{% endblock %}
+{% block content %}
+<style>
+.committee-edit fieldset { border:1px solid #ddd; border-radius:8px; padding:1rem 1.25rem; margin:1rem 0; }
+.committee-edit legend { font-weight:600; color:#064420; padding:0 0.35rem; }
+.committee-edit .rule-row { display:grid; grid-template-columns: 1.2fr 1.4fr 1.4fr 1.2fr auto auto; gap:0.5rem; align-items:end; margin-bottom:0.65rem; padding-bottom:0.65rem; border-bottom:1px solid #eee; }
+.committee-edit .rule-row label { display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.15rem; }
+.committee-edit .err { color:#a00; font-size:0.85rem; }
+@media (max-width: 900px) {
+  .committee-edit .rule-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<div class="committee-edit">
+  <p class="help"><a href="{% url 'manage_approval_committees' %}">← Approval committees</a></p>
+  <h1>{% if is_create %}Add approval level{% else %}Edit — {{ level.name }}{% endif %}</h1>
+  {% if scope_help %}<p class="help">{{ scope_help }}</p>{% endif %}
+  <p class="help">Configure the level settings and who may vote, then save.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    <fieldset>
+      <legend>Level settings</legend>
+      {% if form.non_field_errors %}<div class="err">{{ form.non_field_errors }}</div>{% endif %}
+      {% if is_create %}
+      <p>{{ form.name.label_tag }} {{ form.name }}
+        {% if form.name.errors %}<span class="err">{{ form.name.errors|striptags }}</span>{% endif %}
+      </p>
+      <p>{{ form.key.label_tag }} {{ form.key }}
+        {% if form.key.help_text %}<br><small>{{ form.key.help_text }}</small>{% endif %}
+        {% if form.key.errors %}<br><span class="err">{{ form.key.errors|striptags }}</span>{% endif %}
+      </p>
+      {% else %}
+      <p><strong>Key:</strong> <code>{{ level.key }}</code> <small>(stable id — not editable)</small></p>
+      <p>{{ form.name.label_tag }} {{ form.name }}</p>
+      {% endif %}
+      <p>{{ form.voter_scope.label_tag }} {{ form.voter_scope }}</p>
+      <p>{{ form.sequence_order.label_tag }} {{ form.sequence_order }}
+         &nbsp; <label>{{ form.is_active }} Active</label></p>
+      <p>{{ form.min_approvals_required.label_tag }} {{ form.min_approvals_required }}
+         &nbsp; {{ form.min_declines_required.label_tag }} {{ form.min_declines_required }}</p>
+      <p>
+        {{ form.min_loan_amount.label_tag }} {{ form.min_loan_amount }}
+        &nbsp; {{ form.max_loan_amount.label_tag }} {{ form.max_loan_amount }}
+      </p>
+      <p class="help">Leave both amount fields blank to always include this level. Amount uses Sheet 6 recommended amount when set.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Who may vote at this level</legend>
+      {% if formset.non_form_errors %}<div class="err">{{ formset.non_form_errors }}</div>{% endif %}
+      {% for rf in formset %}
+      <div class="rule-row">
+        {{ rf.id }}
+        <div>
+          <label>Type</label>
+          {{ rf.participant_type }}
+          {% if rf.participant_type.errors %}<div class="err">{{ rf.participant_type.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Role</label>
+          {{ rf.role }}
+          {% if rf.role.errors %}<div class="err">{{ rf.role.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label>User</label>
+          {{ rf.user }}
+          {% if rf.user.errors %}<div class="err">{{ rf.user.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Label</label>
+          {{ rf.label }}
+        </div>
+        <div>
+          <label>Active</label>
+          {{ rf.is_active }}
+        </div>
+        <div>
+          {% if rf.instance.pk %}
+          <label>Delete</label>
+          {{ rf.DELETE }}
+          {% endif %}
+        </div>
+        {% if rf.non_field_errors %}
+        <div style="grid-column:1 / -1;" class="err">{{ rf.non_field_errors }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      <p class="help">Add rows for roles or named users. For branch/district scope, prefer roles so the right staff are included automatically.</p>
+    </fieldset>
+
+    <p>
+      <button type="submit" class="btn btn-green">{% if is_create %}Create level{% else %}Save{% endif %}</button>
+      <a href="{% url 'manage_approval_committees' %}" class="btn btn-gray">Cancel</a>
+    </p>
+  </form>
+
+  {% if not is_create and level %}
+  <form method="post" action="{% url 'delete_approval_committee_level' level.id %}"
+        style="margin-top:1.5rem; padding-top:1rem; border-top:1px dashed #ccc;"
+        onsubmit="return confirm('Delete this approval level permanently? Only works if unused.');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-gray">Delete level</button>
+    <span class="help">If the level has votes or loans in progress, deactivate it instead.</span>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -215,17 +215,18 @@ APPRAISAL_SHEET_SPECS: tuple[SheetRequirementSpec, ...] = (
 
 
 def _collateral_boq_status(loan_request) -> Dict[str, Any]:
-    """Collateral module requirements that feed Sheet (5)."""
-    from collateral.models import Building, BuildingValuation
+    """
+    Collateral module requirements that feed Sheet (5).
+
+    Excel Sheet 5 accepts immovable (building and/or land), moveable, etc.
+    Require at least one registered collateral evidence path — not building-only.
+    """
+    from collateral.models import Building, BuildingValuation, LandValuation, OtherCollateralItem
 
     buildings = list(Building.objects.filter(loan_request=loan_request))
-    if not buildings:
-        return {
-            'complete': False,
-            'missing': ['At least one building registered for this loan'],
-            'building_count': 0,
-            'valuation_row_count': 0,
-        }
+    has_land = LandValuation.objects.filter(loan_request=loan_request).exists()
+    has_other = OtherCollateralItem.objects.filter(loan_request=loan_request).exists()
+
     missing = []
     total_rows = 0
     for b in buildings:
@@ -235,11 +236,36 @@ def _collateral_boq_status(loan_request) -> Dict[str, Any]:
             missing.append(f'Building "{b.name}": city/woreda not set (required for unit prices)')
         if rows == 0:
             missing.append(f'Building "{b.name}": no valuation line items')
+
+    if buildings:
+        return {
+            'complete': len(missing) == 0,
+            'missing': missing,
+            'building_count': len(buildings),
+            'valuation_row_count': total_rows,
+            'has_land': has_land,
+            'has_other': has_other,
+        }
+
+    if has_land or has_other:
+        return {
+            'complete': True,
+            'missing': [],
+            'building_count': 0,
+            'valuation_row_count': 0,
+            'has_land': has_land,
+            'has_other': has_other,
+        }
+
     return {
-        'complete': len(missing) == 0,
-        'missing': missing,
-        'building_count': len(buildings),
-        'valuation_row_count': total_rows,
+        'complete': False,
+        'missing': [
+            'Register at least one building valuation, land valuation, or other collateral item',
+        ],
+        'building_count': 0,
+        'valuation_row_count': 0,
+        'has_land': False,
+        'has_other': False,
     }
 
 

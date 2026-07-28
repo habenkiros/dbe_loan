@@ -1,4 +1,14 @@
 {% load static %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script>
+window.COLLATERAL_MAP_PROVIDER = {
+  geocode: "{{ map_provider.geocode_provider|default:'nominatim'|escapejs }}",
+  tiles: "{{ map_provider.map_tiles_provider|default:'leaflet_osm'|escapejs }}",
+  gebetaConfigured: {% if map_provider.gebeta_maps_configured %}true{% else %}false{% endif %}
+};
+</script>
 <script src="{% static 'js/collateral_map.js' %}"></script>
+{% if map_provider.geocode_provider == 'gebeta' %}
+<!-- Declared-address geocoding uses Gebeta Maps (https://docs.gebeta.app/docs). Map tiles still Leaflet/OSM until GEBETA_MAPS_TILES_PROVIDER=gebeta. -->
+{% endif %}

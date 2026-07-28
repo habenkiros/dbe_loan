@@ -2,7 +2,11 @@
 {% block title %}Engineering QA queue{% endblock %}
 {% block content %}
 <h2>Collateral — engineering QA queue</h2>
+{% if is_branch_manager_view %}
+<p class="help">Read-only view of submissions from your branch awaiting engineering review. Approving/returning is done by engineering head or the assigned engineer.</p>
+{% else %}
 <p class="help">Submitted collateral awaiting engineering review (when engineering team mode is enabled).</p>
+{% endif %}
 {% if pending_loans %}
 <div class="table-container">
   <table>
@@ -26,7 +30,13 @@
         <td>{{ lr.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}</td>
         <td>{% if lr.collateral_submitted_by %}{{ lr.collateral_submitted_by.username }}{% else %}—{% endif %}</td>
         <td>{% if lr.assigned_engineer %}{{ lr.assigned_engineer.username }}{% else %}—{% endif %}</td>
-        <td><a href="{% url 'collateral:engineering_qa_review' lr.id %}" class="btn btn-blue">Review</a></td>
+        <td>
+          {% if can_act_on_queue %}
+          <a href="{% url 'collateral:engineering_qa_review' lr.id %}" class="btn btn-blue">Review</a>
+          {% else %}
+          <a href="{% url 'collateral:summary' lr.id %}" class="btn btn-gray">View summary</a>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -35,5 +45,9 @@
 {% else %}
 <p>No collateral submissions pending engineering review.</p>
 {% endif %}
-<p><a href="{% url 'collateral:dashboard' %}">← Collateral dashboard</a></p>
+<p><a href="{% url 'collateral:dashboard' %}">← Collateral dashboard</a>
+  {% if user.role == 'engineering_head' or user.role == 'admin' or user.role == 'superadmin' %}
+  · <a href="{% url 'loans_sent_for_collateral' %}">Assign engineers</a>
+  {% endif %}
+</p>
 {% endblock %}

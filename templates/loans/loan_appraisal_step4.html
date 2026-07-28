@@ -66,14 +66,19 @@
     {% endfor %}
 
     <div class="sheet4-section">
-      <h3>Risk category, eligibility &amp; sign-off</h3>
+      <h3>Risk category, eligibility &amp; loan-officer sign-off</h3>
+      <p class="meta" style="margin-top:-0.5rem;margin-bottom:1rem;color:#445;">
+        The <strong>loan officer</strong> screens, checks, and confirms E&amp;S eligibility here.
+        The <strong>credit committee</strong> signs the overall loan decision later on the
+        committee appraisal pack / voting — not on this sheet.
+      </p>
       <div class="table-container">
         <table class="form-table sheet4-summary-table">
-          <tr><td>{{ form.es_risk_category.label }}</td><td>{{ form.es_risk_category }}</td></tr>
-          <tr><td>{{ form.es_eligibility_decision.label }}</td><td>{{ form.es_eligibility_decision }}</td></tr>
-          <tr><td>{{ form.es_screened_by.label }}</td><td>{{ form.es_screened_by }}</td></tr>
-          <tr><td>{{ form.es_checked_by.label }}</td><td>{{ form.es_checked_by }}</td></tr>
-          <tr><td>{{ form.es_approved_by.label }}</td><td>{{ form.es_approved_by }}</td></tr>
+          <tr><td>{{ form.es_risk_category.label }}</td><td>{{ form.es_risk_category }}{% if form.es_risk_category.help_text %}<div class="helptext">{{ form.es_risk_category.help_text }}</div>{% endif %}</td></tr>
+          <tr><td>{{ form.es_eligibility_decision.label }}</td><td>{{ form.es_eligibility_decision }}{% if form.es_eligibility_decision.help_text %}<div class="helptext">{{ form.es_eligibility_decision.help_text }}</div>{% endif %}</td></tr>
+          <tr><td>{{ form.es_screened_by.label }}</td><td>{{ form.es_screened_by }}{% if form.es_screened_by.help_text %}<div class="helptext">{{ form.es_screened_by.help_text }}</div>{% endif %}</td></tr>
+          <tr><td>{{ form.es_checked_by.label }}</td><td>{{ form.es_checked_by }}{% if form.es_checked_by.help_text %}<div class="helptext">{{ form.es_checked_by.help_text }}</div>{% endif %}</td></tr>
+          <tr><td>{{ form.es_approved_by.label }}</td><td>{{ form.es_approved_by }}{% if form.es_approved_by.help_text %}<div class="helptext">{{ form.es_approved_by.help_text }}</div>{% endif %}</td></tr>
           <tr><td>{{ form.es_assessment_date.label }}</td><td>{{ form.es_assessment_date }}</td></tr>
           <tr><td>{{ form.es_notes.label }}</td><td>{{ form.es_notes }}</td></tr>
         </table>

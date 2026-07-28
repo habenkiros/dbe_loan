@@ -245,7 +245,7 @@
           <tbody>
             {% for f in purpose_formset %}
             <tr style="border-bottom:1px solid #e0e8e0;">
-              <td style="padding:0.35rem;">{{ f.id }}{{ f.description }}</td>
+              <td style="padding:0.35rem;">{{ f.id }}{{ f.display_order }}{{ f.description }}{% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}</td>
               <td style="padding:0.35rem;">{{ f.quantity }}</td>
               <td style="padding:0.35rem;">{{ f.unit_price }}</td>
               <td style="padding:0.35rem;">{{ f.value }}</td>
@@ -255,11 +255,17 @@
           </tbody>
         </table>
       </div>
+      {% if purpose_formset.non_form_errors %}
+      <div class="form-errors" style="margin-top:0.5rem;background:#fee;border:1px solid #c00;padding:0.5rem;border-radius:6px;">{{ purpose_formset.non_form_errors }}</div>
+      {% endif %}
       {% if purpose_formset.errors %}<div class="form-errors" style="margin-top:0.5rem;">{{ purpose_formset.errors }}</div>{% endif %}
     </div>
     {% else %}
-      {{ purpose_formset.management_form }}
-      {% for f in purpose_formset %}{{ f.id }}{% endfor %}
+      {# Corporate: keep purpose lines server-side; do not POST a partial formset #}
+      <input type="hidden" name="purpose-TOTAL_FORMS" value="0">
+      <input type="hidden" name="purpose-INITIAL_FORMS" value="0">
+      <input type="hidden" name="purpose-MIN_NUM_FORMS" value="0">
+      <input type="hidden" name="purpose-MAX_NUM_FORMS" value="1000">
     {% endif %}
 
     <div class="sheet1-section">

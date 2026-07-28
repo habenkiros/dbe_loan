@@ -9,7 +9,7 @@
 <h2>Land valuation</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
 <p>
-    <a href="{% url 'collateral:land_field_visit' loan_request.id %}" class="field-btn field-btn-primary" style="padding:0.4rem 0.8rem;font-size:0.9rem;display:inline-block;">Tablet field visit (recommended)</a>
+    <a href="{% url 'collateral:land_field_visit' loan_request.id %}" class="field-btn field-btn-primary" style="padding:0.4rem 0.8rem;font-size:0.9rem;display:inline-block;">Continue land field visit</a>
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
     &nbsp;|&nbsp;
@@ -17,6 +17,7 @@
     &nbsp;|&nbsp;
     <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
 </p>
+<p class="help">Field visit (GPS + photos) is the primary path. Desktop form below is for value edits only.</p>
 {% if readiness %}
 <p>Field readiness: {% if readiness.ready %}<span class="field-check-ok">Ready</span>{% else %}<span class="field-check-fail">Incomplete</span>{% endif %}
  — {{ readiness.image_count }}/{{ readiness.min_images }} photos</p>

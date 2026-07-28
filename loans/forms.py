@@ -8,6 +8,7 @@ from .models import (
     LoanRequestBasicInfo, AppraisalPurposeLine, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
     AppraisalRiskMitigation, AppraisalCondition,
     AppraisalESChecklistItem,
+    ApprovalCommitteeLevel, ApprovalCommitteeMemberRule,
     QUALITATIVE_FACTOR_KEYS, qualitative_rating_field_choices,
     es_checklist_item_count,
 )
@@ -328,9 +329,18 @@ class AppraisalPurposeLineForm(forms.ModelForm):
             'display_order': forms.HiddenInput(),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hidden field must not block Save when omitted from the template/POST
+        self.fields['display_order'].required = False
+        if self.fields['display_order'].initial is None and not self.instance.pk:
+            self.fields['display_order'].initial = 0
+
     def clean(self):
         from decimal import Decimal
         data = super().clean()
+        if data.get('display_order') in (None, ''):
+            data['display_order'] = self.instance.display_order or 0
         qty = data.get('quantity')
         price = data.get('unit_price')
         if qty is not None and price is not None and data.get('value') is None:
@@ -378,38 +388,59 @@ class AppraisalQualitativeFactorForm(forms.ModelForm):
     """One qualitative factor (Sheet 2) – rating dropdown per Excel (options vary by factor_key)."""
     class Meta:
         model = AppraisalQualitativeFactor
+        # weight / earned_score are computed server-side (+ live JS); not posted.
         fields = [
             'factor_key', 'factor_name',
-            'rating', 'weight', 'earned_score',
+            'rating',
             'notes', 'display_order',
         ]
         widgets = {
-            'rating': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['factor_key'].widget = forms.HiddenInput()
-        self.fields['factor_name'].widget.attrs['readonly'] = True
-        self.fields['factor_name'].widget.attrs['class'] = 'form-control'
+        self.fields['factor_name'].widget = forms.HiddenInput()
         self.fields['display_order'].widget = forms.HiddenInput()
-        self.fields['rating'].required = False
-        # Computed by Excel mapping; show as readonly in UI.
-        self.fields['weight'].disabled = True
-        self.fields['earned_score'].disabled = True
+        self.fields['display_order'].required = False
 
         factor_key = ''
         if getattr(self.instance, 'pk', None) and self.instance.factor_key:
             factor_key = self.instance.factor_key
+        elif self.data is not None and self.prefix:
+            # Bound formset POST: factor_key comes as hidden input
+            factor_key = self.data.get(f'{self.prefix}-factor_key') or ''
         elif self.initial.get('factor_key'):
             factor_key = self.initial['factor_key']
 
         choices = qualitative_rating_field_choices(factor_key)
-        current = getattr(self.instance, 'rating', None) or self.initial.get('rating') or ''
+        current = ''
+        if self.data is not None and self.prefix:
+            current = self.data.get(f'{self.prefix}-rating') or ''
+        if not current:
+            current = getattr(self.instance, 'rating', None) or self.initial.get('rating') or ''
         if current and not any(current == c[0] for c in choices):
-            choices = list(choices) + [(current, current)]
-        self.fields['rating'].choices = choices
+            # Tolerate Excel trailing-space / drift vs stored value
+            stripped = current.strip()
+            matched = next((c[0] for c in choices if c[0] and c[0].strip() == stripped), None)
+            if matched:
+                current = matched
+            else:
+                choices = list(choices) + [(current, current)]
+
+        # Must use ChoiceField — CharField + Select does not render options from .choices
+        self.fields['rating'] = forms.ChoiceField(
+            choices=choices,
+            required=False,
+            widget=forms.Select(attrs={
+                'class': 'form-control rating-select',
+                'data-factor-key': factor_key,
+            }),
+            label='Rating',
+        )
+        if current:
+            self.fields['rating'].initial = current
 
 
 def get_credit_history_formset():
@@ -474,7 +505,7 @@ class AppraisalRiskMitigationForm(forms.ModelForm):
     class Meta:
         model = AppraisalRiskMitigation
         fields = [
-            'risk', 'severity', 'mitigation', 'owner', 'due_date', 'status', 'display_order',
+            'risk', 'severity', 'mitigation', 'owner', 'due_date', 'status',
         ]
         widgets = {
             'mitigation': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -486,6 +517,14 @@ class AppraisalRiskMitigationForm(forms.ModelForm):
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
 
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        if obj.display_order is None:
+            obj.display_order = 0
+        if commit:
+            obj.save()
+        return obj
+
 
 def get_risk_mitigation_formset():
     from django.forms import inlineformset_factory
@@ -493,7 +532,7 @@ def get_risk_mitigation_formset():
         LoanAppraisal,
         AppraisalRiskMitigation,
         form=AppraisalRiskMitigationForm,
-        extra=3,
+        extra=1,
         can_delete=True,
     )
 
@@ -502,7 +541,7 @@ class AppraisalConditionForm(forms.ModelForm):
     class Meta:
         model = AppraisalCondition
         fields = [
-            'condition_type', 'description', 'responsible_party', 'due_date', 'fulfilled', 'display_order',
+            'condition_type', 'description', 'responsible_party', 'due_date', 'fulfilled',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -516,6 +555,14 @@ class AppraisalConditionForm(forms.ModelForm):
                 self.fields[name].widget.attrs.setdefault('class', 'form-control')
         self.fields['fulfilled'].widget.attrs.setdefault('class', 'form-check-input')
 
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        if obj.display_order is None:
+            obj.display_order = 0
+        if commit:
+            obj.save()
+        return obj
+
 
 def get_conditions_formset():
     from django.forms import inlineformset_factory
@@ -523,7 +570,7 @@ def get_conditions_formset():
         LoanAppraisal,
         AppraisalCondition,
         form=AppraisalConditionForm,
-        extra=3,
+        extra=1,
         can_delete=True,
     )
 
@@ -743,7 +790,7 @@ class AppraisalSheet3Form(forms.ModelForm):
 
 
 class AppraisalESForm(forms.ModelForm):
-    """Sheet (4) E&S Assessment."""
+    """Sheet (4) E&S Assessment — loan officer screening; committee signs later."""
     class Meta:
         model = LoanAppraisal
         fields = [
@@ -755,15 +802,49 @@ class AppraisalESForm(forms.ModelForm):
             'es_assessment_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'es_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
+        labels = {
+            'es_risk_category': 'E&S risk category',
+            'es_eligibility_decision': 'E&S eligibility (loan officer)',
+            'es_screened_by': 'Screened by (loan officer)',
+            'es_checked_by': 'Checked by (loan officer)',
+            'es_approved_by': 'E&S confirmed by (loan officer)',
+            'es_assessment_date': 'Assessment date',
+            'es_notes': 'E&S notes / action points',
+        }
+        help_texts = {
+            'es_eligibility_decision': (
+                'Loan officer E&S screening result. Credit committee signs the loan decision '
+                'separately on the committee pack / voting — not on this sheet.'
+            ),
+            'es_screened_by': 'Officer who completed the E&S checklist screening.',
+            'es_checked_by': 'Officer who verified checklist answers and mitigations.',
+            'es_approved_by': (
+                'Loan officer confirmation of E&S eligibility. Not a credit-committee signature.'
+            ),
+        }
 
     def __init__(self, *args, **kwargs):
+        officer = kwargs.pop('officer', None)
         super().__init__(*args, **kwargs)
         from .models import CustomUser
-        qs = CustomUser.objects.filter(is_active=True).order_by('username')
+        qs = CustomUser.objects.filter(
+            is_active=True,
+            role__in=('loan_officer', 'branch_manager'),
+        ).order_by('username')
         for f in ('es_screened_by', 'es_checked_by', 'es_approved_by'):
             self.fields[f].queryset = qs
+            self.fields[f].required = False
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', 'form-control')
+        # Default empty sign-off fields to the assigned / current loan officer
+        if officer and officer.is_authenticated:
+            for f in ('es_screened_by', 'es_checked_by', 'es_approved_by'):
+                if not self.initial.get(f) and not getattr(self.instance, f'{f}_id', None):
+                    self.initial[f] = officer.pk
+            if not self.initial.get('es_assessment_date') and not self.instance.es_assessment_date:
+                from django.utils import timezone
+                self.initial['es_assessment_date'] = timezone.localdate()
+
 
 
 class AppraisalCollateralForm(forms.ModelForm):
@@ -855,6 +936,127 @@ class CommitteeVoteForm(forms.Form):
     comments = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+    )
+
+
+class ApprovalCommitteeLevelForm(forms.ModelForm):
+    """Settings UI: edit an approval committee level (thresholds + routing)."""
+
+    class Meta:
+        model = ApprovalCommitteeLevel
+        fields = [
+            'name', 'voter_scope', 'sequence_order', 'is_active',
+            'min_approvals_required', 'min_declines_required',
+            'min_loan_amount', 'max_loan_amount',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'voter_scope': forms.Select(attrs={'class': 'form-control'}),
+            'sequence_order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'is_active': forms.CheckboxInput(),
+            'min_approvals_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'min_declines_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'min_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'max_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+
+
+class ApprovalCommitteeLevelCreateForm(forms.ModelForm):
+    """Settings UI: add a new custom approval level."""
+
+    class Meta:
+        model = ApprovalCommitteeLevel
+        fields = [
+            'name', 'key', 'voter_scope', 'sequence_order', 'is_active',
+            'min_approvals_required', 'min_declines_required',
+            'min_loan_amount', 'max_loan_amount',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Regional risk committee'}),
+            'key': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. regional_risk (leave blank to auto-generate)',
+            }),
+            'voter_scope': forms.Select(attrs={'class': 'form-control'}),
+            'sequence_order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'is_active': forms.CheckboxInput(),
+            'min_approvals_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'min_declines_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'min_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'max_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['key'].required = False
+        self.fields['key'].help_text = 'Unique slug. Leave blank to generate from the name.'
+        self.fields['min_loan_amount'].required = False
+        self.fields['max_loan_amount'].required = False
+
+    def clean_key(self):
+        from django.utils.text import slugify
+
+        key = (self.cleaned_data.get('key') or '').strip()
+        name = (self.data.get('name') or '').strip()
+        if not key:
+            key = slugify(name).replace('-', '_')[:50]
+        key = slugify(key).replace('-', '_')[:50]
+        if not key:
+            raise forms.ValidationError('Provide a name or key for this level.')
+        qs = ApprovalCommitteeLevel.objects.filter(key=key)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(f'Key “{key}” is already used. Choose another.')
+        return key
+
+
+class ApprovalCommitteeMemberRuleForm(forms.ModelForm):
+    """Who may vote at a committee level (by role or named user)."""
+
+    class Meta:
+        model = ApprovalCommitteeMemberRule
+        fields = ['participant_type', 'role', 'user', 'label', 'is_active']
+        widgets = {
+            'participant_type': forms.Select(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
+            'user': forms.Select(attrs={'class': 'form-control'}),
+            'label': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = CustomUser.objects.filter(is_active=True).order_by('username')
+        self.fields['user'].required = False
+        self.fields['role'].required = False
+        self.fields['label'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.cleaned_data.get('DELETE'):
+            return cleaned
+        ptype = cleaned.get('participant_type')
+        role = cleaned.get('role')
+        user = cleaned.get('user')
+        if ptype == ApprovalCommitteeMemberRule.PARTICIPANT_ROLE:
+            if not role:
+                raise forms.ValidationError('Select a role when type is “Anyone with role”.')
+            cleaned['user'] = None
+        elif ptype == ApprovalCommitteeMemberRule.PARTICIPANT_USER:
+            if not user:
+                raise forms.ValidationError('Select a user when type is “Specific user”.')
+            cleaned['role'] = ''
+        return cleaned
+
+
+def get_approval_committee_member_rule_formset(extra=1):
+    return forms.inlineformset_factory(
+        ApprovalCommitteeLevel,
+        ApprovalCommitteeMemberRule,
+        form=ApprovalCommitteeMemberRuleForm,
+        extra=extra,
+        can_delete=True,
     )
 
 

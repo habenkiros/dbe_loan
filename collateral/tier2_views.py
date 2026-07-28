@@ -24,8 +24,11 @@ def engineering_qa_queue(request):
         messages.info(request, 'Engineering QA is not enabled in collateral estimation config.')
         return redirect('collateral:dashboard')
     requests_qs = engineering_pending_loans(request.user)
+    can_act = role in ('engineer', 'engineering_head', 'admin', 'superadmin')
     return render(request, 'collateral/engineering_qa_queue.html', {
         'pending_loans': requests_qs,
+        'can_act_on_queue': can_act,
+        'is_branch_manager_view': role == 'branch_manager',
     })
 
 
@@ -94,11 +97,52 @@ def engineering_qa_review(request, loan_request_id):
         return redirect('collateral:engineering_qa_review', loan_request_id=loan_request_id)
 
     from collateral.coverage import compute_coverage_adequacy
+    from collateral.field_utils import get_loan_collateral_readiness
     from collateral.pipeline import collateral_pipeline_stage, pipeline_stage_label
+    from collateral.models import Building, BuildingImage, BuildingValuation, LandValuation, LandValuationImage
+    from loans.services.appraisal_prefill import compute_collateral_totals
+
+    readiness = get_loan_collateral_readiness(loan_request)
+    totals = compute_collateral_totals(loan_request)
+    photo_previews = []
+    for b in Building.objects.filter(loan_request=loan_request):
+        for img in BuildingImage.objects.filter(building=b).order_by('-created_at')[:4]:
+            if img.image:
+                photo_previews.append({
+                    'url': img.image.url,
+                    'label': f'{b.name} — {img.get_photo_type_display}',
+                    'has_gps': bool(img.gps_lat),
+                })
+    try:
+        land = LandValuation.objects.get(loan_request=loan_request)
+        for img in LandValuationImage.objects.filter(land_valuation=land).order_by('-created_at')[:4]:
+            if img.image:
+                photo_previews.append({
+                    'url': img.image.url,
+                    'label': f'Land — {img.get_photo_type_display}',
+                    'has_gps': bool(img.gps_lat),
+                })
+    except LandValuation.DoesNotExist:
+        pass
+    photo_previews = photo_previews[:12]
+
+    building_boq = []
+    for b in Building.objects.filter(loan_request=loan_request):
+        rows = BuildingValuation.objects.filter(building=b)
+        building_boq.append({
+            'building': b,
+            'line_count': rows.count(),
+            'total': sum((r.total or 0) for r in rows),
+        })
 
     return render(request, 'collateral/engineering_qa_review.html', {
         'loan_request': loan_request,
         'form': CollateralEngineeringReviewForm(),
         'coverage': compute_coverage_adequacy(loan_request),
         'pipeline_label': pipeline_stage_label(collateral_pipeline_stage(loan_request)),
+        'readiness': readiness,
+        'totals': totals,
+        'photo_previews': photo_previews,
+        'building_boq': building_boq,
+        'can_review': True,
     })

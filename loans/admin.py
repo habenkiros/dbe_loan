@@ -241,23 +241,22 @@ class ApprovalCommitteeMemberRuleInline(admin.TabularInline):
 @admin.register(ApprovalCommitteeLevel)
 class ApprovalCommitteeLevelAdmin(admin.ModelAdmin):
     list_display = (
-        'name', 'key', 'sequence_order', 'is_active',
+        'name', 'key', 'voter_scope', 'sequence_order', 'is_active',
         'active_member_rules_count',
         'min_approvals_required', 'min_declines_required',
         'min_loan_amount', 'max_loan_amount',
     )
     list_editable = ('sequence_order', 'is_active')
-    list_filter = ('is_active', 'key')
+    list_filter = ('is_active', 'voter_scope')
+    search_fields = ('name', 'key')
     inlines = [ApprovalCommitteeMemberRuleInline]
     readonly_fields = ('member_scope_description',)
     fieldsets = (
         (None, {
-            'fields': ('key', 'name', 'sequence_order', 'is_active', 'member_scope_description'),
+            'fields': ('key', 'name', 'voter_scope', 'sequence_order', 'is_active', 'member_scope_description'),
             'description': (
-                '<strong>Branch &amp; district:</strong> add member rules by <em>role</em> only — '
-                'the system picks the right people per loan from that branch or district. '
-                '<strong>Head office &amp; management / board:</strong> use roles for standing committees '
-                'or <em>specific users</em> for named executives and board members.'
+                'Add any number of levels. <strong>Voter scope</strong> controls how role rules resolve: '
+                'branch / district (scoped to the loan) or organization-wide (roles or named users).'
             ),
         }),
         ('Vote thresholds', {
@@ -268,8 +267,7 @@ class ApprovalCommitteeLevelAdmin(admin.ModelAdmin):
             'fields': ('min_loan_amount', 'max_loan_amount'),
             'description': (
                 'Uses <strong>Sheet 6 recommended amount</strong> when set, otherwise requested amount. '
-                'Leave both blank to always include this level. '
-                'Example: set <em>Min loan amount</em> = 1,000,000 on Management so only large loans reach the board.'
+                'Leave both blank to always include this level.'
             ),
         }),
     )

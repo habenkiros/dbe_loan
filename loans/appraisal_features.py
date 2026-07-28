@@ -49,6 +49,7 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
         'es': {},
         'collateral': {},
         'bureau': {},
+        'banking': {},
         'scorecard': {},
         'outcomes': {},
     }
@@ -115,6 +116,23 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
         'defaults_ever': appraisal.bureau_defaults_ever,
         'restructured_ever': appraisal.bureau_restructured_ever,
         'inquiries_6m': appraisal.bureau_inquiries_6m,
+    }
+    bb = getattr(appraisal, 'banking_behavior', None) or {}
+    features['banking'] = {
+        'provider': bb.get('provider'),
+        'refreshed_at': (
+            appraisal.banking_refreshed_at.isoformat()
+            if getattr(appraisal, 'banking_refreshed_at', None) else bb.get('refreshed_at')
+        ),
+        'tx_count': bb.get('tx_count'),
+        'avg_monthly_credit': bb.get('avg_monthly_credit'),
+        'avg_monthly_debit': bb.get('avg_monthly_debit'),
+        'inflow_cv': bb.get('inflow_cv'),
+        'nsf_count': bb.get('nsf_count'),
+        'negative_balance_days': bb.get('negative_balance_days'),
+        'credit_months': bb.get('credit_months'),
+        'turnover_vs_installment': bb.get('turnover_vs_installment'),
+        'ending_balance': bb.get('ending_balance'),
     }
     features['scorecard'] = appraisal.scorecard_detail if getattr(appraisal, 'scorecard_detail', None) else {}
     features['outcomes'] = {

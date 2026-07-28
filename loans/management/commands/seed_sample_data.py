@@ -28,7 +28,13 @@ from collateral.models import (
 from loans.models import (
     ApprovalCommitteeLevel,
     ApprovalCommitteeMemberRule,
+    AppraisalAmortizationEntry,
+    AppraisalCondition,
+    AppraisalCreditHistoryEntry,
+    AppraisalESChecklistItem,
     AppraisalPurposeLine,
+    AppraisalQualitativeFactor,
+    AppraisalRiskMitigation,
     Branch,
     City,
     CollateralEstimationConfig,
@@ -37,6 +43,7 @@ from loans.models import (
     CustomUser,
     District,
     DocumentAuthenticationPolicy,
+    ES_CHECKLIST_STRUCTURE,
     LatestLoanRequestID,
     LoanAnalysisPolicyConfig,
     LoanApplicationDocumentType,
@@ -45,9 +52,20 @@ from loans.models import (
     LoanNotification,
     LoanRequest,
     LoanRequestBasicInfo,
+    LoanRequestDocument,
+    QUALITATIVE_RATING_CHOICES_BY_FACTOR,
     Region,
     Zone,
 )
+from loans.qualitative_scoring import best_rating_for_factor, update_appraisal_qualitative_totals
+from loans.appraisal_scorecard import persist_credit_scorecard
+from loans.appraisal_mode import qualitative_factor_keys_for_mode, ensure_appraisal_mode
+from loans.cashflow_utils import (
+    max_loan_capacity_from_cashflow,
+    seed_monthly_grid_from_averages,
+    suggested_installment_declining,
+)
+
 
 
 DEFAULT_PASSWORD = 'Demo@12345'
@@ -685,76 +703,506 @@ class Command(BaseCommand):
             )
 
         if spec.get('with_appraisal') and spec.get('officer'):
-            appraisal, _ = LoanAppraisal.objects.get_or_create(
-                loan_request=loan,
-                defaults={'created_by': spec['officer']},
-            )
-            mode = 'corporate' if spec.get('corporate') else 'msme'
-            appraisal.appraisal_mode = mode
-            appraisal.credit_score_total = Decimal(spec.get('score', '70'))
-            appraisal.credit_score_band = spec.get('band', 'acceptable')
-            appraisal.dscr = Decimal('1.35')
-            appraisal.dscr_annual = Decimal('1.40')
-            appraisal.net_monthly_cashflow = Decimal('45000')
-            appraisal.proposed_monthly_installment = Decimal('32000')
-            appraisal.qualitative_total_score = Decimal('78')
-            appraisal.qualitative_passed = True
-            appraisal.recommendation = 'approve'
-            appraisal.recommendation_comment = 'Sample seeded recommendation — adequate cashflow and collateral.'
-            appraisal.amount_approved = Decimal(spec['amount'])
-            appraisal.collateral_coverage_ratio = Decimal('1.25')
-            if mode == 'corporate':
-                appraisal.corp_annual_revenue = Decimal('18000000')
-            appraisal.save()
-
-            basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(
-                loan_request=loan,
-                defaults={
-                    'tin_number': f"00{index:08d}",
-                    'business_name': spec['applicant'],
-                    'term_months': 24,
-                    'repayment_frequency': 'Monthly',
-                    'interest_rate': Decimal('16.50'),
-                    'interest_basis': 'Declining',
-                    'home_address': loan.declared_address_text,
-                    'business_address': loan.declared_address_text,
-                    'economic_sector': 'Trade',
-                    'form_of_ownership': 'Sole Proprietorship',
-                    'gender': 'Male',
-                    'age': 35,
-                },
-            )
-            AppraisalPurposeLine.objects.get_or_create(
-                basic_info=basic_info,
-                description='Primary purpose line',
-                defaults={
-                    'quantity': Decimal('1'),
-                    'unit_price': Decimal(spec['amount']),
-                    'value': Decimal(spec['amount']),
-                    'display_order': 1,
-                },
-            )
-
-            loan.appraisal_completed_at = now - timedelta(days=1)
-            if spec.get('committee') == 'pending':
-                loan.committee_status = LoanRequest.COMMITTEE_PENDING
-                loan.submitted_to_committee_at = now - timedelta(hours=12)
-                loan.submitted_to_committee_by = spec['officer']
-                loan.committee_submission_notes = 'Submitted for sample committee review.'
-                branch_level = ApprovalCommitteeLevel.objects.filter(
-                    key=ApprovalCommitteeLevel.LEVEL_BRANCH
-                ).first()
-                loan.current_approval_level = branch_level
-            elif spec.get('committee') == 'approved':
-                loan.committee_status = LoanRequest.COMMITTEE_APPROVED
-                loan.committee_final_decision = 'approve'
-                loan.committee_final_amount = Decimal(spec['amount'])
-                loan.committee_decided_at = now - timedelta(days=3)
-                loan.submitted_to_committee_at = now - timedelta(days=5)
-                loan.submitted_to_committee_by = spec['officer']
-            loan.save()
+            self._seed_full_appraisal(loan, spec, index, now)
 
         return loan
+
+    def _ensure_qual_factors(self, appraisal):
+        mode = ensure_appraisal_mode(appraisal, appraisal.loan_request)
+        expected = qualitative_factor_keys_for_mode(mode)
+        expected_keys = {k for k, _ in expected}
+        appraisal.qualitative_factors.exclude(factor_key__in=expected_keys).delete()
+        existing = set(appraisal.qualitative_factors.values_list('factor_key', flat=True))
+        for order, (key, name) in enumerate(expected):
+            if key not in existing:
+                AppraisalQualitativeFactor.objects.create(
+                    appraisal=appraisal,
+                    factor_key=key,
+                    factor_name=name,
+                    display_order=order,
+                )
+            else:
+                AppraisalQualitativeFactor.objects.filter(
+                    appraisal=appraisal, factor_key=key,
+                ).update(factor_name=name, display_order=order)
+
+    def _ensure_es_items(self, appraisal):
+        existing = set(appraisal.es_checklist_items.values_list('item_key', flat=True))
+        order = 0
+        for section_key, section_label, rows in ES_CHECKLIST_STRUCTURE:
+            for item_key, question in rows:
+                order += 1
+                if item_key in existing:
+                    continue
+                AppraisalESChecklistItem.objects.create(
+                    appraisal=appraisal,
+                    section_key=section_key,
+                    section_label=section_label,
+                    item_key=item_key,
+                    question_text=question,
+                    display_order=order,
+                )
+
+    def _seed_corporate_audit_document(self, loan, officer, now):
+        """Attach a verified Audited Financial Statements doc (corporate gate)."""
+        from django.core.files.base import ContentFile
+
+        dtype = LoanApplicationDocumentType.objects.filter(name__icontains='audit').first()
+        if not dtype:
+            return
+        existing = loan.application_documents.filter(document_type=dtype).first()
+        if existing:
+            existing.auth_status = LoanRequestDocument.AUTH_VERIFIED
+            existing.auth_verdict = LoanRequestDocument.VERDICT_AUTHENTIC
+            existing.authenticated_by = officer
+            existing.authenticated_at = now
+            existing.save(update_fields=[
+                'auth_status', 'auth_verdict', 'authenticated_by', 'authenticated_at',
+            ])
+            return
+        doc = LoanRequestDocument(
+            loan_request=loan,
+            document_type=dtype,
+            uploaded_by=officer,
+            original_filename='audited_financials_demo.pdf',
+            file_size=64,
+            auth_status=LoanRequestDocument.AUTH_VERIFIED,
+            auth_verdict=LoanRequestDocument.VERDICT_AUTHENTIC,
+            authenticated_by=officer,
+            authenticated_at=now,
+            auth_notes='Demo seeded verified audited statements.',
+        )
+        doc.file.save(
+            f'{loan.loan_request_id}_audited_financials.pdf',
+            ContentFile(b'%PDF-1.4\n% demo audited financial statements\n'),
+            save=True,
+        )
+
+    def _seed_amortization(self, appraisal, basic_info, loan):
+        AppraisalAmortizationEntry.objects.filter(appraisal=appraisal).delete()
+        amount = loan.amount_requested or Decimal('0')
+        term_months = basic_info.term_months or 12
+        annual_rate = (basic_info.interest_rate or Decimal('0')) / Decimal('100')
+        if amount <= 0 or term_months <= 0:
+            return
+        n = term_months
+        r = annual_rate / 12 if annual_rate else Decimal('0')
+        balance = amount
+        start = timezone.now().date()
+        entries = []
+        for period in range(1, n + 1):
+            if r > 0:
+                interest = (balance * r).quantize(Decimal('0.01'))
+                remaining = n - period + 1
+                principal = (balance / remaining).quantize(Decimal('0.01'))
+                if period == n:
+                    principal = balance
+                payment = principal + interest
+            else:
+                interest = Decimal('0')
+                principal = (amount / n).quantize(Decimal('0.01'))
+                if period == n:
+                    principal = balance
+                payment = principal
+            balance = max((balance - principal).quantize(Decimal('0.01')), Decimal('0'))
+            # simple month add
+            month = start.month - 1 + period
+            year = start.year + month // 12
+            month = month % 12 + 1
+            day = min(start.day, 28)
+            from datetime import date
+            pay_date = date(year, month, day)
+            entries.append(AppraisalAmortizationEntry(
+                appraisal=appraisal,
+                period_number=period,
+                payment_date=pay_date,
+                payment_amount=payment,
+                principal=principal,
+                interest=interest,
+                balance_after=balance,
+            ))
+        AppraisalAmortizationEntry.objects.bulk_create(entries)
+
+    def _seed_full_appraisal(self, loan, spec, index, now):
+        """Populate Sheets 1–7 with realistic demo content."""
+        officer = spec['officer']
+        amount = Decimal(spec['amount'])
+        mode = 'corporate' if spec.get('corporate') else 'msme'
+
+        appraisal, _ = LoanAppraisal.objects.get_or_create(
+            loan_request=loan,
+            defaults={'created_by': officer},
+        )
+        ensure_appraisal_mode(appraisal, loan)
+        appraisal.appraisal_mode = mode
+        appraisal.created_by = officer
+
+        # ----- Sheet 1 -----
+        basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan)
+        basic_info.tin_number = f'00{index:08d}'
+        basic_info.gender = 'Female' if index % 2 == 0 else 'Male'
+        basic_info.age = 28 + (index % 20)
+        basic_info.marital_status = 'Married'
+        basic_info.education_level = 'College'
+        basic_info.home_address = loan.declared_address_text or f'Kebele {index}, Mekelle'
+        basic_info.spouse_name = f'Spouse of {spec["applicant"].split()[0]}'
+        basic_info.spouse_occupation = 'Trader' if index % 2 else 'Teacher'
+        basic_info.father_name = f'Father-{index}'
+        basic_info.grandfather_name = f'GFather-{index}'
+        basic_info.business_name = spec['applicant']
+        basic_info.business_description = spec['reason']
+        basic_info.business_address = loan.declared_address_text or f'Business kebele {index}'
+        basic_info.date_business_started = (now - timedelta(days=365 * (3 + index % 5))).date()
+        basic_info.form_of_ownership = 'PLC' if mode == 'corporate' else 'Sole Proprietorship'
+        basic_info.economic_sector = 'Trade'
+        basic_info.subsector_activity = spec['category']
+        basic_info.employees_full_time = 4 + index
+        basic_info.employees_part_time = 2
+        basic_info.employees_seasonal = 1
+        basic_info.employees_ft_equivalent = Decimal(str(4 + index)) + Decimal('0.50')
+        basic_info.family_members_employed = 1 + (index % 2)
+        basic_info.number_business_owners = 3 if mode == 'corporate' else 1
+        basic_info.peak_sales_months = 'Nov-Jan'
+        basic_info.lowest_sales_months = 'Jun-Aug'
+        basic_info.peak_sales_percent = Decimal('130')
+        basic_info.lowest_sales_percent = Decimal('70')
+        basic_info.term_months = 24
+        basic_info.repayment_frequency = 'Monthly'
+        basic_info.interest_rate = Decimal('16.50')
+        basic_info.interest_basis = 'Declining'
+        basic_info.grace_period_months = 0
+        basic_info.interest_only_months = 0
+        basic_info.instalments_per_year = 12
+        basic_info.cash_contribution = (amount * Decimal('0.20')).quantize(Decimal('0.01'))
+        if mode == 'corporate':
+            basic_info.legal_registration_number = f'CR/{1000 + index}'
+            basic_info.directors_summary = 'Board of 3 directors; managing director is primary contact.'
+            basic_info.ubo_summary = 'Two UBOs hold 60% / 40%; both Ethiopian nationals.'
+        basic_info.save()
+
+        AppraisalPurposeLine.objects.filter(basic_info=basic_info).delete()
+        AppraisalPurposeLine.objects.create(
+            basic_info=basic_info,
+            description='Working capital – inventory restock',
+            quantity=Decimal('1'),
+            unit_price=(amount * Decimal('0.70')).quantize(Decimal('0.01')),
+            value=(amount * Decimal('0.70')).quantize(Decimal('0.01')),
+            display_order=1,
+        )
+        AppraisalPurposeLine.objects.create(
+            basic_info=basic_info,
+            description='Investment – equipment / fixtures',
+            quantity=Decimal('1'),
+            unit_price=(amount * Decimal('0.30')).quantize(Decimal('0.01')),
+            value=(amount * Decimal('0.30')).quantize(Decimal('0.01')),
+            display_order=2,
+        )
+
+        # ----- Sheet 2 -----
+        appraisal.nbe_credit_report_obtained = True
+        appraisal.nbe_report_date_received = (now - timedelta(days=10)).date()
+        appraisal.total_number_repaid_loans = 2
+        appraisal.credit_history_max_score = Decimal('80')
+        appraisal.bureau_score = Decimal('620')
+        appraisal.bureau_score_band = 'good'
+        appraisal.bureau_report_date = (now - timedelta(days=10)).date()
+        appraisal.bureau_active_loans_count = 1
+        appraisal.bureau_total_outstanding = Decimal('85000')
+        appraisal.bureau_total_monthly_debt_service = Decimal('6500')
+        appraisal.bureau_inquiries_6m = 1
+        appraisal.bureau_defaults_ever = False
+        appraisal.bureau_restructured_ever = False
+        appraisal.bureau_thin_file = False
+        appraisal.business_assessment = (
+            'Established operator with stable local demand and adequate supplier access. '
+            'Seasonality managed via inventory planning.'
+        )
+        appraisal.character_assessment = (
+            'Cooperative client; documents provided; community references positive. '
+            'No adverse character findings in branch file.'
+        )
+        appraisal.save()
+
+        AppraisalCreditHistoryEntry.objects.filter(appraisal=appraisal).delete()
+        AppraisalCreditHistoryEntry.objects.create(
+            appraisal=appraisal,
+            lender='DECSI (prior facility)',
+            purpose='Working capital',
+            loan_amount=Decimal('120000'),
+            current_balance=Decimal('0'),
+            maturity_date=(now - timedelta(days=90)).date(),
+            status='settled_on_time',
+            repayment='On time',
+            letter_from_lender='Yes',
+            score=Decimal('85'),
+            display_order=1,
+        )
+        AppraisalCreditHistoryEntry.objects.create(
+            appraisal=appraisal,
+            lender='Other MFI (active)',
+            purpose='Fixed Asset',
+            loan_amount=Decimal('95000'),
+            current_balance=Decimal('42000'),
+            maturity_date=(now + timedelta(days=400)).date(),
+            status='regular',
+            repayment='Regular',
+            letter_from_lender='Yes',
+            score=Decimal('70'),
+            display_order=2,
+        )
+
+        self._ensure_qual_factors(appraisal)
+        # Dummy ratings: mostly strong, one mid-tier so scores are realistic not all 100
+        mid_keys = {'project_plan', 'savings_record', 'transparency', 'related_party'}
+        for factor in appraisal.qualitative_factors.all():
+            opts = QUALITATIVE_RATING_CHOICES_BY_FACTOR.get(factor.factor_key) or []
+            if factor.factor_key in mid_keys and len(opts) >= 2:
+                factor.rating = opts[1]
+            else:
+                factor.rating = best_rating_for_factor(factor.factor_key) or (opts[0] if opts else '')
+            factor.notes = f'Demo justification for {factor.factor_name or factor.factor_key}.'
+            factor.save(update_fields=['rating', 'notes'])
+        update_appraisal_qualitative_totals(appraisal)
+
+        # ----- Sheet 3 -----
+        # Sized so base + Excel-style stress (20% sales drop / 10% cost up) clear DSCR hard min ≥1.0
+        # Corporate: scale P&L with ask so max cashflow capacity ≥ requested amount.
+        drop_pct = Decimal('20')
+        cost_pct = Decimal('10')
+        other_inc = Decimal('5000')
+        other_exp = Decimal('2000')
+        if mode == 'corporate':
+            sales = (amount / Decimal('5')).quantize(Decimal('0.01'))
+            expenses = (sales * Decimal('0.46')).quantize(Decimal('0.01'))
+            other_inc = (sales * Decimal('0.02')).quantize(Decimal('0.01'))
+            other_exp = (sales * Decimal('0.01')).quantize(Decimal('0.01'))
+            installment = suggested_installment_declining(
+                amount, basic_info.interest_rate, basic_info.term_months, payments_per_year=12,
+            )
+            if not installment or installment <= 0:
+                installment = (amount / Decimal('24')).quantize(Decimal('0.01'))
+        else:
+            sales = Decimal('280000')
+            expenses = Decimal('130000')
+            installment = Decimal('32000')
+
+        appraisal.cf_monthly_sales = sales
+        appraisal.cf_monthly_cogs = (sales * Decimal('0.36')).quantize(Decimal('0.01'))
+        appraisal.cf_monthly_salaries = (expenses * Decimal('0.14')).quantize(Decimal('0.01'))
+        appraisal.cf_monthly_rent = (expenses * Decimal('0.06')).quantize(Decimal('0.01'))
+        appraisal.cf_monthly_utilities = (expenses * Decimal('0.02')).quantize(Decimal('0.01'))
+        appraisal.cf_monthly_transport = (expenses * Decimal('0.01')).quantize(Decimal('0.01'))
+        appraisal.cf_monthly_other_operating = Decimal('0')
+        appraisal.cf_monthly_taxes = Decimal('0')
+        appraisal.monthly_business_income = sales
+        appraisal.monthly_business_expenses = expenses
+        appraisal.other_monthly_income = other_inc
+        appraisal.other_monthly_expenses = other_exp
+        appraisal.proposed_monthly_installment = installment
+        net = sales + other_inc - expenses - other_exp
+        appraisal.net_monthly_cashflow = net
+        appraisal.dscr = (net / installment).quantize(Decimal('0.01')) if installment else None
+        appraisal.cf_annual_net_cashflow = (net * 12).quantize(Decimal('0.01'))
+        appraisal.cf_annual_debt_service = (installment * 12).quantize(Decimal('0.01'))
+        appraisal.dscr_annual = (
+            appraisal.cf_annual_net_cashflow / appraisal.cf_annual_debt_service
+        ).quantize(Decimal('0.01')) if installment else None
+        appraisal.stress_sales_drop_pct = drop_pct
+        appraisal.stress_cost_increase_pct = cost_pct
+        # Same formula as AppraisalSheet3Form (not net*0.8 − expenses*0.1)
+        stressed_inc = (sales + other_inc) * (Decimal('1') - drop_pct / Decimal('100'))
+        stressed_exp = (expenses + other_exp) * (Decimal('1') + cost_pct / Decimal('100'))
+        stressed_net = (stressed_inc - stressed_exp).quantize(Decimal('0.01'))
+        appraisal.stressed_net_monthly_cashflow = stressed_net
+        appraisal.stressed_dscr = (
+            (stressed_net / installment).quantize(Decimal('0.01')) if installment else None
+        )
+        if mode == 'corporate':
+            appraisal.bs_current_assets = (amount * Decimal('0.55')).quantize(Decimal('0.01'))
+            appraisal.bs_current_liabilities = (amount * Decimal('0.22')).quantize(Decimal('0.01'))
+            appraisal.bs_inventory = (amount * Decimal('0.15')).quantize(Decimal('0.01'))
+            appraisal.bs_total_assets = (amount * Decimal('1.80')).quantize(Decimal('0.01'))
+            appraisal.bs_total_liabilities = (amount * Decimal('0.55')).quantize(Decimal('0.01'))
+            appraisal.bs_equity = (amount * Decimal('1.25')).quantize(Decimal('0.01'))
+            appraisal.corp_annual_revenue = (sales * 12).quantize(Decimal('0.01'))
+            appraisal.corp_operating_profit = (net * 12 * Decimal('0.55')).quantize(Decimal('0.01'))
+            appraisal.bureau_score = Decimal('710')
+            appraisal.bureau_score_band = 'excellent'
+        else:
+            appraisal.bs_current_assets = Decimal('450000')
+            appraisal.bs_current_liabilities = Decimal('180000')
+            appraisal.bs_inventory = Decimal('120000')
+            appraisal.bs_total_assets = Decimal('980000')
+            appraisal.bs_total_liabilities = Decimal('320000')
+            appraisal.bs_equity = Decimal('660000')
+        appraisal.ratio_current = Decimal('2.50')
+        appraisal.ratio_acid_test = Decimal('1.83')
+        appraisal.ratio_debt_equity = Decimal('0.48')
+        appraisal.max_loan_capacity = max_loan_capacity_from_cashflow(
+            appraisal.cf_annual_net_cashflow,
+            basic_info.interest_rate,
+            basic_info.term_months,
+            target_dscr=Decimal('1.2'),
+            payments_per_year=12,
+        )
+        appraisal.monthly_cashflow_grid = seed_monthly_grid_from_averages(sales, expenses)
+        appraisal.save()
+
+        # Banking conduct metrics (CREDIT_SCORE_ALGORITHM_V2) from customer number
+        try:
+            from loans.services.banking_transactions import refresh_appraisal_banking
+            if (loan.customer_number or '').strip():
+                refresh_appraisal_banking(appraisal, loan)
+        except Exception:
+            pass
+
+        if mode == 'corporate':
+            self._seed_corporate_audit_document(loan, officer, now)
+
+        # ----- Sheet 4 (loan officer E&S sign-off — not committee) -----
+        self._ensure_es_items(appraisal)
+        for item in appraisal.es_checklist_items.all():
+            # Default safe answers for demo
+            if item.item_key in (
+                'excluded_activities', 'displacement', 'child_labour',
+                'green_area', 'chemicals_pesticides', 'pollutants', 'vegetation',
+            ):
+                item.response_yes_no = 'no'
+                item.description = 'Not applicable for this activity.'
+                item.mitigation = ''
+            elif item.item_key in ('owner_of_premises', 'sanitation', 'waste_minimization'):
+                item.response_yes_no = 'yes'
+                item.description = 'Confirmed during field discussion.'
+                item.mitigation = 'Maintain current controls.'
+            else:
+                item.response_yes_no = 'na'
+                item.description = 'Reviewed; no material concern.'
+                item.mitigation = 'Monitor during supervision.'
+            item.save()
+
+        appraisal.es_risk_category = LoanAppraisal.ES_RISK_LOW
+        appraisal.es_eligibility_decision = LoanAppraisal.ES_ELIGIBILITY_PASS
+        appraisal.es_screened_by = officer
+        appraisal.es_checked_by = officer
+        appraisal.es_approved_by = officer  # loan officer confirmation — committee signs later
+        appraisal.es_assessment_date = (now - timedelta(days=2)).date()
+        appraisal.es_notes = (
+            'E&S screening completed by loan officer. Low residual risk. '
+            'Credit committee signature occurs on committee pack / voting.'
+        )
+
+        # ----- Sheet 5 -----
+        if mode == 'corporate':
+            imm = Decimal('900000') if spec.get('with_building') or spec.get('with_land') else Decimal('0')
+            mov = Decimal('280000') if spec.get('with_other') else Decimal('150000')
+            # Scale immovable so coverage clears policy warning (≥1.0)
+            need = (amount * Decimal('1.15')).quantize(Decimal('0.01'))
+            if imm + mov + Decimal('100000') < need:
+                imm = (need - mov - Decimal('100000')).quantize(Decimal('0.01'))
+        else:
+            imm = Decimal('900000') if spec.get('with_building') or spec.get('with_land') else Decimal('0')
+            mov = Decimal('280000') if spec.get('with_other') else Decimal('150000')
+        appraisal.collateral_immovable_value = imm
+        appraisal.collateral_moveable_value = mov
+        appraisal.collateral_intangible_value = Decimal('0')
+        appraisal.collateral_guarantors_value = Decimal('100000')
+        total_coll = imm + mov + Decimal('100000')
+        appraisal.collateral_total_value = total_coll
+        appraisal.collateral_coverage_ratio = (total_coll / amount).quantize(Decimal('0.01')) if amount else None
+
+        # ----- Sheet 6 -----
+        appraisal.recommendation = 'approve'
+        appraisal.recommendation_comment = (
+            'Cashflow capacity and collateral coverage support the request. '
+            'Recommend approval subject to standard covenants.'
+        )
+        appraisal.strengths = (
+            '- Adequate DSCR and net cashflow\n'
+            '- Positive credit history / bureau band\n'
+            '- Collateral coverage above policy minimum\n'
+            '- E&S eligibility: PASS (loan officer screened)'
+        )
+        if mode == 'corporate':
+            appraisal.weaknesses = (
+                '- Working-capital seasonality / receivable concentration\n'
+                '- Monitor covenant compliance post-disbursement'
+            )
+        else:
+            appraisal.weaknesses = (
+                '- Seasonal sales variability\n'
+                '- Limited formal financial records (MSME typical)'
+            )
+        appraisal.committee_comments = (
+            'For committee review: officer recommends approve. '
+            'Committee members cast formal votes on the approval queue.'
+        )
+        appraisal.amount_approved = amount
+        appraisal.term_approved_months = 24
+        appraisal.rate_approved = Decimal('16.50')
+        appraisal.credit_score_total = Decimal(spec.get('score', '75'))
+        appraisal.credit_score_band = spec.get('band', 'acceptable')
+        appraisal.save()
+
+        AppraisalRiskMitigation.objects.filter(appraisal=appraisal).delete()
+        AppraisalRiskMitigation.objects.create(
+            appraisal=appraisal,
+            risk='Seasonal cashflow shortfall',
+            severity='medium',
+            mitigation='Align repayment with peak months; grace if needed.',
+            owner='Client / branch',
+            status='Open',
+            display_order=1,
+        )
+        AppraisalRiskMitigation.objects.create(
+            appraisal=appraisal,
+            risk='Collateral liquidity delay',
+            severity='low',
+            mitigation='Title verification completed; maintain insurance.',
+            owner='Credit / engineering',
+            status='In progress',
+            display_order=2,
+        )
+        AppraisalCondition.objects.filter(appraisal=appraisal).delete()
+        AppraisalCondition.objects.create(
+            appraisal=appraisal,
+            condition_type='cp',
+            description='Submit updated tax clearance before disbursement.',
+            responsible_party='Client',
+            fulfilled=False,
+            display_order=1,
+        )
+        AppraisalCondition.objects.create(
+            appraisal=appraisal,
+            condition_type='covenant',
+            description='Maintain collateral insurance for full loan term.',
+            responsible_party='Client',
+            fulfilled=False,
+            display_order=2,
+        )
+
+        persist_credit_scorecard(appraisal)
+
+        # ----- Sheet 7 -----
+        self._seed_amortization(appraisal, basic_info, loan)
+
+        loan.appraisal_completed_at = now - timedelta(days=1)
+        if spec.get('committee') == 'pending':
+            loan.committee_status = LoanRequest.COMMITTEE_PENDING
+            loan.submitted_to_committee_at = now - timedelta(hours=12)
+            loan.submitted_to_committee_by = officer
+            loan.committee_submission_notes = 'Submitted for sample committee review.'
+            branch_level = ApprovalCommitteeLevel.objects.filter(
+                key=ApprovalCommitteeLevel.LEVEL_BRANCH
+            ).first()
+            loan.current_approval_level = branch_level
+        elif spec.get('committee') == 'approved':
+            loan.committee_status = LoanRequest.COMMITTEE_APPROVED
+            loan.committee_final_decision = 'approve'
+            loan.committee_final_amount = amount
+            loan.committee_decided_at = now - timedelta(days=3)
+            loan.submitted_to_committee_at = now - timedelta(days=5)
+            loan.submitted_to_committee_by = officer
+        loan.save()
 
     def _seed_notifications(self, users, loans):
         if not loans:

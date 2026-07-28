@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Approval committees{% endblock %}
+{% block content %}
+<style>
+.committee-settings .badge-on { background:#d4edda; color:#155724; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
+.committee-settings .badge-off { background:#eee; color:#666; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
+.committee-settings .rules { margin:0.25rem 0 0; padding-left:1.1rem; font-size:0.9rem; }
+.committee-settings .header-row { display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+</style>
+
+<div class="committee-settings">
+  <div class="header-row">
+    <div>
+      <h1 style="margin:0 0 0.35rem;">Approval committees</h1>
+      <p style="margin:0;" class="help">
+        Loans pass through <strong>active</strong> levels in order.
+        Voter scope: branch / district / organization-wide.
+      </p>
+    </div>
+    <a href="{% url 'add_approval_committee_level' %}" class="btn btn-green">Add approval level</a>
+  </div>
+
+  {% if levels %}
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Level</th>
+          <th>Scope</th>
+          <th>Status</th>
+          <th>Votes needed</th>
+          <th>Amount filter</th>
+          <th>Who may vote</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for level in levels %}
+        <tr>
+          <td>{{ level.sequence_order }}</td>
+          <td>
+            <strong>{{ level.name }}</strong><br>
+            <small><code>{{ level.key }}</code></small>
+          </td>
+          <td><small>{{ level.get_voter_scope_display }}</small></td>
+          <td>{% if level.is_active %}<span class="badge-on">Active</span>{% else %}<span class="badge-off">Inactive</span>{% endif %}</td>
+          <td>{{ level.min_approvals_required }} approve / {{ level.min_declines_required }} decline</td>
+          <td>
+            {% if level.min_loan_amount or level.max_loan_amount %}
+              {% if level.min_loan_amount %}≥ {{ level.min_loan_amount|floatformat:0 }}{% endif %}
+              {% if level.min_loan_amount and level.max_loan_amount %} · {% endif %}
+              {% if level.max_loan_amount %}≤ {{ level.max_loan_amount|floatformat:0 }}{% endif %}
+            {% else %}
+              Always
+            {% endif %}
+          </td>
+          <td>
+            {% with rules=level.member_rules.all %}
+              {% if rules %}
+              <ul class="rules">
+                {% for r in rules %}
+                <li {% if not r.is_active %}style="opacity:0.55;"{% endif %}>
+                  {% if r.participant_type == 'user' and r.user %}
+                    User: {{ r.user.get_full_name|default:r.user.username }}
+                  {% else %}
+                    Role: {{ r.get_role_display|default:r.role }}
+                  {% endif %}
+                  {% if r.label %} <em>({{ r.label }})</em>{% endif %}
+                  {% if not r.is_active %} — off{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <em>No voters configured</em>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td><a href="{% url 'edit_approval_committee_level' level.id %}" class="btn btn-blue">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p><em>No committee levels yet.</em> <a href="{% url 'add_approval_committee_level' %}">Add the first level</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

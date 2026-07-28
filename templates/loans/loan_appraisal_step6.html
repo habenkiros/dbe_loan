@@ -22,6 +22,17 @@
       The <strong>explainable credit scorecard</strong> below is the system source of truth for committee (not the Excel key-indicator matrix).
       Warnings and hard blocks use thresholds from <strong>Admin → Loan analysis policy</strong>.</p>
 
+    {% if form.errors or risk_formset.non_form_errors or cond_formset.non_form_errors or risk_formset.errors or cond_formset.errors %}
+    <div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">
+      <strong>Could not save — fix the errors below.</strong>
+      {% if form.errors %}<div>{{ form.errors }}</div>{% endif %}
+      {% if risk_formset.non_form_errors %}<div>{{ risk_formset.non_form_errors }}</div>{% endif %}
+      {% if cond_formset.non_form_errors %}<div>{{ cond_formset.non_form_errors }}</div>{% endif %}
+      {% if risk_formset.errors %}<div><em>Risks:</em> {{ risk_formset.errors }}</div>{% endif %}
+      {% if cond_formset.errors %}<div><em>Conditions:</em> {{ cond_formset.errors }}</div>{% endif %}
+    </div>
+    {% endif %}
+
     {% if analysis_blocks %}
     <div style="background:#ffecec; border:1px solid #e28b8b; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
       <strong>Hard blocks (must fix before continuing)</strong>
@@ -74,7 +85,10 @@
     {% if scorecard %}
     <div class="sheet6-section">
       <h3>Explainable credit scorecard</h3>
-      <p class="meta" style="margin-top:0;">Composite score from Cashflow MSME pillars — assistive only; officer recommendation still required. Rate workbook is not used.</p>
+      <p class="meta" style="margin-top:0;">
+        Algorithm <code>CREDIT_SCORE_ALGORITHM_V2</code> — five pillars (qualitative, financial, banking/bureau, E&amp;S, collateral).
+        Assistive only; officer recommendation still required. Rate workbook is not used.
+      </p>
       <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:baseline;margin:0.75rem 0;">
         <div style="font-size:1.75rem;font-weight:700;color:#064420;">{{ scorecard.total|floatformat:1 }} <span style="font-size:1rem;font-weight:500;">/ 100</span></div>
         <div><strong>Band:</strong> {{ scorecard.band_label }}</div>
@@ -99,6 +113,11 @@
 
     <div class="sheet6-section">
       <h3>Recommendation &amp; committee</h3>
+      <p class="help" style="margin:0 0 0.75rem 0;">
+        Sheet 6 is the decision point. After you recommend <strong>Approve</strong> or <strong>Escalate</strong>,
+        finish the appraisal and send it to the approval committee.
+        The repayment schedule (Sheet 7) is optional and can be generated anytime.
+      </p>
       <div class="table-container">
         <table class="form-table">
           <tr><td>{{ form.recommendation.label }}</td><td>{{ form.recommendation }}</td></tr>
@@ -132,7 +151,7 @@
           <tbody>
             {% for f in risk_formset %}
             <tr>
-              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.risk }}</td>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.risk }}{% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}</td>
               <td>{{ f.severity }}</td>
               <td>{{ f.mitigation }}</td>
               <td>{{ f.owner }}</td>
@@ -164,7 +183,7 @@
           <tbody>
             {% for f in cond_formset %}
             <tr>
-              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.condition_type }}</td>
+              <td>{% if f.id %}{{ f.id }}{% endif %}{{ f.condition_type }}{% if f.errors %}<div class="text-danger small">{{ f.errors }}</div>{% endif %}</td>
               <td>{{ f.description }}</td>
               <td>{{ f.responsible_party }}</td>
               <td>{{ f.due_date }}</td>
@@ -178,7 +197,14 @@
     </div>
 
     <div class="appraisal-actions">
-      <button type="submit" class="btn btn-green">Save &amp; continue to Sheet 7</button>
+      <div style="margin-bottom:0.75rem;">
+        <label for="id_committee_submission_notes" style="font-weight:600;">Notes for committee (optional)</label>
+        <textarea name="committee_submission_notes" id="id_committee_submission_notes" rows="2" class="form-control" style="max-width:520px;" placeholder="Brief context for the approval committee…"></textarea>
+      </div>
+      <button type="submit" name="finish_and_submit" value="1" class="btn btn-green">Finish &amp; submit to committee</button>
+      <button type="submit" name="finish_appraisal" value="1" class="btn btn-blue">Finish appraisal only</button>
+      <button type="submit" name="save" value="1" class="btn btn-gray">Save draft</button>
+      <button type="submit" name="save_and_schedule" value="1" class="btn btn-gray">Optional: repayment schedule</button>
       <a href="{% url 'loan_appraisal_step' loan_request.id 5 %}" class="btn btn-blue">Back to Sheet 5</a>
       <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
     </div>

@@ -66,6 +66,31 @@ class CollateralTier2Tests(TestCase):
     def test_declared_address_from_basic_info(self):
         self.assertEqual(declared_address_for_loan(self.loan), 'Bole Road, Addis Ababa')
 
+    def test_geocode_prefers_gebeta_when_configured(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        from collateral import geocoding as geo
+
+        with override_settings(GEBETA_MAPS_API_KEY='test-key', GEBETA_MAPS_GEOCODE_PROVIDER='auto'):
+            with patch.object(geo, 'geocode_address_gebeta', return_value=(9.01, 38.75)) as gebeta:
+                with patch.object(geo, 'geocode_address_nominatim') as nominatim:
+                    coords = geo.geocode_address('Bole, Addis Ababa')
+        self.assertEqual(coords, (9.01, 38.75))
+        gebeta.assert_called_once()
+        nominatim.assert_not_called()
+
+    def test_geocode_falls_back_to_nominatim(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        from collateral import geocoding as geo
+
+        with override_settings(GEBETA_MAPS_API_KEY='test-key', GEBETA_MAPS_GEOCODE_PROVIDER='auto'):
+            with patch.object(geo, 'geocode_address_gebeta', return_value=None):
+                with patch.object(geo, 'geocode_address_nominatim', return_value=(8.98, 38.79)) as nominatim:
+                    coords = geo.geocode_address('Somewhere Ethiopia')
+        self.assertEqual(coords, (8.98, 38.79))
+        nominatim.assert_called_once()
+
     def test_other_item_form_empty_year_saves(self):
         from collateral.forms import OtherCollateralItemForm
         from collateral.models import OtherCollateralItem

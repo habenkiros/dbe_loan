@@ -5,7 +5,7 @@
 
 <div class="appraisal-card">
   <h2>Sheet 7: {{ step_title }}</h2>
-  <p class="meta">Repayment schedule and loan amortization. Generate from loan terms (Sheet 1) and amount requested.</p>
+  <p class="meta">Optional repayment / amortization schedule for the appraisal pack. The decision and committee submission happen on <strong>Sheet 6</strong>.</p>
 
   {% if loan_request.applicant_name %}
   <p><strong>Loan amount:</strong> {{ loan_request.amount_requested|floatformat:2 }} &nbsp;|&nbsp;
@@ -75,8 +75,9 @@
     {% csrf_token %}
     <div class="appraisal-actions">
       <button type="submit" name="generate_schedule" value="1" class="btn btn-green">Generate schedule</button>
-      <button type="submit" name="finish" value="1" class="btn btn-blue">Finish appraisal</button>
-      <span class="help" style="display:block; margin-top:0.5rem;">After finishing, submit to the approval committee from the loan detail page (Sheet 6 recommended amount required).</span>
+      <button type="submit" name="finish_and_submit" value="1" class="btn btn-green">Finish &amp; submit to committee</button>
+      <button type="submit" name="finish" value="1" class="btn btn-blue">Finish appraisal only</button>
+      <span class="help" style="display:block; margin-top:0.5rem;">Primary path is Sheet 6 → committee. This schedule is optional for the pack.</span>
       <a href="{% url 'loan_appraisal_step' loan_request.id 6 %}" class="btn btn-gray">Back to Sheet 6</a>
       <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
     </div>

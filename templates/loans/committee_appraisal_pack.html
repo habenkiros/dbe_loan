@@ -27,6 +27,43 @@
   <p class="pack-banner"><strong>Read-only appraisal pack</strong> — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.
     {% if mode_label %} · Mode: <strong>{{ mode_label }}</strong>{% endif %}
   </p>
+
+  <div class="pack-section" style="background:#e8f4ec; border-color:#064420;">
+    <h2 style="margin-top:0;">Decision snapshot</h2>
+    <div class="pack-grid">
+      <span class="lbl">Recommendation</span>
+      <span><strong>{{ appraisal.get_recommendation_display|default:"—" }}</strong></span>
+      <span class="lbl">Recommended amount</span>
+      <span><strong>{% if appraisal.amount_approved %}{{ appraisal.amount_approved|floatformat:2 }}{% else %}—{% endif %}</strong>
+        <small>(requested {{ loan_request.amount_requested|floatformat:2 }})</small></span>
+      <span class="lbl">Term / rate</span>
+      <span>{{ appraisal.term_approved_months|default:"—" }} months · {% if appraisal.rate_approved %}{{ appraisal.rate_approved }}%{% else %}—{% endif %}</span>
+      {% if scorecard %}
+      <span class="lbl">Credit score</span>
+      <span><strong>{{ scorecard.total|floatformat:1 }}/100</strong> — {{ scorecard.band_label }}</span>
+      {% endif %}
+    </div>
+    {% if scorecard.pillars %}
+    <ul style="margin:0.5rem 0 0 1.1rem; font-size:0.9rem;">
+      {% for p in scorecard.pillars %}
+      <li>{{ p.label }}: {{ p.earned }}/{{ p.max }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if documents %}
+    <h3 style="margin-top:0.85rem;">Application documents ({{ documents|length }})</h3>
+    <ul style="margin:0.25rem 0 0 1.1rem; font-size:0.9rem;">
+      {% for doc in documents %}
+      <li>
+        {{ doc.document_type.name }}
+        — {{ doc.get_auth_status_display|default:doc.auth_status|default:"—" }}
+        {% if doc.file %}<a class="no-print" href="{% url 'view_loan_document' loan_request.id doc.id %}">View</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
   <p>
     <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
     &nbsp;|&nbsp; Branch: {{ loan_request.branch.name }}

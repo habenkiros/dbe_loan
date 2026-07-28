@@ -476,7 +476,7 @@ class LoanRequest(models.Model):
     appraisal_completed_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text='When the assigned loan officer finished appraisal (Sheet 7).',
+        help_text='When the assigned loan officer finished appraisal (locks Sheets 1–7 until returned).',
     )
     committee_status = models.CharField(
         max_length=30,
@@ -1021,6 +1021,8 @@ class LoanAppraisal(models.Model):
         null=True,
         blank=True,
         related_name='es_screened_appraisals',
+        help_text='Loan officer who screened the E&S checklist.',
+        verbose_name='Screened by (loan officer)',
     )
     es_checked_by = models.ForeignKey(
         CustomUser,
@@ -1028,6 +1030,8 @@ class LoanAppraisal(models.Model):
         null=True,
         blank=True,
         related_name='es_checked_appraisals',
+        help_text='Loan officer who checked checklist answers and mitigations.',
+        verbose_name='Checked by (loan officer)',
     )
     es_approved_by = models.ForeignKey(
         CustomUser,
@@ -1035,6 +1039,11 @@ class LoanAppraisal(models.Model):
         null=True,
         blank=True,
         related_name='es_approved_appraisals',
+        help_text=(
+            'Loan officer confirmation of E&S eligibility. '
+            'Credit committee signs the loan decision separately via committee voting.'
+        ),
+        verbose_name='E&S confirmed by (loan officer)',
     )
     es_assessment_date = models.DateField(null=True, blank=True)
     es_notes = models.TextField(null=True, blank=True, help_text='E&S checklist summary / action points.')
@@ -1114,6 +1123,15 @@ class LoanAppraisal(models.Model):
     max_loan_capacity = models.DecimalField(
         max_digits=20, decimal_places=2, null=True, blank=True,
         help_text='Max loan capacity from cashflow at target DSCR.',
+    )
+    # Banking conduct (live/mock account transactions) — CREDIT_SCORE_ALGORITHM_V2
+    banking_behavior = models.JSONField(
+        null=True, blank=True, default=dict,
+        help_text='Account transaction metrics for banking pillar (turnover, NSF, stability, …).',
+    )
+    banking_refreshed_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When banking_behavior was last refreshed from core banking / mock.',
     )
 
     def __str__(self):
@@ -1568,22 +1586,38 @@ class CommitteeApprovalPolicy(models.Model):
 
 class ApprovalCommitteeLevel(models.Model):
     """
-    Configurable approval tier: branch, district, head office, management.
-    Loans pass through active levels in sequence_order.
+    Configurable approval tier in the committee chain.
+    Loans pass through active levels in sequence_order (amount filters apply).
+
+    Well-known keys (branch, district, head_office, management) ship by default;
+    admins may add extra levels with any unique key and a voter_scope.
     """
     LEVEL_BRANCH = 'branch'
     LEVEL_DISTRICT = 'district'
     LEVEL_HEAD_OFFICE = 'head_office'
     LEVEL_MANAGEMENT = 'management'
-    LEVEL_KEY_CHOICES = [
-        (LEVEL_BRANCH, 'Branch committee'),
-        (LEVEL_DISTRICT, 'District committee'),
-        (LEVEL_HEAD_OFFICE, 'Head office committee'),
-        (LEVEL_MANAGEMENT, 'Management committee (CEO / VP / Board)'),
+
+    SCOPE_BRANCH = 'branch'
+    SCOPE_DISTRICT = 'district'
+    SCOPE_ORGANIZATION = 'organization'
+    VOTER_SCOPE_CHOICES = [
+        (SCOPE_BRANCH, 'Loan’s branch (role users at that branch)'),
+        (SCOPE_DISTRICT, 'Loan’s district (role users in that district)'),
+        (SCOPE_ORGANIZATION, 'Organization-wide (roles or named users)'),
     ]
 
-    key = models.CharField(max_length=30, choices=LEVEL_KEY_CHOICES, unique=True)
+    key = models.SlugField(
+        max_length=50,
+        unique=True,
+        help_text='Stable id (e.g. branch, regional_risk). Used in URLs/logs; unique.',
+    )
     name = models.CharField(max_length=120, help_text='Display name in UI.')
+    voter_scope = models.CharField(
+        max_length=20,
+        choices=VOTER_SCOPE_CHOICES,
+        default=SCOPE_ORGANIZATION,
+        help_text='How role-based voters are scoped for this level.',
+    )
     sequence_order = models.PositiveIntegerField(
         default=1,
         help_text='Order in the chain (1 = first after loan officer submits).',
@@ -1620,6 +1654,16 @@ class ApprovalCommitteeLevel(models.Model):
     def __str__(self):
         return f'{self.name} (order {self.sequence_order})'
 
+    def get_key_display(self):
+        """Human label for key (backwards-compatible with old choices)."""
+        labels = {
+            self.LEVEL_BRANCH: 'Branch committee',
+            self.LEVEL_DISTRICT: 'District committee',
+            self.LEVEL_HEAD_OFFICE: 'Head office committee',
+            self.LEVEL_MANAGEMENT: 'Management committee (CEO / VP / Board)',
+        }
+        return labels.get(self.key, self.key.replace('_', ' ').title())
+
     def applies_to_amount(self, amount: 'Decimal') -> bool:
         from decimal import Decimal
 
@@ -1641,27 +1685,26 @@ class ApprovalCommitteeLevel(models.Model):
         return 'Level is inactive.'
 
     @property
+    def allows_branch_override(self) -> bool:
+        return self.voter_scope == self.SCOPE_BRANCH
+
+    @property
     def member_scope_description(self) -> str:
-        """How member rules resolve to voters for a given loan (shown in admin)."""
-        if self.key == self.LEVEL_BRANCH:
+        """How member rules resolve to voters for a given loan (shown in admin / settings)."""
+        if self.voter_scope == self.SCOPE_BRANCH:
             return (
                 'Configure roles (e.g. loan officer, branch manager, accountant). '
                 'At vote time the system includes every active user with that role '
                 'who is assigned to the same branch as the loan.'
             )
-        if self.key == self.LEVEL_DISTRICT:
+        if self.voter_scope == self.SCOPE_DISTRICT:
             return (
                 'Configure roles (e.g. district manager, accountant). '
                 'Voters are users with that role assigned to the loan’s district.'
             )
-        if self.key == self.LEVEL_HEAD_OFFICE:
-            return (
-                'Configure roles (operation/finance managers, credit committee) or '
-                'named users. Role rules apply organization-wide (no branch filter).'
-            )
         return (
-            'Configure board / executive roles or add specific users (CEO, VP, '
-            'individual board members). Role rules are organization-wide.'
+            'Configure roles organization-wide, or add specific users '
+            '(executives, board members, standing committee).'
         )
 
 
@@ -1727,7 +1770,7 @@ class BranchCommitteeOverride(models.Model):
         ApprovalCommitteeLevel,
         on_delete=models.CASCADE,
         related_name='branch_overrides',
-        limit_choices_to={'key': ApprovalCommitteeLevel.LEVEL_BRANCH},
+        limit_choices_to={'voter_scope': ApprovalCommitteeLevel.SCOPE_BRANCH},
     )
     is_active = models.BooleanField(default=True)
     min_approvals_required = models.PositiveIntegerField(
@@ -1757,9 +1800,9 @@ class BranchCommitteeOverride(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if self.level_id and self.level.key != ApprovalCommitteeLevel.LEVEL_BRANCH:
+        if self.level_id and self.level.voter_scope != ApprovalCommitteeLevel.SCOPE_BRANCH:
             raise ValidationError(
-                {'level': 'Per-branch overrides are only supported for the branch committee level.'}
+                {'level': 'Per-branch overrides are only supported for branch-scoped committee levels.'}
             )
 
 

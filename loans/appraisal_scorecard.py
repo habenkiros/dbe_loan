@@ -7,12 +7,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from .appraisal_policy import get_loan_analysis_policy
 from .appraisal_vision import (
+    PILLAR_BANKING,
     PILLAR_COLLATERAL,
     PILLAR_ES,
     PILLAR_FINANCIAL,
     PILLAR_LABELS,
+    PILLAR_LABELS_BY_MODE,
     PILLAR_MAX,
     PILLAR_QUALITATIVE,
+    CREDIT_SCORE_ALGORITHM,
     SCORE_BAND_ACCEPTABLE,
     SCORE_BAND_STRONG,
     SCORE_BAND_UNACCEPTABLE,
@@ -28,6 +31,11 @@ def _d(v) -> Optional[Decimal]:
         return Decimal(str(v))
     except Exception:
         return None
+
+
+def _pillar_label(key: str, mode: str) -> str:
+    mode_labels = PILLAR_LABELS_BY_MODE.get(mode) or {}
+    return mode_labels.get(key) or PILLAR_LABELS.get(key) or key
 
 
 def _pillar_qualitative(appraisal) -> Tuple[Decimal, List[dict], str]:
@@ -56,13 +64,13 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     points = Decimal('0')
     if dscr is not None:
         if dscr >= Decimal('1.5'):
-            points += Decimal('20')
+            points += Decimal('16')
             band = 'strong DSCR'
         elif dscr >= warn_min:
-            points += Decimal('14')
+            points += Decimal('12')
             band = 'adequate DSCR'
         elif dscr >= Decimal('1.0'):
-            points += Decimal('8')
+            points += Decimal('7')
             band = 'thin DSCR'
         else:
             points += Decimal('2')
@@ -85,9 +93,9 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     if stressed is not None:
         stress_floor = _d(policy.warn_stressed_dscr_min) or Decimal('1.0')
         if stressed >= warn_min:
-            stress_pts = Decimal('10')
+            stress_pts = Decimal('8')
         elif stressed >= stress_floor:
-            stress_pts = Decimal('6')
+            stress_pts = Decimal('5')
         else:
             stress_pts = Decimal('2')
         contrib.append({
@@ -104,11 +112,11 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     if cap is not None and ask is not None and ask > 0:
         ratio = (cap / ask).quantize(Decimal('0.01'))
         if ratio >= Decimal('1.2'):
-            cap_pts = Decimal('5')
-        elif ratio >= Decimal('1.0'):
             cap_pts = Decimal('3')
+        elif ratio >= Decimal('1.0'):
+            cap_pts = Decimal('2')
         else:
-            cap_pts = Decimal('1')
+            cap_pts = Decimal('0.5')
         points += cap_pts
         contrib.append({
             'feature_key': 'fin.max_capacity_vs_ask',
@@ -123,9 +131,9 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     ratio_pts = Decimal('0')
     if current_r is not None:
         if current_r >= Decimal('1.5'):
-            ratio_pts += Decimal('3')
-        elif current_r >= Decimal('1.0'):
             ratio_pts += Decimal('2')
+        elif current_r >= Decimal('1.0'):
+            ratio_pts += Decimal('1')
         else:
             ratio_pts += Decimal('0.5')
         contrib.append({
@@ -137,11 +145,11 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     de_pts = Decimal('0')
     if de is not None:
         if de <= Decimal('1.0'):
-            de_pts = Decimal('2')
-        elif de <= Decimal('2.0'):
             de_pts = Decimal('1')
-        else:
+        elif de <= Decimal('2.0'):
             de_pts = Decimal('0.5')
+        else:
+            de_pts = Decimal('0.25')
         contrib.append({
             'feature_key': 'fin.debt_equity',
             'value': float(de),
@@ -153,6 +161,160 @@ def _pillar_financial(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     earned = min(points, max_pts)
     mode = getattr(appraisal, 'appraisal_mode', None) or 'msme'
     remark = f'DSCR + ratios financial pillar ({earned}/{max_pts}) [{mode}]'
+    return earned, contrib, remark
+
+
+def _pillar_banking(appraisal) -> Tuple[Decimal, List[dict], str]:
+    """Live/mock account conduct + bureau band (MSME & corporate)."""
+    max_pts = Decimal(PILLAR_MAX[PILLAR_BANKING])
+    contrib: List[dict] = []
+    points = Decimal('0')
+    metrics = getattr(appraisal, 'banking_behavior', None) or {}
+    if not isinstance(metrics, dict):
+        metrics = {}
+
+    turnover = metrics.get('turnover_vs_installment')
+    if turnover is not None:
+        t = _d(turnover)
+        if t >= Decimal('3'):
+            t_pts = Decimal('6')
+        elif t >= Decimal('2'):
+            t_pts = Decimal('4')
+        elif t >= Decimal('1'):
+            t_pts = Decimal('2')
+        else:
+            t_pts = Decimal('0.5')
+        points += t_pts
+        contrib.append({
+            'feature_key': 'bank.turnover_vs_installment',
+            'value': float(t),
+            'points': float(t_pts),
+            'reason': 'Avg monthly credits / proposed installment',
+        })
+    else:
+        contrib.append({
+            'feature_key': 'bank.turnover_vs_installment',
+            'value': None,
+            'points': 0,
+            'reason': 'No banking turnover yet — refresh transactions on Sheet 2',
+        })
+
+    cv = metrics.get('inflow_cv')
+    if cv is not None:
+        c = _d(cv)
+        if c <= Decimal('0.25'):
+            cv_pts = Decimal('4')
+        elif c <= Decimal('0.5'):
+            cv_pts = Decimal('2.5')
+        elif c <= Decimal('0.8'):
+            cv_pts = Decimal('1')
+        else:
+            cv_pts = Decimal('0.25')
+        points += cv_pts
+        contrib.append({
+            'feature_key': 'bank.inflow_stability',
+            'value': float(c),
+            'points': float(cv_pts),
+            'reason': 'Inflow stability (lower CV better)',
+        })
+
+    nsf = int(metrics.get('nsf_count') or 0)
+    if metrics:
+        if nsf <= 0:
+            nsf_pts = Decimal('3')
+        elif nsf == 1:
+            nsf_pts = Decimal('1')
+        else:
+            nsf_pts = Decimal('0')
+        points += nsf_pts
+        contrib.append({
+            'feature_key': 'bank.nsf_bounces',
+            'value': nsf,
+            'points': float(nsf_pts),
+            'reason': 'NSF / returned items in window',
+        })
+
+    neg = int(metrics.get('negative_balance_days') or 0)
+    if metrics:
+        if neg <= 0:
+            neg_pts = Decimal('2')
+        elif neg <= 3:
+            neg_pts = Decimal('1')
+        else:
+            neg_pts = Decimal('0')
+        points += neg_pts
+        contrib.append({
+            'feature_key': 'bank.negative_balance_days',
+            'value': neg,
+            'points': float(neg_pts),
+            'reason': 'Days with negative ending balance',
+        })
+
+    credit_months = int(metrics.get('credit_months') or 0)
+    if metrics:
+        if credit_months >= 5:
+            cm_pts = Decimal('2')
+        elif credit_months >= 3:
+            cm_pts = Decimal('1')
+        else:
+            cm_pts = Decimal('0.25')
+        points += cm_pts
+        contrib.append({
+            'feature_key': 'bank.credit_months',
+            'value': credit_months,
+            'points': float(cm_pts),
+            'reason': 'Months with material credit inflow',
+        })
+
+    # Bureau band (Sheet 2)
+    band = (appraisal.bureau_score_band or '').lower()
+    if band in ('excellent',):
+        b_pts = Decimal('3')
+    elif band in ('good',):
+        b_pts = Decimal('2')
+    elif band in ('fair',):
+        b_pts = Decimal('1')
+    elif band in ('poor', 'thin'):
+        b_pts = Decimal('0')
+    else:
+        b_pts = Decimal('0')
+    if band:
+        points += b_pts
+        contrib.append({
+            'feature_key': 'bank.bureau_band',
+            'value': band,
+            'points': float(b_pts),
+            'reason': f'Bureau band ({appraisal.get_bureau_score_band_display()})',
+        })
+
+    mode = getattr(appraisal, 'appraisal_mode', None) or 'msme'
+    if mode == 'corporate':
+        if _corporate_has_verified_audit_doc(appraisal.loan_request):
+            points += Decimal('2')
+            contrib.append({
+                'feature_key': 'bank.audit_verified',
+                'value': True,
+                'points': 2.0,
+                'reason': 'Verified audited financials on file',
+            })
+        if _d(getattr(appraisal, 'corp_annual_revenue', None)):
+            points += Decimal('1')
+            contrib.append({
+                'feature_key': 'bank.corp_revenue_present',
+                'value': float(appraisal.corp_annual_revenue),
+                'points': 1.0,
+                'reason': 'Corporate annual revenue entered',
+            })
+
+    earned = min(points, max_pts)
+    provider = metrics.get('provider') or 'none'
+    if not metrics or not metrics.get('tx_count'):
+        remark = f'Banking metrics missing (provider={provider}) — refresh on Sheet 2'
+    else:
+        remark = (
+            f'Account conduct + bureau ({earned}/{max_pts}); '
+            f'provider={provider}, txs={metrics.get("tx_count")}'
+        )
     return earned, contrib, remark
 
 
@@ -191,7 +353,6 @@ def _pillar_collateral(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
     warn_min = _d(policy.warn_collateral_coverage_min) or Decimal('1.0')
     contrib = []
     if cov is None:
-        # try compute
         total = _d(appraisal.collateral_total_value)
         ask = _d(appraisal.loan_request.amount_requested)
         if total is not None and ask and ask > 0:
@@ -207,13 +368,13 @@ def _pillar_collateral(appraisal, policy) -> Tuple[Decimal, List[dict], str]:
         earned = max_pts
         remark = 'Strong coverage'
     elif cov >= warn_min:
-        earned = Decimal('18')
+        earned = Decimal('11')
         remark = 'Adequate coverage'
     elif cov >= Decimal('0.8'):
-        earned = Decimal('10')
+        earned = Decimal('6')
         remark = 'Below policy minimum'
     else:
-        earned = Decimal('4')
+        earned = Decimal('2')
         remark = 'Weak coverage'
     contrib.append({
         'feature_key': 'col.coverage',
@@ -235,8 +396,9 @@ def band_for_total(total: Decimal) -> str:
 
 
 def build_credit_scorecard(appraisal) -> Dict[str, Any]:
-    """Compute explainable 4-pillar scorecard (does not save)."""
+    """Compute explainable 5-pillar scorecard (does not save)."""
     policy = get_loan_analysis_policy()
+    mode = getattr(appraisal, 'appraisal_mode', None) or 'msme'
     pillars = []
     all_contrib: List[dict] = []
     total = Decimal('0')
@@ -244,6 +406,7 @@ def build_credit_scorecard(appraisal) -> Dict[str, Any]:
     for key, fn in (
         (PILLAR_QUALITATIVE, lambda: _pillar_qualitative(appraisal)),
         (PILLAR_FINANCIAL, lambda: _pillar_financial(appraisal, policy)),
+        (PILLAR_BANKING, lambda: _pillar_banking(appraisal)),
         (PILLAR_ES, lambda: _pillar_es(appraisal)),
         (PILLAR_COLLATERAL, lambda: _pillar_collateral(appraisal, policy)),
     ):
@@ -251,7 +414,7 @@ def build_credit_scorecard(appraisal) -> Dict[str, Any]:
         max_pts = Decimal(PILLAR_MAX[key])
         pillars.append({
             'key': key,
-            'label': PILLAR_LABELS[key],
+            'label': _pillar_label(key, mode),
             'earned': float(earned),
             'max': float(max_pts),
             'remark': remark,
@@ -262,7 +425,9 @@ def build_credit_scorecard(appraisal) -> Dict[str, Any]:
     total = total.quantize(Decimal('0.01'))
     band = band_for_total(total)
     return {
-        'schema': 'credit_scorecard_v1',
+        'schema': 'credit_scorecard_v2',
+        'algorithm': CREDIT_SCORE_ALGORITHM,
+        'appraisal_mode': mode,
         'total': float(total),
         'max_total': 100.0,
         'band': band,

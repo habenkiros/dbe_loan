@@ -57,6 +57,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'loans.context_processors.loan_notifications',
+                'collateral.context_processors.gebeta_maps',
             ],
         },
     },
@@ -162,6 +163,23 @@ DECSI_BASE_URL = os.getenv('DECSI_BASE_URL', '').rstrip('/')
 DECSI_CUSTOMER_TIMEOUT = int(os.getenv('DECSI_CUSTOMER_TIMEOUT', '8'))
 DECSI_CUSTOMER_FORCE_MOCK = os.getenv('DECSI_CUSTOMER_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
 DECSI_CUSTOMER_FALLBACK_MOCK = os.getenv('DECSI_CUSTOMER_FALLBACK_MOCK', 'True').lower() in ('1', 'true', 'yes')
+DECSI_TRANSACTIONS_PATH = os.getenv(
+    'DECSI_TRANSACTIONS_PATH',
+    '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/transactions',
+)
+
+# Gebeta Maps — Ethiopia-local geocoding / (future) map tiles
+# Docs: https://docs.gebeta.app/docs
+GEBETA_MAPS_API_KEY = os.getenv('GEBETA_MAPS_API_KEY', '').strip()
+GEBETA_MAPS_GEOCODE_URL = os.getenv(
+    'GEBETA_MAPS_GEOCODE_URL',
+    'https://mapapi.gebeta.app/api/v1/route/geocoding',
+).rstrip('/')
+GEBETA_MAPS_TIMEOUT = int(os.getenv('GEBETA_MAPS_TIMEOUT', '8'))
+# auto = Gebeta when key set, else Nominatim; force with gebeta|nominatim
+GEBETA_MAPS_GEOCODE_PROVIDER = os.getenv('GEBETA_MAPS_GEOCODE_PROVIDER', 'auto').strip().lower()
+# leaflet_osm (current UI) | gebeta (Phase 2 map SDK swap)
+GEBETA_MAPS_TILES_PROVIDER = os.getenv('GEBETA_MAPS_TILES_PROVIDER', 'leaflet_osm').strip().lower()
 
 # HTTPS reverse proxy for tablet field visits (see docker-compose.https.yml)
 if os.getenv('USE_HTTPS_PROXY', '') == '1':

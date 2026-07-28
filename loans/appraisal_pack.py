@@ -71,6 +71,13 @@ def build_committee_appraisal_pack(loan_request: LoanRequest) -> Dict[str, Any]:
     if mode == 'corporate':
         qual_labels = dict(CORPORATE_QUALITATIVE_FACTOR_KEYS)
 
+    scorecard = None
+    if appraisal:
+        scorecard = getattr(appraisal, 'scorecard_detail', None)
+        if not scorecard:
+            from .appraisal_scorecard import build_credit_scorecard
+            scorecard = build_credit_scorecard(appraisal)
+
     return {
         'loan_request': loan_request,
         'basic_info': basic_info,
@@ -87,6 +94,6 @@ def build_committee_appraisal_pack(loan_request: LoanRequest) -> Dict[str, Any]:
         'amortization': amortization,
         'documents': documents,
         'display': _display,
-        'scorecard': getattr(appraisal, 'scorecard_detail', None) if appraisal else None,
+        'scorecard': scorecard,
         'feature_snapshot': getattr(appraisal, 'feature_snapshot', None) if appraisal else None,
     }

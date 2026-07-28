@@ -1,5 +1,5 @@
 # loans/committee.py
-"""Multi-level configurable approval committees (branch → district → HO → management)."""
+"""Multi-level configurable approval committees (open-ended chain by sequence_order)."""
 
 from __future__ import annotations
 
@@ -70,7 +70,10 @@ def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
     if loan_request.branch_id:
         from loans.models import ApprovalCommitteeLevel as Level
 
-        branch_level = next((l for l in applied if l.key == Level.LEVEL_BRANCH), None)
+        branch_level = next(
+            (l for l in applied if l.voter_scope == Level.SCOPE_BRANCH),
+            None,
+        )
         if branch_level:
             branch_override = get_branch_override(loan_request, branch_level)
     return {
@@ -85,7 +88,7 @@ def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
 def get_branch_override(loan_request, level):
     from loans.models import BranchCommitteeOverride, ApprovalCommitteeLevel
 
-    if not loan_request.branch_id or level.key != ApprovalCommitteeLevel.LEVEL_BRANCH:
+    if not loan_request.branch_id or level.voter_scope != ApprovalCommitteeLevel.SCOPE_BRANCH:
         return None
     return (
         BranchCommitteeOverride.objects.filter(
@@ -139,17 +142,17 @@ def _user_matches_rule(user, rule, loan_request, level) -> bool:
     if user.role != rule.role:
         return False
 
-    key = level.key
-    if key == ApprovalCommitteeLevel.LEVEL_BRANCH:
+    scope = level.voter_scope
+    if scope == ApprovalCommitteeLevel.SCOPE_BRANCH:
         return bool(user.branch_id and loan_request.branch_id and user.branch_id == loan_request.branch_id)
-    if key == ApprovalCommitteeLevel.LEVEL_DISTRICT:
+    if scope == ApprovalCommitteeLevel.SCOPE_DISTRICT:
         district_id = _loan_district_id(loan_request)
         return bool(district_id and user.district_id == district_id)
     return True
 
 
 def get_eligible_voters(loan_request, level) -> List:
-    from loans.models import CustomUser, ApprovalCommitteeMemberRule
+    from loans.models import CustomUser, ApprovalCommitteeMemberRule, ApprovalCommitteeLevel
 
     rules, _ = get_member_rules_for_level(loan_request, level)
     users_by_id = {}
@@ -159,9 +162,9 @@ def get_eligible_voters(loan_request, level) -> List:
                 users_by_id[rule.user_id] = rule.user
         else:
             qs = CustomUser.objects.filter(is_active=True, role=rule.role)
-            if level.key == 'branch':
+            if level.voter_scope == ApprovalCommitteeLevel.SCOPE_BRANCH:
                 qs = qs.filter(branch_id=loan_request.branch_id)
-            elif level.key == 'district':
+            elif level.voter_scope == ApprovalCommitteeLevel.SCOPE_DISTRICT:
                 district_id = _loan_district_id(loan_request)
                 if district_id:
                     qs = qs.filter(district_id=district_id)
@@ -257,7 +260,8 @@ def _committee_engaged_q():
 
 def committee_loan_visibility_q(user) -> Q:
     """
-    Loans this user may see in committee lists/detail (by branch, district, or current HO/mgmt level).
+    Loans this user may see in committee lists/detail
+    (by branch, district, or current org-scoped level).
     """
     from loans.models import ApprovalCommitteeLevel
 
@@ -268,32 +272,29 @@ def committee_loan_visibility_q(user) -> Q:
     if not rules.exists():
         return Q(pk__in=[])
 
-    level_keys = set(rules.values_list('level__key', flat=True))
+    scopes = set(rules.values_list('level__voter_scope', flat=True))
+    org_level_ids = set(
+        rules.filter(level__voter_scope=ApprovalCommitteeLevel.SCOPE_ORGANIZATION)
+        .values_list('level_id', flat=True)
+    )
     visibility = Q()
     has_scope = False
     engaged = _committee_engaged_q()
 
     if (
-        ApprovalCommitteeLevel.LEVEL_BRANCH in level_keys or _user_participates_in_branch_rules(user)
+        ApprovalCommitteeLevel.SCOPE_BRANCH in scopes or _user_participates_in_branch_rules(user)
     ) and user.branch_id:
         visibility |= Q(branch_id=user.branch_id)
         has_scope = True
-    if ApprovalCommitteeLevel.LEVEL_DISTRICT in level_keys:
+    if ApprovalCommitteeLevel.SCOPE_DISTRICT in scopes:
         district_id = user.district_id
         if not district_id and user.branch_id:
             district_id = getattr(user.branch, 'district_id', None)
         if district_id:
             visibility |= Q(district_id=district_id) | Q(branch__district_id=district_id)
             has_scope = True
-    if ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE in level_keys:
-        visibility |= Q(
-            current_approval_level__key=ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE,
-        )
-        has_scope = True
-    if ApprovalCommitteeLevel.LEVEL_MANAGEMENT in level_keys:
-        visibility |= Q(
-            current_approval_level__key=ApprovalCommitteeLevel.LEVEL_MANAGEMENT,
-        )
+    if org_level_ids:
+        visibility |= Q(current_approval_level_id__in=org_level_ids)
         has_scope = True
 
     if not has_scope:
@@ -302,7 +303,7 @@ def committee_loan_visibility_q(user) -> Q:
 
 
 def committee_loan_requests_queryset(user):
-    """All committee loans visible to user in their branch/district/HO/mgmt scope."""
+    """All committee loans visible to user in their branch/district/org scope."""
     from loans.models import LoanRequest
 
     return (
@@ -454,17 +455,17 @@ def get_committee_tally(loan_request, current_user=None) -> Dict[str, Any]:
 def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
     errors = []
     if not loan_request.appraisal_completed_at:
-        errors.append('Finish the appraisal (Sheet 7 — “Finish appraisal”) before submitting.')
+        errors.append('Finish the appraisal on Sheet 6 (Summary & decision) before submitting to committee.')
     appraisal = get_appraisal_for_loan(loan_request)
     if not appraisal:
-        errors.append('No appraisal record found — complete Sheets 1–7 first.')
+        errors.append('No appraisal record found — complete Sheets 1–6 first.')
     else:
         if not appraisal.amount_approved or appraisal.amount_approved <= 0:
             errors.append('Enter the recommended amount on Sheet 6 (Summary & decision).')
         if appraisal.recommendation not in ('approve', 'escalate'):
             errors.append('Sheet 6 recommendation must be Approve or Escalate to send to committee.')
     if not get_levels_for_loan(loan_request):
-        errors.append('No approval committee levels are configured (Admin → Approval committee levels).')
+        errors.append('No approval committee levels are configured (Settings → Approval committees).')
     if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
         errors.append('This loan is already in the approval committee workflow.')
     if loan_request.committee_status == loan_request.COMMITTEE_APPROVED:
@@ -499,6 +500,10 @@ def return_loan_to_officer(loan_request, returned_by, notes: str) -> None:
     loan_request.committee_return_notes = notes.strip()
     loan_request.committee_returned_at = timezone.now()
     loan_request.committee_returned_by = returned_by
+    # Unlock Sheets 1–7 / scorecard — officer must re-finish before resubmit.
+    loan_request.appraisal_completed_at = None
+    loan_request.submitted_to_committee_at = None
+    loan_request.submitted_to_committee_by = None
     loan_request.save(
         update_fields=[
             'committee_status',
@@ -506,6 +511,9 @@ def return_loan_to_officer(loan_request, returned_by, notes: str) -> None:
             'committee_return_notes',
             'committee_returned_at',
             'committee_returned_by',
+            'appraisal_completed_at',
+            'submitted_to_committee_at',
+            'submitted_to_committee_by',
         ]
     )
     loan_request.approval_level_progress.filter(

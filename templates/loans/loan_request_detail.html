@@ -184,11 +184,16 @@
 {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
 <div class="loan-officer-actions" style="margin: 1.5rem 0; padding: 1rem; border: 2px solid #064420; border-radius: 8px; background: #f0f8f0;">
     <h3 style="margin-top: 0;">Loan officer steps</h3>
-    <p style="margin-bottom: 0.5rem;">Fill the cashflow-based MSME loan appraisal (Sheet 1–7), set the <strong>recommended amount</strong> on Sheet 6, then submit to the approval committee.</p>
+    <p style="margin-bottom: 0.5rem;">Complete Sheets 1–6 (recommendation on Sheet 6), then <strong>finish &amp; submit to the approval committee</strong>. Sheet 7 repayment schedule is optional.</p>
     <p>
-        <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green" title="Open loan appraisal form">Open loan appraisal</a>
+        <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green" title="Open loan appraisal form">{% if appraisal_locked %}View appraisal (read-only){% else %}Open loan appraisal{% endif %}</a>
         <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue">View appraisal steps (guide)</a>
     </p>
+    {% if appraisal_locked %}
+    <p style="margin:0.5rem 0 0; padding:0.6rem 0.75rem; background:#fff8e5; border:1px solid #e0b84a; border-radius:6px; font-size:0.9rem;">
+      <strong>Appraisal locked.</strong> {{ appraisal_lock_reason }}
+    </p>
+    {% endif %}
     {% if loan_request.appraisal_completed_at %}
     <p><small>Appraisal finished {{ loan_request.appraisal_completed_at|date:"SHORT_DATETIME_FORMAT" }}.</small></p>
     {% endif %}
@@ -214,21 +219,28 @@
     {% elif loan_request.committee_status == 'committee_declined' %}
     <p><strong>Committee declined</strong> on {{ loan_request.committee_decided_at|date:"SHORT_DATETIME_FORMAT" }}.</p>
     {% elif loan_request.committee_status == 'returned_to_officer' %}
-    <p><strong>Returned for corrections</strong>
-      {% if loan_request.committee_returned_at %}on {{ loan_request.committee_returned_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
-      {% if loan_request.committee_returned_by %}by {{ loan_request.committee_returned_by.username }}{% endif %}.</p>
-    {% if loan_request.committee_return_notes %}
-    <p><strong>Committee feedback:</strong> {{ loan_request.committee_return_notes|linebreaksbr }}</p>
-    {% endif %}
-    <p class="help">Update the appraisal, then submit to the committee again when ready.</p>
+    <div style="margin:0.75rem 0; padding:0.85rem 1rem; background:#fff3cd; border:2px solid #e0b84a; border-radius:8px;">
+      <p style="margin:0 0 0.5rem;"><strong>Returned for corrections</strong>
+        {% if loan_request.committee_returned_at %}on {{ loan_request.committee_returned_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
+        {% if loan_request.committee_returned_by %}by {{ loan_request.committee_returned_by.username }}{% endif %}.
+      </p>
+      {% if loan_request.committee_return_notes %}
+      <p style="margin:0 0 0.75rem;"><strong>Committee feedback:</strong><br>{{ loan_request.committee_return_notes|linebreaksbr }}</p>
+      {% endif %}
+      <p style="margin:0 0 0.75rem;" class="help">Fix the appraisal (Sheets 1–6), finish again if needed, then resubmit below.</p>
+      <p style="margin:0;">
+        <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green">Open appraisal to fix</a>
+      </p>
+    </div>
     {% if committee_submit and committee_submit.ok %}
-    <form method="post" action="{% url 'submit_to_committee' loan_request.id %}">
+    <form method="post" action="{% url 'submit_to_committee' loan_request.id %}" style="margin-top:0.75rem;">
         {% csrf_token %}
-        <label>Notes for committee (optional)</label><br>
-        <textarea name="committee_submission_notes" rows="2" style="width:100%; max-width:480px;"></textarea>
+        <label><strong>Notes for committee</strong> (optional — mention what you fixed)</label><br>
+        <textarea name="committee_submission_notes" rows="2" style="width:100%; max-width:480px;" placeholder="e.g. Updated DSCR and collateral coverage per feedback…"></textarea>
         <p style="margin-top:0.5rem;"><button type="submit" class="btn btn-green">Resubmit to approval committee</button></p>
     </form>
     {% elif committee_submit %}
+    <p><strong>Cannot resubmit yet:</strong></p>
     <ul style="margin:0.5rem 0 0 1.1rem;">{% for err in committee_submit.errors %}<li>{{ err }}</li>{% endfor %}</ul>
     {% endif %}
     {% elif committee_submit and committee_submit.ok %}
@@ -250,20 +262,32 @@
 {% endif %}
 
 <a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>
+{% if user.role == 'branch_manager' or user.is_superuser or user.role == 'engineering_head' or user.role == 'admin' or user.role == 'superadmin' %}
+{% if loan_request.status|default:''|lower == 'approved' or loan_request.queue_approved %}
 {% if user.role == 'branch_manager' or user.is_superuser %}
-{% if loan_request.status|default:''|lower == 'approved' %}
 {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
  {% if not loan_request.assigned_loan_officer %}
  | <a href="{% url 'assign_loan_officer' loan_request.id %}">Assign loan officer</a>
  {% else %}
- | Assigned: {{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}
+ | Assigned LO: {{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}
  {% endif %}
 {% endif %}
 {% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
  {% if not loan_request.sent_to_engineering_at %}
- | <a href="{% url 'send_to_engineering_head' loan_request.id %}">Send to engineering head</a>
+ | <a href="{% url 'send_to_engineering_head' loan_request.id %}" class="btn btn-green" style="font-size:0.85rem;">Send to engineering head</a>
  {% else %}
- | Sent to engineering on {{ loan_request.sent_to_engineering_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.assigned_engineer %} — Assigned: {{ loan_request.assigned_engineer.get_full_name|default:loan_request.assigned_engineer.username }}{% endif %}
+ | Sent {{ loan_request.sent_to_engineering_at|date:"SHORT_DATETIME_FORMAT" }}
+ {% endif %}
+{% endif %}
+{% endif %}
+{% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
+ {% if loan_request.sent_to_engineering_at %}
+  {% if user.role == 'engineering_head' or user.role == 'admin' or user.role == 'superadmin' or user.is_superuser %}
+  | <a href="{% url 'assign_engineer' loan_request.id %}" class="btn btn-blue" style="font-size:0.85rem;">{% if loan_request.assigned_engineer %}Reassign engineer{% else %}Assign engineer{% endif %}</a>
+  {% endif %}
+  {% if loan_request.assigned_engineer %}
+  | Engineer: {{ loan_request.assigned_engineer.get_full_name|default:loan_request.assigned_engineer.username }}
+  {% endif %}
  {% endif %}
 {% endif %}
 {% endif %}

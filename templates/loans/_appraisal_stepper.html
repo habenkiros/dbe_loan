@@ -80,12 +80,28 @@
 }
 .appraisal-card h2 { margin-top: 0; color: #064420; font-size: 1.2rem; }
 .appraisal-actions { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.appraisal-lock-banner {
+  background: #fff8e5;
+  border: 1px solid #e0b84a;
+  border-radius: 8px;
+  padding: 0.85rem 1.1rem;
+  margin: 0 0 1.25rem 0;
+  color: #5c4500;
+}
+.appraisal-lock-banner.final {
+  background: #e8f5e9;
+  border-color: #28a745;
+  color: #155724;
+}
 </style>
 <div class="appraisal-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
   <div>
     <h1>Loan appraisal – {{ loan_request.loan_request_id }}
       {% if mode_label %}
       <span style="font-size:0.85rem; font-weight:600; vertical-align:middle; margin-left:0.5rem; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid {% if is_corporate %}#1e40af{% else %}#064420{% endif %}; color:{% if is_corporate %}#1e40af{% else %}#064420{% endif %}; background:{% if is_corporate %}#eff6ff{% else %}#e8f4ec{% endif %};">{{ mode_label }}</span>
+      {% endif %}
+      {% if appraisal_locked %}
+      <span style="font-size:0.8rem; font-weight:600; vertical-align:middle; margin-left:0.35rem; padding:0.2rem 0.55rem; border-radius:999px; background:#5c4500; color:#fff;">LOCKED</span>
       {% endif %}
     </h1>
     <p class="meta">Applicant: <strong>{{ loan_request.applicant_name }}</strong> · Phone: {{ loan_request.phone_number }} · Amount: <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong>
@@ -94,16 +110,41 @@
   </div>
   <a href="{% url 'loan_appraisal_steps' %}" class="btn btn-blue" style="flex-shrink: 0;">View steps guide</a>
 </div>
+{% if appraisal_locked %}
+<div class="appraisal-lock-banner {% if appraisal_lock_code == 'committee_approved' %}final{% endif %}">
+  <strong>Read-only.</strong> {{ appraisal_lock_reason }}
+  <a href="{% url 'loan_request_detail' loan_request.id %}" style="margin-left:0.5rem;">Back to loan detail</a>
+</div>
+{% elif appraisal_lock_code == 'returned' and appraisal_lock_reason %}
+<div class="appraisal-lock-banner" style="background:#eef6ff;border-color:#6b9bd1;color:#1e3a5f;">
+  <strong>Unlocked for corrections.</strong> {{ appraisal_lock_reason }}
+</div>
+{% endif %}
 <div class="appraisal-stepper">
   {% for s in steps %}
-  <div class="step-item {% if s.0 == step %}current{% elif s.0 < step %}done{% endif %}">
-    {% if s.0 < step %}
+  <div class="step-item {% if s.0 == step %}current{% elif s.0 < step or appraisal_locked %}done{% endif %}">
+    {% if s.0 != step %}
       <a href="{% url 'loan_appraisal_step' loan_request.id s.0 %}">{{ s.1 }}</a>
     {% else %}
       <span>{{ s.1 }}</span>
     {% endif %}
   </div>
-  {% if not forloop.last %}<div class="step-connector {% if forloop.counter < step %}done{% endif %}"></div>{% endif %}
+  {% if not forloop.last %}<div class="step-connector {% if forloop.counter < step or appraisal_locked %}done{% endif %}"></div>{% endif %}
   {% endfor %}
 </div>
 {% include "loans/_sheet_requirements_panel.html" %}
+{% if appraisal_locked %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('form').forEach(function (form) {
+    form.querySelectorAll('input:not([type="hidden"]), select, textarea, button[type="submit"]').forEach(function (el) {
+      el.disabled = true;
+      el.setAttribute('aria-disabled', 'true');
+    });
+    form.querySelectorAll('.appraisal-actions button[type="submit"]').forEach(function (btn) {
+      btn.style.display = 'none';
+    });
+  });
+});
+</script>
+{% endif %}

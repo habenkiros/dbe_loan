@@ -1,30 +1,136 @@
 {% extends "base.html" %}
 {% block title %}Engineering QA — {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
-<h2>Engineering collateral review</h2>
-<p>
-  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
-  · {{ loan_request.collateral.name }} · Branch {{ loan_request.branch.name }}
-</p>
-<p>Submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
-  {% if loan_request.collateral_submitted_by %}by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}
-  · Status: {{ pipeline_label }}</p>
+<style>
+.qa-wrap { max-width: 960px; }
+.qa-strip {
+  position: sticky; top: 0; z-index: 20;
+  background: #fff; border: 2px solid #064420; border-radius: 10px;
+  padding: 0.85rem 1.1rem; margin: 0 0 1.25rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: center; justify-content: space-between;
+}
+.qa-panel { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+.qa-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.65rem; }
+.qa-photos img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
+.qa-badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #fff3cd; color: #856404; }
+</style>
 
-{% include "collateral/_coverage_panel.html" %}
+<div class="qa-wrap">
+  <p class="help"><a href="{% url 'collateral:engineering_qa_queue' %}">← Engineering QA queue</a></p>
+  <h1 style="margin-bottom:0.35rem;">Engineering collateral review</h1>
+  <p style="margin-top:0;">
+    <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+    · {{ loan_request.collateral.name }} · {{ loan_request.branch.name }}
+  </p>
 
-<form method="post" style="margin-top:1rem;">
-  {% csrf_token %}
-  <p>
-    <label for="id_review_note">Engineering note</label><br>
-    {{ form.review_note }}
-    <br><small class="help">Include reason when returning for correction.</small>
-  </p>
-  <p>
-    <button type="submit" name="action" value="approve" class="btn btn-green">Approve collateral</button>
-    <button type="submit" name="action" value="return" class="btn btn-orange">Return for correction</button>
-    <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">View summary</a>
-    <a href="{% url 'collateral:engineering_qa_queue' %}" class="btn btn-gray">Back to queue</a>
-  </p>
-</form>
-<p class="help">Approve keeps the submit lock. Return clears submit so the officer can edit field data and re-submit.</p>
+  <div class="qa-strip">
+    <div>
+      <span class="qa-badge">{{ pipeline_label }}</span>
+      {% if totals and totals.grand_total %}
+      · Estimated value <strong>{{ totals.grand_total|floatformat:2 }}</strong>
+      {% endif %}
+      {% if coverage.coverage_pct %}
+      · Coverage <strong>{{ coverage.coverage_pct }}%</strong>
+      {% endif %}
+      <br><small>
+        Submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
+        {% if loan_request.collateral_submitted_by %}by {{ loan_request.collateral_submitted_by.username }}{% endif %}
+        {% if loan_request.assigned_engineer %} · Field engineer: {{ loan_request.assigned_engineer.get_full_name|default:loan_request.assigned_engineer.username }}{% endif %}
+      </small>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+      <a href="#qa-decision" class="btn btn-green">Approve / return</a>
+      <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">Full summary</a>
+    </div>
+  </div>
+
+  {% include "collateral/_coverage_panel.html" %}
+
+  {% if readiness and readiness.applies %}
+  <div class="qa-panel">
+    <h3 style="margin-top:0;">Field readiness</h3>
+    <ul style="margin:0; padding-left:1.1rem;">
+      {% for row in readiness.buildings %}
+      <li>
+        <strong>{{ row.building.name }}</strong>
+        — {% if row.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}<span style="color:#856404;">incomplete</span>{% endif %}
+        · {{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos
+        · BOQ {{ row.readiness.building_total|floatformat:0 }}
+        · <a href="{% url 'collateral:field_visit' row.building.id %}">Field visit</a>
+        · <a href="{% url 'collateral:building_estimation_summary' row.building.id %}">መጠቃለሊ</a>
+      </li>
+      {% endfor %}
+      {% if readiness.land %}
+      <li>
+        <strong>Land</strong>
+        — {% if readiness.land.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}incomplete{% endif %}
+        · <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Field visit</a>
+      </li>
+      {% endif %}
+      {% for row in readiness.other_items %}
+      <li>
+        <strong>{{ row.item.name }}</strong>
+        — {% if row.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}incomplete{% endif %}
+        · <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if building_boq %}
+  <div class="qa-panel">
+    <h3 style="margin-top:0;">BOQ totals</h3>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead><tr><th style="text-align:left;">Building</th><th>Lines</th><th style="text-align:right;">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for row in building_boq %}
+        <tr>
+          <td>{{ row.building.name }}</td>
+          <td style="text-align:center;">{{ row.line_count }}</td>
+          <td style="text-align:right;">{{ row.total|floatformat:2 }}</td>
+          <td><a href="{% url 'collateral:valuation_list' row.building.id %}">Desktop BOQ</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if photo_previews %}
+  <div class="qa-panel">
+    <h3 style="margin-top:0;">Recent field photos</h3>
+    <div class="qa-photos">
+      {% for p in photo_previews %}
+      <div>
+        <a href="{{ p.url }}" target="_blank" rel="noopener"><img src="{{ p.url }}" alt=""></a>
+        <small>{{ p.label }}{% if p.has_gps %} · GPS{% endif %}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div id="qa-decision" class="qa-panel" style="border-color:#064420;">
+    <h3 style="margin-top:0; color:#064420;">Decision</h3>
+    <form method="post">
+      {% csrf_token %}
+      <p>
+        <label for="id_review_note"><strong>Engineering note</strong></label><br>
+        {{ form.review_note }}
+        <br><small class="help">Required when returning for correction.</small>
+      </p>
+      <p>
+        <button type="submit" name="action" value="approve" class="btn btn-green">Approve collateral</button>
+        <button type="submit" name="action" value="return" class="btn btn-orange"
+                onclick="var n=document.getElementById('id_review_note'); if(n && n.value.trim().length < 10){ alert('Add a return note (at least 10 characters).'); return false; }">
+          Return for correction
+        </button>
+        <a href="{% url 'collateral:engineering_qa_queue' %}" class="btn btn-gray">Cancel</a>
+      </p>
+    </form>
+    <p class="help" style="margin:0;">Approve keeps the submit lock. Return unlocks field data so the officer/engineer can fix and re-submit.</p>
+  </div>
+</div>
 {% endblock %}

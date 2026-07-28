@@ -74,11 +74,16 @@ def build_analysis_assist(appraisal, basic_info=None) -> Dict[str, Any]:
             'detail': 'Prior defaults — ensure mitigation / committee notes.',
             'sheet': 2,
         })
-    if appraisal.bureau_score is not None and appraisal.bureau_score_band:
+    # Only flag weak/fair/poor bureau — good/excellent is not an action item.
+    if appraisal.bureau_score_band in (
+        getattr(appraisal, 'BUREAU_BAND_FAIR', 'fair'),
+        getattr(appraisal, 'BUREAU_BAND_POOR', 'poor'),
+        getattr(appraisal, 'BUREAU_BAND_THIN', 'thin'),
+    ):
         insights.append({
-            'severity': 'info',
+            'severity': 'medium' if appraisal.bureau_score_band != 'poor' else 'high',
             'title': f'Bureau band: {appraisal.get_bureau_score_band_display()}',
-            'detail': f'Score {appraisal.bureau_score}',
+            'detail': f'Score {appraisal.bureau_score}' if appraisal.bureau_score is not None else 'Review bureau on Sheet 2.',
             'sheet': 2,
         })
     elif appraisal.nbe_credit_report_obtained and appraisal.bureau_score is None:
@@ -154,6 +159,7 @@ def _pillar_sheet(key: Optional[str]) -> int:
     return {
         'qualitative': 2,
         'financial': 3,
+        'banking': 2,
         'es': 4,
         'collateral': 5,
     }.get(key or '', 6)
@@ -164,7 +170,8 @@ def officer_checklist_for_mode(mode: str) -> List[str]:
     common = [
         'Confirm identity / TIN (banking or documents) matches Sheet 1',
         'Complete Sheets 1–6; resolve hard blocks before finish',
-        'Review explainable scorecard on Sheet 6 before recommendation',
+        'On Sheet 6: recommend approve/escalate, then finish and submit to committee',
+        'Sheet 7 repayment schedule is optional (for the pack / disbursement)',
     ]
     if mode == 'corporate':
         return [

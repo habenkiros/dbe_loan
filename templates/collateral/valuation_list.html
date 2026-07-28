@@ -1,17 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Valuation – {{ building.name }}{% endblock %}
 {% block content %}
-<h2>Valuation – {{ building.name }}</h2>
+<h2>Desktop BOQ — {{ building.name }}</h2>
 <p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong></p>
+<p class="help">Prefer the tablet <strong>field visit</strong> for on-site quantities and photos. Use this page for desktop BOQ edits.</p>
 <p>
-    <a href="{% url 'collateral:valuation_add' building.id %}">Add row</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:valuation_add_multiple' building.id %}">Add multiple rows</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:building_estimation_summary' building.id %}">መጠቃለሊ (estimation summary)</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:building_list' building.loan_request.id %}">Back to buildings</a>
+    <a href="{% url 'collateral:field_visit' building.id %}" class="btn btn-green">Continue field visit</a>
+    <a href="{% url 'collateral:valuation_add_multiple' building.id %}" class="btn btn-blue">Add multiple rows</a>
+    <a href="{% url 'collateral:valuation_add' building.id %}" class="btn btn-gray">Add row</a>
+    <a href="{% url 'collateral:building_estimation_summary' building.id %}" class="btn btn-gray">መጠቃለሊ</a>
+    <a href="{% url 'collateral:building_list' building.loan_request.id %}" class="btn btn-gray">Buildings</a>
 </p>
+{% if locked %}
+<p style="padding:0.65rem 0.85rem;background:#fff3cd;border-radius:6px;">Collateral submitted — BOQ is read-only.</p>
+{% endif %}
 
 <div class="table-container">
     <table>
@@ -47,7 +49,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="{% if locked %}6{% else %}7{% endif %}">No valuation rows. <a href="{% url 'collateral:valuation_add' building.id %}">Add one</a>.</td>
+                <td colspan="{% if locked %}6{% else %}7{% endif %}">No valuation rows. Prefer <a href="{% url 'collateral:field_visit_step' building.id 2 %}">field visit BOQ</a> or <a href="{% url 'collateral:valuation_add' building.id %}">add a desktop row</a>.</td>
             </tr>
             {% endfor %}
         </tbody>

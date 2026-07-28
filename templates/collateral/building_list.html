@@ -48,13 +48,13 @@
                   <br><small>{{ r.image_count }}/{{ r.min_images }} photos · {{ r.valuation_count }} BOQ · {{ r.building_total|floatformat:0 }}</small>
                 </td>
                 <td>
-                    <a href="{% url 'collateral:field_visit' b.id %}" class="field-btn field-btn-primary" style="padding:0.35rem 0.65rem;font-size:0.85rem;display:inline-block;margin-bottom:0.25rem;">Field visit</a>
+                    <a href="{% url 'collateral:field_visit' b.id %}" class="field-btn field-btn-primary" style="padding:0.35rem 0.65rem;font-size:0.85rem;display:inline-block;margin-bottom:0.25rem;">Continue field visit</a>
                     <br>
-                    <a href="{% url 'collateral:valuation_list' b.id %}">Valuation</a>
-                    &nbsp;|&nbsp;
-                    <a href="{% url 'collateral:building_images' b.id %}">Images</a>
-                    &nbsp;|&nbsp;
-                    <a href="{% url 'collateral:building_edit' b.id %}">Edit</a>
+                    <small>
+                      <a href="{% url 'collateral:valuation_list' b.id %}">Desktop BOQ</a>
+                      · <a href="{% url 'collateral:building_images' b.id %}">Images</a>
+                      · <a href="{% url 'collateral:building_edit' b.id %}">Edit</a>
+                    </small>
                 </td>
             </tr>
             {% endwith %}

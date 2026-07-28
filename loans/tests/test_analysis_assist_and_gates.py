@@ -90,3 +90,28 @@ class AnalysisAssistAndGatesTests(TestCase):
         self.assertTrue(any('CR' in x or 'registration' in x.lower() for x in corp))
         self.assertTrue(any('cashflow' in x.lower() or 'DSCR' in x for x in msme))
         self.assertNotEqual(corp[0], msme[0])
+
+    def test_sheet5_accepts_land_or_other_without_building(self):
+        from collateral.models import LandValuation, OtherCollateralItem
+        from loans.sheet_requirements import _collateral_boq_status
+
+        loan, _basic, _appraisal = self._loan(category=self.msme_cat, lid='LR-ASSIST-5')
+        status = _collateral_boq_status(loan)
+        self.assertFalse(status['complete'])
+
+        LandValuation.objects.create(
+            loan_request=loan,
+            land_size_sqm=Decimal('100'),
+            unit_price_per_sqm=Decimal('1000'),
+        )
+        status = _collateral_boq_status(loan)
+        self.assertTrue(status['complete'])
+        self.assertTrue(status['has_land'])
+
+        loan2, _b2, _a2 = self._loan(category=self.msme_cat, lid='LR-ASSIST-6')
+        OtherCollateralItem.objects.create(
+            loan_request=loan2,
+            name='Generator',
+            estimated_value=Decimal('50000'),
+        )
+        self.assertTrue(_collateral_boq_status(loan2)['complete'])

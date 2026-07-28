@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+.committee-badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+.committee-pending { background: #fff3cd; color: #856404; }
+.committee-ok { background: #d4edda; color: #155724; }
+.committee-bad { background: #f8d7da; color: #721c24; }
+.committee-info { background: #e7f1ff; color: #004085; }
+.committee-muted { background: #eee; color: #555; }
+.vote-pill { background:#064420; color:#fff; font-size:0.75rem; padding:0.12rem 0.4rem; border-radius:999px; margin-left:0.35rem; }
+</style>
 <div class="table-container">
     <h2>Approval committee — loan requests</h2>
     {% if is_participant %}
@@ -14,51 +23,30 @@
     {% elif scope_limited %}
     <p class="help"><strong>In my scope:</strong> branch committee — your branch; district — your district; head office / management — only while the loan is at that level.</p>
     {% endif %}
-    
-    <!-- Filter Form -->
+
     <form method="get" class="form-inline" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
-        <!--<div class="form-group">
-            <label for="id_loan_request_id">Applicant ID:</label>
-            <input type="text" id="id_loan_request_id" name="loan_request_id" value="{{ selected_loan_request_id }}" class="form-control" style="width: 150px;">
-        </div>-->
-        
+        {% if queue_my_votes %}<input type="hidden" name="queue" value="my_votes">{% endif %}
         <div class="form-group">
             <label for="id_district">District:</label>
             <select id="id_district" name="district" class="form-control" style="width: 150px;">
-                <option value="">-- Select District --</option>
+                <option value="">— All —</option>
                 {% for district in districts %}
-                    <option value="{{ district.id }}" {% if selected_district == district.id|stringformat:"s" %}selected{% endif %}>
-                        {{ district.name }}
-                    </option>
+                    <option value="{{ district.id }}" {% if selected_district == district.id|stringformat:"s" %}selected{% endif %}>{{ district.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        
         <div class="form-group">
             <label for="id_branch">Branch:</label>
             <select id="id_branch" name="branch" class="form-control" style="width: 150px;">
-                <option value="">-- Select Branch --</option>
+                <option value="">— All —</option>
                 {% for branch in branches %}
-                    <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
-                        {{ branch.name }}
-                    </option>
+                    <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>{{ branch.name }}</option>
                 {% endfor %}
             </select>
         </div>
-
         <div class="form-group">
-            <label for="id_branch">ID-Phone-Name:</label>
-            <input type="text" id="id_branch" name="q" placeholder="Search by Name, ID, Phone" value="{{ query }}" class="form-control" style="width: 200px;">
-        </div>
-
-        <div class="form-group">
-            <label for="id_status">Queue status:</label>
-            <select id="id_status" name="status" class="form-control" style="width: 150px;">
-                <option value="">All Statuses</option>
-                <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
-                <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
-                <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
-            </select>
+            <label for="id_q">Search:</label>
+            <input type="text" id="id_q" name="q" placeholder="Name, ID, phone" value="{{ query }}" class="form-control" style="width: 200px;">
         </div>
         <div class="form-group">
             <label for="id_committee_status">Committee:</label>
@@ -69,71 +57,73 @@
                 {% endfor %}
             </select>
         </div>
-        
         <div class="form-group">
-            <label for="id_date_requested">Date Requested:</label>
+            <label for="id_date_requested">Date:</label>
             <input type="date" id="id_date_requested" name="date_requested" value="{{ selected_date_requested }}" class="form-control" style="width: 150px;">
         </div>
-        <br>
-        <button type="submit">Filter</button>
+        <button type="submit" class="btn btn-blue">Filter</button>
     </form>
-    
-    <!-- Loan Requests Table -->
+
     <div class="table-container">
         {% if page_obj.object_list %}
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>Loan Request ID</th>
-                        <th>Applicant Name</th>
-                        <th>Category</th>
-                        <th>Amount Requested</th>
-                        <th>Status</th>
+                        <th>Loan ID</th>
+                        <th>Applicant</th>
+                        <th>Requested</th>
+                        <th>Recommended</th>
                         <th>Committee</th>
                         <th>Current level</th>
-                        <th>Date Requested</th>
-                        <th>Actions</th>
+                        <th>Submitted</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for loan_request in page_obj.object_list %}
                         <tr>
-                            <td>{{ loan_request.loan_request_id }}</td>
-                            <td>{{ loan_request.applicant_name }}</td>
-                            <td>{{ loan_request.category.name }}</td>
-                            <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
-                            <td>{{ loan_request.status }}</td>
-                            <td>{{ loan_request.get_committee_status_display|default:"—" }}</td>
-                            <td>{% if loan_request.current_approval_level %}{{ loan_request.current_approval_level.name }}{% else %}—{% endif %}</td>
-                            <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                             <td>
-                                <div class="dropdown">
-                                    <button class="dropbtn">Actions ▾</button>
-                                    <div class="dropdown-content">
-                                        <a href="{% url 'loan_request_detail_manager' loan_request.id %}" class="btn btn-blue">{% if loan_request.committee_status == 'pending_committee' %}Review &amp; vote{% else %}Details{% endif %}</a>
-                                    </div>
-                                </div>
+                              {{ loan_request.loan_request_id }}
+                              {% if queue_my_votes %}<span class="vote-pill">Vote</span>{% endif %}
+                            </td>
+                            <td>{{ loan_request.applicant_name }}<br><small>{{ loan_request.branch.name }}</small></td>
+                            <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
+                            <td>{% if loan_request.appraisal.amount_approved %}{{ loan_request.appraisal.amount_approved|floatformat:2 }}{% else %}—{% endif %}</td>
+                            <td>
+                              {% if loan_request.committee_status == 'pending_committee' %}
+                                <span class="committee-badge committee-pending">Pending</span>
+                              {% elif loan_request.committee_status == 'committee_approved' %}
+                                <span class="committee-badge committee-ok">Approved</span>
+                              {% elif loan_request.committee_status == 'committee_declined' %}
+                                <span class="committee-badge committee-bad">Declined</span>
+                              {% elif loan_request.committee_status == 'returned_to_officer' %}
+                                <span class="committee-badge committee-info">Returned</span>
+                              {% else %}
+                                <span class="committee-badge committee-muted">{{ loan_request.get_committee_status_display|default:"—" }}</span>
+                              {% endif %}
+                            </td>
+                            <td>{% if loan_request.current_approval_level %}{{ loan_request.current_approval_level.name }}{% else %}—{% endif %}</td>
+                            <td>{% if loan_request.submitted_to_committee_at %}{{ loan_request.submitted_to_committee_at|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                            <td>
+                              <a href="{% url 'loan_request_detail_manager' loan_request.id %}" class="btn btn-blue">
+                                {% if loan_request.committee_status == 'pending_committee' %}Review &amp; vote{% else %}Details{% endif %}
+                              </a>
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            
-            <!-- Pagination -->
+
             <div class="pagination">
                 <span class="step-links">
                     {% if page_obj.has_previous %}
-                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page=1">&laquo; first</a>
-                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.previous_page_number }}">previous</a>
+                        <a href="?{% if list_query %}{{ list_query }}&{% endif %}page=1">&laquo; first</a>
+                        <a href="?{% if list_query %}{{ list_query }}&{% endif %}page={{ page_obj.previous_page_number }}">previous</a>
                     {% endif %}
-                    
-                    <span class="current">
-                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-                    </span>
-                    
+                    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
                     {% if page_obj.has_next %}
-                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.next_page_number }}">next</a>
-                        <a href="?{% if request.GET.district %}zone={{ request.GET.district }}&{% endif %}{% if request.GET.branch %}branch={{ request.GET.branch }}&{% endif %}{% if request.GET.date_requested %}date_requested={{ request.GET.date_requested }}&{% endif %}page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                        <a href="?{% if list_query %}{{ list_query }}&{% endif %}page={{ page_obj.next_page_number }}">next</a>
+                        <a href="?{% if list_query %}{{ list_query }}&{% endif %}page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
                     {% endif %}
                 </span>
             </div>
@@ -151,12 +141,10 @@
             var districtId = $(this).val();
             $.ajax({
                 url: "{% url 'ajax_load_branches' %}",
-                data: {
-                    'district': districtId
-                },
+                data: { 'district': districtId },
                 success: function(data) {
                     var branchDropdown = $("#id_branch");
-                    branchDropdown.html('<option value="">-- Select Branch --</option>');
+                    branchDropdown.html('<option value="">— All —</option>');
                     $.each(data, function(index, branch) {
                         branchDropdown.append('<option value="' + branch.id + '">' + branch.name + '</option>');
                     });

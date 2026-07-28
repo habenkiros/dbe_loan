@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Collateral summary – {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
+<style>
+.summary-action-strip {
+  position: sticky; top: 0; z-index: 15;
+  background: #fff; border: 2px solid #064420; border-radius: 10px;
+  padding: 0.85rem 1.1rem; margin: 0 0 1.25rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+</style>
 <h2>Collateral summary</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
-<p><em>Summary</em> shows the total collateral value for this loan. <em>መጠቃለሊ (Estimation summary)</em> is the detailed work breakdown for a single building (from the link next to each building below).</p>
 <p>
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
     <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
     &nbsp;|&nbsp;
     {% endif %}
     {% if "land" in collateral_type_lower %}
-    <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Land field visit</a>
+    · <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land desktop</a>
     &nbsp;|&nbsp;
     {% endif %}
     {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
@@ -19,6 +27,39 @@
     {% endif %}
     <a href="{% url 'collateral:dashboard' %}">Back to list</a>
 </p>
+
+<div class="summary-action-strip">
+  <div style="display:flex; flex-wrap:wrap; gap:0.75rem 1.25rem; align-items:center; justify-content:space-between;">
+    <div>
+      <strong>Grand total:</strong> {{ grand_total|floatformat:2 }}
+      {% if coverage and coverage.coverage_pct %} · Coverage <strong>{{ coverage.coverage_pct }}%</strong>{% endif %}
+      {% if loan_request.collateral_submitted_at %}
+      <br><small>Submitted {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}
+        {% if loan_request.collateral_engineering_status == 'pending_review' %} — Pending engineering QA{% endif %}
+        {% if loan_request.collateral_engineering_status == 'approved' %} — Engineering approved{% endif %}
+        {% if loan_request.collateral_engineering_status == 'returned' %} — Returned for correction{% endif %}
+      </small>
+      {% elif can_submit_collateral %}
+      <br><small style="color:#155724;">Ready to submit</small>
+      {% elif submit_blockers %}
+      <br><small style="color:#c62828;">{{ submit_blockers|join:"; " }}</small>
+      {% else %}
+      <br><small style="color:#856404;">Complete field visits before submitting</small>
+      {% endif %}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+      {% if not loan_request.collateral_submitted_at %}
+      <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-green" {% if not can_submit_collateral %}disabled{% endif %}>Submit collateral</button>
+      </form>
+      {% elif loan_request.collateral_engineering_status == 'pending_review' %}
+      <a href="{% url 'collateral:engineering_qa_review' loan_request.id %}" class="btn btn-green">Engineering QA</a>
+      {% endif %}
+      <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack</a>
+    </div>
+  </div>
+</div>
 
 {% if loan_readiness.applies %}
 <div style="margin:1rem 0;padding:1rem;border:1px solid #dee2e6;border-radius:8px;background:#f8f9fa;">
@@ -56,11 +97,14 @@
 
 {% include "collateral/_coverage_panel.html" %}
 
-<p style="margin:0.75rem 0;">
-  <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack (print/PDF)</a>
-  <a href="{% url 'collateral:dossier_json' loan_request.id %}" class="btn btn-green">Export dossier (JSON)</a>
-  <a href="{% url 'collateral:dossier_zip' loan_request.id %}" class="btn btn-green">Export dossier (ZIP + photos)</a>
-</p>
+<details style="margin:0.75rem 0;">
+  <summary style="cursor:pointer; font-weight:600; color:#064420;">Exports &amp; dossier</summary>
+  <p style="margin:0.75rem 0;">
+    <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack (print/PDF)</a>
+    <a href="{% url 'collateral:dossier_json' loan_request.id %}" class="btn btn-green">Export dossier (JSON)</a>
+    <a href="{% url 'collateral:dossier_zip' loan_request.id %}" class="btn btn-green">Export dossier (ZIP + photos)</a>
+  </p>
+</details>
 
 {% load static %}
 {% include "collateral/_offline_bar.html" %}
@@ -138,8 +182,8 @@
 
 <p><strong>Grand total (collateral): {{ grand_total|floatformat:2 }}</strong></p>
 
+{% if loan_request.collateral_submitted_at %}
 <p>
-    {% if loan_request.collateral_submitted_at %}
     <strong>Submitted</strong> on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}.
     {% if loan_request.collateral_engineering_status == 'pending_review' %}
     <em style="color:#856404;"> — Pending engineering QA.</em>
@@ -148,6 +192,7 @@
     {% elif loan_request.collateral_engineering_status == 'returned' and loan_request.collateral_engineering_return_note %}
     <br><em style="color:#c62828;">Returned: {{ loan_request.collateral_engineering_return_note|truncatewords:30 }}</em>
     {% endif %}
+</p>
     {% if can_request_unlock %}
     <form method="post" action="{% url 'collateral:unlock_request' loan_request.id %}" style="margin-top:0.75rem;padding:0.75rem;border:1px solid #ffc107;border-radius:6px;background:#fff8e1;">
       {% csrf_token %}
@@ -156,26 +201,19 @@
       <button type="submit" class="btn btn-orange" style="margin-top:0.5rem;">Submit unlock request</button>
     </form>
     {% elif pending_unlock %}
-    <em style="color:#856404;">Unlock request pending supervisor review.</em>
+    <p><em style="color:#856404;">Unlock request pending supervisor review.</em></p>
     {% endif %}
-    {% else %}
-    All collateral data (buildings, valuations, land, other) is saved in the system as you add or edit.
+{% else %}
+<p class="help">All collateral data is saved as you edit. Use the sticky bar at the top to submit when ready.</p>
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
-    <strong>At least {{ min_images_per_building }} images per building are required</strong> before you can submit.
+    <p><strong>At least {{ min_images_per_building }} images per building are required</strong> before you can submit.
     {% if buildings_below_image_min %}
     <span class="error">Add more images for: {% for b in buildings_below_image_min %}<a href="{% url 'collateral:field_visit_step' b.id 3 %}">{{ b.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</span>
     {% endif %}
+    </p>
     {% endif %}
-    When you are done, submit the collateral estimation:
-    <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display: inline;">
-        {% csrf_token %}
-        <button type="submit" {% if not can_submit_collateral %}disabled title="Add at least {{ min_images_per_building }} images to each building first"{% endif %}>Submit collateral</button>
-    </form>
     {% if not can_submit_collateral and submit_blockers %}
     <ul class="error">{% for b in submit_blockers %}<li>{{ b }}</li>{% endfor %}</ul>
-    {% elif not can_submit_collateral %}
-    <em>(Complete field visits before submitting.)</em>
     {% endif %}
-    {% endif %}
-</p>
+{% endif %}
 {% endblock %}

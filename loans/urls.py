@@ -90,6 +90,18 @@ urlpatterns = [
     path('edit_loan_category/<int:category_id>/', views.edit_loan_category, name='edit_loan_category'),
     path('manage_collateral_types/', views.manage_collateral_types, name='manage_collateral_types'),
     path('edit_collateral_type/<int:collateral_type_id>/', views.edit_collateral_type, name='edit_collateral_type'),
+    path('manage_approval_committees/', views.manage_approval_committees, name='manage_approval_committees'),
+    path('add_approval_committee_level/', views.add_approval_committee_level, name='add_approval_committee_level'),
+    path(
+        'edit_approval_committee_level/<int:level_id>/',
+        views.edit_approval_committee_level,
+        name='edit_approval_committee_level',
+    ),
+    path(
+        'delete_approval_committee_level/<int:level_id>/',
+        views.delete_approval_committee_level,
+        name='delete_approval_committee_level',
+    ),
     path('manage_loan_application_document_types/', views.manage_loan_application_document_types, name='manage_loan_application_document_types'),
     path('edit_loan_application_document_type/<int:document_type_id>/', views.edit_loan_application_document_type, name='edit_loan_application_document_type'),
     path(

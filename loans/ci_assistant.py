@@ -69,7 +69,10 @@ def run_assistant_query(user, query: str) -> Dict[str, Any]:
                 f'Bureau outstanding where captured: ETB {_kpi(overview, "bureau_outstanding"):,.0f}.'
             )
         else:
-            answer = f'Ledger outstanding: ETB {float(out):,.0f}.'
+            answer = (
+                f'Ledger outstanding: ETB {float(out):,.0f} '
+                f'({ledger.connection_label()}).'
+            )
         links = [{'label': 'Overview', 'url': reverse('credit_intelligence_overview')}]
 
     elif _match(q_lower, ('risky', 'high-risk', 'weak band', 'watchlist', 'sme risk')):

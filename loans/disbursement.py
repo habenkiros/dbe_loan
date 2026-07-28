@@ -300,19 +300,63 @@ def mark_ready_for_disbursement(loan_request, user, *, notes: str = '') -> Tuple
 
 
 def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[str]]:
+    """
+    Confirm disbursement. When DECSI_CBS_BOOK_ON_DISBURSE is on, books in CBS first
+    (live or mock ledger) and stores the booking reference.
+    """
+    from django.conf import settings
+
     if loan_request.disbursement_status != loan_request.DISBURSE_READY:
         return False, ['Loan must be marked ready for disbursement first.']
+
+    booking_note = ''
+    if getattr(settings, 'DECSI_CBS_BOOK_ON_DISBURSE', True):
+        from loans.portfolio_ledger import get_ledger_adapter
+        from loans.services.cbs_client import fetch_customer_outstanding
+
+        adapter = get_ledger_adapter()
+        if not adapter.is_connected():
+            return False, [
+                'CBS ledger is not connected. Set DECSI_CBS_USE_MOCK_LEDGER=True for demo '
+                'or configure DECSI_BASE_URL / DECSI_LEDGER_ADAPTER=cbs.'
+            ]
+        result = adapter.book_disbursement(loan_request, user, notes=notes)
+        if not result.ok:
+            loan_request.cbs_booking_status = loan_request.CBS_BOOK_FAILED
+            loan_request.save(update_fields=['cbs_booking_status'])
+            return False, [result.message or 'CBS disbursement booking failed.']
+
+        loan_request.cbs_booking_status = (
+            loan_request.CBS_BOOK_MOCK if result.status == 'mock' else loan_request.CBS_BOOK_BOOKED
+        )
+        loan_request.cbs_booking_ref = result.booking_ref or ''
+        loan_request.cbs_loan_account = result.loan_account or ''
+        loan_request.cbs_booked_at = timezone.now()
+        cid = (loan_request.customer_number or '').strip()
+        if cid:
+            snap = fetch_customer_outstanding(cid)
+            if snap:
+                loan_request.cbs_outstanding_at_booking = snap.total_outstanding
+        booking_note = (
+            f'CBS {result.status}: ref={result.booking_ref or "—"} '
+            f'account={result.loan_account or "—"} ({result.provider})'
+        )
+
     loan_request.disbursement_status = loan_request.DISBURSE_DISBURSED
     loan_request.disbursed_at = timezone.now()
     loan_request.disbursed_by = user
-    if notes:
+    note_parts = [p for p in (notes.strip() if notes else '', booking_note) if p]
+    if note_parts:
         loan_request.disbursement_notes = (
             (loan_request.disbursement_notes + '\n' if loan_request.disbursement_notes else '')
-            + notes.strip()
+            + '\n'.join(note_parts)
         )
     loan_request.save(update_fields=[
         'disbursement_status', 'disbursed_at', 'disbursed_by', 'disbursement_notes',
+        'cbs_booking_status', 'cbs_booking_ref', 'cbs_loan_account', 'cbs_booked_at',
+        'cbs_outstanding_at_booking',
     ])
+
     from loans.models import CustomUser, LoanNotification
     from loans.services.notifications import notify_users
 
@@ -333,7 +377,11 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
             loan_request=loan_request,
             kind=LoanNotification.KIND_DISBURSED,
             title=f'Disbursed: {loan_request.loan_request_id}',
-            message=f'Loan marked disbursed by {user.get_full_name() or user.username}.',
+            message=(
+                f'Loan marked disbursed by {user.get_full_name() or user.username}'
+                + (f' · CBS ref {loan_request.cbs_booking_ref}' if loan_request.cbs_booking_ref else '')
+                + '.'
+            ),
             url=reverse('post_approval_detail', args=[loan_request.pk]),
         )
     return True, []

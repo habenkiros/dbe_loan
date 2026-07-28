@@ -281,6 +281,43 @@ def build_overview(user) -> Dict[str, Any]:
         ),
     ]
 
+    from loans.portfolio_ledger import get_ledger_adapter
+    ledger = get_ledger_adapter()
+    ledger_meta = {
+        'connected': ledger.is_connected(),
+        'label': ledger.connection_label(),
+    }
+    if ledger.is_connected():
+        cbs_out = ledger.total_outstanding(user)
+        cbs_npl = ledger.npl_ratio(user)
+        cbs_borrowers = ledger.active_borrowers(user)
+        kpis.insert(1, _kpi(
+            'cbs_outstanding',
+            'CBS outstanding (ETB)',
+            float(cbs_out) if cbs_out is not None else 0.0,
+            'currency',
+            None,
+            (
+                f'{cbs_borrowers or 0} active borrowers in scope · '
+                + (f'NPL {(cbs_npl * 100):.1f}%' if cbs_npl is not None else 'No NPL data')
+            ),
+            'medium' if (cbs_npl or 0) >= 0.05 else 'low',
+            ledger.connection_label(),
+        ))
+        if cbs_npl is not None:
+            kpis.insert(2, _kpi(
+                'cbs_npl',
+                'CBS NPL ratio',
+                round(cbs_npl * 100.0, 2),
+                'percent',
+                None,
+                'From core-banking outstanding / NPL amounts by customer number',
+                'high' if cbs_npl >= 0.1 else ('medium' if cbs_npl >= 0.05 else 'low'),
+                ledger.connection_label(),
+            ))
+    else:
+        ledger_meta['note'] = 'Set DECSI_BASE_URL or DECSI_CBS_USE_MOCK_LEDGER for CBS KPIs'
+
     # Branch breakdown (top 10)
     branch_rows = list(
         qs.values('branch__name')
@@ -339,9 +376,14 @@ def build_overview(user) -> Dict[str, Any]:
         'branches': branches,
         'insights': insights,
         'watchlist': watchlist,
+        'ledger': ledger_meta,
         'disclaimer': (
-            'Origination Credit Intelligence — KPIs from applications, appraisals, '
-            'committee and disbursement tracking. Not a core-banking NPL/outstanding ledger.'
+            'Origination KPIs from applications, appraisals, committee and disbursement. '
+            + (
+                f'CBS ledger connected ({ledger_meta["label"]}).'
+                if ledger_meta.get('connected')
+                else 'CBS outstanding/NPL unavailable — using origination proxies.'
+            )
         ),
     }
 

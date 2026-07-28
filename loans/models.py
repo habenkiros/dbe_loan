@@ -578,6 +578,33 @@ class LoanRequest(models.Model):
     )
     disbursement_notes = models.TextField(blank=True)
 
+    # CBS / Temenos booking result (written when DECSI_CBS_BOOK_ON_DISBURSE)
+    CBS_BOOK_NONE = ''
+    CBS_BOOK_MOCK = 'mock'
+    CBS_BOOK_BOOKED = 'booked'
+    CBS_BOOK_FAILED = 'failed'
+    CBS_BOOK_SKIPPED = 'skipped'
+    CBS_BOOKING_STATUS_CHOICES = [
+        (CBS_BOOK_NONE, 'Not booked'),
+        (CBS_BOOK_MOCK, 'Mock booked'),
+        (CBS_BOOK_BOOKED, 'Booked in CBS'),
+        (CBS_BOOK_FAILED, 'CBS booking failed'),
+        (CBS_BOOK_SKIPPED, 'Skipped'),
+    ]
+    cbs_booking_status = models.CharField(
+        max_length=20,
+        choices=CBS_BOOKING_STATUS_CHOICES,
+        default=CBS_BOOK_NONE,
+        blank=True,
+    )
+    cbs_booking_ref = models.CharField(max_length=120, blank=True)
+    cbs_loan_account = models.CharField(max_length=120, blank=True)
+    cbs_booked_at = models.DateTimeField(null=True, blank=True)
+    cbs_outstanding_at_booking = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Customer outstanding snapshot from CBS at booking time (ETB).',
+    )
+
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules
     #     if not self.status:

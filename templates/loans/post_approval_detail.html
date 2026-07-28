@@ -161,19 +161,32 @@
       {{ loan_request.disbursed_at|date:"SHORT_DATETIME_FORMAT" }}
       {% if loan_request.disbursed_by %} by {{ loan_request.disbursed_by.username }}{% endif %}
     </p>
+    {% if loan_request.cbs_booking_ref %}
+    <p class="help">
+      CBS {{ loan_request.get_cbs_booking_status_display|default:loan_request.cbs_booking_status }}
+      · ref <code>{{ loan_request.cbs_booking_ref }}</code>
+      {% if loan_request.cbs_loan_account %} · account <code>{{ loan_request.cbs_loan_account }}</code>{% endif %}
+      {% if loan_request.cbs_outstanding_at_booking is not None %}
+      · customer outstanding at booking {{ loan_request.cbs_outstanding_at_booking|floatformat:2 }} ETB
+      {% endif %}
+    </p>
+    {% endif %}
     {% elif loan_request.disbursement_status == 'ready_for_disbursement' %}
     <p><span class="pa-badge pa-ok">Ready for disbursement</span>
       {% if loan_request.ready_for_disbursement_at %} since {{ loan_request.ready_for_disbursement_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
     </p>
     {% if can_mark_disbursed %}
+    {% if not loan_request.customer_number %}
+    <p class="help" style="color:#c0392b;">Set a core-banking <strong>customer number</strong> on the loan (Sheet 1) before confirming CBS disbursement.</p>
+    {% endif %}
     <form method="post" action="{% url 'post_approval_mark_disbursed' loan_request.id %}">
       {% csrf_token %}
       <label>Booking / CBS note (optional)</label><br>
       <textarea name="disbursement_notes" rows="2" style="width:100%; max-width:480px;"></textarea>
-      <p><button type="submit" class="btn btn-green" onclick="return confirm('Mark this loan as disbursed?');">Mark disbursed</button></p>
+      <p><button type="submit" class="btn btn-green" onclick="return confirm('Book in CBS (or mock) and mark this loan as disbursed?');"{% if not loan_request.customer_number %} disabled{% endif %}>Confirm disbursement (CBS)</button></p>
     </form>
     {% else %}
-    <p class="help">Assigned loan officer confirms disbursement once funds are released.</p>
+    <p class="help">Assigned loan officer confirms disbursement once funds are released (CBS booking runs on confirm).</p>
     {% endif %}
     {% else %}
     {% if can_mark_ready %}

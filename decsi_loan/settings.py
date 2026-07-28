@@ -168,6 +168,26 @@ DECSI_TRANSACTIONS_PATH = os.getenv(
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/transactions',
 )
 
+# CBS / Temenos — outstanding + disbursement booking (PortfolioLedgerAdapter)
+# auto = use DecsiCbsLedgerAdapter when mock ledger or DECSI_BASE_URL enabled
+DECSI_LEDGER_ADAPTER = os.getenv('DECSI_LEDGER_ADAPTER', 'auto').strip().lower()  # auto|cbs|stub
+DECSI_CBS_ENABLED = os.getenv('DECSI_CBS_ENABLED', 'True').lower() in ('1', 'true', 'yes')
+# When True (default), mock outstanding/booking works offline without DECSI_BASE_URL
+DECSI_CBS_USE_MOCK_LEDGER = os.getenv('DECSI_CBS_USE_MOCK_LEDGER', 'True').lower() in ('1', 'true', 'yes')
+DECSI_CBS_FORCE_MOCK = os.getenv('DECSI_CBS_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
+DECSI_CBS_TIMEOUT = int(os.getenv('DECSI_CBS_TIMEOUT', os.getenv('DECSI_CUSTOMER_TIMEOUT', '8')))
+DECSI_CBS_API_KEY = os.getenv('DECSI_CBS_API_KEY', '').strip()
+DECSI_OUTSTANDING_PATH = os.getenv(
+    'DECSI_OUTSTANDING_PATH',
+    '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/outstanding',
+)
+DECSI_DISBURSE_PATH = os.getenv(
+    'DECSI_DISBURSE_PATH',
+    '/loanDisburse/api/v1.0.0/loans/disburse',
+)
+# When True, officer "Mark disbursed" books in CBS first (required success)
+DECSI_CBS_BOOK_ON_DISBURSE = os.getenv('DECSI_CBS_BOOK_ON_DISBURSE', 'True').lower() in ('1', 'true', 'yes')
+
 # Gebeta Maps — Ethiopia-local geocoding + map tiles (MapLibre / Gebeta styles)
 # Docs: https://docs.gebeta.app/docs · JS tiles: https://github.com/AfriGebeta/gebeta-tiles-js
 GEBETA_MAPS_API_KEY = os.getenv('GEBETA_MAPS_API_KEY', '').strip()

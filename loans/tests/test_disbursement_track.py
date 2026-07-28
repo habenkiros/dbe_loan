@@ -63,6 +63,7 @@ class DisbursementTrackTests(TestCase):
             committee_final_decision='approve',
             committee_final_amount=Decimal('100000'),
             committee_decided_at=timezone.now(),
+            customer_number='1001',
         )
         self.appraisal = LoanAppraisal.objects.create(
             loan_request=self.loan,
@@ -155,6 +156,10 @@ class DisbursementTrackTests(TestCase):
         self.assertEqual(self.loan.disbursement_status, LoanRequest.DISBURSE_DISBURSED)
         self.assertEqual(self.loan.disbursed_by_id, self.officer.id)
         self.assertIn('CBS ref 99', self.loan.disbursement_notes)
+        self.assertTrue(self.loan.cbs_booking_ref)
+        self.assertIn(self.loan.cbs_booking_status, (
+            LoanRequest.CBS_BOOK_MOCK, LoanRequest.CBS_BOOK_BOOKED,
+        ))
 
     def test_admin_cannot_mark_disbursed(self):
         self.cp.fulfilled = True

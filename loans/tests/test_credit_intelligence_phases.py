@@ -89,16 +89,23 @@ class CreditIntelligencePhases234Tests(TestCase):
         self.assertGreater(coll['kpis']['total_collateral_value'], 0)
 
     def test_assistant_and_ledger_stub(self):
-        self.assertFalse(get_ledger_adapter().is_connected())
-        self.assertIsInstance(get_ledger_adapter(), StubPortfolioLedgerAdapter)
+        from django.test import override_settings
+        from loans.portfolio_ledger import set_ledger_adapter
 
-        npl = run_assistant_query(self.bm, 'What is the NPL ratio?')
-        self.assertTrue(npl['understood'])
-        self.assertIn('not available', npl['answer'].lower())
+        with override_settings(DECSI_LEDGER_ADAPTER='stub', DECSI_CBS_USE_MOCK_LEDGER=False):
+            set_ledger_adapter(None)
+            from loans.portfolio_ledger import StubPortfolioLedgerAdapter, get_ledger_adapter
+            self.assertFalse(get_ledger_adapter().is_connected())
+            self.assertIsInstance(get_ledger_adapter(), StubPortfolioLedgerAdapter)
 
-        risky = run_assistant_query(self.bm, 'Show risky loans')
-        self.assertTrue(risky['understood'])
-        self.assertTrue(risky['links'])
+            npl = run_assistant_query(self.bm, 'What is the NPL ratio?')
+            self.assertTrue(npl['understood'])
+            self.assertIn('not available', npl['answer'].lower())
+
+            risky = run_assistant_query(self.bm, 'Show risky loans')
+            self.assertTrue(risky['understood'])
+            self.assertTrue(risky['links'])
+            set_ledger_adapter(None)
 
     def test_phase_pages_render(self):
         client = Client()

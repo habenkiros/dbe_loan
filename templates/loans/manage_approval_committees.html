@@ -76,7 +76,12 @@
               {% endif %}
             {% endwith %}
           </td>
-          <td><a href="{% url 'edit_approval_committee_level' level.id %}" class="btn btn-blue">Edit</a></td>
+          <td>
+            <div class="list-actions">
+            {% url 'edit_approval_committee_level' level.id as edit_url %}
+            {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit approval level" tone="blue" only %}
+            </div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

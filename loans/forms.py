@@ -541,7 +541,8 @@ class AppraisalConditionForm(forms.ModelForm):
     class Meta:
         model = AppraisalCondition
         fields = [
-            'condition_type', 'description', 'responsible_party', 'due_date', 'fulfilled',
+            'condition_type', 'description', 'responsible_party', 'due_date',
+            'required_before_disbursement', 'fulfilled',
         ]
         widgets = {
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -551,9 +552,11 @@ class AppraisalConditionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name in self.fields:
-            if name != 'fulfilled':
+            if name not in ('fulfilled', 'required_before_disbursement'):
                 self.fields[name].widget.attrs.setdefault('class', 'form-control')
         self.fields['fulfilled'].widget.attrs.setdefault('class', 'form-check-input')
+        self.fields['required_before_disbursement'].widget.attrs.setdefault('class', 'form-check-input')
+        self.fields['required_before_disbursement'].label = 'Before disbursement'
 
     def save(self, commit=True):
         obj = super().save(commit=False)

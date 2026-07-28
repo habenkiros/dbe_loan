@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Officer workspace{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash ci">
+  {% include "loans/ci/_subnav.html" %}
+  <section class="dash-hero ci-hero">
+    <div>
+      <p class="ci-eyebrow">Credit officer workspace</p>
+      <h1>Your appraisal queue</h1>
+      <p>Assigned work, AI decision assists, and risk alerts — finish Sheets 1–6 then submit to committee.</p>
+    </div>
+    <div class="dash-hero-meta">
+      <span class="dash-pill">Scope: {{ scope_label }}</span>
+    </div>
+  </section>
+
+  <section class="dash-kpis">
+    <article class="dash-kpi"><p class="dash-kpi-label">Assigned</p><p class="dash-kpi-value">{{ counts.assigned }}</p></article>
+    <article class="dash-kpi kpi-pending"><p class="dash-kpi-label">Pending appraisal</p><p class="dash-kpi-value">{{ counts.pending_appraisal }}</p></article>
+    <article class="dash-kpi kpi-amount"><p class="dash-kpi-label">In committee</p><p class="dash-kpi-value">{{ counts.pending_committee }}</p></article>
+    <article class="dash-kpi kpi-rejected"><p class="dash-kpi-label">Returned</p><p class="dash-kpi-value">{{ counts.returned }}</p></article>
+  </section>
+
+  <section class="ci-grid">
+    <div class="dash-panel">
+      <h2>Pending appraisals</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Loan</th><th>Applicant</th><th>Score</th><th></th></tr></thead>
+          <tbody>
+          {% for row in queue %}
+            <tr>
+              <td>{{ row.loan_request_id }}</td>
+              <td>{{ row.applicant_name }}</td>
+              <td>{% if row.score %}{{ row.score|floatformat:0 }}{% else %}—{% endif %}</td>
+              <td>
+                <div class="list-actions">
+                {% url 'loan_appraisal_step' row.id 6 as s6 %}
+                {% include "includes/list_action.html" with href=s6 icon="appraisal" label="Sheet 6" tone="green" only %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="dash-empty">No pending appraisals.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Alerts</h2>
+      <div class="ci-insights">
+        {% for alert in alerts %}
+        <article class="ci-insight sev-{{ alert.severity }}">
+          <div class="ci-insight-head"><strong>{{ alert.title }}</strong></div>
+          <p>{{ alert.body }}</p>
+          {% if alert.action_url and alert.action_url != '#' %}
+          <a class="ci-insight-link" href="{{ alert.action_url }}">{{ alert.action_label }} →</a>
+          {% endif %}
+        </article>
+        {% empty %}
+        <p class="dash-empty">Quiet for now.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {% if decision_cards %}
+  <section class="dash-panel">
+    <h2>AI decision assists (queue sample)</h2>
+    {% for decision_card in decision_cards %}
+      {% include "loans/_ci_decision_card.html" %}
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

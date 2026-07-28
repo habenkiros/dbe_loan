@@ -64,6 +64,7 @@ from .committee import (
     user_is_approval_participant,
 )
 from .collateral_config import get_collateral_estimation_mode, allows_loan_officer, allows_engineering_team
+from .reporting import user_can_access_reports
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum
@@ -449,6 +450,11 @@ def loan_request_detail(request, loan_request_id):
     if collateral_readiness:
         from collateral.coverage import compute_coverage_adequacy
         coverage = compute_coverage_adequacy(loan_request)
+    decision_card = None
+    if appraisal:
+        from .ci_decision import build_application_decision
+        basic_info = getattr(loan_request, 'basic_info', None)
+        decision_card = build_application_decision(loan_request, appraisal, basic_info)
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -472,6 +478,7 @@ def loan_request_detail(request, loan_request_id):
         'appraisal_lock_code': lock_state['code'],
         'committee_submit': committee_submit,
         'committee_tally': committee_tally,
+        'decision_card': decision_card,
     })
 
 
@@ -823,6 +830,8 @@ def loan_appraisal_step(request, loan_request_id, step):
         }
 
     def _step6_context(form=None, risk_formset=None, cond_formset=None):
+        from .ci_decision import build_application_decision
+
         card = build_credit_scorecard(appraisal)
         blocks, warnings = evaluate_analysis_gates(appraisal, basic_info)
         assist = build_analysis_assist(appraisal, basic_info)
@@ -835,6 +844,7 @@ def loan_appraisal_step(request, loan_request_id, step):
             'analysis_blocks': blocks,
             'analysis_warnings': warnings,
             'analysis_assist': assist,
+            'decision_card': build_application_decision(loan_request, appraisal, basic_info),
         }
 
     if request.method == 'POST':
@@ -1316,14 +1326,15 @@ def _add_months(date, months):
 
 
 def _generate_amortization_schedule(appraisal, basic_info, loan_request):
-    """Generate amortization entries from loan amount and basic info terms (declining balance)."""
+    """Generate amortization from final approved terms when available (else request + Sheet 1)."""
     from decimal import Decimal
     from django.utils import timezone
+    from loans.disbursement import final_annual_rate_pct, final_loan_amount, final_term_months
 
     AppraisalAmortizationEntry.objects.filter(appraisal=appraisal).delete()
-    amount = loan_request.amount_requested or Decimal('0')
-    term_months = basic_info.term_months or 12
-    annual_rate = (basic_info.interest_rate or Decimal('0')) / Decimal('100')
+    amount = final_loan_amount(loan_request, appraisal)
+    term_months = final_term_months(loan_request, appraisal, basic_info)
+    annual_rate = final_annual_rate_pct(loan_request, appraisal, basic_info) / Decimal('100')
     if amount <= 0 or term_months <= 0:
         return
     n = term_months
@@ -1631,7 +1642,251 @@ def committee_appraisal_pack(request, loan_request_id):
     if not pack.get('appraisal'):
         messages.warning(request, 'No appraisal record found for this loan.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
+    pack['auto_print'] = request.GET.get('print') == '1'
     return render(request, 'loans/committee_appraisal_pack.html', pack)
+
+
+@login_required
+def export_appraisal_pack_excel(request, loan_request_id):
+    """Excel export of appraisal pack (summary, scorecard, conditions, schedule)."""
+    from .reporting import build_appraisal_pack_workbook, excel_response
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _user_can_export_appraisal_pack(request.user, loan_request):
+        messages.warning(request, 'You do not have access to export this appraisal pack.')
+        return redirect('view_loan_requests')
+    if not LoanAppraisal.objects.filter(loan_request=loan_request).exists():
+        messages.warning(request, 'No appraisal record found for this loan.')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    bio = build_appraisal_pack_workbook(loan_request)
+    filename = f'appraisal_pack_{loan_request.loan_request_id}.xlsx'
+    return excel_response(bio, filename)
+
+
+@login_required
+def export_appraisal_pack_pdf(request, loan_request_id):
+    """Server-side PDF attachment of the appraisal pack (WeasyPrint or ReportLab)."""
+    from .appraisal_pack_pdf import build_appraisal_pack_pdf, pdf_response
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _user_can_export_appraisal_pack(request.user, loan_request):
+        messages.warning(request, 'You do not have access to export this appraisal pack.')
+        return redirect('view_loan_requests')
+    if not LoanAppraisal.objects.filter(loan_request=loan_request).exists():
+        messages.warning(request, 'No appraisal record found for this loan.')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    try:
+        pdf_bytes, _engine = build_appraisal_pack_pdf(
+            loan_request,
+            base_url=request.build_absolute_uri('/'),
+        )
+    except Exception:
+        messages.error(request, 'Could not generate the appraisal pack PDF.')
+        return redirect('committee_appraisal_pack', loan_request_id=loan_request_id)
+    filename = f'appraisal_pack_{loan_request.loan_request_id}.pdf'
+    return pdf_response(pdf_bytes, filename)
+
+
+def _user_can_export_appraisal_pack(user, loan_request) -> bool:
+    role = getattr(user, 'role', None)
+    if user_can_view_committee_loan(user, loan_request):
+        return True
+    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+        return True
+    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin'):
+        return True
+    if role == 'branch_manager' and user.branch_id and loan_request.branch_id == user.branch_id:
+        return True
+    return False
+
+
+def _can_view_post_approval(user, loan_request) -> bool:
+    from .disbursement import (
+        can_manage_conditions, can_mark_disbursed, can_mark_ready, post_approval_queue_queryset,
+    )
+    if loan_request.committee_status != LoanRequest.COMMITTEE_APPROVED:
+        return False
+    if can_manage_conditions(user, loan_request) or can_mark_ready(user, loan_request) or can_mark_disbursed(user, loan_request):
+        return True
+    role = getattr(user, 'role', None)
+    if role in ('risk_compliance', 'auditor', 'credit_committee'):
+        return True
+    return post_approval_queue_queryset(user).filter(pk=loan_request.pk).exists()
+
+
+@login_required
+def post_approval_queue(request):
+    """Loans awaiting conditions / schedule / disbursement after committee approve."""
+    from .disbursement import post_approval_queue_queryset
+
+    qs = post_approval_queue_queryset(request.user)
+    status_filter = (request.GET.get('disbursement_status') or '').strip()
+    if status_filter:
+        qs = qs.filter(disbursement_status=status_filter)
+    return render(request, 'loans/post_approval_queue.html', {
+        'loan_requests': qs[:100],
+        'disbursement_status_choices': LoanRequest.DISBURSE_STATUS_CHOICES,
+        'selected_status': status_filter,
+    })
+
+
+@login_required
+def post_approval_detail(request, loan_request_id):
+    from .disbursement import (
+        can_confirm_schedule, can_manage_conditions, can_mark_disbursed, can_mark_ready,
+        disbursement_readiness, final_loan_amount,
+    )
+    from .models import AppraisalCondition, LoanRequestBasicInfo
+
+    loan_request = get_object_or_404(
+        LoanRequest.objects.select_related(
+            'branch', 'assigned_loan_officer', 'appraisal', 'schedule_confirmed_by',
+            'ready_for_disbursement_by', 'disbursed_by',
+        ),
+        pk=loan_request_id,
+    )
+    if not _can_view_post_approval(request.user, loan_request):
+        messages.warning(request, 'You do not have access to this post-approval workspace.')
+        return redirect('view_loan_requests')
+
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    basic_info = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
+    readiness = disbursement_readiness(loan_request)
+    conditions = list(appraisal.conditions.order_by('display_order', 'id')) if appraisal else []
+
+    return render(request, 'loans/post_approval_detail.html', {
+        'loan_request': loan_request,
+        'appraisal': appraisal,
+        'basic_info': basic_info,
+        'readiness': readiness,
+        'conditions': conditions,
+        'final_amount': final_loan_amount(loan_request, appraisal),
+        'can_manage_conditions': can_manage_conditions(request.user, loan_request),
+        'can_confirm_schedule': can_confirm_schedule(request.user, loan_request),
+        'can_mark_ready': can_mark_ready(request.user, loan_request),
+        'can_mark_disbursed': can_mark_disbursed(request.user, loan_request),
+        'TYPE_CP': AppraisalCondition.TYPE_CP,
+        'TYPE_COVENANT': AppraisalCondition.TYPE_COVENANT,
+    })
+
+
+@login_required
+def post_approval_condition_toggle(request, loan_request_id, condition_id):
+    from .disbursement import can_manage_conditions, set_condition_fulfilled
+    from .models import AppraisalCondition
+
+    if request.method != 'POST':
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot update conditions on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    condition = get_object_or_404(
+        AppraisalCondition,
+        pk=condition_id,
+        appraisal__loan_request=loan_request,
+    )
+    fulfilled = request.POST.get('fulfilled') == '1'
+    evidence = request.POST.get('evidence_note', '').strip()
+    if fulfilled and condition.required_before_disbursement and len(evidence) < 5:
+        messages.error(request, 'Add a short evidence note when marking a required condition fulfilled.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    set_condition_fulfilled(condition, request.user, fulfilled=fulfilled, evidence_note=evidence)
+    messages.success(request, 'Condition updated.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+def post_approval_regen_schedule(request, loan_request_id):
+    from .disbursement import can_confirm_schedule
+    from .models import LoanRequestBasicInfo
+
+    if request.method != 'POST':
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_confirm_schedule(request.user, loan_request):
+        messages.warning(request, 'You cannot regenerate the schedule for this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    if not appraisal:
+        messages.error(request, 'No appraisal found.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    basic_info = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
+    _generate_amortization_schedule(appraisal, basic_info, loan_request)
+    loan_request.schedule_confirmed_at = None
+    loan_request.schedule_confirmed_by = None
+    if loan_request.disbursement_status in (
+        LoanRequest.DISBURSE_SCHEDULE_CONFIRMED,
+        LoanRequest.DISBURSE_READY,
+    ):
+        loan_request.disbursement_status = LoanRequest.DISBURSE_AWAITING_CONDITIONS
+        loan_request.ready_for_disbursement_at = None
+        loan_request.ready_for_disbursement_by = None
+    loan_request.save(update_fields=[
+        'schedule_confirmed_at', 'schedule_confirmed_by', 'disbursement_status',
+        'ready_for_disbursement_at', 'ready_for_disbursement_by',
+    ])
+    messages.success(request, 'Repayment schedule regenerated from final approved terms. Please confirm it.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+def post_approval_confirm_schedule(request, loan_request_id):
+    from .disbursement import can_confirm_schedule, confirm_schedule
+
+    if request.method != 'POST':
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_confirm_schedule(request.user, loan_request):
+        messages.warning(request, 'You cannot confirm the schedule for this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    ok, errors = confirm_schedule(loan_request, request.user)
+    if not ok:
+        for err in errors:
+            messages.error(request, err)
+    else:
+        messages.success(request, 'Repayment schedule confirmed.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+def post_approval_mark_ready(request, loan_request_id):
+    from .disbursement import can_mark_ready, mark_ready_for_disbursement
+
+    if request.method != 'POST':
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_mark_ready(request.user, loan_request):
+        messages.warning(request, 'You cannot mark this loan ready for disbursement.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    notes = request.POST.get('disbursement_notes', '').strip()
+    ok, errors = mark_ready_for_disbursement(loan_request, request.user, notes=notes)
+    if not ok:
+        for err in errors:
+            messages.error(request, err)
+    else:
+        messages.success(request, 'Loan marked ready for disbursement. Accountant / ops notified.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+def post_approval_mark_disbursed(request, loan_request_id):
+    from .disbursement import can_mark_disbursed, mark_disbursed
+
+    if request.method != 'POST':
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_mark_disbursed(request.user, loan_request):
+        messages.warning(request, 'You cannot mark this loan as disbursed.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    notes = request.POST.get('disbursement_notes', '').strip()
+    ok, errors = mark_disbursed(loan_request, request.user, notes=notes)
+    if not ok:
+        for err in errors:
+            messages.error(request, err)
+    else:
+        messages.success(request, 'Loan marked as disbursed.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
 
 @login_required
@@ -1730,7 +1985,9 @@ def view_loan_requests(request):
         return redirect('loans_sent_for_collateral')
     if getattr(request.user, 'role', None) == 'engineer' and allows_engineering_team():
         return redirect(reverse('collateral:dashboard'))
-    loan_requests = _loan_requests_queryset_for_user(request.user)
+    loan_requests = _loan_requests_queryset_for_user(request.user).select_related(
+        'branch', 'assigned_loan_officer',
+    ).order_by('-date_requested', '-id')
     
     query = request.GET.get("q")
     # Filtering
@@ -2416,72 +2673,115 @@ def load_branches(request):
     return JsonResponse(list(branches.values('id', 'name')), safe=False)
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
+@user_passes_test(user_can_access_reports)
 def view_report(request):
-    status = request.GET.get('status')
-    role = request.user.role
-    branch = request.user.branch if role == 'branch_manager' else None
+    from .reporting import filter_choices_for_user, filtered_reporting_queryset
 
-    loan_requests = LoanRequest.objects.all()
-    
-    if branch:
-        loan_requests = loan_requests.filter(branch=branch)
-    
-    if status:
-        loan_requests = loan_requests.filter(status__iexact=status)
-
-    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
+    params = request.GET
+    loan_requests = filtered_reporting_queryset(request.user, params)
+    paginator = Paginator(loan_requests, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    choices = filter_choices_for_user(request.user)
+    return render(request, 'loans/view_report.html', {
         'page_obj': page_obj,
-        'status': status,
-        'districts': District.objects.all(),
-        'branches': Branch.objects.all(),
-    }
-    return render(request, 'loans/view_report.html', context)
+        'filters': {
+            'status': params.get('status', ''),
+            'committee_status': params.get('committee_status', ''),
+            'disbursement_status': params.get('disbursement_status', ''),
+            'branch_id': params.get('branch_id', ''),
+            'district_id': params.get('district_id', ''),
+            'date_from': params.get('date_from', ''),
+            'date_to': params.get('date_to', ''),
+        },
+        **choices,
+    })
+
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
+@user_passes_test(user_can_access_reports)
 def generate_report(request):
-    status = request.GET.get('status')
-    role = request.user.role
-    branch = request.user.branch if role == 'branch_manager' else None
+    """Export filtered loan pipeline as Excel (.xlsx)."""
+    from .reporting import (
+        build_pipeline_workbook, excel_response, filtered_reporting_queryset, pipeline_export_filename,
+    )
 
-    loan_requests = LoanRequest.objects.all()
-    
-    if branch:
-        loan_requests = loan_requests.filter(branch=branch)
-    
-    if status:
-        loan_requests = loan_requests.filter(status__iexact=status)
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="{status}_loan_requests.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['ID', 'Applicant Name', 'Amount Requested', 'Status', 'Date Requested', 'Date Reviewed'])
-
-    for loan_request in loan_requests:
+    params = request.GET
+    qs = filtered_reporting_queryset(request.user, params)
+    fmt = (params.get('format') or 'xlsx').lower()
+    if fmt == 'csv':
+        # Legacy CSV kept for compatibility
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="loan_pipeline.csv"'
+        writer = csv.writer(response)
         writer.writerow([
-            loan_request.loan_request_id,
-            loan_request.applicant_name,
-            loan_request.amount_requested,
-            loan_request.status,
-            loan_request.date_requested,
-            loan_request.date_reviewed
+            'ID', 'Applicant', 'Branch', 'Amount', 'Status', 'Committee',
+            'Disbursement', 'Date requested', 'Date reviewed',
         ])
+        for lr in qs[:5000]:
+            writer.writerow([
+                lr.loan_request_id,
+                lr.applicant_name,
+                lr.branch.name if lr.branch_id else '',
+                lr.amount_requested,
+                lr.status,
+                lr.get_committee_status_display() if lr.committee_status else '',
+                lr.get_disbursement_status_display() if lr.disbursement_status else '',
+                lr.date_requested,
+                lr.date_reviewed,
+            ])
+        return response
 
-    return response
+    bio = build_pipeline_workbook(qs)
+    return excel_response(bio, pipeline_export_filename(params))
+
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'operation_manager', 'finance_manager', 'credit_committee', 'loan_officer'])
+@user_passes_test(user_can_access_reports)
 def view_report_options(request):
-    return render(request, 'loans/view_report_options.html')
+    from .reporting import filter_choices_for_user
+
+    return render(request, 'loans/view_report_options.html', filter_choices_for_user(request.user))
+
+
+@login_required
+@user_passes_test(user_can_access_reports)
+def branch_report_dashboard(request):
+    """Branch / portfolio MIS dashboard with export links."""
+    from .reporting import (
+        branch_dashboard_stats, filter_choices_for_user, filtered_reporting_queryset,
+    )
+
+    params = request.GET
+    qs = filtered_reporting_queryset(request.user, params)
+    stats = branch_dashboard_stats(qs)
+    choices = filter_choices_for_user(request.user)
+    recent = list(qs[:12])
+    return render(request, 'loans/branch_report_dashboard.html', {
+        'stats': stats,
+        'recent_loans': recent,
+        'filters': {
+            'status': params.get('status', ''),
+            'committee_status': params.get('committee_status', ''),
+            'disbursement_status': params.get('disbursement_status', ''),
+            'branch_id': params.get('branch_id', ''),
+            'district_id': params.get('district_id', ''),
+            'date_from': params.get('date_from', ''),
+            'date_to': params.get('date_to', ''),
+        },
+        'querystring': request.GET.urlencode(),
+        **choices,
+    })
 
 @login_required(login_url='login')  # redirect to login page if not logged in
 def home(request):
+    """Home is Credit Intelligence Executive Overview (Phase 1)."""
+    from .views_credit_intelligence import credit_intelligence_overview
+    return credit_intelligence_overview(request)
+
+
+@login_required(login_url='login')
+def classic_home(request):
+    """Legacy status-count dashboard (kept for comparison / fallback)."""
     user = request.user
     role = getattr(user, 'role', None)
 

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Manager workspace{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash ci">
+  {% include "loans/ci/_subnav.html" %}
+  <section class="dash-hero ci-hero">
+    <div>
+      <p class="ci-eyebrow">Credit manager workspace</p>
+      <h1>Approval pipeline</h1>
+      <p>Committee pressure, branch risk, and officer load across your scope.</p>
+    </div>
+    <div class="dash-hero-meta">
+      <span class="dash-pill">Scope: {{ scope_label }}</span>
+      {% url 'view_loan_requests_manager' as votes_url %}
+      {% include "includes/list_action.html" with href=votes_url|add:'?queue=my_votes' icon="vote" label="My votes" tone="blue" only %}
+    </div>
+  </section>
+
+  <section class="dash-kpis">
+    <article class="dash-kpi"><p class="dash-kpi-label">In appraisal</p><p class="dash-kpi-value">{{ pipeline.in_appraisal }}</p></article>
+    <article class="dash-kpi kpi-pending"><p class="dash-kpi-label">Committee pending</p><p class="dash-kpi-value">{{ pipeline.pending_committee }}</p></article>
+    <article class="dash-kpi kpi-approved"><p class="dash-kpi-label">Approved</p><p class="dash-kpi-value">{{ pipeline.approved }}</p></article>
+    <article class="dash-kpi kpi-amount"><p class="dash-kpi-label">Post-approval</p><p class="dash-kpi-value">{{ pipeline.awaiting_disburse }}</p></article>
+  </section>
+
+  <section class="ci-grid">
+    <div class="dash-panel">
+      <h2>Awaiting committee</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Loan</th><th>Applicant</th><th>Officer</th><th>Band</th><th></th></tr></thead>
+          <tbody>
+          {% for row in pending_votes %}
+            <tr>
+              <td>{{ row.loan_request_id }}</td>
+              <td>{{ row.applicant_name }}</td>
+              <td>{{ row.officer|default:"—" }}</td>
+              <td><span class="ci-band band-{{ row.band }}">{{ row.band|default:"—" }}</span></td>
+              <td>
+                <div class="list-actions">
+                {% url 'loan_request_detail_manager' row.id as murl %}
+                {% include "includes/list_action.html" with href=murl icon="open" label="Review" tone="blue" only %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="dash-empty">No committee-pending loans.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Officer load</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>Officer</th><th>Assigned</th><th>Pending</th><th>Avg score</th></tr></thead>
+          <tbody>
+          {% for t in team %}
+            <tr>
+              <td>{{ t.name }}</td>
+              <td>{{ t.assigned }}</td>
+              <td>{{ t.pending_appraisal }}</td>
+              <td>{% if t.avg_score %}{{ t.avg_score }}{% else %}—{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="dash-empty">No assigned officers in scope.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash-grid">
+    <div class="dash-panel">
+      <h2>Branch comparison</h2>
+      <div class="dash-chart-wrap"><canvas id="ciBranchChart"></canvas></div>
+    </div>
+    <div class="dash-panel">
+      <h2>Alerts</h2>
+      <div class="ci-insights">
+        {% for alert in alerts|slice:":6" %}
+        <article class="ci-insight sev-{{ alert.severity }}">
+          <strong>{{ alert.title }}</strong>
+          <p>{{ alert.body }}</p>
+        </article>
+        {% empty %}
+        <p class="dash-empty">No alerts.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  window.CI_BRANCHES = {{ branches_json|safe }};
+  window.CI_PIPELINE = null;
+  window.CI_SCORE_BANDS = null;
+</script>
+<script src="{% static 'js/credit_intelligence.js' %}"></script>
+{% endblock %}

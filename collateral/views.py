@@ -1522,8 +1522,11 @@ def unit_price_list(request):
     city_id = request.GET.get('city_id')
     if city_id:
         prices = prices.filter(city_id=city_id)
+    paginator = Paginator(prices, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
     return render(request, 'collateral/unit_price_list.html', {
-        'prices': prices,
+        'page_obj': page_obj,
+        'prices': page_obj,
         'selected_city_id': city_id,
     })
 

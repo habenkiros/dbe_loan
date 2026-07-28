@@ -10,14 +10,32 @@
 {% block content %}
 <div class="dash">
 
+  {% if user.role == 'loan_officer' or user.role == 'branch_manager' %}
+  <div class="dash-quicklinks">
+    <h3>{% if user.role == 'loan_officer' %}Your workbench{% else %}Branch workbench{% endif %}</h3>
+    <p>Jump to the next queue — appraisal, committee votes, or post-approval disbursement.</p>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'view_loan_requests' as loans_url %}
+      {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
+      {% url 'view_loan_requests_manager' as queue_url %}
+      {% include "includes/list_action.html" with href=queue_url|add:'?queue=my_votes' icon="vote" label="Approval queue" tone="blue" only %}
+      {% url 'post_approval_queue' as pa_url %}
+      {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if user.role == 'engineer' or user.role == 'engineering_head' or user.role == 'Engineering Head' %}
   <div class="dash-quicklinks">
     <h3>Engineering &amp; Collateral</h3>
     <p>Use <strong>Field visit</strong> on a tablet at the property (GPS + camera). Desktop: Buildings → Valuation / Images.</p>
-    <div class="dash-actions" style="margin:0;">
-      <a href="{% url 'collateral:catalog_index' %}" class="btn btn-green">Catalog</a>
-      <a href="{% url 'collateral:unit_price_list' %}" class="btn btn-blue">Unit prices</a>
-      <a href="{% url 'collateral:dashboard' %}" class="btn btn-orange">Collateral loans</a>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'collateral:catalog_index' as cat_url %}
+      {% include "includes/list_action.html" with href=cat_url icon="list" label="Catalog" tone="green" only %}
+      {% url 'collateral:unit_price_list' as up_url %}
+      {% include "includes/list_action.html" with href=up_url icon="money" label="Unit prices" tone="blue" only %}
+      {% url 'collateral:dashboard' as dash_url %}
+      {% include "includes/list_action.html" with href=dash_url icon="building" label="Collateral loans" tone="orange" only %}
     </div>
   </div>
   {% endif %}
@@ -25,7 +43,7 @@
   <section class="dash-hero">
     <div>
       <h1>Loan Dashboard</h1>
-      <p>Pipeline overview for faster credit decisions.</p>
+      <p>Classic pipeline counts — prefer <a href="{% url 'credit_intelligence_overview' %}" style="color:#fff;text-decoration:underline;">Credit Intelligence</a> for risk KPIs.</p>
     </div>
     <div class="dash-hero-meta">
       <span class="dash-pill">Scope: {{ scope_label }}</span>
@@ -66,21 +84,38 @@
     </article>
   </section>
 
-  <section class="dash-actions">
+  <section class="dash-actions list-actions list-actions-lg">
     {% if user.role == 'loan_officer' or user.role == 'branch_manager' %}
-    <a href="{% url 'view_loan_requests' %}" class="btn btn-green">View loan requests</a>
+    {% url 'view_loan_requests' as loans_url %}
+    {% include "includes/list_action.html" with href=loans_url icon="list" label="View loan requests" tone="green" only %}
+    {% url 'view_report_options' as reports_url %}
+    {% include "includes/list_action.html" with href=reports_url icon="summary" label="Reports & Excel" tone="blue" only %}
+    {% url 'branch_report_dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Branch dashboard" tone="orange" only %}
     {% endif %}
     {% if user.role == 'branch_manager' %}
-    <a href="{% url 'create_loan_request' %}" class="btn btn-blue">New loan request</a>
+    {% url 'create_loan_request' as create_url %}
+    {% include "includes/list_action.html" with href=create_url icon="add" label="New loan request" tone="blue" only %}
     {% endif %}
     {% if user.role == 'operation_manager' %}
-    <a href="{% url 'view_loan_requests_operation_manager' %}" class="btn btn-green">Operation queue</a>
+    {% url 'view_loan_requests_operation_manager' as op_url %}
+    {% include "includes/list_action.html" with href=op_url icon="list" label="Operation queue" tone="green" only %}
+    {% url 'post_approval_queue' as pa_url %}
+    {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
+    {% url 'view_report_options' as reports_url %}
+    {% include "includes/list_action.html" with href=reports_url icon="summary" label="Reports" tone="blue" only %}
     {% endif %}
     {% if user.role == 'finance_manager' %}
-    <a href="{% url 'view_loan_requests_finance_manager' %}" class="btn btn-green">Finance queue</a>
+    {% url 'view_loan_requests_finance_manager' as fin_url %}
+    {% include "includes/list_action.html" with href=fin_url icon="list" label="Finance queue" tone="green" only %}
+    {% url 'post_approval_queue' as pa_url %}
+    {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
+    {% url 'view_report_options' as reports_url %}
+    {% include "includes/list_action.html" with href=reports_url icon="summary" label="Reports" tone="blue" only %}
     {% endif %}
     {% if user.role == 'loan_officer' or user.role == 'branch_manager' or user.role == 'engineer' or user.role == 'engineering_head' %}
-    <a href="{% url 'collateral:dashboard' %}" class="btn btn-orange">Collateral</a>
+    {% url 'collateral:dashboard' as coll_url %}
+    {% include "includes/list_action.html" with href=coll_url icon="building" label="Collateral" tone="orange" only %}
     {% endif %}
   </section>
 
@@ -109,43 +144,40 @@
             <th>Applicant</th>
             <th>Branch</th>
             <th>Amount</th>
-            <th>Status</th>
+            <th>Status / stage</th>
             <th>Requested</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
         {% for loan in recent_loans %}
           <tr>
-            <td>
-              {% if user.role == 'operation_manager' %}
-              <a href="{% url 'loan_request_detail_operation_manager' loan.id %}">{{ loan.loan_request_id }}</a>
-              {% elif user.role == 'finance_manager' %}
-              <a href="{% url 'loan_request_detail_finance' loan.id %}">{{ loan.loan_request_id }}</a>
-              {% elif user.role == 'branch_manager' or user.role == 'loan_officer' %}
-              <a href="{% url 'loan_request_detail' loan.id %}">{{ loan.loan_request_id }}</a>
-              {% else %}
-              {{ loan.loan_request_id }}
-              {% endif %}
-            </td>
+            <td>{{ loan.loan_request_id }}</td>
             <td>{{ loan.applicant_name }}</td>
             <td>{{ loan.branch.name|default:"—" }}</td>
             <td>{{ loan.amount_requested|floatformat:2 }}</td>
             <td>
-              {% if loan.status == 'Approved' %}
-              <span class="dash-status approved">Approved</span>
-              {% elif loan.status == 'Pending' %}
-              <span class="dash-status pending">Pending</span>
-              {% elif loan.status == 'Rejected' %}
-              <span class="dash-status rejected">Rejected</span>
-              {% else %}
-              <span class="dash-status other">{{ loan.status|default:"—" }}</span>
-              {% endif %}
+              <div class="lw-chip-row">
+                {% include "loans/_loan_status_chips.html" with loan_request=loan %}
+              </div>
             </td>
             <td>{{ loan.date_requested|date:"Y-m-d" }}</td>
+            <td>
+              <div class="list-actions">
+              {% if user.role == 'operation_manager' %}
+              {% url 'loan_request_detail_operation_manager' loan.id as recent_url %}
+              {% elif user.role == 'finance_manager' %}
+              {% url 'loan_request_detail_finance' loan.id as recent_url %}
+              {% else %}
+              {% url 'loan_request_detail' loan.id as recent_url %}
+              {% endif %}
+              {% include "includes/list_action.html" with href=recent_url icon="open" label="Open details" tone="blue" only %}
+              </div>
+            </td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6"><div class="dash-empty">No loan requests in your scope yet.</div></td>
+            <td colspan="7"><div class="dash-empty">No loan requests in your scope yet.</div></td>
           </tr>
         {% endfor %}
         </tbody>

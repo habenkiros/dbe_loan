@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Technical Specification — AI-powered Credit Intelligence for DECSI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela  ·  Technical Specification  ·  DECSI";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.55;font-size:10.2pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:18mm 16mm;box-shadow:0 4px 24px rgba(6,69,40,.08);}
+.screen.cover{padding:0;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:0;box-shadow:none;max-width:none;min-height:0;}
+  .screen.cover{padding:0;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;}
+  table,tr,.box{break-inside:avoid;}
+  .cover{min-height:0!important;max-height:269mm;overflow:hidden;page-break-inside:avoid;}
+  .cover-hero{padding:10mm 0 8mm;}
+  .cover .brand-row{margin-bottom:8mm;}
+  .cover-body{padding:7mm 14mm 8mm;}
+  .cover h1{font-size:20pt;}
+  .cover .bank{font-size:16pt;}
+  .logo-img.lg{height:56px;}
+}
+.cover{min-height:262mm;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:14mm 0 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover-inner{padding:0 16mm;}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover .for-label{font-size:8pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e8d48a;margin-bottom:6px;}
+.cover .bank{font-family:Fraunces,Georgia,serif;font-size:20pt;font-weight:700;margin:0 0 2px;}
+.cover .bank-sub{font-size:10pt;color:#b7d9c6;margin:0 0 14px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:24pt;line-height:1.15;color:#fff;margin:0 0 10px;max-width:165mm;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:165mm;line-height:1.5;margin:0;}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:10mm 16mm 12mm;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+.badge{border:1px solid rgba(11,107,58,.25);color:var(--g);padding:3px 9px;border-radius:999px;font-size:8pt;font-weight:600;}
+.cover-foot{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:8px;margin-top:8px;font-size:8pt;color:var(--muted);}
+.cover-foot strong{color:var(--gd);}
+h2{font-family:Fraunces,Georgia,serif;font-size:14.5pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11pt;color:var(--g);margin:10px 0 5px;}
+h4{font-size:10pt;color:var(--gd);margin:8px 0 4px;}
+p,li{margin:0 0 6px;}
+ul,ol{margin:0 0 8px;padding-left:1.2em;}
+.toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;font-size:9.5pt;margin:0 0 12px;padding:0;list-style:none;}
+.toc-grid li{margin:0 0 5px;display:flex;gap:6px;break-inside:avoid;}
+.toc-grid li span.n{flex:0 0 1.5em;font-weight:700;color:var(--g);}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:9px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;}
+.box h4{margin:0 0 4px;}
+.box.gold{border-top:3px solid var(--gold);}
+.box.green{border-top:3px solid var(--g);}
+.box.ok{border-top:3px solid var(--ok);}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:8.8pt;}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7.3pt;text-transform:uppercase;letter-spacing:.04em;}
+code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:8.5pt;background:var(--bg);padding:1px 4px;border-radius:3px;}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 12px;font-size:8.5pt;font-weight:600;color:var(--gd);}
+.flow span{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;}
+.flow .arr{border:none;background:transparent;color:var(--muted);padding:0;}
+.small{font-size:9pt;color:var(--muted);}
+.footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+.logo-img{height:52px;width:auto;display:block;object-fit:contain;}
+.logo-img.lg{height:72px;}
+.arch{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8pt;line-height:1.45;background:#0f1f17;color:#d7ebe0;border-radius:8px;padding:12px 14px;white-space:pre;overflow:hidden;margin:8px 0 12px;}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<section class="screen cover">
+  <div class="cover-hero">
+    <div class="cover-inner">
+      <div class="brand-row">
+        <div>
+          <img class="logo-img lg" src="logo.png" alt="Seqela"/>
+          <div class="seqela" style="margin-top:8px;">Seqela<span>Banking technology · Ethiopia</span></div>
+        </div>
+        <div class="conf">Technical specification</div>
+      </div>
+      <p class="for-label">Prepared for</p>
+      <p class="bank">DECSI</p>
+      <p class="bank-sub">Dedebit Credit and Savings Institution S.C. · Mekelle, Tigray</p>
+      <h1>Technical Specification<br>AI-powered Credit Intelligence</h1>
+      <p class="tagline">
+        Functional and technical specification of the DECSI credit factory —
+        architecture, modules, integrations, security, deployment, and acceptance criteria.
+      </p>
+    </div>
+  </div>
+  <div class="cover-body">
+    <div>
+      <div class="badges">
+        <span class="badge">Django 3.2 · Python 3.9</span>
+        <span class="badge">PostgreSQL 16</span>
+        <span class="badge">Docker</span>
+        <span class="badge">CBS customer API</span>
+        <span class="badge">OCR eng+amh</span>
+        <span class="badge">Offline field PWA</span>
+      </div>
+      <div class="meta">
+        <div><div class="l">Document type</div><div class="v">Technical specification (TS)</div></div>
+        <div><div class="l">Version / date</div><div class="v">1.0 · 28 July 2026</div></div>
+        <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
+        <div><div class="l">Reference</div><div class="v">SEQ/DECSI/TS/2026-07</div></div>
+        <div><div class="l">Companion</div><div class="v">Business proposal SEQ/DECSI/CAPH/2026-07</div></div>
+        <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
+      </div>
+    </div>
+    <div class="cover-foot">
+      <div><strong>Seqela</strong> · seqela.com</div>
+      <div>For DECSI evaluation only · Not for redistribution</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>Contents</h2>
+  <ul class="toc-grid">
+    <li><span class="n">1.</span><span class="t">Purpose, scope &amp; document control</span></li>
+    <li><span class="n">2.</span><span class="t">System overview &amp; lifecycle</span></li>
+    <li><span class="n">3.</span><span class="t">Logical architecture</span></li>
+    <li><span class="n">4.</span><span class="t">Technology stack</span></li>
+    <li><span class="n">5.</span><span class="t">Functional modules (detailed)</span></li>
+    <li><span class="n">6.</span><span class="t">Data domains &amp; key entities</span></li>
+    <li><span class="n">7.</span><span class="t">Appraisal engine (Sheets 1–7)</span></li>
+    <li><span class="n">8.</span><span class="t">Collateral, GPS &amp; offline PWA</span></li>
+    <li><span class="n">9.</span><span class="t">Committee &amp; disbursement track</span></li>
+    <li><span class="n">10.</span><span class="t">Integrations (CBS / maps / OCR)</span></li>
+    <li><span class="n">11.</span><span class="t">Roles, access control &amp; security</span></li>
+    <li><span class="n">12.</span><span class="t">Non-functional requirements</span></li>
+    <li><span class="n">13.</span><span class="t">Deployment, environments &amp; ops</span></li>
+    <li><span class="n">14.</span><span class="t">Configuration &amp; bank policy knobs</span></li>
+    <li><span class="n">15.</span><span class="t">Assumptions, exclusions &amp; interfaces</span></li>
+    <li><span class="n">16.</span><span class="t">Acceptance criteria &amp; test approach</span></li>
+  </ul>
+  <h3>Document control</h3>
+  <table>
+    <tr><th>Item</th><th>Detail</th></tr>
+    <tr><td>Audience</td><td>DECSI IT, Credit Operations, Collateral/Engineering, Risk &amp; Compliance, Executive sponsors</td></tr>
+    <tr><td>Purpose</td><td>Define what the system is, how it works, how it deploys, and how DECSI accepts it</td></tr>
+    <tr><td>Baseline</td><td>Running production-shaped codebase designed around DECSI Branch → District → HO practices</td></tr>
+    <tr><td>Related docs</td><td>Business proposal <em>DECSI_AI_Credit_Intelligence_Proposal.pdf</em>; live UI screenshots</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>1. Purpose, Scope &amp; Document Control</h2>
+  <div class="exec">
+    <p style="margin:0;"><strong>Purpose:</strong> Specify the AI-powered Credit Intelligence platform for DECSI — a digital credit factory for loan intake, document authentication, 7-step cashflow appraisal (MSME/corporate), GPS collateral valuation, multi-level committees, and post-approval disbursement tracking.</p>
+  </div>
+  <h3>1.1 In scope</h3>
+  <ul>
+    <li>Staff web application (branch / district / HO roles)</li>
+    <li>Loan request lifecycle and role queues</li>
+    <li>Document checklist with OCR (English + Amharic) and authentication workflow</li>
+    <li>Appraisal Sheets 1–7 with Excel-faithful completeness gates, scorecard, analysis assist</li>
+    <li>Collateral catalog, field visit (online + offline PWA), coverage, lock/unlock, evidence pack</li>
+    <li>Configurable Branch → District → Head Office → Management committee voting</li>
+    <li>CBS customer number lookup / smart prefill (and optional transactions feed)</li>
+    <li>Docker-based deployment on DECSI infrastructure (on-prem or private cloud)</li>
+  </ul>
+  <h3>1.2 Out of scope (unless separately contracted)</h3>
+  <ul>
+    <li>Full Temenos/CBS rip-and-replace or account booking engine</li>
+    <li>Customer-facing retail mobile banking app</li>
+    <li>General ledger / IFRS reporting suite</li>
+    <li>Hardware (tablets, GPS devices) procurement</li>
+  </ul>
+  <div class="callout"><strong>Design principle:</strong> The Hub is DECSI’s <em>credit factory</em>. Core banking remains the system of record for accounts and fund disbursement.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>2. System Overview &amp; Lifecycle</h2>
+  <p>End-to-end secured / cashflow credit processing for MSME and corporate facilities:</p>
+  <div class="flow">
+    <span>1. Intake</span><span class="arr">→</span>
+    <span>2. Documents</span><span class="arr">→</span>
+    <span>3. Appraisal 1–7</span><span class="arr">→</span>
+    <span>4. Collateral / GPS</span><span class="arr">→</span>
+    <span>5. Lock &amp; QA</span><span class="arr">→</span>
+    <span>6. Committee</span><span class="arr">→</span>
+    <span>7. Disburse track</span><span class="arr">→</span>
+    <span>8. CBS handoff</span>
+  </div>
+  <table>
+    <tr><th>Stage</th><th>Primary actors</th><th>System behaviour</th></tr>
+    <tr><td>Intake</td><td>Branch manager / officer</td><td>Create <code>LoanRequest</code>; product, amount, collateral type, customer #</td></tr>
+    <tr><td>Documents</td><td>Officer / engineer</td><td>Required types; OCR; identity match; verify/reject</td></tr>
+    <tr><td>Pre-committee queues</td><td>Ops / finance managers</td><td>Optional approval flags before appraisal assignment</td></tr>
+    <tr><td>Appraisal</td><td>Loan officer</td><td>Guided Sheets 1–7; MSME or Corporate mode; policy gates</td></tr>
+    <tr><td>Collateral</td><td>Officer and/or engineer</td><td>Building BOQ / land / movable; GPS photos; offline sync</td></tr>
+    <tr><td>Committee</td><td>Voters by level</td><td>Pack, vote, return-to-officer; amount routing</td></tr>
+    <tr><td>Post-approval</td><td>Ops / finance / officer</td><td>Conditions → schedule → ready → disbursed (CBS booking external)</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>3. Logical Architecture</h2>
+  <div class="arch">┌─────────────────────────────────────────────────────────────┐
+│                     Staff browsers / tablets                │
+│          Django templates · jQuery · Leaflet / Gebeta       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ HTTPS (optional nginx TLS)
+┌───────────────────────────▼─────────────────────────────────┐
+│                 AI-powered Credit Intelligence              │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│  │  loans app   │  │ collateral   │  │  services layer   │  │
+│  │ intake/docs  │  │ field/BOQ    │  │ CBS · OCR · PDF   │  │
+│  │ appraisal    │  │ offline PWA  │  │ scorecard/assist  │  │
+│  │ committee    │  │ evidence     │  │ geocoding         │  │
+│  └──────┬───────┘  └──────┬───────┘  └─────────┬─────────┘  │
+│         └─────────────────┴────────────────────┘            │
+│                      Django 3.2 ORM                         │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         ▼                  ▼                  ▼
+   PostgreSQL 16      DECSI CBS APIs      Maps / OCR
+   (system of         party + txns        Tesseract
+    record for        (prefill only)      eng+amh
+    credit files)</div>
+  <div class="two">
+    <div class="box green"><h4>Application packages</h4>
+      <ul>
+        <li><code>decsi_loan/</code> — settings, URLs, WSGI</li>
+        <li><code>loans/</code> — credit factory core</li>
+        <li><code>collateral/</code> — valuation &amp; field PWA</li>
+        <li><code>templates/</code>, <code>static/</code> — UI &amp; PWA assets</li>
+      </ul>
+    </div>
+    <div class="box gold"><h4>Runtime topology</h4>
+      <ul>
+        <li><code>web</code> — Django app container</li>
+        <li><code>db</code> — PostgreSQL 16</li>
+        <li>Optional <code>nginx</code> HTTPS overlay for tablet secure context (GPS/camera)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>4. Technology Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Notes</th></tr>
+    <tr><td>Language</td><td>Python 3.9</td><td>Container base image</td></tr>
+    <tr><td>Framework</td><td>Django 3.2.x</td><td>Server-rendered staff UI</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 16</td><td><code>psycopg2-binary</code></td></tr>
+    <tr><td>Auth</td><td>Django sessions + <code>loans.CustomUser</code></td><td>Role field RBAC</td></tr>
+    <tr><td>Frontend</td><td>Django templates, jQuery 3.6, CSS</td><td>No SPA framework required</td></tr>
+    <tr><td>OCR</td><td>Tesseract + pytesseract + pdf2image</td><td>Default <code>eng+amh</code></td></tr>
+    <tr><td>PDF</td><td>WeasyPrint, ReportLab</td><td>Committee / evidence packs</td></tr>
+    <tr><td>Excel I/O</td><td>pandas, openpyxl, django-import-export</td><td>Catalog &amp; bulk masters</td></tr>
+    <tr><td>HTTP</td><td>requests</td><td>CBS party / transactions</td></tr>
+    <tr><td>Maps</td><td>Gebeta Maps + MapLibre; Leaflet/OSM fallback</td><td>Field GPS &amp; geocoding</td></tr>
+    <tr><td>Offline</td><td>Service Worker + IndexedDB PWA</td><td>Collateral field capture</td></tr>
+    <tr><td>Deploy</td><td>Docker Compose</td><td>web + db (+ optional nginx TLS)</td></tr>
+  </table>
+  <p class="small">DRF / JWT packages may appear in <code>requirements.txt</code> for future API work; current staff UI is session-based Django views.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>5. Functional Modules (Detailed)</h2>
+  <table>
+    <tr><th>Module</th><th>Capabilities</th></tr>
+    <tr><td><strong>A. Intake &amp; master data</strong></td><td>Loan requests; categories/products; collateral types; geography (Region→Zone→City→District→Branch); user administration; CSV bulk import commands</td></tr>
+    <tr><td><strong>B. Documents</strong></td><td>Configurable required types (MSME/corporate aware); size/MIME checks; OCR eng+amh; identity match (name/phone/TIN); statuses Pending → Auto-passed / Needs review → Verified / Rejected; replace-aware upload</td></tr>
+    <tr><td><strong>C. Appraisal</strong></td><td>7-step wizard; MSME vs Corporate mode; qualitative ≥75% gate; DSCR/stress/capacity; E&amp;S 21 items; scorecard /100; analysis assist; amortization schedule; finish gates</td></tr>
+    <tr><td><strong>D. Collateral</strong></td><td>Building BOQ catalog × woreda unit prices; land; movable; GPS site mark; photo rules; EXIF vs live GPS; lock after submit; supervised unlock; engineering QA; coverage vs ask; evidence pack (Print/PDF/JSON/ZIP)</td></tr>
+    <tr><td><strong>E. Approvals</strong></td><td>Ops/finance queues; amount-routed committee levels; vote Approve/Decline; return-to-officer; notifications; read-only committee pack</td></tr>
+    <tr><td><strong>F. Post-approval</strong></td><td>Conditions clearance → schedule readiness → ready to disburse → disbursed flag (CBS booking external)</td></tr>
+    <tr><td><strong>G. Reporting</strong></td><td>Management report generation options by role</td></tr>
+  </table>
+  <h3>5.1 Appraisal mode</h3>
+  <p>Mode is driven by <code>LoanCategory.appraisal_mode</code> (<code>msme</code> / <code>corporate</code>) and stamped on <code>LoanAppraisal</code>. Corporate mode changes Sheet 1 KYC depth, Sheet 2 qualitative factor set (governance), and Sheet 3 financial statement emphasis while keeping the same 7-step wizard and committee factory.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>6. Data Domains &amp; Key Entities</h2>
+  <div class="two">
+    <div class="box green"><h4>Credit core</h4>
+      <ul>
+        <li><code>LoanRequest</code> — central case file</li>
+        <li><code>LoanAppraisal</code> — 1:1 appraisal record</li>
+        <li><code>LoanRequestBasicInfo</code> — Sheet 1 + field provenance</li>
+        <li>Qualitative factors, E&amp;S items, amortization lines</li>
+        <li>Documents &amp; document types / policies</li>
+        <li>Committee progress, votes, notifications</li>
+      </ul>
+    </div>
+    <div class="box gold"><h4>Collateral &amp; org</h4>
+      <ul>
+        <li>Building / Land / Other collateral + images</li>
+        <li>MainWork → SubWork → SubSubWork + unit prices</li>
+        <li><code>CollateralPolicyConfig</code>, audit log, unlock requests</li>
+        <li><code>CustomUser</code> + roles; District / Branch masters</li>
+        <li><code>LoanCategory</code>, <code>CollateralType</code></li>
+      </ul>
+    </div>
+  </div>
+  <h3>6.1 Provenance</h3>
+  <p>Sheet 1 fields retain source badges: <strong>Core banking</strong> / <strong>OCR / Document</strong> / <strong>Officer</strong> / defaults. CBS conflicts are listed for Accept (banking wins) rather than silent overwrite.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>7. Appraisal Engine (Sheets 1–7)</h2>
+  <table>
+    <tr><th>Sheet</th><th>MSME focus</th><th>Corporate focus</th><th>Hard gates (typical)</th></tr>
+    <tr><td>1</td><td>Basic info &amp; loan request</td><td>Entity KYC, directors, UBO</td><td>Required KYC completeness</td></tr>
+    <tr><td>2</td><td>Business &amp; character (10 factors)</td><td>Governance &amp; character</td><td>Qualitative ≥75%</td></tr>
+    <tr><td>3</td><td>Cashflow / DSCR / stress / 12-mo grid</td><td>FS + cashflow + ratios</td><td>Annual / stressed DSCR &lt;1.0 block</td></tr>
+    <tr><td>4</td><td colspan="2">E&amp;S — 21 items, 5 sections</td><td>E&amp;S REJECT hard block</td></tr>
+    <tr><td>5</td><td colspan="2">Collateral worksheet (from field valuation)</td><td>Coverage warning at policy min</td></tr>
+    <tr><td>6</td><td colspan="2">Summary, 4-pillar scorecard, recommendation</td><td>Incomplete sheets 1–6 cannot finish</td></tr>
+    <tr><td>7</td><td colspan="2">Repayment &amp; amortization</td><td>Schedule for booking / pack</td></tr>
+  </table>
+  <h3>7.1 Scorecard pillars (explainable /100)</h3>
+  <table>
+    <tr><th>Pillar</th><th>Weight</th><th>Inputs</th></tr>
+    <tr><td>Qualitative / character</td><td>25</td><td>Sheet 2 totals</td></tr>
+    <tr><td>Financial / cashflow</td><td>35</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Environmental &amp; social</td><td>15</td><td>Risk category &amp; eligibility</td></tr>
+    <tr><td>Collateral coverage</td><td>25</td><td>Coverage vs ask (e.g. ≥1.5× full points)</td></tr>
+  </table>
+  <p>Bands: Strong ≥80 · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40. <strong>Analysis Assist</strong> surfaces thin pillars and hard blocks — decision support, not auto-approve.</p>
+  <p class="small">Key modules: <code>loans/appraisal_mode.py</code>, <code>cashflow_utils.py</code>, <code>sheet_requirements.py</code>, <code>appraisal_scorecard.py</code>, <code>analysis_assist.py</code>.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>8. Collateral, GPS &amp; Offline PWA</h2>
+  <h3>8.1 Field visit</h3>
+  <ul>
+    <li>Wizard: Site → BOQ / valuation → Photos → Review</li>
+    <li>GPS accuracy capture; map pin (Gebeta or Leaflet/OSM)</li>
+    <li>Default policy examples: min 5 building / 3 land photos; weak accuracy threshold ~100 m; photo max distance from site ~200 m; declared-address mismatch flags</li>
+    <li>EXIF GPS vs live capture mismatch warnings; optional hard blocks</li>
+    <li>Submit locks dossier for audit; supervised unlock workflow</li>
+  </ul>
+  <h3>8.2 Offline Progressive Web App</h3>
+  <table>
+    <tr><th>Component</th><th>Behaviour</th></tr>
+    <tr><td>Manifest / SW</td><td><code>manifest-collateral.webmanifest</code>, <code>collateral_sw.js</code></td></tr>
+    <tr><td>Local store</td><td>IndexedDB bundle for site data &amp; photos</td></tr>
+    <tr><td>Sync</td><td>Prepare offline → capture → Sync now when online</td></tr>
+    <tr><td>Secure context</td><td>Optional HTTPS nginx overlay for camera/GPS on LAN tablets</td></tr>
+  </table>
+  <div class="callout"><strong>DECSI fit:</strong> Offline tablet path is required for rural branches with intermittent connectivity — core to DECSI’s field reality.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>9. Committee &amp; Disbursement Track</h2>
+  <h3>9.1 Committee engine</h3>
+  <ul>
+    <li>Configurable levels: Branch → District → Head Office → Management</li>
+    <li>Amount used for routing: Sheet 6 recommended amount (fallback: requested)</li>
+    <li>Member rules: by role scoped to branch/district/org, or named users</li>
+    <li>Thresholds: min approvals / declines per level (configurable)</li>
+    <li>Outcomes: Approve · Decline · Return to officer with notes</li>
+    <li>Read-only appraisal pack for voters (Sheets 1–7 summary)</li>
+  </ul>
+  <h3>9.2 Disbursement track (in-app)</h3>
+  <p>Post-final-approval states track conditions clearance, schedule readiness, ready-to-disburse, and disbursed. <strong>Fund release and account booking remain in CBS</strong> via operational handoff — the Hub does not replace the ledger.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>10. Integrations</h2>
+  <h3>10.1 DECSI CBS — customer party lookup</h3>
+  <table>
+    <tr><th>Item</th><th>Specification</th></tr>
+    <tr><td>Config</td><td><code>DECSI_BASE_URL</code>, timeout, mock/fallback flags</td></tr>
+    <tr><td>Typical path</td><td><code>/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets</code></td></tr>
+    <tr><td>Use</td><td>Prefill Sheet 1 empty fields; conflict list for Accept</td></tr>
+    <tr><td>Service</td><td><code>loans/services/customer.py</code></td></tr>
+  </table>
+  <h3>10.2 Transactions (optional banking pillar)</h3>
+  <p>Optional path via <code>DECSI_TRANSACTIONS_PATH</code> for banking behaviour signals in scoring/assist (<code>loans/services/banking_transactions.py</code>).</p>
+  <h3>10.3 OCR &amp; maps</h3>
+  <ul>
+    <li>OCR language: <code>DOCUMENT_OCR_LANG</code> (default <code>eng+amh</code>)</li>
+    <li>Gebeta Maps API for geocode/tiles; Nominatim / Leaflet+OSM fallbacks</li>
+  </ul>
+  <div class="callout"><strong>Interface ownership:</strong> DECSI IT provides CBS sandbox credentials, network allow-lists, and field mapping for customer attributes. Seqela implements adapters and conflict UX.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>11. Roles, Access Control &amp; Security</h2>
+  <h3>11.1 Role catalogue (out of the box)</h3>
+  <table>
+    <tr><th>Family</th><th>Roles</th></tr>
+    <tr><td>Admin</td><td>superadmin, admin</td></tr>
+    <tr><td>Branch credit</td><td>loan_officer, branch_manager, accountant</td></tr>
+    <tr><td>Engineering</td><td>engineer, engineering_head</td></tr>
+    <tr><td>Pre-committee</td><td>operation_manager, finance_manager</td></tr>
+    <tr><td>District / HO</td><td>district_manager, credit_committee</td></tr>
+    <tr><td>Executive</td><td>ceo, vp, board_member</td></tr>
+    <tr><td>Control</td><td>risk_compliance, auditor</td></tr>
+  </table>
+  <p>Users may be scoped to <code>branch</code> and/or <code>district</code>. Committee eligibility follows level rules.</p>
+  <h3>11.2 Security controls</h3>
+  <ul>
+    <li>Authenticated session access on all operational screens</li>
+    <li>Role checks on views / workflows</li>
+    <li>Document authentication trail and field provenance</li>
+    <li>Collateral lock + supervised unlock + field audit log</li>
+    <li>Hard/soft policy gates before finish / committee</li>
+    <li>Evidence pack / dossier export for audit reconstruction</li>
+    <li>Bank-controlled data residency (on-prem / private cloud Docker)</li>
+  </ul>
+</section>
+
+<section class="screen pagebreak">
+  <h2>12. Non-Functional Requirements</h2>
+  <table>
+    <tr><th>Area</th><th>Target / requirement</th></tr>
+    <tr><td>Availability</td><td>Business-hours critical; overnight batch windows agreed with DECSI IT</td></tr>
+    <tr><td>Performance</td><td>Interactive pages &lt;3s typical on LAN; OCR may be async/longer for large PDFs</td></tr>
+    <tr><td>Concurrency</td><td>Sized for DECSI concurrent branch users (capacity planning in discovery)</td></tr>
+    <tr><td>Offline</td><td>Field PWA must capture GPS/photos offline and sync without data loss</td></tr>
+    <tr><td>Backup</td><td>PostgreSQL backup/restore procedures owned with DECSI IT</td></tr>
+    <tr><td>Auditability</td><td>Who/when for documents, appraisal finish, locks, unlocks, votes</td></tr>
+    <tr><td>Localisation</td><td>UI English; OCR supports Amharic; bilingual labels extendable</td></tr>
+    <tr><td>Browser</td><td>Current Chrome/Edge/Firefox; Chromium-based for best PWA field support</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>13. Deployment, Environments &amp; Ops</h2>
+  <h3>13.1 Standard topology</h3>
+  <table>
+    <tr><th>Service</th><th>Image / role</th><th>Port</th></tr>
+    <tr><td><code>web</code></td><td>App build from <code>Dockerfile</code> (Python 3.9 + Tesseract eng/amh + WeasyPrint libs)</td><td>8000</td></tr>
+    <tr><td><code>db</code></td><td><code>postgres:16</code> with persistent volume</td><td>5432 (internal)</td></tr>
+    <tr><td><code>nginx</code> (optional)</td><td>TLS terminator for tablet HTTPS (<code>docker-compose.https.yml</code>)</td><td>8443→443</td></tr>
+  </table>
+  <h3>13.2 Environments (recommended)</h3>
+  <ul>
+    <li><strong>Dev / UAT</strong> — configuration &amp; training; mock or sandbox CBS</li>
+    <li><strong>Production</strong> — DECSI-controlled host; real CBS; backup &amp; monitoring</li>
+  </ul>
+  <h3>13.3 Configuration (non-secret names)</h3>
+  <p><code>SECRET_KEY</code>, <code>DEBUG</code>, <code>SITE_URL</code>, <code>DB_*</code>, <code>DECSI_BASE_URL</code>, <code>DECSI_CUSTOMER_TIMEOUT</code>, <code>DECSI_CUSTOMER_*_MOCK</code>, <code>DECSI_TRANSACTIONS_PATH</code>, <code>DOCUMENT_OCR_LANG</code>, <code>GEBETA_MAPS_*</code>, <code>USE_HTTPS_PROXY</code>, <code>CSRF_TRUSTED_ORIGINS</code>, email settings.</p>
+  <h3>13.4 Operations</h3>
+  <ul>
+    <li>Migrations via Django manage.py</li>
+    <li>Bulk master import management commands (zones, branches, users, catalogs)</li>
+    <li>Application logs + Postgres backups; hypercare during network rollout</li>
+  </ul>
+</section>
+
+<section class="screen pagebreak">
+  <h2>14. Configuration &amp; Bank Policy Knobs</h2>
+  <p>DECSI Credit/Risk can tune without code changes (via admin / policy models):</p>
+  <div class="two">
+    <div class="box green"><h4>Credit / analysis</h4>
+      <ul>
+        <li>Loan categories &amp; appraisal mode</li>
+        <li>Document type requirements</li>
+        <li>Qualitative pass threshold</li>
+        <li>DSCR / stress hard blocks</li>
+        <li>Scorecard weights (if enabled)</li>
+        <li>Committee levels, voters, thresholds</li>
+      </ul>
+    </div>
+    <div class="box gold"><h4>Collateral / field</h4>
+      <ul>
+        <li>Min photos by asset type</li>
+        <li>GPS accuracy / distance rules</li>
+        <li>Coverage minimum &amp; flag ratio</li>
+        <li>Block-on-submit toggles</li>
+        <li>Unit-price catalog by woreda</li>
+        <li>Who estimates (officer / eng / both)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>15. Assumptions, Exclusions &amp; Interfaces</h2>
+  <h3>15.1 Assumptions</h3>
+  <ul>
+    <li>DECSI provides infrastructure (VM/hosts), TLS certificates if required, and CBS connectivity</li>
+    <li>Cashflow MSME methodology remains aligned to DECSI practice and the sector Excel standard</li>
+    <li>Officers and engineers receive role-based training before go-live of each wave</li>
+  </ul>
+  <h3>15.2 Interface responsibilities</h3>
+  <table>
+    <tr><th>Party</th><th>Responsibility</th></tr>
+    <tr><td>DECSI IT</td><td>Hosting, network, backups, CBS API access, AD/SSO roadmap (if later required)</td></tr>
+    <tr><td>DECSI Credit</td><td>Policy thresholds, products, committee design, UAT sign-off</td></tr>
+    <tr><td>Seqela</td><td>Application delivery, configuration, training, defect fix, methodology updates</td></tr>
+  </table>
+  <h3>15.3 Explicit exclusions</h3>
+  <ul>
+    <li>CBS disbursement posting API (handoff process only, unless separately specified)</li>
+    <li>National ID / NBE bureau live feed (flags captured on file; live bureau connector optional future work)</li>
+  </ul>
+</section>
+
+<section class="screen pagebreak">
+  <h2>16. Acceptance Criteria &amp; Test Approach</h2>
+  <h3>16.1 Functional acceptance (must pass)</h3>
+  <ol>
+    <li>Create loan → upload required docs → OCR/auth statuses visible</li>
+    <li>CBS customer # prefill populates empty Sheet 1 fields; conflicts Acceptable</li>
+    <li>Complete MSME Sheets 1–7; qualitative &lt;75% and E&amp;S REJECT and DSCR&lt;1.0 block finish as configured</li>
+    <li>Corporate mode switches labels/factors for a corporate category loan</li>
+    <li>Field visit captures GPS + min photos; offline capture syncs when online</li>
+    <li>Coverage ratio appears on Sheet 5 / evidence pack</li>
+    <li>Submit to committee; voter sees pack; Approve/Decline/Return works; routing follows recommended amount</li>
+    <li>Role isolation: auditor/risk read paths; officers cannot cast HO votes without eligibility</li>
+  </ol>
+  <h3>16.2 Non-functional acceptance</h3>
+  <ul>
+    <li>UAT environment restored from backup successfully (drill)</li>
+    <li>HTTPS field tablet can access camera/GPS (if HTTPS overlay used)</li>
+    <li>Production deploy runbook executed with DECSI IT sign-off</li>
+  </ul>
+  <h3>16.3 Test types</h3>
+  <p>Unit tests (cashflow helpers, gates, modes) · Integration tests (CBS mock) · UAT scripts by role · Parallel-run sample files vs Excel baseline for credit sign-off.</p>
+  <div class="callout">
+    <strong>Next step:</strong> Joint TS walkthrough with DECSI IT + Credit → confirm CBS field map → freeze UAT script → schedule environment build.<br><br>
+    <strong>Seqela</strong> · info@seqela.com · +251 964 790 724 · seqela.com
+  </div>
+  <div class="footer">
+    <p><strong>Seqela</strong> · Technical Specification SEQ/DECSI/TS/2026-07 · Companion business proposal SEQ/DECSI/CAPH/2026-07</p>
+    <p>Confidential — for Dedebit Credit and Savings Institution S.C. evaluation only.</p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

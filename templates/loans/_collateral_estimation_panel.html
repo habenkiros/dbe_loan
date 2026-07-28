@@ -25,11 +25,14 @@
       <small>Field work in progress.</small>
       {% endif %}
     </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.35rem;">
-      <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">Summary</a>
-      <a href="{% url 'collateral:dashboard' %}" class="btn btn-gray">Dashboard</a>
+    <div class="list-actions">
+      {% url 'collateral:summary' loan_request.id as sum_url %}
+      {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="blue" only %}
+      {% url 'collateral:dashboard' as dash_url %}
+      {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Dashboard" tone="gray" only %}
       {% if loan_request.collateral_engineering_status == 'pending_review' %}
-      <a href="{% url 'collateral:engineering_qa_review' loan_request.id %}" class="btn btn-green">Engineering QA</a>
+      {% url 'collateral:engineering_qa_review' loan_request.id as qa_url %}
+      {% include "includes/list_action.html" with href=qa_url icon="vote" label="Engineering QA" tone="green" only %}
       {% endif %}
     </div>
   </div>

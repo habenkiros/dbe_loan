@@ -2,12 +2,13 @@
 {% block title %}Sub-sub work – Catalog{% endblock %}
 {% block content %}
 <h2>Sub-sub work</h2>
-<p>
-    <a href="{% url 'collateral:sub_sub_work_add' %}">Add sub-sub work</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:dashboard' %}">Collateral (loans)</a>
+<p class="list-actions" style="margin:0.75rem 0;">
+    {% url 'collateral:sub_sub_work_add' as add_url %}
+    {% include "includes/list_action.html" with href=add_url icon="add" label="Add sub-sub work" tone="green" only %}
+    {% url 'collateral:catalog_index' as cat_url %}
+    {% include "includes/list_action.html" with href=cat_url icon="list" label="Catalog" tone="blue" only %}
+    {% url 'collateral:dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Collateral loans" tone="gray" only %}
 </p>
 
 <form method="get" style="margin-bottom: 16px;">
@@ -40,7 +41,12 @@
                 <td>{{ item.order }}</td>
                 <td>{{ item.name }}</td>
                 <td>{{ item.unit_measure|default:"—" }}</td>
-                <td><a href="{% url 'collateral:sub_sub_work_edit' item.id %}">Edit</a></td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'collateral:sub_sub_work_edit' item.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit sub-sub work" tone="blue" only %}
+                    </div>
+                </td>
             </tr>
             {% empty %}
             <tr>

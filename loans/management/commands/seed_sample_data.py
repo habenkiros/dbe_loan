@@ -1169,6 +1169,7 @@ class Command(BaseCommand):
             description='Submit updated tax clearance before disbursement.',
             responsible_party='Client',
             fulfilled=False,
+            required_before_disbursement=True,
             display_order=1,
         )
         AppraisalCondition.objects.create(
@@ -1177,6 +1178,7 @@ class Command(BaseCommand):
             description='Maintain collateral insurance for full loan term.',
             responsible_party='Client',
             fulfilled=False,
+            required_before_disbursement=False,
             display_order=2,
         )
 
@@ -1202,6 +1204,7 @@ class Command(BaseCommand):
             loan.committee_decided_at = now - timedelta(days=3)
             loan.submitted_to_committee_at = now - timedelta(days=5)
             loan.submitted_to_committee_by = officer
+            loan.disbursement_status = LoanRequest.DISBURSE_AWAITING_CONDITIONS
         loan.save()
 
     def _seed_notifications(self, users, loans):

@@ -100,7 +100,12 @@
           {% if dt.enable_llm_check %}<span title="LLM">LLM</span>{% endif %}
           {% if dt.enable_external_id %}<span title="External ID">ID</span>{% endif %}
         </td>
-        <td><a href="{% url 'edit_loan_application_document_type' dt.id %}">Edit</a></td>
+        <td>
+          <div class="list-actions">
+          {% url 'edit_loan_application_document_type' dt.id as edit_url %}
+          {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit document type" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       {% empty %}
       <tr>

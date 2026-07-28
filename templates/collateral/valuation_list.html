@@ -4,12 +4,19 @@
 <h2>Desktop BOQ — {{ building.name }}</h2>
 <p>Loan: <strong>{{ building.loan_request.loan_request_id }}</strong></p>
 <p class="help">Prefer the tablet <strong>field visit</strong> for on-site quantities and photos. Use this page for desktop BOQ edits.</p>
-<p>
-    <a href="{% url 'collateral:field_visit' building.id %}" class="btn btn-green">Continue field visit</a>
-    <a href="{% url 'collateral:valuation_add_multiple' building.id %}" class="btn btn-blue">Add multiple rows</a>
-    <a href="{% url 'collateral:valuation_add' building.id %}" class="btn btn-gray">Add row</a>
-    <a href="{% url 'collateral:building_estimation_summary' building.id %}" class="btn btn-gray">መጠቃለሊ</a>
-    <a href="{% url 'collateral:building_list' building.loan_request.id %}" class="btn btn-gray">Buildings</a>
+<p class="list-actions" style="margin:0.75rem 0;">
+    {% if not locked %}
+    {% url 'collateral:field_visit' building.id as visit_url %}
+    {% include "includes/list_action.html" with href=visit_url icon="open" label="Continue field visit" tone="green" only %}
+    {% url 'collateral:valuation_add_multiple' building.id as multi_url %}
+    {% include "includes/list_action.html" with href=multi_url icon="add" label="Add multiple rows" tone="blue" only %}
+    {% url 'collateral:valuation_add' building.id as add_url %}
+    {% include "includes/list_action.html" with href=add_url icon="add" label="Add row" tone="gray" only %}
+    {% endif %}
+    {% url 'collateral:building_estimation_summary' building.id as est_url %}
+    {% include "includes/list_action.html" with href=est_url icon="summary" label="Estimation summary" tone="gray" only %}
+    {% url 'collateral:building_list' building.loan_request.id as buildings_url %}
+    {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="gray" only %}
 </p>
 {% if locked %}
 <p style="padding:0.65rem 0.85rem;background:#fff3cd;border-radius:6px;">Collateral submitted — BOQ is read-only.</p>
@@ -39,11 +46,14 @@
                 <td>{{ r.total|floatformat:2 }}</td>
                 {% if not locked %}
                 <td>
-                    <a href="{% url 'collateral:valuation_edit' r.id %}">Edit</a>
+                    <div class="list-actions">
+                    {% url 'collateral:valuation_edit' r.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit BOQ row" tone="blue" only %}
                     <form method="post" action="{% url 'collateral:valuation_delete' r.id %}" style="display:inline;" onsubmit="return confirm('Remove this BOQ line?');">
                         {% csrf_token %}
-                        <button type="submit" style="background:none;border:none;color:#c00;cursor:pointer;padding:0;">Delete</button>
+                        {% include "includes/list_action_submit.html" with icon="delete" label="Delete BOQ row" tone="red" only %}
                     </form>
+                    </div>
                 </td>
                 {% endif %}
             </tr>

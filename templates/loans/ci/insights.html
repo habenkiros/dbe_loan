@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}CI Insights{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash ci">
+  {% include "loans/ci/_subnav.html" %}
+  <section class="dash-hero ci-hero">
+    <div>
+      <p class="ci-eyebrow">AI Credit Intelligence</p>
+      <h1>Risk alerts &amp; recommendations</h1>
+      <p>Rule-based alerts from score bands, DSCR, and collateral coverage — not generative predictions.</p>
+    </div>
+    <div class="dash-hero-meta">
+      <span class="dash-pill">Scope: {{ scope_label }}</span>
+    </div>
+  </section>
+
+  <div class="ci-insights">
+    {% for alert in alerts %}
+    <article class="ci-insight sev-{{ alert.severity }}">
+      <div class="ci-insight-head">
+        <strong>{{ alert.title }}</strong>
+        <span class="ci-conf">{{ alert.kind }}</span>
+      </div>
+      <p>{{ alert.body }}</p>
+      {% if alert.action_url and alert.action_url != '#' %}
+      <a class="ci-insight-link" href="{{ alert.action_url }}">{{ alert.action_label }} →</a>
+      {% endif %}
+    </article>
+    {% empty %}
+    <p class="dash-empty">No elevated alerts in your scope.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

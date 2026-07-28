@@ -3,12 +3,13 @@
 {% block content %}
 <h2>Unit prices per woreda (ነፀላ ዋጋ)</h2>
 <p>Construction unit prices by woreda/city. Set by the engineering team. Not tied to any loan.</p>
-<p>
-    <a href="{% url 'collateral:unit_price_add' %}">Add unit price</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:catalog_index' %}">Catalog</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:dashboard' %}">Collateral (loan valuations)</a>
+<p class="list-actions" style="margin:0.75rem 0;">
+    {% url 'collateral:unit_price_add' as add_url %}
+    {% include "includes/list_action.html" with href=add_url icon="add" label="Add unit price" tone="green" only %}
+    {% url 'collateral:catalog_index' as cat_url %}
+    {% include "includes/list_action.html" with href=cat_url icon="list" label="Catalog" tone="blue" only %}
+    {% url 'collateral:dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Collateral loans" tone="gray" only %}
 </p>
 
 <div class="table-container">
@@ -35,7 +36,12 @@
                 <td>{% if p.sub_work_id %}{{ p.sub_work.name }}{% else %}{{ p.sub_sub_work.sub_work.name }}{% endif %}</td>
                 <td>{% if p.sub_sub_work_id %}{{ p.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
                 <td>{{ p.unit_price|floatformat:2 }}</td>
-                <td><a href="{% url 'collateral:unit_price_edit' p.id %}">Edit</a></td>
+                <td>
+                  <div class="list-actions">
+                  {% url 'collateral:unit_price_edit' p.id as edit_url %}
+                  {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit unit price" tone="blue" only %}
+                  </div>
+                </td>
             </tr>
             {% empty %}
             <tr>
@@ -45,4 +51,23 @@
         </tbody>
     </table>
 </div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination" style="margin-top:1rem;">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if selected_city_id %}&city_id={{ selected_city_id }}{% endif %}">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if selected_city_id %}&city_id={{ selected_city_id }}{% endif %}">Previous</a>
+        {% endif %}
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            ({{ page_obj.paginator.count }} total)
+        </span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if selected_city_id %}&city_id={{ selected_city_id }}{% endif %}">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_city_id %}&city_id={{ selected_city_id }}{% endif %}">Last</a>
+        {% endif %}
+    </span>
+</div>
+{% endif %}
 {% endblock %}

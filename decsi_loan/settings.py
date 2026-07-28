@@ -168,8 +168,8 @@ DECSI_TRANSACTIONS_PATH = os.getenv(
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/transactions',
 )
 
-# Gebeta Maps — Ethiopia-local geocoding / (future) map tiles
-# Docs: https://docs.gebeta.app/docs
+# Gebeta Maps — Ethiopia-local geocoding + map tiles (MapLibre / Gebeta styles)
+# Docs: https://docs.gebeta.app/docs · JS tiles: https://github.com/AfriGebeta/gebeta-tiles-js
 GEBETA_MAPS_API_KEY = os.getenv('GEBETA_MAPS_API_KEY', '').strip()
 GEBETA_MAPS_GEOCODE_URL = os.getenv(
     'GEBETA_MAPS_GEOCODE_URL',
@@ -178,8 +178,20 @@ GEBETA_MAPS_GEOCODE_URL = os.getenv(
 GEBETA_MAPS_TIMEOUT = int(os.getenv('GEBETA_MAPS_TIMEOUT', '8'))
 # auto = Gebeta when key set, else Nominatim; force with gebeta|nominatim
 GEBETA_MAPS_GEOCODE_PROVIDER = os.getenv('GEBETA_MAPS_GEOCODE_PROVIDER', 'auto').strip().lower()
-# leaflet_osm (current UI) | gebeta (Phase 2 map SDK swap)
-GEBETA_MAPS_TILES_PROVIDER = os.getenv('GEBETA_MAPS_TILES_PROVIDER', 'leaflet_osm').strip().lower()
+# auto = Gebeta tiles when key set, else Leaflet/OSM; force with gebeta|leaflet_osm
+GEBETA_MAPS_TILES_PROVIDER = os.getenv('GEBETA_MAPS_TILES_PROVIDER', 'auto').strip().lower()
+GEBETA_MAPS_STYLE_STANDARD = os.getenv(
+    'GEBETA_MAPS_STYLE_STANDARD',
+    'https://tiles.gebeta.app/styles/standard/style.json',
+)
+GEBETA_MAPS_STYLE_SATELLITE = os.getenv(
+    'GEBETA_MAPS_STYLE_SATELLITE',
+    'https://tiles.gebeta.app/styles/raster/raster.json',
+)
+GEBETA_MAPS_STYLE_TERRAIN = os.getenv(
+    'GEBETA_MAPS_STYLE_TERRAIN',
+    'https://tiles.gebeta.app/styles/standard/terrain/terrain.json',
+)
 
 # HTTPS reverse proxy for tablet field visits (see docker-compose.https.yml)
 if os.getenv('USE_HTTPS_PROXY', '') == '1':

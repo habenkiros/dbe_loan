@@ -15,6 +15,8 @@
 .notif-document_needs_review, .notif-document_rejected { background:#f8d7da; color:#721c24; }
 .notif-collateral_assigned, .notif-collateral_submitted,
 .notif-collateral_engineering_return, .notif-collateral_engineering_approved { background:#e8f4ec; color:#064420; }
+.notif-disbursement_ready { background:#d4edda; color:#155724; }
+.notif-disbursed { background:#eceff1; color:#455a64; }
 </style>
 
 <h1>Notifications</h1>
@@ -50,7 +52,10 @@
       <td>{{ n.title }}</td>
       <td>{{ n.message|truncatewords:30 }}</td>
       <td>
-        <a href="{% url 'loan_notification_mark_read' n.id %}" class="btn btn-blue">Open</a>
+        <div class="list-actions">
+        {% url 'loan_notification_mark_read' n.id as open_url %}
+        {% include "includes/list_action.html" with href=open_url icon="open" label="Open" tone="blue" only %}
+        </div>
       </td>
     </tr>
     {% endfor %}

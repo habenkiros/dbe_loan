@@ -1,54 +1,45 @@
-<!-- templates/loans/view_loan_requests.html -->
 {% extends "base.html" %}
 
 {% block title %}View Loan Requests{% endblock %}
 
 {% block content %}
-<h2>View Loan Requests</h2>
+<h2>Loan requests</h2>
 
-<!-- Filter Form -->
-    <form method="get" class="form-inline" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
-        <!--<div class="form-group">
-            <label for="id_loan_request_id">Applicant ID:</label>
-            <input type="text" id="id_loan_request_id" name="loan_request_id" value="{{ selected_loan_request_id }}" class="form-control" style="width: 150px;">
-        </div>-->
-        <div class="form-group">
-            <label for="id_branch">ID-Phone-Name:</label>
-            <input type="text" id="id_branch" name="q" placeholder="Search by Name, ID, Phone" value="{{ query }}" class="form-control" style="width: 200px;">
-        </div>
-
-        <div class="form-group">
-            <label for="id_branch">Status:</label>
-            <select id="id_status" name="status" class="form-control" style="width: 150px;">
-                <option value="">All Statuses</option>
-                <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
-                <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
-                <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="id_date_requested">Date Requested:</label>
-            <input type="date" id="id_date_requested" name="date_requested" value="{{ selected_date_requested }}" class="form-control" style="width: 150px;">
-        </div>
-        <br>
-        <button type="submit">Filter</button>
-    </form>
+<form method="get" class="form-inline" style="display:flex; flex-wrap:wrap; gap:0.65rem; align-items:flex-end; margin-bottom:1.25rem;">
+    <div class="form-group">
+        <label for="id_q"><strong>Search</strong></label><br>
+        <input type="text" id="id_q" name="q" placeholder="Name, ID, or phone" value="{{ query }}" class="form-control" style="width:220px;">
+    </div>
+    <div class="form-group">
+        <label for="id_status"><strong>Status</strong></label><br>
+        <select id="id_status" name="status" class="form-control" style="width:150px;">
+            <option value="">All</option>
+            <option value="Approved" {% if selected_status == "Approved" %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
+            <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="id_date_requested"><strong>Date requested</strong></label><br>
+        <input type="date" id="id_date_requested" name="date_requested" value="{{ selected_date_requested }}" class="form-control" style="width:150px;">
+    </div>
+    <button type="submit" class="btn btn-blue">Filter</button>
+</form>
 
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Applicant Name</th>
-                <th>Amount Requested</th>
-                <th>Status</th>
+                <th>Applicant</th>
+                <th>Amount</th>
+                <th>Status / stage</th>
                 {% if user.role == 'branch_manager' or user.is_superuser %}
                 <th>Assigned to</th>
                 {% endif %}
-                <th>Date Requested</th>
-                <th>Date Reviewed</th>
-                <th>Actions</th>
+                <th>Requested</th>
+                <th>Reviewed</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -57,44 +48,49 @@
                 <td>{{ loan_request.loan_request_id }}</td>
                 <td>{{ loan_request.applicant_name }}</td>
                 <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
-                <td>{{ loan_request.status }}</td>
+                <td>
+                  <div class="lw-chip-row">
+                    {% include "loans/_loan_status_chips.html" %}
+                  </div>
+                </td>
                 {% if user.role == 'branch_manager' or user.is_superuser %}
                 <td>{% if loan_request.assigned_loan_officer %}{{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}{% else %}—{% endif %}</td>
                 {% endif %}
-                <td>{{ loan_request.date_requested }}</td>
                 <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
-                
+                <td>{% if loan_request.date_reviewed %}{{ loan_request.date_reviewed|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                 <td>
-                    <div class="dropdown">
-                        <button class="dropbtn">Actions ▾</button>
-                        <div class="dropdown-content">
-                            <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-blue">Details</a>
-                            {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
-                            <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green">Loan appraisal</a>
-                            {% endif %}
-                            {% if user.role == 'branch_manager' or user.is_superuser %}
-                            {% if loan_request.status|default:''|lower == 'approved' %}
-                            {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
-                            {% if not loan_request.assigned_loan_officer %}
-                            <a href="{% url 'assign_loan_officer' loan_request.id %}" class="btn btn-green">Assign Officer</a>
-                            {% endif %}
-                            {% endif %}
-                            {% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
-                            {% if not loan_request.sent_to_engineering_at %}
-                            <a href="{% url 'send_to_engineering_head' loan_request.id %}" class="btn btn-green">Send to engineering</a>
-                            {% endif %}
-                            {% endif %}
-                            {% endif %}
-                            {% endif %}
-                            {% if user.role == 'operation_manager' or user.role == 'finance_manager' %}
-                                <a href="{% url 'update_loan_request_status' loan_request.id %}" class="btn btn-orange">Update Status</a>
-                                <a href="{% url 'delete_loan_request' loan_request.id %}" class="btn btn-red">Delete</a>
-                            {% endif %}
-                        </div>
+                    <div class="list-actions">
+                    {% url 'loan_request_detail' loan_request.id as detail_url %}
+                    {% include "includes/list_action.html" with href=detail_url icon="open" label="Open details" tone="blue" only %}
+                    {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
+                    {% url 'loan_appraisal_edit' loan_request.id as appraisal_url %}
+                    {% include "includes/list_action.html" with href=appraisal_url icon="appraisal" label="Appraisal" tone="green" only %}
+                    {% endif %}
+                    {% if user.role == 'branch_manager' or user.is_superuser %}
+                    {% if loan_request.status|default:''|lower == 'approved' %}
+                    {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
+                    {% if not loan_request.assigned_loan_officer %}
+                    {% url 'assign_loan_officer' loan_request.id as assign_url %}
+                    {% include "includes/list_action.html" with href=assign_url icon="assign" label="Assign officer" tone="green" only %}
+                    {% endif %}
+                    {% endif %}
+                    {% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
+                    {% if not loan_request.sent_to_engineering_at %}
+                    {% url 'send_to_engineering_head' loan_request.id as eng_url %}
+                    {% include "includes/list_action.html" with href=eng_url icon="engineering" label="Send to engineering" tone="orange" only %}
+                    {% endif %}
+                    {% endif %}
+                    {% endif %}
+                    {% endif %}
+                    {% if user.role == 'operation_manager' or user.role == 'finance_manager' %}
+                    {% url 'update_loan_request_status' loan_request.id as update_url %}
+                    {% include "includes/list_action.html" with href=update_url icon="update" label="Update status" tone="orange" only %}
+                    {% endif %}
                     </div>
                 </td>
-
             </tr>
+            {% empty %}
+            <tr><td colspan="8">No loan requests match your filters.</td></tr>
             {% endfor %}
         </tbody>
     </table>

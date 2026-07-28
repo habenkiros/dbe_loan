@@ -70,15 +70,18 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
           <br><small>Credit score: <strong>{{ scorecard.total|floatformat:1 }}/100</strong> ({{ scorecard.band_label }})</small>
         {% endif %}
       </div>
-      <div class="ctas">
+      <div class="ctas list-actions list-actions-lg">
         {% if committee_tally.can_vote %}
-          <a href="#cast-vote" class="btn btn-green">Cast your vote</a>
+          {% include "includes/list_action.html" with href="#cast-vote" icon="vote" label="Cast your vote" tone="green" only %}
         {% endif %}
         {% if appraisal %}
-          <a href="{% url 'committee_appraisal_pack' loan_request.id %}" class="btn btn-blue">Open appraisal pack</a>
+          {% url 'committee_appraisal_pack' loan_request.id as pack_url %}
+          {% include "includes/list_action.html" with href=pack_url icon="appraisal" label="Open appraisal pack" tone="blue" only %}
+          {% url 'export_appraisal_pack_pdf' loan_request.id as pdf_url %}
+          {% include "includes/list_action.html" with href=pdf_url icon="print" label="Download PDF" tone="green" only %}
         {% endif %}
         {% if can_return_to_officer %}
-          <a href="#return-officer" class="btn btn-gray">Return to officer</a>
+          {% include "includes/list_action.html" with href="#return-officer" icon="update" label="Return to officer" tone="gray" only %}
         {% endif %}
       </div>
     </div>
@@ -154,6 +157,10 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
     </table>
     <p style="margin:0.75rem 0 0;">
       <a href="{% url 'committee_appraisal_pack' loan_request.id %}" class="btn btn-blue">Full appraisal pack (Sheets 1–7)</a>
+      {% url 'export_appraisal_pack_pdf' loan_request.id as pdf_url2 %}
+      <span class="list-actions" style="margin-left:0.35rem;">
+      {% include "includes/list_action.html" with href=pdf_url2 icon="print" label="Download PDF" tone="green" only %}
+      </span>
     </p>
   </div>
   {% endif %}

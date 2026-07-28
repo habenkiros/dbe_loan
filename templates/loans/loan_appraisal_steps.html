@@ -20,31 +20,51 @@
         <td>1</td>
         <td><strong>Applicant and loan information</strong> — Basic info, loan type, amount, term, branch.</td>
         <td><a href="#step-2">→ Financial / cashflow analysis</a></td>
-        <td><a href="#step-1" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#step-1" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="step-2">
         <td>2</td>
         <td><strong>Financial / cashflow analysis</strong> — Income, expenses, repayment capacity, coverage ratios.</td>
         <td><a href="#step-3">→ Business and character assessment</a></td>
-        <td><a href="#step-2" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#step-2" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="step-3">
         <td>3</td>
         <td><strong>Business and character assessment</strong> — Business profile, character, and E&S.</td>
         <td><a href="#step-4">→ Collateral worksheet</a></td>
-        <td><a href="#step-3" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#step-3" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="step-4">
         <td>4</td>
         <td><strong>Collateral worksheet</strong> — Collateral inputs; values from Collateral Estimation module.</td>
         <td><a href="#step-5">→ Summary and decision sheet</a></td>
-        <td><a href="#step-4" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#step-4" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="step-5">
         <td>5</td>
         <td><strong>Summary and decision sheet</strong> — Consolidated appraisal summary; recommend/decline; feeds into authorization.</td>
         <td><a href="#next-1">→ Submit appraisal (after appraisal)</a></td>
-        <td><a href="#step-5" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#step-5" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
     </tbody>
   </table>
@@ -65,32 +85,56 @@
       <tr id="next-1">
         <td>6</td>
         <td><strong>Submit appraisal</strong> — Send appraisal summary and recommend/decline to authorization workflow.</td>
-        <td><a href="#next-1" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-1" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="next-2">
         <td>7</td>
         <td><strong>Multi-level authorization</strong> — Branch → Zonal → Operation HO → Management HO; approve/reject or escalate.</td>
-        <td><a href="#next-2" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-2" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="next-3">
         <td>8</td>
         <td><strong>Prohibition (legal admin)</strong> — Legal/admin checks before final sign-off where applicable.</td>
-        <td><a href="#next-3" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-3" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="next-4">
         <td>9</td>
         <td><strong>Processing workflow</strong> — Status updates, notifications, loan agreement preparation.</td>
-        <td><a href="#next-4" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-4" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="next-5">
         <td>10</td>
         <td><strong>Disbursement</strong> — On final approval, transfer to client account or mobile wallet; e-signature loan agreement.</td>
-        <td><a href="#next-5" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-5" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       <tr id="next-6">
         <td>11</td>
         <td><strong>Reporting &amp; analytics</strong> — Audit trail, NBE reporting, and compliance.</td>
-        <td><a href="#next-6" class="btn btn-blue">Go to step</a></td>
+        <td>
+          <div class="list-actions">
+          {% include "includes/list_action.html" with href="#next-6" icon="open" label="Go to step" tone="blue" only %}
+          </div>
+        </td>
       </tr>
     </tbody>
   </table>

@@ -21,7 +21,12 @@
             <tr>
                 <td>{{ region.id }}</td>
                 <td>{{ region.name }}</td>
-                <td><a href="{% url 'edit_region' region.id %}">Edit</a></td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'edit_region' region.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit region" tone="blue" only %}
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

@@ -1,0 +1,10 @@
+{# Icon-only list action. Params: href, icon, label, tone, onclick, target (optional) #}
+<a href="{{ href }}"
+   class="btn-icon btn-icon-{{ tone|default:'blue' }}"
+   title="{{ label }}"
+   aria-label="{{ label }}"
+   {% if target %}target="{{ target }}" rel="noopener"{% endif %}
+   {% if onclick %}onclick="{{ onclick }}"{% endif %}>
+  {% include "includes/action_icon.html" with icon=icon only %}
+  <span class="btn-icon-tip">{{ label }}</span>
+</a>

@@ -1,0 +1,13 @@
+{# Icon-only form submit. Params: icon, label, tone, formaction, name, value, onclick, disabled (optional) #}
+<button type="submit"
+        class="btn-icon btn-icon-{{ tone|default:'blue' }}"
+        title="{{ label }}"
+        aria-label="{{ label }}"
+        {% if name %}name="{{ name }}"{% endif %}
+        {% if value %}value="{{ value }}"{% endif %}
+        {% if formaction %}formaction="{{ formaction }}"{% endif %}
+        {% if onclick %}onclick="{{ onclick }}"{% endif %}
+        {% if disabled %}disabled{% endif %}>
+  {% include "includes/action_icon.html" with icon=icon only %}
+  <span class="btn-icon-tip">{{ label }}</span>
+</button>

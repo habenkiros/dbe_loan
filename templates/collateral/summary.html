@@ -11,21 +11,23 @@
 </style>
 <h2>Collateral summary</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
-<p>
+<p class="list-actions" style="margin:0.75rem 0;">
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
-    <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
-    &nbsp;|&nbsp;
+    {% url 'collateral:building_list' loan_request.id as buildings_url %}
+    {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
     {% endif %}
     {% if "land" in collateral_type_lower %}
-    <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Land field visit</a>
-    · <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land desktop</a>
-    &nbsp;|&nbsp;
+    {% url 'collateral:land_field_visit' loan_request.id as land_visit_url %}
+    {% include "includes/list_action.html" with href=land_visit_url icon="open" label="Land field visit" tone="green" only %}
+    {% url 'collateral:land_valuation' loan_request.id as land_url %}
+    {% include "includes/list_action.html" with href=land_url icon="land" label="Land desktop" tone="blue" only %}
     {% endif %}
     {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
-    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">{{ loan_request.collateral.name }}</a>
-    &nbsp;|&nbsp;
+    {% url 'collateral:other_collateral_list' loan_request.id as other_url %}
+    {% include "includes/list_action.html" with href=other_url icon="vehicle" label=loan_request.collateral.name tone="blue" only %}
     {% endif %}
-    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+    {% url 'collateral:dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Back to list" tone="gray" only %}
 </p>
 
 <div class="summary-action-strip">
@@ -47,16 +49,22 @@
       <br><small style="color:#856404;">Complete field visits before submitting</small>
       {% endif %}
     </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+    <div class="list-actions">
       {% if not loan_request.collateral_submitted_at %}
       <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display:inline;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-green" {% if not can_submit_collateral %}disabled{% endif %}>Submit collateral</button>
+        {% if can_submit_collateral %}
+        {% include "includes/list_action_submit.html" with icon="check" label="Submit collateral" tone="green" only %}
+        {% else %}
+        {% include "includes/list_action_submit.html" with icon="check" label="Submit collateral" tone="green" disabled=1 only %}
+        {% endif %}
       </form>
       {% elif loan_request.collateral_engineering_status == 'pending_review' %}
-      <a href="{% url 'collateral:engineering_qa_review' loan_request.id %}" class="btn btn-green">Engineering QA</a>
+      {% url 'collateral:engineering_qa_review' loan_request.id as qa_url %}
+      {% include "includes/list_action.html" with href=qa_url icon="vote" label="Engineering QA" tone="green" only %}
       {% endif %}
-      <a href="{% url 'collateral:evidence_pack' loan_request.id %}" class="btn btn-blue">Evidence pack</a>
+      {% url 'collateral:evidence_pack' loan_request.id as pack_url %}
+      {% include "includes/list_action.html" with href=pack_url icon="print" label="Evidence pack" tone="blue" only %}
     </div>
   </div>
 </div>
@@ -70,7 +78,10 @@
       <strong>Building: {{ item.building.name }}</strong>
       {% if item.readiness.locked and item.readiness.ready %}<span style="color:#155724;"> — submitted</span>{% elif item.readiness.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
       <br><small>{{ item.readiness.image_count }}/{{ item.readiness.min_images }} photos · BOQ {{ item.readiness.building_total|floatformat:0 }}</small>
-      — <a href="{% url 'collateral:field_visit' item.building.id %}">Field visit</a>
+      <span class="list-actions" style="margin-left:0.35rem;">
+      {% url 'collateral:field_visit' item.building.id as visit_url %}
+      {% include "includes/list_action.html" with href=visit_url icon="open" label="Field visit" tone="green" only %}
+      </span>
     </li>
     {% endfor %}
     {% if loan_readiness.land %}
@@ -79,7 +90,10 @@
       <strong>Land</strong>
       {% if lr.locked and lr.ready %}<span style="color:#155724;"> — submitted</span>{% elif lr.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
       <br><small>{{ lr.image_count }}/{{ lr.min_images }} photos</small>
-      — <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Field visit</a>
+      <span class="list-actions" style="margin-left:0.35rem;">
+      {% url 'collateral:land_field_visit' loan_request.id as land_visit_url %}
+      {% include "includes/list_action.html" with href=land_visit_url icon="open" label="Field visit" tone="green" only %}
+      </span>
     </li>
   {% endwith %}
     {% endif %}
@@ -88,7 +102,10 @@
       <strong>{{ row.item.name }}</strong>
       {% if row.readiness.locked and row.readiness.ready %}<span style="color:#155724;"> — submitted</span>{% elif row.readiness.ready %}<span style="color:#155724;"> — ready</span>{% else %}<span style="color:#856404;"> — incomplete</span>{% endif %}
       <br><small>{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos · {{ row.readiness.total_value|floatformat:0 }}</small>
-      — <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
+      — <span class="list-actions">
+      {% url 'collateral:other_field_visit' row.item.id as other_visit_url %}
+      {% include "includes/list_action.html" with href=other_visit_url icon="open" label="Field visit" tone="green" only %}
+      </span>
     </li>
     {% endfor %}
   </ul>
@@ -133,17 +150,24 @@
             <tr>
                 <th>Building</th>
                 <th>Total value</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for bt in building_totals %}
             <tr>
-                <td>{{ bt.building.name }} &nbsp; <a href="{% url 'collateral:building_estimation_summary' bt.building.id %}">መጠቃለሊ (estimation summary)</a></td>
+                <td>{{ bt.building.name }}</td>
                 <td>{{ bt.total|floatformat:2 }}</td>
+                <td>
+                  <div class="list-actions">
+                  {% url 'collateral:building_estimation_summary' bt.building.id as est_url %}
+                  {% include "includes/list_action.html" with href=est_url icon="summary" label="Estimation summary" tone="blue" only %}
+                  </div>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="2">No buildings.</td>
+                <td colspan="3">No buildings.</td>
             </tr>
             {% endfor %}
         </tbody>

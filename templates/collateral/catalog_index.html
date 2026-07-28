@@ -3,11 +3,16 @@
 {% block content %}
 <h2>Collateral catalog (ዝርዝር ስራሕ)</h2>
 <p>Manage the construction work breakdown and unit prices. Engineering team only.</p>
-<ul>
-    <li><a href="{% url 'collateral:main_work_list' %}">Main work (ጠቅላላ ስራሕ)</a> – Level 1</li>
-    <li><a href="{% url 'collateral:sub_work_list' %}">Sub work</a> – Level 2 (under Main work)</li>
-    <li><a href="{% url 'collateral:sub_sub_work_list' %}">Sub-sub work</a> – Level 3 (under Sub work)</li>
-    <li><a href="{% url 'collateral:unit_price_list' %}">Unit prices per woreda (ነፀላ ዋጋ)</a> – Sub work × City</li>
-</ul>
-<p><a href="{% url 'collateral:dashboard' %}">← Collateral (loans)</a></p>
+<p class="list-actions" style="margin:1rem 0;">
+    {% url 'collateral:main_work_list' as main_url %}
+    {% include "includes/list_action.html" with href=main_url icon="list" label="Main work" tone="blue" only %}
+    {% url 'collateral:sub_work_list' as sub_url %}
+    {% include "includes/list_action.html" with href=sub_url icon="list" label="Sub work" tone="blue" only %}
+    {% url 'collateral:sub_sub_work_list' as ssw_url %}
+    {% include "includes/list_action.html" with href=ssw_url icon="list" label="Sub-sub work" tone="blue" only %}
+    {% url 'collateral:unit_price_list' as up_url %}
+    {% include "includes/list_action.html" with href=up_url icon="money" label="Unit prices" tone="green" only %}
+    {% url 'collateral:dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Collateral loans" tone="gray" only %}
+</p>
 {% endblock %}

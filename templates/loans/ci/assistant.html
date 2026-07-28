@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Credit Analyst Assistant{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash ci">
+  {% include "loans/ci/_subnav.html" %}
+  <section class="dash-hero ci-hero">
+    <div>
+      <p class="ci-eyebrow">Credit analyst assistant</p>
+      <h1>Ask portfolio questions</h1>
+      <p>Rule-based answers from your scoped data — not a generative chatbot. Ledger NPL/outstanding stays stubbed until CBS is connected.</p>
+    </div>
+    <div class="dash-hero-meta">
+      <span class="dash-pill">{% if ledger_connected %}Ledger connected{% else %}Ledger stub (origination proxies){% endif %}</span>
+    </div>
+  </section>
+
+  <form method="post" class="dash-panel ci-assistant-form">
+    {% csrf_token %}
+    <label for="query"><strong>Question</strong></label>
+    <div class="ci-assistant-row">
+      <input type="text" name="query" id="query" class="form-control" value="{{ query }}" placeholder="e.g. Show risky loans in Addis" autocomplete="off">
+      <button type="submit" class="btn btn-green">Ask</button>
+    </div>
+    <p class="help" style="margin:0.5rem 0 0;">Try:
+      {% for s in suggestions %}
+      <a href="{% url 'ci_assistant' %}?q={{ s|urlencode }}">{{ s }}</a>{% if not forloop.last %} · {% endif %}
+      {% endfor %}
+    </p>
+  </form>
+
+  {% if result %}
+  <section class="dash-panel ci-assistant-answer">
+    <h2>{% if result.understood %}Answer{% else %}Suggestions{% endif %}</h2>
+    <p class="ci-answer-body">{{ result.answer }}</p>
+    {% if result.links %}
+    <div class="list-actions list-actions-lg" style="margin-top:0.75rem;">
+      {% for link in result.links %}
+      {% include "includes/list_action.html" with href=link.url icon="open" label=link.label tone="blue" only %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

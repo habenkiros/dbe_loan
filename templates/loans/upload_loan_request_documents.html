@@ -38,7 +38,10 @@
                 <td>{% if doc.document_type.is_required %}Yes{% else %}Optional{% endif %}</td>
                 <td>{% include "loans/_document_auth_status.html" %}</td>
                 <td>
-                    <a href="{% url 'view_loan_document' loan_request.id doc.id %}" class="btn btn-blue" style="font-size:0.85rem;">View</a>
+                    <div class="list-actions">
+                    {% url 'view_loan_document' loan_request.id doc.id as view_url %}
+                    {% include "includes/list_action.html" with href=view_url icon="open" label="View document" tone="blue" only %}
+                    </div>
                     {% if doc.original_filename %}<br><small>{{ doc.original_filename }}</small>{% endif %}
                 </td>
                 <td>{{ doc.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}</td>
@@ -70,7 +73,8 @@
                   <p style="margin:0 0 0.35rem; font-size:0.9rem; color:#856404;">
                     <strong>On file</strong> ({{ cur.uploaded_at|date:"SHORT_DATETIME_FORMAT" }}) —
                     uploading replaces the current file.
-                    <a href="{% url 'view_loan_document' loan_request.id cur.id %}">View current</a>
+                    {% url 'view_loan_document' loan_request.id cur.id as cur_url %}
+                    {% include "includes/list_action.html" with href=cur_url icon="open" label="View current" tone="blue" only %}
                   </p>
                   {% endif %}
                   {% endfor %}

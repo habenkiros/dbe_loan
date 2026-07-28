@@ -91,6 +91,27 @@ class CollateralTier2Tests(TestCase):
         self.assertEqual(coords, (8.98, 38.79))
         nominatim.assert_called_once()
 
+    def test_map_tiles_provider_auto_uses_gebeta_when_keyed(self):
+        from django.test import override_settings
+        from collateral.geocoding import map_provider_context, resolve_map_tiles_provider
+
+        with override_settings(GEBETA_MAPS_API_KEY='test-key', GEBETA_MAPS_TILES_PROVIDER='auto'):
+            self.assertEqual(resolve_map_tiles_provider(), 'gebeta')
+            ctx = map_provider_context()
+            self.assertEqual(ctx['map_tiles_provider'], 'gebeta')
+            self.assertTrue(ctx['gebeta_maps_configured'])
+            self.assertIn('styles/standard', ctx['gebeta_style_standard'])
+
+        with override_settings(GEBETA_MAPS_API_KEY='', GEBETA_MAPS_TILES_PROVIDER='auto'):
+            self.assertEqual(resolve_map_tiles_provider(), 'leaflet_osm')
+
+        with override_settings(GEBETA_MAPS_API_KEY='test-key', GEBETA_MAPS_TILES_PROVIDER='leaflet_osm'):
+            self.assertEqual(resolve_map_tiles_provider(), 'leaflet_osm')
+
+        with override_settings(GEBETA_MAPS_API_KEY='', GEBETA_MAPS_TILES_PROVIDER='gebeta'):
+            # Forced gebeta without key still falls back — tiles need auth
+            self.assertEqual(resolve_map_tiles_provider(), 'leaflet_osm')
+
     def test_other_item_form_empty_year_saves(self):
         from collateral.forms import OtherCollateralItemForm
         from collateral.models import OtherCollateralItem

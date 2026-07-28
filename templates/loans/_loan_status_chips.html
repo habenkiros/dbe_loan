@@ -1,0 +1,34 @@
+{# Shared status / committee / disbursement chips. Expects `loan_request`. #}
+{% if loan_request.status == 'Approved' or loan_request.status == 'approved' %}
+<span class="lw-badge lw-ok" title="Queue status">{{ loan_request.status }}</span>
+{% elif loan_request.status == 'Rejected' or loan_request.status == 'rejected' %}
+<span class="lw-badge lw-bad" title="Queue status">{{ loan_request.status }}</span>
+{% elif loan_request.status == 'Pending' or loan_request.status == 'pending' %}
+<span class="lw-badge lw-warn" title="Queue status">{{ loan_request.status|default:"Pending" }}</span>
+{% elif loan_request.status %}
+<span class="lw-badge lw-muted" title="Queue status">{{ loan_request.status }}</span>
+{% else %}
+<span class="lw-badge lw-muted" title="Queue status">No status</span>
+{% endif %}
+
+{% if loan_request.committee_status == 'pending_committee' %}
+<span class="lw-badge lw-warn">Committee pending</span>
+{% elif loan_request.committee_status == 'committee_approved' %}
+<span class="lw-badge lw-ok">Committee approved</span>
+{% elif loan_request.committee_status == 'committee_declined' %}
+<span class="lw-badge lw-bad">Committee declined</span>
+{% elif loan_request.committee_status == 'returned_to_officer' %}
+<span class="lw-badge lw-info">Returned</span>
+{% endif %}
+
+{% if loan_request.committee_status == 'committee_approved' and loan_request.disbursement_status %}
+  {% if loan_request.disbursement_status == 'disbursed' %}
+  <span class="lw-badge lw-muted">Disbursed</span>
+  {% elif loan_request.disbursement_status == 'ready_for_disbursement' %}
+  <span class="lw-badge lw-ok">Ready to disburse</span>
+  {% elif loan_request.disbursement_status == 'schedule_confirmed' %}
+  <span class="lw-badge lw-info">Schedule confirmed</span>
+  {% elif loan_request.disbursement_status == 'awaiting_conditions' %}
+  <span class="lw-badge lw-warn">Awaiting conditions</span>
+  {% endif %}
+{% endif %}

@@ -51,19 +51,22 @@
                 <td>{{ lr.branch.name }}</td>
                 <td>{{ row.pipeline_label }}</td>
                 <td>
+                    <div class="list-actions">
                     {% with ct=lr.collateral.name|lower %}
                     {% if "building" in ct or "house" in ct or "construction" in ct %}
-                    <a href="{% url 'collateral:building_list' lr.id %}">Buildings</a>
-                    &nbsp;|&nbsp;
+                    {% url 'collateral:building_list' lr.id as buildings_url %}
+                    {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
                     {% elif "land" in ct %}
-                    <a href="{% url 'collateral:land_valuation' lr.id %}">Land</a>
-                    &nbsp;|&nbsp;
+                    {% url 'collateral:land_valuation' lr.id as land_url %}
+                    {% include "includes/list_action.html" with href=land_url icon="land" label="Land" tone="blue" only %}
                     {% elif "vehicle" in ct or "machinery" in ct or "equipment" in ct or "other" in ct %}
-                    <a href="{% url 'collateral:other_collateral_list' lr.id %}">Other</a>
-                    &nbsp;|&nbsp;
+                    {% url 'collateral:other_collateral_list' lr.id as other_url %}
+                    {% include "includes/list_action.html" with href=other_url icon="vehicle" label="Vehicle / other" tone="blue" only %}
                     {% endif %}
-                    <a href="{% url 'collateral:summary' lr.id %}">Summary</a>
                     {% endwith %}
+                    {% url 'collateral:summary' lr.id as sum_url %}
+                    {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="green" only %}
+                    </div>
                 </td>
             </tr>
             {% endwith %}

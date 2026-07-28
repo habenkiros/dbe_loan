@@ -532,6 +532,52 @@ class LoanRequest(models.Model):
         related_name='loan_requests_returned_to_officer',
     )
 
+    # Post-committee disbursement track (conditions → schedule → ready → disbursed)
+    DISBURSE_NONE = ''
+    DISBURSE_AWAITING_CONDITIONS = 'awaiting_conditions'
+    DISBURSE_SCHEDULE_CONFIRMED = 'schedule_confirmed'
+    DISBURSE_READY = 'ready_for_disbursement'
+    DISBURSE_DISBURSED = 'disbursed'
+    DISBURSE_STATUS_CHOICES = [
+        (DISBURSE_NONE, 'Not started'),
+        (DISBURSE_AWAITING_CONDITIONS, 'Awaiting conditions'),
+        (DISBURSE_SCHEDULE_CONFIRMED, 'Schedule confirmed'),
+        (DISBURSE_READY, 'Ready for disbursement'),
+        (DISBURSE_DISBURSED, 'Disbursed'),
+    ]
+    disbursement_status = models.CharField(
+        max_length=30,
+        choices=DISBURSE_STATUS_CHOICES,
+        default=DISBURSE_NONE,
+        blank=True,
+        help_text='Post-committee track: conditions → schedule → ready → disbursed.',
+    )
+    schedule_confirmed_at = models.DateTimeField(null=True, blank=True)
+    schedule_confirmed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_schedules_confirmed',
+    )
+    ready_for_disbursement_at = models.DateTimeField(null=True, blank=True)
+    ready_for_disbursement_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_marked_ready_disbursement',
+    )
+    disbursed_at = models.DateTimeField(null=True, blank=True)
+    disbursed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_disbursed',
+    )
+    disbursement_notes = models.TextField(blank=True)
+
     # def save(self, *args, **kwargs):
     #     # If this is a new record without a status, apply system rules
     #     if not self.status:
@@ -1214,6 +1260,22 @@ class AppraisalCondition(models.Model):
     responsible_party = models.CharField(max_length=120, null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     fulfilled = models.BooleanField(null=True, blank=True)
+    required_before_disbursement = models.BooleanField(
+        default=True,
+        help_text='If true (typical for conditions precedent), must be fulfilled before schedule confirm / disbursement.',
+    )
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
+    fulfilled_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='appraisal_conditions_fulfilled',
+    )
+    evidence_note = models.TextField(
+        blank=True,
+        help_text='How this condition was satisfied (document ref, date, etc.).',
+    )
     display_order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -1937,6 +1999,8 @@ class LoanNotification(models.Model):
     KIND_COLLATERAL_SUBMITTED = 'collateral_submitted'
     KIND_COLLATERAL_ENGINEERING_RETURN = 'collateral_engineering_return'
     KIND_COLLATERAL_ENGINEERING_APPROVED = 'collateral_engineering_approved'
+    KIND_DISBURSEMENT_READY = 'disbursement_ready'
+    KIND_DISBURSED = 'disbursed'
     KIND_CHOICES = [
         (KIND_VOTE_NEEDED, 'Vote needed'),
         (KIND_LEVEL_ADVANCED, 'Advanced to next level'),
@@ -1952,6 +2016,8 @@ class LoanNotification(models.Model):
         (KIND_COLLATERAL_SUBMITTED, 'Collateral submitted'),
         (KIND_COLLATERAL_ENGINEERING_RETURN, 'Collateral returned by engineering'),
         (KIND_COLLATERAL_ENGINEERING_APPROVED, 'Collateral approved by engineering'),
+        (KIND_DISBURSEMENT_READY, 'Ready for disbursement'),
+        (KIND_DISBURSED, 'Disbursed'),
     ]
 
     user = models.ForeignKey(

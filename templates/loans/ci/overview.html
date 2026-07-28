@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Credit Intelligence{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dash ci">
+  {% include "loans/ci/_subnav.html" %}
+
+  <section class="dash-hero ci-hero">
+    <div>
+      <p class="ci-eyebrow">AI Credit Intelligence</p>
+      <h1>Executive overview</h1>
+      <p>Origination portfolio risk and pipeline — explainable KPIs from appraisals and committee, not a CBS ledger.</p>
+    </div>
+    <div class="dash-hero-meta">
+      <span class="dash-pill">Scope: {{ scope_label }}</span>
+      <span class="dash-pill ci-risk-pill risk-{{ portfolio_risk_level }}">Portfolio risk: {{ portfolio_risk_level|upper }}</span>
+      <span class="dash-pill">{% if ledger_connected %}Ledger on{% else %}Ledger stub{% endif %}</span>
+      <span class="dash-pill">{{ user.get_role_display|default:user.role }}</span>
+    </div>
+  </section>
+
+  <p class="ci-disclaimer">{{ disclaimer }}</p>
+
+  {% if user.role == 'loan_officer' or user.role == 'branch_manager' %}
+  <div class="dash-quicklinks">
+    <h3>{% if user.role == 'loan_officer' %}Your workbench{% else %}Branch workbench{% endif %}</h3>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'view_loan_requests' as loans_url %}
+      {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
+      {% url 'view_loan_requests_manager' as queue_url %}
+      {% include "includes/list_action.html" with href=queue_url|add:'?queue=my_votes' icon="vote" label="Approval queue" tone="blue" only %}
+      {% url 'post_approval_queue' as pa_url %}
+      {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
+      {% url 'branch_report_dashboard' as br_url %}
+      {% include "includes/list_action.html" with href=br_url icon="summary" label="Branch reports" tone="blue" only %}
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="dash-kpis ci-kpis">
+    {% for kpi in kpis %}
+    <article class="dash-kpi ci-kpi risk-{{ kpi.risk }}">
+      <p class="dash-kpi-label">{{ kpi.label }}</p>
+      <p class="dash-kpi-value">
+        {% if kpi.format == 'currency' %}{{ kpi.value|floatformat:0 }}
+        {% elif kpi.format == 'percent' %}{{ kpi.value }}%
+        {% elif kpi.format == 'score' %}{% if kpi.value %}{{ kpi.value }}{% else %}—{% endif %}
+        {% else %}{{ kpi.value|floatformat:0 }}{% endif %}
+      </p>
+      {% if kpi.delta_pct != None %}
+      <p class="ci-delta {% if kpi.delta_pct >= 0 %}up{% else %}down{% endif %}">
+        {% if kpi.delta_pct >= 0 %}+{% endif %}{{ kpi.delta_pct }}% MoM
+      </p>
+      {% endif %}
+      <p class="dash-kpi-hint">{{ kpi.explanation }}</p>
+      <p class="ci-kpi-note">{{ kpi.note }}</p>
+    </article>
+    {% endfor %}
+  </section>
+
+  <section class="ci-grid">
+    <div class="dash-panel">
+      <h2>AI insights</h2>
+      <div class="ci-insights">
+        {% for insight in insights %}
+        <article class="ci-insight sev-{{ insight.severity }}">
+          <div class="ci-insight-head">
+            <strong>{{ insight.title }}</strong>
+            <span class="ci-conf">{{ insight.confidence|floatformat:0 }}% conf.</span>
+          </div>
+          <p>{{ insight.body }}</p>
+          {% if insight.action_url and insight.action_url != '#' %}
+          <a class="ci-insight-link" href="{{ insight.action_url }}">{{ insight.action_label }} →</a>
+          {% endif %}
+        </article>
+        {% empty %}
+        <p class="dash-empty">No insights yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="dash-panel">
+      <h2>Risk watchlist</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>Loan</th>
+              <th>Applicant</th>
+              <th>Score</th>
+              <th>Band</th>
+              <th>Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for row in watchlist %}
+            <tr>
+              <td>{{ row.loan_request_id }}</td>
+              <td>{{ row.applicant_name }}</td>
+              <td>{% if row.score_1000 %}{{ row.score_1000 }}{% elif row.score %}{{ row.score }}{% else %}—{% endif %}</td>
+              <td><span class="ci-band band-{{ row.band }}">{{ row.band|default:"—" }}</span></td>
+              <td>{{ row.amount|floatformat:0 }}</td>
+              <td>
+                <div class="list-actions">
+                {% url 'loan_request_detail' row.id as wl_url %}
+                {% include "includes/list_action.html" with href=wl_url icon="open" label="Open" tone="blue" only %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="dash-empty">No weak-band scored loans in scope.</div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash-grid">
+    <div class="dash-panel">
+      <h2>Pipeline status</h2>
+      <div class="dash-chart-wrap">
+        <canvas id="ciStatusDonut"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Score band distribution</h2>
+      <div class="dash-chart-wrap">
+        <canvas id="ciScoreBands"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Loans by branch</h2>
+      <div class="dash-chart-wrap">
+        <canvas id="ciBranchChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash-actions list-actions list-actions-lg">
+    {% url 'ci_officer' as off_url %}
+    {% include "includes/list_action.html" with href=off_url icon="list" label="Officer workspace" tone="green" only %}
+    {% url 'ci_manager' as mgr_url %}
+    {% include "includes/list_action.html" with href=mgr_url icon="vote" label="Manager workspace" tone="blue" only %}
+    {% url 'ci_portfolio' as port_url %}
+    {% include "includes/list_action.html" with href=port_url icon="summary" label="Portfolio" tone="orange" only %}
+    {% url 'ci_assistant' as asst_url %}
+    {% include "includes/list_action.html" with href=asst_url icon="open" label="Assistant" tone="blue" only %}
+    {% url 'classic_home' as classic_url %}
+    {% include "includes/list_action.html" with href=classic_url icon="dashboard" label="Classic counts" tone="green" only %}
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  window.CI_PIPELINE = {{ pipeline_json|safe }};
+  window.CI_SCORE_BANDS = {{ score_bands_json|safe }};
+  window.CI_BRANCHES = {{ branches_json|safe }};
+</script>
+<script src="{% static 'js/credit_intelligence.js' %}"></script>
+{% endblock %}

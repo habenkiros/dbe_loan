@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Post-approval queue{% endblock %}
+{% block content %}
+<style>
+.da-badge { display:inline-block; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
+.da-await { background:#fff3cd; color:#856404; }
+.da-sched { background:#e7f1ff; color:#004085; }
+.da-ready { background:#d4edda; color:#155724; }
+.da-done { background:#eceff1; color:#455a64; }
+</style>
+<h1>Post-approval — disbursement track</h1>
+<p class="help">After committee approval: clear conditions precedent, confirm schedule, then mark ready / disbursed.</p>
+
+<form method="get" style="margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+  <label for="id_ds"><strong>Status:</strong></label>
+  <select id="id_ds" name="disbursement_status">
+    <option value="">All open</option>
+    {% for val, label in disbursement_status_choices %}
+      {% if val %}
+      <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-blue">Filter</button>
+</form>
+
+{% if loan_requests %}
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Loan</th>
+        <th>Applicant</th>
+        <th>Branch</th>
+        <th>Final amount</th>
+        <th>Decided</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lr in loan_requests %}
+      <tr>
+        <td>{{ lr.loan_request_id }}</td>
+        <td>{{ lr.applicant_name }}</td>
+        <td>{{ lr.branch.name }}</td>
+        <td>{% if lr.committee_final_amount %}{{ lr.committee_final_amount|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td>{% if lr.committee_decided_at %}{{ lr.committee_decided_at|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+        <td>
+          {% if lr.disbursement_status == 'awaiting_conditions' %}
+            <span class="da-badge da-await">Awaiting conditions</span>
+          {% elif lr.disbursement_status == 'schedule_confirmed' %}
+            <span class="da-badge da-sched">Schedule confirmed</span>
+          {% elif lr.disbursement_status == 'ready_for_disbursement' %}
+            <span class="da-badge da-ready">Ready</span>
+          {% elif lr.disbursement_status == 'disbursed' %}
+            <span class="da-badge da-done">Disbursed</span>
+          {% else %}
+            <span class="da-badge">{{ lr.get_disbursement_status_display|default:"—" }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="list-actions">
+          {% url 'post_approval_detail' lr.id as pa_url %}
+          {% include "includes/list_action.html" with href=pa_url icon="money" label="Open post-approval" tone="blue" only %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p>No loans in the post-approval track.</p>
+{% endif %}
+{% endblock %}

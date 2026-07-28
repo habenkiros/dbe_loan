@@ -5,11 +5,18 @@ FROM python:3.9
 WORKDIR /app
 
 # Tesseract OCR for scanned document text extraction (optional checks)
+# WeasyPrint needs Pango/Cairo for HTML→PDF appraisal packs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-amh \
     poppler-utils \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Install any needed packages specified in requirements.txt

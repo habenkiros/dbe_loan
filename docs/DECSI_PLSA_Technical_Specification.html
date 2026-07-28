@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>DECSI PLSA Technical Specification v2</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.42;
+    color: #1a1a1a;
+  }
+  h1 {
+    font-size: 17pt;
+    border-bottom: 2px solid #0b3d5c;
+    padding-bottom: 6px;
+    color: #0b3d5c;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 12.5pt;
+    color: #0b3d5c;
+    margin-top: 1.25em;
+    border-bottom: 1px solid #c5d4de;
+    padding-bottom: 3px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    color: #1f4e6e;
+    margin-top: 1em;
+    page-break-after: avoid;
+  }
+  p { margin: 0.4em 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.6em 0 0.9em;
+    font-size: 9pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #b8c7d1;
+    padding: 4px 6px;
+    vertical-align: top;
+    text-align: left;
+  }
+  th { background: #e8eef3; color: #0b3d5c; font-weight: 600; }
+  tr:nth-child(even) td { background: #f7fafc; }
+  code {
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 8.5pt;
+    background: #f0f3f6;
+    padding: 1px 3px;
+  }
+  pre {
+    background: #f4f6f8;
+    border: 1px solid #d5dde3;
+    padding: 8px 10px;
+    font-size: 8pt;
+    line-height: 1.3;
+    page-break-inside: avoid;
+    white-space: pre-wrap;
+  }
+  pre code { background: none; padding: 0; }
+  blockquote {
+    margin: 0.7em 0;
+    padding: 7px 10px;
+    border-left: 3px solid #0b3d5c;
+    background: #f3f7fa;
+  }
+  ul, ol { margin: 0.35em 0 0.6em 1.15em; padding: 0; }
+  li { margin: 0.15em 0; }
+  hr { border: none; border-top: 1px solid #c5d4de; margin: 1em 0; }
+  a { color: #0b3d5c; text-decoration: none; }
+  .check { margin: 0.2em 0; }
+</style>
+</head>
+<body>
+<h1>DECSI PLSA — Technical Specification</h1>
+
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td><strong>Document</strong></td><td>Technical Specification (v2.0)</td></tr>
+<tr><td><strong>Product</strong></td><td>PLSA — Prize-Linked Savings & Customer Engagement Platform</td></tr>
+<tr><td><strong>Institution</strong></td><td>Dedebit Credit and Saving Institution (DECSI)</td></tr>
+<tr><td><strong>Vendor</strong></td><td>Seqela Technologies</td></tr>
+<tr><td><strong>Date</strong></td><td>2026-07-28</td></tr>
+<tr><td><strong>Status</strong></td><td>Aligned to DECSI source documents</td></tr>
+<tr><td><strong>Source inputs</strong></td><td><em>PLSA For DECSI</em> (Seqela proposal); <em>PLSA Project Marketing Plan & Strategy</em> (June 2026)</td></tr>
+</table>
+
+<hr/>
+
+<h2>1. Purpose and product positioning</h2>
+
+<h3>1.1 What PLSA is for DECSI</h3>
+
+<p>PLSA is <strong>not only</strong> a classic prize-linked savings account. Per DECSI’s approved marketing direction, it is DECSI’s <strong>premier customer engagement, loyalty, and promotional platform</strong> — a growth engine that connects customers to the full DECSI ecosystem through:</p>
+
+<ul><li>savings incentives and prize draws  </li><li>digital adoption (especially <strong>AdoPay</strong>)  </li><li>cross-selling (loans, merchant payments, School ERP, SACCO / multipurpose)  </li><li>financial education and community engagement  </li><li>referral and loyalty rewards  </li></ul>
+
+<p>Classic PLSA mechanics (entries from savings activity; <strong>principal never at risk</strong>) remain the core of the draw model. The platform extends entries to other positive behaviours DECSI wants to grow.</p>
+
+<h3>1.2 Strategic vision</h3>
+
+<p>Establish PLSA as DECSI’s primary engagement and rewards platform that drives financial inclusion, savings culture, digital financial services, and long-term customer relationships.</p>
+
+<h3>1.3 Institutional context (scale assumptions)</h3>
+
+<table>
+<tr><th>Factor</th><th>Value (from DECSI proposal)</th></tr>
+<tr><td>Clients</td><td>1,000,000+</td></tr>
+<tr><td>Branches</td><td>200+ (including 4 in Addis Ababa)</td></tr>
+<tr><td>Lending scale</td><td>> ETB 10 billion disbursement from 2024</td></tr>
+<tr><td>Digital channel</td><td><strong>AdoPay</strong> mobile banking</td></tr>
+<tr><td>Geography</td><td>National MFI footprint; strong Tigray / Mekelle base</td></tr>
+</table>
+
+<p>The platform must be designed for <strong>millions of accounts</strong> and concurrent national campaigns.</p>
+
+<h3>1.4 Source-document alignment</h3>
+
+<table>
+<tr><th>Document</th><th>Role in this spec</th></tr>
+<tr><td><em>PLSA For DECSI</em></td><td>Product model, Campaign→Phase→Draw, segments, economics, architecture, compliance, rollout</td></tr>
+<tr><td><em>PLSA Marketing Plan & Strategy</em></td><td>Five marketing pillars, multi-behaviour rewards, scholarship prizes, channels, KPIs, ecosystem products</td></tr>
+</table>
+
+<hr/>
+
+<h2>2. Business objectives</h2>
+
+<p>Mapped from both source documents.</p>
+
+<table>
+<tr><th>ID</th><th>Objective</th><th>Platform implication</th></tr>
+<tr><td>O1</td><td>Strengthen <strong>voluntary</strong> (and compulsory) savings mobilization</td><td>Ticket rules on deposits, balances, frequency</td></tr>
+<tr><td>O2</td><td>Expand financial inclusion (rural, women, youth, underage, PwD)</td><td>Segment campaigns, accessible channels (SMS, branch, agent)</td></tr>
+<tr><td>O3</td><td>Increase customer acquisition</td><td>Referral entries; campaign tagging of new accounts</td></tr>
+<tr><td>O4</td><td>Promote <strong>AdoPay</strong> and digital DFS</td><td>Bonus entries / multipliers for digital deposits & transactions</td></tr>
+<tr><td>O5</td><td>Increase engagement & retention</td><td>Continuous Campaign→Phase→Draw cycles</td></tr>
+<tr><td>O6</td><td>Increase institutional revenue & sustainability</td><td>Deposit lift → lending capacity; fee/txn revenue analytics</td></tr>
+<tr><td>O7</td><td>Strengthen brand & public trust</td><td>Transparent draws, public winner announcement, audit packs</td></tr>
+<tr><td>O8</td><td>Cross-sell DECSI products & Seqela ecosystem</td><td>Entry rules for loans, repayments, School ERP, SACCO, merchants</td></tr>
+</table>
+
+<hr/>
+
+<h2>3. Product model</h2>
+
+<h3>3.1 Behavioural PLSA core</h3>
+
+<ul><li>Customers keep <strong>full access</strong> to savings (no lock-box requirement for participation).  </li><li>Each qualifying action increases <strong>probability of winning</strong> (more tickets).  </li><li>Prize funds come from <strong>institutional marketing / incentive budget</strong>, <strong>not</strong> from deducting customer deposits.  </li><li>Interest on deposits continues under DECSI / NBE deposit rules.</li></ul>
+
+<h3>3.2 Campaign → Phase → Draw hierarchy</h3>
+
+<p>This is the <strong>canonical structure</strong> for DECSI PLSA.</p>
+
+<pre><code>Campaign          National or segment initiative (may run in parallel)
+  └── Phase       Time-boxed stage (e.g. monthly prizes → regional → grand)
+        └── Draw  Weekly / monthly / quarterly / annual execution event</code></pre>
+
+<p><strong>Example campaigns</strong></p>
+
+<ul><li>National Savings Campaign  </li><li>Women Financial Empowerment Campaign  </li><li>Youth Digital Savings Campaign  </li><li>Harvest / Farmer Seasonal Campaign  </li><li>Educational Scholarship Campaign (“Save Today, Educate Tomorrow”)</li></ul>
+
+<p><strong>Example phases within a campaign</strong></p>
+
+<ol><li>Phase 1 — Monthly prizes  </li><li>Phase 2 — Regional prizes  </li><li>Phase 3 — National grand prizes  </li></ol>
+
+<p><strong>Draw cadence (configurable per phase)</strong></p>
+
+<ul><li>Weekly, monthly, quarterly, annually  </li></ul>
+
+<p>Multiple campaigns may run <strong>simultaneously</strong> with independent eligibility and ticket pools.</p>
+
+<h3>3.3 How customers earn entries (tickets)</h3>
+
+<p>From the marketing plan <strong>Pillar 5</strong> and DECSI proposal eligibility model.</p>
+
+<table>
+<tr><th>Behaviour</th><th>Typical entry effect</th><th>Notes</th></tr>
+<tr><td>Open / maintain savings account</td><td>Base enrolment + ongoing eligibility</td><td>Regular, voluntary, compulsory, fixed-term, group</td></tr>
+<tr><td>Increase savings balance / deposit amount</td><td>Primary ticket generator</td><td>Probability rises with amount & frequency</td></tr>
+<tr><td>Regular monthly deposits</td><td>Consistency bonus</td><td>Encourages habit</td></tr>
+<tr><td>Use <strong>AdoPay</strong> (deposit / transfer / pay)</td><td>Digital multiplier or bonus tickets</td><td>Strategic digital push</td></tr>
+<tr><td>Timely loan repayment</td><td>Loyalty tickets</td><td>Cross-sell / retention</td></tr>
+<tr><td>Refer new customers</td><td>Referral tickets</td><td>Acquisition</td></tr>
+<tr><td>Active account status</td><td>Soft eligibility gate</td><td>Dormant = ineligible</td></tr>
+<tr><td>Use DECSI School ERP / scholarship path</td><td>Education-campaign tickets</td><td>Ecosystem</td></tr>
+<tr><td>DECSI SACCO / multipurpose cooperative activity</td><td>Group / partner tickets</td><td>Ecosystem</td></tr>
+<tr><td>Merchant / QR / bill payments (AdoPay)</td><td>Digital engagement tickets</td><td>Optional rule packs</td></tr>
+</table>
+
+<p><strong>Ticket formula (configurable per campaign/phase)</strong></p>
+
+<pre><code>tickets = f(deposit_amount, deposit_frequency, balance_basis, channel_multiplier, behaviour_bonuses)
+tickets = min(tickets, max_tickets_cap)
+if not eligible: tickets = 0</code></pre>
+
+<p>Recommended Phase-1 default for pure savings phases:</p>
+
+<ul><li>Unit: e.g. every <strong>ETB 500</strong> net qualifying deposit (or ADB unit) = 1 ticket  </li><li>Cap per customer per draw period (anti-whale)  </li><li><strong>AdoPay multiplier</strong> e.g. 1.25×–2× for digital-channel deposits  </li></ul>
+
+<p>Exact unit, caps, and multipliers are Board / Marketing parameters (see §17).</p>
+
+<h3>3.4 Prize catalogue</h3>
+
+<p><strong>Cash and in-kind (from DECSI proposal)</strong></p>
+
+<table>
+<tr><th>Tier</th><th>Timing</th><th>Example prizes</th></tr>
+<tr><td>Monthly</td><td>Frequent, many winners</td><td>Cash, smartphones, motorcycles, appliances, solar kits</td></tr>
+<tr><td>Quarterly</td><td>Higher value</td><td>Agri equipment, business startup packages, livestock, shop equipment</td></tr>
+<tr><td>Annual grand</td><td>Flagship ceremony</td><td>Houses, vehicles, tractors, large capital packages</td></tr>
+</table>
+
+<p><strong>Segment-tuned prizes</strong></p>
+
+<table>
+<tr><th>Segment</th><th>Prize examples</th></tr>
+<tr><td>Women</td><td>Business equipment, household assets, micro-enterprise capital</td></tr>
+<tr><td>Youth</td><td>Smartphones, laptops, scholarships, startup grants</td></tr>
+<tr><td>Underage / students</td><td>School supplies, tablets, education support funds</td></tr>
+<tr><td>Rural farmers</td><td>Farming equipment, irrigation tools, livestock/inputs</td></tr>
+<tr><td>Persons with disabilities</td><td>Mobility equipment, assistive tech, small business grants</td></tr>
+</table>
+
+<p><strong>Educational Scholarship Rewards (marketing plan)</strong></p>
+
+<ul><li>1–5 year scholarship packages for winners’ children  </li><li>Coverage: KG → primary → secondary → preparatory (to Grade 12)  </li><li>At approved high-performing schools in <strong>Tigray Region</strong> (extendable)  </li><li>Fulfilment is a multi-year obligation tracked in Prize Management (not a one-time cash post)</li></ul>
+
+<h3>3.5 Products promoted through PLSA</h3>
+
+<p><strong>Savings:</strong> regular, voluntary, compulsory, fixed-term, group  </p>
+
+<p><strong>Credit:</strong> individual, agricultural, SME, women’s, youth, emergency/consumption  </p>
+
+<p><strong>Digital:</strong> AdoPay, digital payments, merchant / QR, transfers, bill pay  </p>
+
+<p><strong>Additional:</strong> financial literacy, BDS, community financing, School ERP, partner / SACCO services  </p>
+
+<hr/>
+
+<h2>4. Target segments and campaign packs</h2>
+
+<table>
+<tr><th>Segment</th><th>Strategy hooks</th><th>Channel bias</th></tr>
+<tr><td>Existing DECSI customers</td><td>Upsell balances, AdoPay, multi-product</td><td>Branch + SMS + AdoPay</td></tr>
+<tr><td>Prospects / unbanked</td><td>Acquisition campaigns, community events</td><td>Field + radio + branch</td></tr>
+<tr><td>Women</td><td>Dedicated campaigns, women’s associations</td><td>Group + literacy workshops</td></tr>
+<tr><td>Youth / startups</td><td>Digital-first, campus, challenges</td><td>AdoPay + social</td></tr>
+<tr><td>Underage (children/students)</td><td>Parent-linked accounts, education prizes</td><td>Branch + schools</td></tr>
+<tr><td>Farmers</td><td>Harvest-season campaigns, cooperatives</td><td>Rural branch + radio (Tigrigna)</td></tr>
+<tr><td>PwD</td><td>Inclusive onboarding, association outreach</td><td>Accessible branch + SMS</td></tr>
+<tr><td>MSEs / merchants</td><td>Merchant payments, business prizes</td><td>AdoPay merchant</td></tr>
+<tr><td>Cooperatives / groups</td><td>Collective participation recognition</td><td>Coop meetings</td></tr>
+<tr><td>Education</td><td>School ERP + scholarship narrative</td><td>Schools / Seqela ERP</td></tr>
+</table>
+
+<p>Platform must support <strong>segment tags</strong> on campaigns, enrolments, and analytics.</p>
+
+<hr/>
+
+<h2>5. Prize pool economics (for system configuration)</h2>
+
+<table>
+<tr><th>Model</th><th>Prize pool as % of PLSA-mobilized deposits</th></tr>
+<tr><td>Conservative</td><td>0.5%</td></tr>
+<tr><td><strong>Balanced (recommended initial)</strong></td><td><strong>1%</strong></td></tr>
+<tr><td>Aggressive</td><td>2%</td></tr>
+</table>
+
+<p><strong>Example (moderate participation):</strong> ETB 1.5bn annual deposits → <strong>ETB 15m</strong> annual prize pool at 1%.</p>
+
+<p><strong>Deposit lift scenarios (assumptions from proposal)</strong></p>
+
+<table>
+<tr><th>Scenario</th><th>Participation</th><th>Participants</th><th>Monthly deposits</th><th>Annual deposits</th></tr>
+<tr><td>Conservative</td><td>10%</td><td>100,000</td><td>ETB 50m</td><td>ETB 600m</td></tr>
+<tr><td>Moderate</td><td>25%</td><td>250,000</td><td>ETB 125m</td><td>ETB 1.5bn</td></tr>
+<tr><td>High growth</td><td>40%</td><td>400,000</td><td>ETB 200m</td><td>ETB 2.4bn</td></tr>
+</table>
+
+<p>Assumption: average <strong>ETB 500 / month</strong> per participant.</p>
+
+<p><strong>System requirement:</strong> Campaign budget module must enforce prize inventory + cash budget ≤ approved pool; alert when remaining pool &lt; threshold.</p>
+
+<hr/>
+
+<h2>6. High-level architecture</h2>
+
+<p>Aligned to <em>PLSA For DECSI</em> §11.</p>
+
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│ Customer channels                                            │
+│  Branch teller · Agent banking · AdoPay · (future USSD)     │
+└────────────────────────────┬────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│ DECSI Core Banking (Temenos) + digital banking infrastructure│
+│  Accounts · deposits · balances · KYC · product codes        │
+└────────────────────────────┬────────────────────────────────┘
+                             │ secure APIs / events
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│ PLSA Campaign Platform (Seqela)                              │
+│  Campaign Mgmt · Eligibility Engine · Draw Engine            │
+│  Prize Mgmt · Notifications · Reporting / Analytics          │
+└───────────────┬─────────────────────────────┬───────────────┘
+                ▼                             ▼
+        SMS Gateway / AdoPay           HO &amp; Branch dashboards
+        push / in-app notices          M&amp;E reports</code></pre>
+
+<p><strong>Principle:</strong> PLSA is an <strong>integrated service layer</strong> — it does <strong>not</strong> replace CBS, AdoPay, teller, or agent systems.</p>
+
+<h3>6.1 System of record</h3>
+
+<table>
+<tr><th>Data</th><th>SoR</th></tr>
+<tr><td>Customer, accounts, balances, deposits, interest</td><td><strong>Core banking</strong></td></tr>
+<tr><td>Campaigns, phases, rules, tickets, draws, winners, prize inventory/fulfilment</td><td><strong>PLSA platform</strong></td></tr>
+<tr><td>AdoPay session / payment UX</td><td><strong>AdoPay</strong></td></tr>
+<tr><td>SMS delivery</td><td><strong>DECSI SMS gateway</strong></td></tr>
+</table>
+
+<h3>6.2 Design principles</h3>
+
+<p>Interoperability · Scalability (1M+ clients) · Security · Automation · Transparency / auditability  </p>
+
+<hr/>
+
+<h2>7. Core system components (functional spec)</h2>
+
+<h3>7.1 Core Banking Integration Layer</h3>
+
+<p><strong>Functions</strong></p>
+
+<ul><li>Retrieve customer / account master data  </li><li>Monitor savings deposits (near-real-time event or frequent batch)  </li><li>Track balances for ADB / eligibility  </li><li>Verify account status and product eligibility  </li><li>Post cash prize credits / GL prize expense (idempotent)  </li></ul>
+
+<p><strong>Triggers:</strong> When a qualifying deposit (or other mapped txn) posts in CBS → evaluate eligibility → grant tickets.</p>
+
+<p><strong>Channels feeding CBS (hence PLSA):</strong> branch teller, agent banking, AdoPay.</p>
+
+<h3>7.2 Campaign Management System</h3>
+
+<p>Admin (HO) configures:</p>
+
+<ul><li>Campaign name, status, duration, segment targeting  </li><li>Phases and draw schedule  </li><li>Eligible account / product types  </li><li>Geographic scope (branch / district / region / national)  </li><li>Min deposit / balance rules  </li><li>Ticket formula, caps, channel multipliers  </li><li>Prize categories and inventory assignment  </li><li>T&Cs version  </li></ul>
+
+<p><strong>Controls:</strong> Maker–checker before go-live; pause/close; simultaneous campaigns.</p>
+
+<h3>7.3 Eligibility Engine</h3>
+
+<p>Continuously (or on txn event) evaluates:</p>
+
+<ul><li>Deposit amount thresholds  </li><li>Deposit frequency  </li><li>Account type / segment (youth, women, voluntary, etc.)  </li><li>Branch geography  </li><li>Phase membership and freeze windows  </li><li>Behaviour bonuses (AdoPay, referral, repayment, ERP/SACCO flags)  </li><li>AML/KYC hold, staff exclusion, dormancy  </li></ul>
+
+<p>Outputs immutable <strong>TicketGrant</strong> records with input hash for audit.</p>
+
+<h3>7.4 Draw Engine</h3>
+
+<ul><li>Automated schedule + manual dual-control execute  </li><li>Secure RNG; proportional tickets; no replacement within tier (configurable)  </li><li>Pre-draw eligibility re-check  </li><li>Fraud controls (duplicate identity, velocity)  </li><li>Full audit log (census checksum, algorithm version, seed commit/reveal, winners)  </li><li>Optional independent observer attestation  </li></ul>
+
+<h3>7.5 Prize Management System</h3>
+
+<ul><li>Register prizes (cash amount or in-kind SKU; scholarship multi-year package)  </li><li>Assign to campaign/phase/tier  </li><li>Inventory tracking  </li><li>Winner claim → verify → fulfil (cash credit / in-kind handover / scholarship enrolment)  </li><li>Status: <code>PENDING_CLAIM | VERIFIED | PAID | DELIVERED | IN_PROGRESS_SCHOLARSHIP | FORFEITED | REJECTED</code>  </li></ul>
+
+<h3>7.6 Notification and Communication System</h3>
+
+<p>Integrate <strong>DECSI SMS gateway</strong> and <strong>AdoPay notifications</strong>:</p>
+
+<ul><li>Participation confirmation  </li><li>Ticket / entry updates  </li><li>Draw reminders  </li><li>Winner announcements  </li><li>Promotional / literacy messages  </li><li>Deposit nudges  </li></ul>
+
+<p><strong>Languages:</strong> Amharic, <strong>Tigrigna</strong>, English (template packs). Radio winner scripts reuse same result feed.</p>
+
+<h3>7.7 Reporting and Analytics Dashboard</h3>
+
+<p>Real-time / near-real-time:</p>
+
+<ul><li>Participating customers  </li><li>Deposit growth trends  </li><li>Campaign performance by branch / region  </li><li>Prize distribution stats  </li><li>Geographic participation  </li><li>AdoPay usage among PLSA participants  </li><li>Cross-sell funnel metrics (loan apps, multi-product ownership)  </li></ul>
+
+<p>Report levels: branch · regional · national  </p>
+
+<hr/>
+
+<h2>8. Domain model (logical)</h2>
+
+<pre><code>Campaign
+  phases[], segment_tags[], geo_scope, status, terms_version, budget_pool
+
+Phase
+  campaign_id, sequence, start/end, draw_cadence, ticket_rules_json
+
+Draw
+  phase_id, scheduled_at, freeze_at, status, census_checksum,
+  algorithm_version, seed_commit, seed_reveal, authorized_by[]
+
+Enrolment
+  campaign_id, customer_number, account_number, branch_id,
+  segment_tags[], channel, opted_in_at, status
+
+TicketGrant
+  draw_or_period_id, enrolment_id, tickets, basis_metrics,
+  formula_version, input_hash, source_txn_refs[]
+
+PrizeItem
+  type (CASH|INKIND|SCHOLARSHIP), value_or_sku, years?, inventory_qty
+
+PrizeAssignment
+  phase_id, prize_item_id, tier, quantity
+
+Winner
+  draw_id, enrolment_id, prize_assignment_id, ticket_ref, status
+
+Payout / Fulfilment
+  winner_id, cbs_ref | handover_ref | scholarship_contract_ref
+
+BehaviourEvent (optional normalized feed)
+  customer_number, event_type, channel, amount, occurred_at, source_system
+
+AuditEvent
+  actor, action, entity, payload, timestamp</code></pre>
+
+<p>External keys: CBS <code>customer_number</code>, <code>account_number</code> (same pattern as DECSI Loan Hub integrations).</p>
+
+<hr/>
+
+<h2>9. Integration contracts</h2>
+
+<h3>9.1 Core banking (Temenos)</h3>
+
+<table>
+<tr><th>Capability</th><th>Pattern</th></tr>
+<tr><td>Customer / account lookup</td><td>Sync API</td></tr>
+<tr><td>Deposit / txn feed</td><td>Event webhook <strong>or</strong> near-real-time poll / batch (≤15 min latency target)</td></tr>
+<tr><td>Balance history</td><td>For ADB campaigns</td></tr>
+<tr><td>Prize cash credit</td><td>Idempotent payment API</td></tr>
+<tr><td>Prize expense GL</td><td>Journal / designated marketing GL</td></tr>
+</table>
+
+<p><strong>Note (roadmap source):</strong> Phase 1 development states platform already developed/tested with DECSI Temenos core banking — integration hardening and production ops remain in scope for pilot.</p>
+
+<h3>9.2 AdoPay</h3>
+
+<table>
+<tr><th>Capability</th><th>Purpose</th></tr>
+<tr><td>Deep link / in-app PLSA section</td><td>Show tickets, campaigns, T&Cs</td></tr>
+<tr><td>Push notifications</td><td>Engagement</td></tr>
+<tr><td>Channel flag on deposits</td><td>Digital ticket multiplier</td></tr>
+<tr><td>Registration drives</td><td>Attribute new AdoPay users to PLSA campaigns</td></tr>
+</table>
+
+<p><strong>Pilot constraint:</strong> Phase 2 pilot is <strong>AdoPay-only</strong> participation path (see §14).</p>
+
+<h3>9.3 SMS gateway</h3>
+
+<p>OTP-free informational SMS; bulk campaign blasts; winner notices; complaint short-code optional.</p>
+
+<h3>9.4 Ecosystem (phase-gated)</h3>
+
+<table>
+<tr><th>System</th><th>Entry / promotion use</th></tr>
+<tr><td>DECSI Loan Hub</td><td>Timely repayment events; cross-sell loan offers to savers</td></tr>
+<tr><td>Seqela School ERP</td><td>Education campaign participation; scholarship school roster</td></tr>
+<tr><td>DECSI SACCO / multipurpose</td><td>Group participation flags</td></tr>
+</table>
+
+<h3>9.5 Illustrative PLSA APIs</h3>
+
+<table>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+<tr><td>POST</td><td><code>/api/v1/campaigns</code></td><td>Create campaign</td></tr>
+<tr><td>POST</td><td><code>/api/v1/campaigns/{id}/phases</code></td><td>Add phase</td></tr>
+<tr><td>POST</td><td><code>/api/v1/campaigns/{id}/approve</code></td><td>Checker approve</td></tr>
+<tr><td>POST</td><td><code>/api/v1/enrolments</code></td><td>Opt-in</td></tr>
+<tr><td>POST</td><td><code>/api/v1/events/transactions</code></td><td>CBS/AdoPay txn ingest</td></tr>
+<tr><td>GET</td><td><code>/api/v1/enrolments/{id}/tickets</code></td><td>Customer/staff ticket view</td></tr>
+<tr><td>POST</td><td><code>/api/v1/draws/{id}/freeze</code></td><td>Freeze census</td></tr>
+<tr><td>POST</td><td><code>/api/v1/draws/{id}/execute</code></td><td>Dual-control draw</td></tr>
+<tr><td>GET</td><td><code>/api/v1/draws/{id}/results</code></td><td>Results feed (SMS/radio/web)</td></tr>
+<tr><td>POST</td><td><code>/api/v1/winners/{id}/verify</code></td><td>Branch verify</td></tr>
+<tr><td>POST</td><td><code>/api/v1/winners/{id}/fulfil</code></td><td>Cash / in-kind / scholarship</td></tr>
+<tr><td>GET</td><td><code>/api/v1/analytics/summary</code></td><td>M&E dashboard API</td></tr>
+</table>
+
+<p>OpenAPI 3.0 required for all external integrations.</p>
+
+<hr/>
+
+<h2>10. Staff roles and governance</h2>
+
+<table>
+<tr><th>Role</th><th>Location</th><th>Responsibilities</th></tr>
+<tr><td>PLSA Program Management Team</td><td>HO</td><td>Campaign planning/approval, deposit monitoring, draws, marketing coordination</td></tr>
+<tr><td>Campaign Maker / Checker</td><td>HO</td><td>Configure vs approve rules & prizes</td></tr>
+<tr><td>Draw Committee</td><td>HO (+ auditor)</td><td>Authorize freeze/execute; witness</td></tr>
+<tr><td>Compliance / Internal Audit</td><td>HO</td><td>Oversight, AML, draw audit</td></tr>
+<tr><td>Branch PLSA focal person</td><td>Each branch</td><td>Promote, enrol, winner verification, local reporting</td></tr>
+<tr><td>Finance</td><td>HO</td><td>Prize pool budget, GL, tax</td></tr>
+<tr><td>Marketing</td><td>HO</td><td>Pillars, creative, media, community calendar</td></tr>
+</table>
+
+<p>Aligns with marketing <strong>implementation roadmap</strong> and M&E governance in the DECSI proposal.</p>
+
+<hr/>
+
+<h2>11. Customer journeys (MVP+)</h2>
+
+<h3>11.1 Enrol (branch or AdoPay)</h3>
+
+<ol><li>Identify customer in CBS  </li><li>Select eligible savings account  </li><li>Accept T&Cs (versioned)  </li><li>Confirm via SMS / AdoPay  </li><li>Start earning tickets on qualifying activity  </li></ol>
+
+<h3>11.2 Save and earn</h3>
+
+<ol><li>Deposit via branch / agent / AdoPay  </li><li>Integration layer notifies PLSA  </li><li>Eligibility engine grants tickets  </li><li>Optional SMS: “You now have N entries for {draw date}”  </li></ol>
+
+<h3>11.3 Draw and win</h3>
+
+<ol><li>Freeze → dual-control draw → publish results  </li><li>Winner SMS + branch list + radio/social feed  </li><li>Claim window → KYC verify → fulfil  </li><li>Public celebration events for trust  </li></ol>
+
+<hr/>
+
+<h2>12. Compliance and risk controls</h2>
+
+<p>NBE-aligned pillars from <em>PLSA For DECSI</em> §10:</p>
+
+<ol><li><strong>Consumer protection</strong> — published rules; no guaranteed-win marketing; complaint channel  </li><li><strong>AML / KYC</strong> — only verified CBS customers; monitor unusual deposit/withdrawal patterns; report as required  </li><li><strong>Deposit protection</strong> — full withdrawal rights; prize funds separated from customer deposits  </li><li><strong>Fair, transparent, auditable draws</strong> — RNG, independent oversight, public winners, immutable logs  </li></ol>
+
+<p><strong>Risks & mitigations:</strong> low participation (marketing pillars + pilot learnings); operational errors (automation + maker-checker); fraud (eligibility re-check, identity rules, audit).</p>
+
+<hr/>
+
+<h2>13. Marketing pillars → system features</h2>
+
+<table>
+<tr><th>Pillar</th><th>Marketing intent</th><th>Platform feature</th></tr>
+<tr><td>1 Savings mobilization</td><td>Save Today, Secure Tomorrow</td><td>Deposit tickets, seasonal campaigns, challenges</td></tr>
+<tr><td>2 AdoPay adoption</td><td>“Your DECSI Account in Your Pocket”</td><td>Digital multipliers, in-app PLSA, registration attribution</td></tr>
+<tr><td>3 Product awareness / cross-sell</td><td>Behaviour-based offers</td><td>Rule engine + Loan Hub / product nudges</td></tr>
+<tr><td>4 Community & inclusion</td><td>Grassroots trust</td><td>Segment campaigns, geo targeting, SMS/radio result feeds</td></tr>
+<tr><td>5 Loyalty / lottery rewards</td><td>Multi-behaviour entries</td><td>Unified ticket ledger + diverse prize catalogue + scholarships</td></tr>
+</table>
+
+<p><strong>Channels to support operationally:</strong> Facebook, Telegram, TikTok, YouTube, SMS, email, AdoPay, website, radio (Tigrigna), community meetings, OOH, print, branch activations, field agents, ambassadors, coop mobilizers, merchants.</p>
+
+<hr/>
+
+<h2>14. Implementation roadmap</h2>
+
+<p>From DECSI proposal §13–14, refined for engineering delivery.</p>
+
+<table>
+<tr><th>Phase</th><th>Scope</th><th>Notes</th></tr>
+<tr><td><strong>1 — System development</strong></td><td>Campaign, eligibility, draw, prize, SMS, CBS integration</td><td>Source states already developed/tested with Temenos — complete UAT, harden, document APIs</td></tr>
+<tr><td><strong>2 — Pilot</strong></td><td><strong>AdoPay-only</strong> pilot cohort</td><td>Prove digital ticket path, notifications, ops playbooks</td></tr>
+<tr><td><strong>3 — Regional rollout</strong></td><td><strong>Mekelle</strong> branches (+ teller/agent if approved)</td><td>Add branch enrolment & in-kind fulfilment</td></tr>
+<tr><td><strong>4 — National deployment</strong></td><td>All branches</td><td>Full channel set</td></tr>
+</table>
+
+<p><strong>Geographic rollout clusters</strong></p>
+
+<ol><li>Urban centers incl. Addis Ababa  </li><li>Major regional cities  </li><li>Rural districts  </li></ol>
+
+<p><strong>Marketing timeline (parallel)</strong></p>
+
+<table>
+<tr><th>Marketing phase</th><th>Timing</th><th>Focus</th></tr>
+<tr><td>Preparation</td><td>Month 1</td><td>Materials, training, stakeholder readiness</td></tr>
+<tr><td>Launch</td><td>Months 2–4</td><td>Launch events, savings + AdoPay drives, referrals</td></tr>
+<tr><td>Expansion</td><td>Months 5–12</td><td>Continuous campaigns, rewards, merchants, cross-sell</td></tr>
+<tr><td>Optimization</td><td>Year 2+</td><td>Segmentation, personalization, new groups</td></tr>
+</table>
+
+<hr/>
+
+<h2>15. KPIs and M&E (must be in analytics)</h2>
+
+<h3>Savings</h3>
+
+<ul><li>Total savings growth; new accounts; average balance; voluntary participation rate  </li></ul>
+
+<h3>AdoPay</h3>
+
+<ul><li>Registrations; MAU; txn count/value; merchant enrolments; % PLSA participants using digital  </li></ul>
+
+<h3>Acquisition & engagement</h3>
+
+<ul><li>New customers; referral conversions; campaign participation; loyalty participation; retention  </li></ul>
+
+<h3>Product utilization</h3>
+
+<ul><li>Loan applications from PLSA cohort; cross-sold products; multi-product ratio  </li></ul>
+
+<h3>Ops / trust</h3>
+
+<ul><li>Draw complaint rate; payout STP %; ticket exception rate; branch league tables  </li></ul>
+
+<p><strong>Review cadence:</strong> monthly performance · quarterly impact · annual strategic evaluation  </p>
+
+<hr/>
+
+<h2>16. Non-functional requirements</h2>
+
+<table>
+<tr><th>Area</th><th>Target</th></tr>
+<tr><td>Scale</td><td>≥ 1M customers; concurrent multi-campaign; peak harvest deposit bursts</td></tr>
+<tr><td>Ticket/eligibility latency</td><td>≤ 15 minutes from CBS post (pilot); stretch to near-real-time</td></tr>
+<tr><td>Availability</td><td>99.5% inquiry; planned draw windows</td></tr>
+<tr><td>Security</td><td>TLS, RBAC, encrypted PII, secure RNG, audit retain ≥ 7 years</td></tr>
+<tr><td>Localization</td><td>EN / AM / TI templates</td></tr>
+<tr><td>DR</td><td>RPO ≤ 24h, RTO ≤ 8h (pilot); tighten for national</td></tr>
+</table>
+
+<hr/>
+
+<h2>17. Open parameters (Board / Marketing lock)</h2>
+
+<ol><li>Ticket unit (ETB) and max tickets per customer per draw  </li><li>Balance basis: net deposit vs ADB vs closing balance  </li><li>AdoPay multiplier value  </li><li>Which behaviours earn tickets in Phase-2 pilot vs national  </li><li>Prize mix: cash % vs in-kind % vs scholarship reserve  </li><li>Prize pool % (0.5 / 1 / 2) for year 1  </li><li>Employee / related-party exclusion rules  </li><li>Claim window days and unclaimed prize policy  </li><li>Scholarship partner school list and multi-year GL treatment  </li><li>Pilot success gates before Mekelle / national expansion  </li></ol>
+
+<hr/>
+
+<h2>18. MVP acceptance criteria</h2>
+
+<div class="check"><input type="checkbox" disabled /> Campaign → Phase → Draw configured with maker-checker  </div>
+<div class="check"><input type="checkbox" disabled /> CBS deposit ingest creates auditable tickets  </div>
+<div class="check"><input type="checkbox" disabled /> AdoPay-channel deposits receive configured multiplier  </div>
+<div class="check"><input type="checkbox" disabled /> Freeze + dual-control draw + replayable audit pack  </div>
+<div class="check"><input type="checkbox" disabled /> SMS notifications for enrolment, tickets, winners  </div>
+<div class="check"><input type="checkbox" disabled /> Cash prize posting idempotent to CBS  </div>
+<div class="check"><input type="checkbox" disabled /> Branch/HO dashboards for participation & deposit growth  </div>
+<div class="check"><input type="checkbox" disabled /> Published T&Cs and responsible-marketing checklist signed off  </div>
+<div class="check"><input type="checkbox" disabled /> AdoPay pilot cohort completed with KPI baseline report  </div>
+
+<hr/>
+
+<h2>19. Technology recommendation</h2>
+
+<table>
+<tr><th>Layer</th><th>Suggestion</th></tr>
+<tr><td>PLSA services</td><td>Modular backend (Django/API or equivalent) + workers for eligibility/draws</td></tr>
+<tr><td>DB</td><td>PostgreSQL</td></tr>
+<tr><td>Integration</td><td>Secure APIs to Temenos, AdoPay, SMS; mocks for lower envs</td></tr>
+<tr><td>Admin UI</td><td>HO campaign console + branch workbench</td></tr>
+<tr><td>Customer UX</td><td>AdoPay module first; branch assisted enrolment</td></tr>
+<tr><td>Analytics</td><td>Dashboard + exportable M&E packs</td></tr>
+<tr><td>Deploy</td><td>Containerized; horizontal scale for national load</td></tr>
+</table>
+
+<hr/>
+
+<h2>20. Document control</h2>
+
+<table>
+<tr><th>Version</th><th>Date</th><th>Notes</th></tr>
+<tr><td>1.0</td><td>2026-07-28</td><td>Initial generic PLSA tech draft</td></tr>
+<tr><td><strong>2.0</strong></td><td><strong>2026-07-28</strong></td><td>Rewritten from <em>PLSA For DECSI</em> + <em>PLSA Project Marketing Plan & Strategy (3)</em></td></tr>
+</table>
+
+<p><strong>Next step:</strong> Freeze §17 parameters in a DECSI workshop; produce CBS/AdoPay OpenAPI bindings and pilot SoW.</p>
+</body>
+</html>

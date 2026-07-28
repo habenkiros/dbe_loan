@@ -597,6 +597,8 @@ def _notify_committee_workflow(loan_request, *, event: str, level=None, next_lev
         return
 
     if event == 'approved':
+        from django.urls import reverse
+
         notify_assigned_officer(
             loan_request,
             kind=LoanNotification.KIND_COMMITTEE_APPROVED,
@@ -604,8 +606,9 @@ def _notify_committee_workflow(loan_request, *, event: str, level=None, next_lev
             message=(
                 f'All committee levels approved this loan.'
                 f'{" Final amount: " + str(loan_request.committee_final_amount) if loan_request.committee_final_amount else ""}'
-                ' Operation / finance queue approval can now complete final approval.'
+                ' Complete conditions precedent and confirm the repayment schedule before disbursement.'
             ),
+            url=reverse('post_approval_detail', args=[loan_request.pk]),
         )
         return
 
@@ -740,6 +743,8 @@ def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
     if appraisal and loan_request.committee_final_amount is not None:
         appraisal.amount_approved = loan_request.committee_final_amount
         appraisal.save(update_fields=['amount_approved'])
+    from loans.disbursement import start_disbursement_track
+    start_disbursement_track(loan_request)
     _notify_committee_workflow(loan_request, event='approved', level=level)
     return True
 

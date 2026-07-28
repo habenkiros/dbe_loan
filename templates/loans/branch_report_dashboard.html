@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Branch reporting dashboard{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <p class="help" style="margin:0 0 0.75rem;">
+    <a href="{% url 'view_report_options' %}">← Reports hub</a>
+    · <a href="{% url 'view_report' %}?{{ querystring }}">Pipeline table</a>
+  </p>
+
+  <section class="dash-hero">
+    <div>
+      <h1>Branch reporting dashboard</h1>
+      <p>Portfolio KPIs for your scope — committee and disbursement included.</p>
+    </div>
+    <div class="dash-hero-meta">
+      {% url 'generate_report' as gen_url %}
+      {% with export_href=gen_url|add:'?'|add:querystring %}
+      {% include "includes/list_action.html" with href=export_href icon="download" label="Export Excel" tone="green" only %}
+      {% endwith %}
+    </div>
+  </section>
+
+  <form method="get" class="dash-quicklinks" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.65rem; align-items:end;">
+    <div>
+      <label for="status"><strong>Status</strong></label><br>
+      <select name="status" id="status" class="form-control">
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="committee_status"><strong>Committee</strong></label><br>
+      <select name="committee_status" id="committee_status" class="form-control">
+        {% for val, label in committee_status_choices %}
+        <option value="{{ val }}" {% if filters.committee_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if can_pick_geo %}
+    <div>
+      <label for="branch_id"><strong>Branch</strong></label><br>
+      <select name="branch_id" id="branch_id" class="form-control">
+        <option value="">All in scope</option>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if filters.branch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="date_from"><strong>From</strong></label><br>
+      <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+    </div>
+    <div>
+      <label for="date_to"><strong>To</strong></label><br>
+      <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+    </div>
+    <div class="list-actions list-actions-lg">
+      {% include "includes/list_action_submit.html" with icon="filter" label="Apply filters" tone="blue" only %}
+    </div>
+  </form>
+
+  <section class="dash-kpis" style="margin-top:1rem;">
+    <article class="dash-kpi kpi-total">
+      <p class="dash-kpi-label">Loans</p>
+      <p class="dash-kpi-value">{{ stats.total }}</p>
+    </article>
+    <article class="dash-kpi kpi-approved">
+      <p class="dash-kpi-label">Queue approved</p>
+      <p class="dash-kpi-value">{{ stats.approved }}</p>
+    </article>
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Committee pending</p>
+      <p class="dash-kpi-value">{{ stats.committee_pending }}</p>
+    </article>
+    <article class="dash-kpi kpi-approved">
+      <p class="dash-kpi-label">Committee approved</p>
+      <p class="dash-kpi-value">{{ stats.committee_approved }}</p>
+    </article>
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Awaiting disbursement</p>
+      <p class="dash-kpi-value">{{ stats.awaiting_disbursement }}</p>
+    </article>
+    <article class="dash-kpi kpi-rate">
+      <p class="dash-kpi-label">Disbursed</p>
+      <p class="dash-kpi-value">{{ stats.disbursed }}</p>
+      <p class="dash-kpi-hint">Final amt {{ stats.final_approved_amount|floatformat:0 }}</p>
+    </article>
+  </section>
+
+  <section class="dash-grid" style="margin-top:1.25rem;">
+    <div class="dash-panel">
+      <h2>By branch</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr><th>Branch</th><th>District</th><th>Loans</th><th>Amount</th><th>Committee ✓</th><th>Disbursed</th></tr>
+          </thead>
+          <tbody>
+            {% for row in stats.by_branch %}
+            <tr>
+              <td>{{ row.branch__name|default:"—" }}</td>
+              <td>{{ row.branch__district__name|default:"—" }}</td>
+              <td>{{ row.total }}</td>
+              <td>{{ row.amount|floatformat:0 }}</td>
+              <td>{{ row.committee_ok }}</td>
+              <td>{{ row.disbursed }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="dash-empty">No loans in this filter.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Recent in filter</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr><th>Loan</th><th>Applicant</th><th>Stage</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for loan in recent_loans %}
+            <tr>
+              <td>{{ loan.loan_request_id }}</td>
+              <td>{{ loan.applicant_name }}</td>
+              <td><div class="lw-chip-row">{% include "loans/_loan_status_chips.html" with loan_request=loan %}</div></td>
+              <td>
+                {% if loan.appraisal_id or loan.appraisal %}
+                <div class="list-actions">
+                {% url 'export_appraisal_pack_pdf' loan.id as pdf_url %}
+                {% include "includes/list_action.html" with href=pdf_url icon="print" label="Download PDF pack" tone="blue" only %}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4"><div class="dash-empty">None</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

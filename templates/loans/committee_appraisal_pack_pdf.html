@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Appraisal pack — {{ loan_request.loan_request_id }}</title>
+  <style>
+    @page { size: A4; margin: 1.4cm 1.2cm; }
+    body { font-family: DejaVu Sans, Helvetica, Arial, sans-serif; font-size: 10.5pt; color: #222; }
+    h2 { margin: 0 0 0.55rem; color: #064420; font-size: 13pt; }
+    h3 { margin: 0.85rem 0 0.4rem; font-size: 11pt; color: #333; }
+    .pack-section {
+      margin: 0.85rem 0;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      page-break-inside: avoid;
+    }
+    .pack-banner {
+      background: #e8f4ec;
+      border: 1px solid #064420;
+      padding: 0.55rem 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    .pack-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 0.25rem 0.75rem;
+    }
+    .pack-grid .lbl { font-weight: 700; color: #555; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 0.35rem; }
+    th, td { border: 1px solid #ccc; padding: 0.25rem 0.35rem; text-align: left; vertical-align: top; }
+    th { background: #f3f3f3; }
+    ul { margin: 0.35rem 0 0 1.1rem; padding: 0; }
+    small { color: #555; }
+  </style>
+</head>
+<body>
+  {% include "loans/_committee_appraisal_pack_content.html" with for_pdf=True %}
+</body>
+</html>

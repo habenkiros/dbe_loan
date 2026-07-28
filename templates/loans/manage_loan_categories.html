@@ -24,7 +24,12 @@
             <tr>
                 <td>{{ category.id }}</td>
                 <td>{{ category.name }}</td>
-                <td><a href="{% url 'edit_loan_category' category.id %}">Edit</a></td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'edit_loan_category' category.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit loan category" tone="blue" only %}
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

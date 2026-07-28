@@ -81,15 +81,17 @@ def notify_eligible_voters(loan_request, level, *, title: str, message: str, kin
     )
 
 
-def notify_assigned_officer(loan_request, *, title: str, message: str, kind: str) -> int:
+def notify_assigned_officer(loan_request, *, title: str, message: str, kind: str, url: str = '') -> int:
     officer = loan_request.assigned_loan_officer
     if not officer:
         return 0
+    if not url:
+        url = reverse('loan_request_detail', args=[loan_request.pk])
     return notify_users(
         [officer],
         loan_request=loan_request,
         kind=kind,
         title=title,
         message=message,
-        url=reverse('loan_request_detail', args=[loan_request.pk]),
+        url=url,
     )

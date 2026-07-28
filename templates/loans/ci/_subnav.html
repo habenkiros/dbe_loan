@@ -1,0 +1,10 @@
+{# Credit Intelligence sub-navigation — one product, many workspaces #}
+<nav class="ci-subnav" aria-label="Credit Intelligence sections">
+  <a href="{% url 'credit_intelligence_overview' %}" class="ci-subnav-link {% if ci_nav_active == 'overview' %}active{% endif %}">Overview</a>
+  <a href="{% url 'ci_insights' %}" class="ci-subnav-link {% if ci_nav_active == 'insights' %}active{% endif %}">Insights</a>
+  <a href="{% url 'ci_officer' %}" class="ci-subnav-link {% if ci_nav_active == 'officer' %}active{% endif %}">Officer</a>
+  <a href="{% url 'ci_manager' %}" class="ci-subnav-link {% if ci_nav_active == 'manager' %}active{% endif %}">Manager</a>
+  <a href="{% url 'ci_portfolio' %}" class="ci-subnav-link {% if ci_nav_active == 'portfolio' %}active{% endif %}">Portfolio</a>
+  <a href="{% url 'ci_collateral' %}" class="ci-subnav-link {% if ci_nav_active == 'collateral' %}active{% endif %}">Collateral</a>
+  <a href="{% url 'ci_assistant' %}" class="ci-subnav-link {% if ci_nav_active == 'assistant' %}active{% endif %}">Assistant</a>
+</nav>

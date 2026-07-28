@@ -242,9 +242,86 @@
   border-radius: 6px;
   border: 1px solid #ccc;
   z-index: 1;
+  position: relative;
+  overflow: hidden;
+  background: #e8eef0;
+}
+.collateral-map-canvas .maplibregl-map,
+.collateral-map-canvas .leaflet-container {
+  width: 100%;
+  height: 100%;
 }
 .collateral-map-panel-compact .collateral-map-canvas {
   height: 220px;
+}
+.collateral-map-provider-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #cfd8dc;
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+  color: #455a64;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.collateral-map-provider-badge a {
+  color: #064420;
+  font-weight: 600;
+  text-decoration: none;
+}
+.collateral-gebeta-style-ctrl {
+  position: absolute;
+  top: 10px;
+  right: 48px;
+  z-index: 2;
+}
+.collateral-gebeta-style-ctrl > button {
+  width: 30px;
+  height: 30px;
+  display: block;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+.collateral-gebeta-style-menu {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 110px;
+  overflow: hidden;
+}
+.collateral-gebeta-style-menu button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: #fff;
+  text-align: left;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.collateral-gebeta-style-menu button:hover {
+  background: #e8f4ec;
+}
+.collateral-map-marker-el {
+  cursor: pointer;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 22px;
 }
 .collateral-map-help {
   margin: 0.35rem 0 0;
@@ -259,13 +336,29 @@
   color: #c62828;
   font-weight: 600;
 }
-.collateral-map-pin span {
-  font-size: 1.25rem;
+.collateral-map-pin-wrap {
+  width: 28px !important;
+  height: 28px !important;
+  margin-left: -14px !important;
+  margin-top: -28px !important;
+  background: transparent !important;
+  border: none !important;
+}
+.collateral-map-pin span,
+.collateral-map-pin {
+  display: inline-block;
+  font-size: 22px;
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
 }
-.collateral-map-pin-photo.far span {
+.collateral-map-pin-photo.far span,
+.collateral-map-pin-photo.far {
   filter: hue-rotate(-40deg) drop-shadow(0 0 2px #c62828);
+}
+.collateral-map-legend-item .pin-site,
+.collateral-map-legend-item .pin-declared,
+.collateral-map-legend-item .pin-photo {
+  font-size: 1rem;
 }
 .collateral-map-popup img {
   display: block;

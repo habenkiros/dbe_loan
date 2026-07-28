@@ -51,7 +51,12 @@
                 <td>{% if user.district %}{{ user.district.name }}{% else %}N/A{% endif %}</td>
                 <td>{% if user.branch %}{{ user.branch.name }}{% else %}N/A{% endif %}</td>
                 <td>{{ user.phone_number }}</td>
-                <td><a href="{% url 'edit_user' user.id %}">Edit</a></td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'edit_user' user.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit user" tone="blue" only %}
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

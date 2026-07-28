@@ -5,6 +5,8 @@ django-environ>=0.4.5
 pandas>=2.0.3
 django-import-export>=4.1.0
 openpyxl>=3.1.5
+reportlab>=4.0.0
+weasyprint>=60.0,<63.0
 dj-database-url>=2.1.0
 python-dotenv
 requests==2.25.1

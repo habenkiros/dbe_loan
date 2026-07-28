@@ -31,11 +31,15 @@
         <td>{% if lr.collateral_submitted_by %}{{ lr.collateral_submitted_by.username }}{% else %}—{% endif %}</td>
         <td>{% if lr.assigned_engineer %}{{ lr.assigned_engineer.username }}{% else %}—{% endif %}</td>
         <td>
+          <div class="list-actions">
           {% if can_act_on_queue %}
-          <a href="{% url 'collateral:engineering_qa_review' lr.id %}" class="btn btn-blue">Review</a>
+          {% url 'collateral:engineering_qa_review' lr.id as qa_url %}
+          {% include "includes/list_action.html" with href=qa_url icon="vote" label="QA review" tone="blue" only %}
           {% else %}
-          <a href="{% url 'collateral:summary' lr.id %}" class="btn btn-gray">View summary</a>
+          {% url 'collateral:summary' lr.id as sum_url %}
+          {% include "includes/list_action.html" with href=sum_url icon="summary" label="View summary" tone="gray" only %}
           {% endif %}
+          </div>
         </td>
       </tr>
       {% endfor %}

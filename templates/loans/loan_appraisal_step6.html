@@ -1,29 +1,66 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Appraisal Step 6 – {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
 {% block content %}
 {% include "loans/_appraisal_stepper.html" %}
 
 <style>
-.sheet6-section { background: #f8faf8; border: 1px solid #e0e8e0; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
-.sheet6-section h3 { margin: 0 0 0.75rem 0; color: #064420; font-size: 1.05rem; border-bottom: 2px solid #064420; padding-bottom: 0.35rem; }
 .sheet6-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
 .sheet6-table th, .sheet6-table td { border: 1px solid #ddd; padding: 0.5rem 0.4rem; text-align: left; vertical-align: top; }
 .sheet6-table th { background: #064420; color: white; font-weight: 600; }
 .sheet6-table tbody tr:nth-child(even) { background: #f9fbf9; }
-.sheet6-table textarea { width: 100%; min-width: 180px; }
+.sheet6-table textarea { width: 100%; min-width: 140px; }
 .sheet6-table select, .sheet6-table input[type="text"], .sheet6-table input[type="date"] { width: 100%; }
+.sheet6-dec-grid { display: grid; grid-template-columns: 150px 1fr; gap: 0.55rem 1rem; max-width: 640px; align-items: start; }
+.sheet6-dec-grid label { font-weight: 600; padding-top: 0.35rem; }
+.sheet6-dec-grid textarea, .sheet6-dec-grid select, .sheet6-dec-grid input { width: 100%; }
+@media (max-width: 640px) {
+  .sheet6-dec-grid { grid-template-columns: 1fr; }
+}
 </style>
 
 <form method="post">
   {% csrf_token %}
+
+  <div class="lw-strip">
+    <div class="lw-row">
+      <div class="lw-meta">
+        <strong>Sheet 6 — decision</strong>
+        {% if analysis_blocks %}
+          <span class="lw-badge lw-bad">{{ analysis_blocks|length }} hard block{{ analysis_blocks|length|pluralize }}</span>
+        {% else %}
+          <span class="lw-badge lw-ok">Gates clear</span>
+        {% endif %}
+        {% if scorecard %}
+          <span class="lw-badge {% if scorecard.band == 'strong' %}lw-strong{% elif scorecard.band == 'acceptable' %}lw-ok{% elif scorecard.band == 'weak' %}lw-warn{% else %}lw-bad{% endif %}">
+            {{ scorecard.total|floatformat:1 }}/100 · {{ scorecard.band_label }}
+          </span>
+        {% endif %}
+        <br>
+        <small>{{ loan_request.loan_request_id }} · {{ loan_request.applicant_name }}
+          · Requested {{ loan_request.amount_requested|floatformat:2 }}
+        </small>
+      </div>
+      <div class="lw-ctas">
+        {% if not appraisal_locked %}
+        <button type="submit" name="finish_and_submit" value="1" class="btn btn-green btn-primary-cta"{% if analysis_blocks %} disabled title="Resolve hard blocks first"{% endif %}>Finish &amp; submit</button>
+        <button type="submit" name="save" value="1" class="btn btn-gray">Save draft</button>
+        {% endif %}
+        <a href="#sheet6-recommendation" class="btn btn-blue">Edit recommendation</a>
+      </div>
+    </div>
+  </div>
+
   <div class="appraisal-card">
     <h2>Sheet 6: {{ step_title }}</h2>
-    <p class="meta">Recommendation, strengths/weaknesses, committee comments and approved terms.
-      The <strong>explainable credit scorecard</strong> below is the system source of truth for committee (not the Excel key-indicator matrix).
-      Warnings and hard blocks use thresholds from <strong>Admin → Loan analysis policy</strong>.</p>
+    <p class="meta">Recommend terms for committee. The explainable scorecard is the system source of truth (not the Excel key-indicator matrix).
+      Thresholds come from <strong>Admin → Loan analysis policy</strong>.</p>
 
     {% if form.errors or risk_formset.non_form_errors or cond_formset.non_form_errors or risk_formset.errors or cond_formset.errors %}
-    <div class="form-errors" style="background:#fee; border:1px solid #c00; padding:0.75rem; margin-bottom:1rem; border-radius:6px;">
+    <div class="lw-panel lw-panel-bad">
       <strong>Could not save — fix the errors below.</strong>
       {% if form.errors %}<div>{{ form.errors }}</div>{% endif %}
       {% if risk_formset.non_form_errors %}<div>{{ risk_formset.non_form_errors }}</div>{% endif %}
@@ -34,64 +71,35 @@
     {% endif %}
 
     {% if analysis_blocks %}
-    <div style="background:#ffecec; border:1px solid #e28b8b; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
-      <strong>Hard blocks (must fix before continuing)</strong>
-      <ul style="margin:0.5rem 0 0 1.25rem;">
-        {% for b in analysis_blocks %}
-        <li>{{ b }}</li>
-        {% endfor %}
+    <div class="lw-panel lw-panel-bad">
+      <h3>Hard blocks</h3>
+      <ul class="lw-alert-list">
+        {% for b in analysis_blocks %}<li>{{ b }}</li>{% endfor %}
       </ul>
     </div>
     {% endif %}
 
     {% if analysis_warnings %}
-    <div style="background:#fff8e5; border:1px solid #f0c36d; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem;">
-      <strong>Automatic warnings</strong>
-      <ul style="margin:0.5rem 0 0 1.25rem;">
-        {% for w in analysis_warnings %}
-        <li>{{ w }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
-    {% if analysis_assist and analysis_assist.insights %}
-    <div class="sheet6-section" style="background:#f0f7fb; border-color:#b6d4e8;">
-      <h3 style="border-color:#1e4a6e; color:#1e4a6e;">Analysis assist</h3>
-      <p class="meta" style="margin-top:0;">Read-only prompts from scorecard, bureau, and mode — not an auto-approve decision.</p>
-      <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
-        {% for tip in analysis_assist.insights %}
-        <li style="margin-bottom:0.4rem;">
-          <strong style="{% if tip.severity == 'high' %}color:#9b1c1c;{% elif tip.severity == 'medium' %}color:#92400e;{% else %}color:#1e40af;{% endif %}">{{ tip.title }}</strong>
-          — {{ tip.detail }}
-          {% if tip.sheet %}<a href="{% url 'loan_appraisal_step' loan_request.id tip.sheet %}">Sheet {{ tip.sheet }}</a>{% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
-    {% if officer_checklist %}
-    <div class="sheet6-section">
-      <h3>Officer checklist ({{ mode_label }})</h3>
-      <ul style="margin:0.35rem 0 0 1.1rem;">
-        {% for item in officer_checklist %}
-        <li>{{ item }}</li>
-        {% endfor %}
+    <div class="lw-panel lw-panel-warn">
+      <h3>Automatic warnings</h3>
+      <ul class="lw-alert-list">
+        {% for w in analysis_warnings %}<li>{{ w }}</li>{% endfor %}
       </ul>
     </div>
     {% endif %}
 
     {% if scorecard %}
-    <div class="sheet6-section">
-      <h3>Explainable credit scorecard</h3>
-      <p class="meta" style="margin-top:0;">
-        Algorithm <code>CREDIT_SCORE_ALGORITHM_V2</code> — five pillars (qualitative, financial, banking/bureau, E&amp;S, collateral).
-        Assistive only; officer recommendation still required. Rate workbook is not used.
-      </p>
-      <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:baseline;margin:0.75rem 0;">
-        <div style="font-size:1.75rem;font-weight:700;color:#064420;">{{ scorecard.total|floatformat:1 }} <span style="font-size:1rem;font-weight:500;">/ 100</span></div>
-        <div><strong>Band:</strong> {{ scorecard.band_label }}</div>
+    <div class="lw-panel">
+      <h3>Decision snapshot</h3>
+      <div class="lw-score-hero">
+        <div class="total">{{ scorecard.total|floatformat:1 }} <span>/ 100</span></div>
+        <span class="lw-badge {% if scorecard.band == 'strong' %}lw-strong{% elif scorecard.band == 'acceptable' %}lw-ok{% elif scorecard.band == 'weak' %}lw-warn{% else %}lw-bad{% endif %}">
+          {{ scorecard.band_label }}
+        </span>
+      </div>
+      <div class="lw-facts" style="margin-bottom:0.75rem;">
+        <span class="lbl">Mode</span><span>{{ mode_label|default:"—" }}</span>
+        <span class="lbl">Requested</span><span>{{ loan_request.amount_requested|floatformat:2 }}</span>
       </div>
       <table class="sheet6-table">
         <thead>
@@ -108,31 +116,64 @@
           {% endfor %}
         </tbody>
       </table>
+      <p class="meta" style="margin:0.5rem 0 0;">Algorithm <code>CREDIT_SCORE_ALGORITHM_V2</code> — assistive only; your recommendation still required.</p>
     </div>
     {% endif %}
 
-    <div class="sheet6-section">
-      <h3>Recommendation &amp; committee</h3>
-      <p class="help" style="margin:0 0 0.75rem 0;">
-        Sheet 6 is the decision point. After you recommend <strong>Approve</strong> or <strong>Escalate</strong>,
-        finish the appraisal and send it to the approval committee.
-        The repayment schedule (Sheet 7) is optional and can be generated anytime.
+    {% include "loans/_ci_decision_card.html" %}
+
+    {% if analysis_assist and analysis_assist.insights %}
+    <div class="lw-panel lw-panel-info">
+      <h3>Analysis assist</h3>
+      <p class="meta" style="margin-top:0;">Read-only prompts — not an auto-approve decision.</p>
+      <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
+        {% for tip in analysis_assist.insights %}
+        <li style="margin-bottom:0.4rem;">
+          <span class="lw-badge {% if tip.severity == 'high' %}lw-bad{% elif tip.severity == 'medium' %}lw-warn{% else %}lw-info{% endif %}">{{ tip.severity|default:"info" }}</span>
+          <strong>{{ tip.title }}</strong> — {{ tip.detail }}
+          {% if tip.sheet %}<a href="{% url 'loan_appraisal_step' loan_request.id tip.sheet %}">Sheet {{ tip.sheet }}</a>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if officer_checklist %}
+    <div class="lw-panel">
+      <h3>Officer checklist ({{ mode_label }})</h3>
+      <ul style="margin:0.35rem 0 0 1.1rem;">
+        {% for item in officer_checklist %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="lw-panel" id="sheet6-recommendation">
+      <h3>Recommendation &amp; terms</h3>
+      <p class="help" style="margin:0 0 0.75rem;">
+        Recommend <strong>Approve</strong> or <strong>Escalate</strong>, then finish &amp; submit to committee.
+        Sheet 7 (repayment schedule) is optional.
       </p>
-      <div class="table-container">
-        <table class="form-table">
-          <tr><td>{{ form.recommendation.label }}</td><td>{{ form.recommendation }}</td></tr>
-          <tr><td>{{ form.recommendation_comment.label }}</td><td>{{ form.recommendation_comment }}</td></tr>
-          <tr><td>{{ form.strengths.label }}</td><td>{{ form.strengths }}</td></tr>
-          <tr><td>{{ form.weaknesses.label }}</td><td>{{ form.weaknesses }}</td></tr>
-          <tr><td>{{ form.committee_comments.label }}</td><td>{{ form.committee_comments }}</td></tr>
-          <tr><td>{{ form.amount_approved.label }}</td><td>{{ form.amount_approved }}</td></tr>
-          <tr><td>{{ form.term_approved_months.label }}</td><td>{{ form.term_approved_months }}</td></tr>
-          <tr><td>{{ form.rate_approved.label }}</td><td>{{ form.rate_approved }}</td></tr>
-        </table>
+      <div class="sheet6-dec-grid">
+        <label for="{{ form.recommendation.id_for_label }}">{{ form.recommendation.label }}</label>
+        <div>{{ form.recommendation }}{% if form.recommendation.errors %}<div class="text-danger small">{{ form.recommendation.errors }}</div>{% endif %}</div>
+        <label for="{{ form.amount_approved.id_for_label }}">{{ form.amount_approved.label }}</label>
+        <div>{{ form.amount_approved }}</div>
+        <label for="{{ form.term_approved_months.id_for_label }}">{{ form.term_approved_months.label }}</label>
+        <div>{{ form.term_approved_months }}</div>
+        <label for="{{ form.rate_approved.id_for_label }}">{{ form.rate_approved.label }}</label>
+        <div>{{ form.rate_approved }}</div>
+        <label for="{{ form.recommendation_comment.id_for_label }}">{{ form.recommendation_comment.label }}</label>
+        <div>{{ form.recommendation_comment }}</div>
+        <label for="{{ form.strengths.id_for_label }}">{{ form.strengths.label }}</label>
+        <div>{{ form.strengths }}</div>
+        <label for="{{ form.weaknesses.id_for_label }}">{{ form.weaknesses.label }}</label>
+        <div>{{ form.weaknesses }}</div>
+        <label for="{{ form.committee_comments.id_for_label }}">{{ form.committee_comments.label }}</label>
+        <div>{{ form.committee_comments }}</div>
       </div>
     </div>
 
-    <div class="sheet6-section">
+    <div class="lw-panel">
       <h3>Key risks &amp; mitigations</h3>
       {{ risk_formset.management_form }}
       <div class="table-container">
@@ -165,7 +206,7 @@
       </div>
     </div>
 
-    <div class="sheet6-section">
+    <div class="lw-panel">
       <h3>Conditions precedent &amp; covenants</h3>
       {{ cond_formset.management_form }}
       <div class="table-container">
@@ -176,6 +217,7 @@
               <th>Description</th>
               <th>Responsible</th>
               <th>Due date</th>
+              <th title="Must be cleared before disbursement">Before disb.</th>
               <th>Fulfilled</th>
               <th>Del.</th>
             </tr>
@@ -187,6 +229,7 @@
               <td>{{ f.description }}</td>
               <td>{{ f.responsible_party }}</td>
               <td>{{ f.due_date }}</td>
+              <td style="text-align:center;">{{ f.required_before_disbursement }}</td>
               <td style="text-align:center;">{{ f.fulfilled }}</td>
               <td>{% if cond_formset.can_delete %}{{ f.DELETE }}{% endif %}</td>
             </tr>
@@ -196,17 +239,31 @@
       </div>
     </div>
 
-    <div class="appraisal-actions">
-      <div style="margin-bottom:0.75rem;">
-        <label for="id_committee_submission_notes" style="font-weight:600;">Notes for committee (optional)</label>
+    <div class="lw-panel" style="border-color:#064420;">
+      <h3>Submit to committee</h3>
+      {% if appraisal_locked %}
+      <p class="help" style="margin:0;">Appraisal is locked — {{ appraisal_lock_reason|default:"read-only." }}</p>
+      {% else %}
+      <div class="lw-actions-primary">
+        <label for="id_committee_submission_notes" style="font-weight:600; display:block; margin-bottom:0.35rem;">Notes for committee (optional)</label>
         <textarea name="committee_submission_notes" id="id_committee_submission_notes" rows="2" class="form-control" style="max-width:520px;" placeholder="Brief context for the approval committee…"></textarea>
       </div>
-      <button type="submit" name="finish_and_submit" value="1" class="btn btn-green">Finish &amp; submit to committee</button>
-      <button type="submit" name="finish_appraisal" value="1" class="btn btn-blue">Finish appraisal only</button>
-      <button type="submit" name="save" value="1" class="btn btn-gray">Save draft</button>
-      <button type="submit" name="save_and_schedule" value="1" class="btn btn-gray">Optional: repayment schedule</button>
-      <a href="{% url 'loan_appraisal_step' loan_request.id 5 %}" class="btn btn-blue">Back to Sheet 5</a>
-      <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+      <div class="lw-actions-bar lw-actions-primary">
+        <button type="submit" name="finish_and_submit" value="1" class="btn btn-green btn-primary-cta"{% if analysis_blocks %} disabled{% endif %}>Finish &amp; submit to committee</button>
+        <button type="submit" name="save" value="1" class="btn btn-gray">Save draft</button>
+      </div>
+      <div class="lw-actions-bar lw-actions-secondary">
+        <button type="submit" name="finish_appraisal" value="1" class="btn btn-blue"{% if analysis_blocks %} disabled{% endif %}>Finish appraisal only</button>
+        <button type="submit" name="save_and_schedule" value="1" class="btn btn-gray">Optional: repayment schedule</button>
+      </div>
+      <div class="lw-actions-bar lw-actions-tertiary">
+        <a href="{% url 'loan_appraisal_step' loan_request.id 5 %}" class="btn btn-blue">Back to Sheet 5</a>
+        <a href="{% url 'loan_request_detail' loan_request.id %}" class="btn btn-gray">Cancel</a>
+      </div>
+      {% if analysis_blocks %}
+      <p class="help" style="margin:0.75rem 0 0; color:#9b1c1c;">Resolve hard blocks before finishing.</p>
+      {% endif %}
+      {% endif %}
     </div>
   </div>
 </form>

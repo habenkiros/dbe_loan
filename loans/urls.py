@@ -2,9 +2,37 @@
 
 from django.urls import path
 from . import views
+from . import views_credit_intelligence as ci_views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('classic-home/', views.classic_home, name='classic_home'),
+    path(
+        'credit-intelligence/',
+        ci_views.credit_intelligence_overview,
+        name='credit_intelligence_overview',
+    ),
+    path('credit-intelligence/insights/', ci_views.ci_insights, name='ci_insights'),
+    path('credit-intelligence/officer/', ci_views.ci_officer, name='ci_officer'),
+    path('credit-intelligence/manager/', ci_views.ci_manager, name='ci_manager'),
+    path('credit-intelligence/portfolio/', ci_views.ci_portfolio, name='ci_portfolio'),
+    path('credit-intelligence/collateral/', ci_views.ci_collateral, name='ci_collateral'),
+    path('credit-intelligence/assistant/', ci_views.ci_assistant, name='ci_assistant'),
+    path(
+        'api/credit-intelligence/overview/',
+        ci_views.credit_intelligence_overview_api,
+        name='api_credit_intelligence_overview',
+    ),
+    path(
+        'api/credit-intelligence/assistant/',
+        ci_views.ci_assistant_api,
+        name='api_ci_assistant',
+    ),
+    path(
+        'api/credit-intelligence/applications/<int:loan_request_id>/decision/',
+        ci_views.ci_application_decision_api,
+        name='api_ci_application_decision',
+    ),
     path('create_user/', views.create_user, name='create_user'),
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('create_loan_request/', views.create_loan_request, name='create_loan_request'),
@@ -67,6 +95,47 @@ urlpatterns = [
         views.committee_appraisal_pack,
         name='committee_appraisal_pack',
     ),
+    path(
+        'loan_request/<int:loan_request_id>/appraisal_pack.xlsx',
+        views.export_appraisal_pack_excel,
+        name='export_appraisal_pack_excel',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/appraisal_pack.pdf',
+        views.export_appraisal_pack_pdf,
+        name='export_appraisal_pack_pdf',
+    ),
+    path('post_approval/', views.post_approval_queue, name='post_approval_queue'),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/',
+        views.post_approval_detail,
+        name='post_approval_detail',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/condition/<int:condition_id>/',
+        views.post_approval_condition_toggle,
+        name='post_approval_condition_toggle',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/regen_schedule/',
+        views.post_approval_regen_schedule,
+        name='post_approval_regen_schedule',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/confirm_schedule/',
+        views.post_approval_confirm_schedule,
+        name='post_approval_confirm_schedule',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/mark_ready/',
+        views.post_approval_mark_ready,
+        name='post_approval_mark_ready',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/mark_disbursed/',
+        views.post_approval_mark_disbursed,
+        name='post_approval_mark_disbursed',
+    ),
     path('notifications/', views.loan_notifications_list, name='loan_notifications_list'),
     path(
         'notifications/<int:notification_id>/read/',
@@ -117,6 +186,7 @@ urlpatterns = [
     path('view_report/', views.view_report, name='view_report'),
     path('generate_report/', views.generate_report, name='generate_report'),
     path('view_report_options/', views.view_report_options, name='view_report_options'),
+    path('reports/branch_dashboard/', views.branch_report_dashboard, name='branch_report_dashboard'),
     path('upload_zones/', views.upload_zones, name='upload_zones'),
     path('upload_branches/', views.upload_branches, name='upload_branches'),
     path('upload_loan_categories/', views.upload_loan_categories, name='upload_loan_categories'),

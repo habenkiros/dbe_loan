@@ -83,12 +83,11 @@
                             <td>{{ loan_request.status }}</td>
                             <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                             <td>
-                                <div class="dropdown">
-                                    <button class="dropbtn">Actions ▾</button>
-                                    <div class="dropdown-content">
-                                        <a href="{% url 'loan_request_detail_finance' loan_request.id %}" class="btn btn-blue">Details</a>
-                                        <a href="{% url 'update_finance_manager_approval' loan_request.id %}" class="btn btn-orange">Update</a>
-                                    </div>
+                                <div class="list-actions">
+                                {% url 'loan_request_detail_finance' loan_request.id as detail_url %}
+                                {% include "includes/list_action.html" with href=detail_url icon="open" label="Open details" tone="blue" only %}
+                                {% url 'update_finance_manager_approval' loan_request.id as update_url %}
+                                {% include "includes/list_action.html" with href=update_url icon="update" label="Update approval" tone="orange" only %}
                                 </div>
                             </td>
                         </tr>

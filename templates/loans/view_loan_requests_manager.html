@@ -105,9 +105,18 @@
                             <td>{% if loan_request.current_approval_level %}{{ loan_request.current_approval_level.name }}{% else %}—{% endif %}</td>
                             <td>{% if loan_request.submitted_to_committee_at %}{{ loan_request.submitted_to_committee_at|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                             <td>
-                              <a href="{% url 'loan_request_detail_manager' loan_request.id %}" class="btn btn-blue">
-                                {% if loan_request.committee_status == 'pending_committee' %}Review &amp; vote{% else %}Details{% endif %}
-                              </a>
+                              <div class="list-actions">
+                              {% url 'loan_request_detail_manager' loan_request.id as review_url %}
+                              {% if loan_request.committee_status == 'pending_committee' %}
+                              {% include "includes/list_action.html" with href=review_url icon="vote" label="Review and vote" tone="green" only %}
+                              {% else %}
+                              {% include "includes/list_action.html" with href=review_url icon="open" label="Open details" tone="blue" only %}
+                              {% endif %}
+                              {% if loan_request.appraisal %}
+                              {% url 'committee_appraisal_pack' loan_request.id as pack_url %}
+                              {% include "includes/list_action.html" with href=pack_url icon="appraisal" label="Appraisal pack" tone="gray" only %}
+                              {% endif %}
+                              </div>
                             </td>
                         </tr>
                     {% endfor %}

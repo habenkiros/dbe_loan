@@ -26,7 +26,12 @@
         <td>{{ req.requested_at|date:"SHORT_DATETIME_FORMAT" }}</td>
         <td>{{ req.requested_by.get_full_name|default:req.requested_by.username }}</td>
         <td>{{ req.reason|truncatewords:25 }}</td>
-        <td><a href="{% url 'collateral:unlock_review' req.id %}" class="btn btn-blue">Review</a></td>
+        <td>
+          <div class="list-actions">
+          {% url 'collateral:unlock_review' req.id as review_url %}
+          {% include "includes/list_action.html" with href=review_url icon="vote" label="Review unlock request" tone="blue" only %}
+          </div>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

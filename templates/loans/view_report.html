@@ -1,67 +1,135 @@
-<!-- templates/loans/view_report.html -->
 {% extends "base.html" %}
-
-{% block title %}View Report{% endblock %}
-
+{% block title %}Pipeline report{% endblock %}
 {% block content %}
-<h1>View Report</h1>
+<div class="lw-wrap" style="max-width:1100px;">
+  <p class="help" style="margin:0 0 0.5rem;">
+    <a href="{% url 'view_report_options' %}">← Reports hub</a>
+    · <a href="{% url 'branch_report_dashboard' %}?{{ request.GET.urlencode }}">Branch dashboard</a>
+  </p>
+  <h1>Pipeline report</h1>
 
-<form method="get" action="{% url 'view_report' %}">
-    <label for="status">Select Status:</label>
-    <select name="status" id="status">
+  <form method="get" class="lw-panel" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.65rem; align-items:end;">
+    <div>
+      <label for="status"><strong>Status</strong></label><br>
+      <select name="status" id="status" class="form-control">
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="committee_status"><strong>Committee</strong></label><br>
+      <select name="committee_status" id="committee_status" class="form-control">
+        {% for val, label in committee_status_choices %}
+        <option value="{{ val }}" {% if filters.committee_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="disbursement_status"><strong>Disbursement</strong></label><br>
+      <select name="disbursement_status" id="disbursement_status" class="form-control">
+        {% for val, label in disbursement_status_choices %}
+        <option value="{{ val }}" {% if filters.disbursement_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if can_pick_geo %}
+    <div>
+      <label for="district_id"><strong>District</strong></label><br>
+      <select name="district_id" id="district_id" class="form-control">
         <option value="">All</option>
-        <option value="Approved" {% if status == 'Approved' %}selected{% endif %}>Approved</option>
-        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
-        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
-    </select>
-    <button type="submit">Filter</button>
-</form>
+        {% for d in districts %}
+        <option value="{{ d.id }}" {% if filters.district_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="branch_id"><strong>Branch</strong></label><br>
+      <select name="branch_id" id="branch_id" class="form-control">
+        <option value="">All</option>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if filters.branch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="date_from"><strong>From</strong></label><br>
+      <input type="date" name="date_from" id="date_from" class="form-control" value="{{ filters.date_from }}">
+    </div>
+    <div>
+      <label for="date_to"><strong>To</strong></label><br>
+      <input type="date" name="date_to" id="date_to" class="form-control" value="{{ filters.date_to }}">
+    </div>
+    <div class="list-actions list-actions-lg">
+      {% include "includes/list_action_submit.html" with icon="filter" label="Apply filters" tone="blue" only %}
+      {% url 'generate_report' as gen_url %}
+      {% include "includes/list_action_submit.html" with icon="download" label="Export Excel" tone="green" formaction=gen_url only %}
+      {% url 'generate_report' as csv_base %}
+      <a href="{{ csv_base }}?{{ request.GET.urlencode }}{% if request.GET %}&{% endif %}format=csv"
+         class="btn-icon btn-icon-gray"
+         title="Export CSV"
+         aria-label="Export CSV">
+        {% include "includes/action_icon.html" with icon="csv" only %}
+        <span class="btn-icon-tip">Export CSV</span>
+      </a>
+    </div>
+  </form>
 
-<div class="table-container">
+  <div class="table-container">
     <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Applicant Name</th>
-                <th>Amount Requested</th>
-                <th>Status</th>
-                <th>Date Requested</th>
-                <th>Date Reviewed</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for loan_request in page_obj %}
-            <tr>
-                <td>{{ loan_request.loan_request_id }}</td>
-                <td>{{ loan_request.applicant_name }}</td>
-                <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
-                <td>{{ loan_request.status }}</td>
-                <td>{{ loan_request.date_requested }}</td>
-                <td>{{ loan_request.date_reviewed }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Applicant</th>
+          <th>Branch</th>
+          <th>Amount</th>
+          <th>Status / stage</th>
+          <th>Requested</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan_request in page_obj %}
+        <tr>
+          <td>{{ loan_request.loan_request_id }}</td>
+          <td>{{ loan_request.applicant_name }}</td>
+          <td>{{ loan_request.branch.name }}</td>
+          <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
+          <td><div class="lw-chip-row">{% include "loans/_loan_status_chips.html" %}</div></td>
+          <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
+          <td>
+            <div class="list-actions">
+            {% url 'loan_request_detail' loan_request.id as detail_url %}
+            {% include "includes/list_action.html" with href=detail_url icon="open" label="Open details" tone="blue" only %}
+            {% if loan_request.appraisal %}
+            {% url 'export_appraisal_pack_pdf' loan_request.id as pdf_url %}
+            {% include "includes/list_action.html" with href=pdf_url icon="print" label="Download PDF pack" tone="gray" only %}
+            {% url 'export_appraisal_pack_excel' loan_request.id as xlsx_url %}
+            {% include "includes/list_action.html" with href=xlsx_url icon="download" label="Excel pack" tone="green" only %}
+            {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">No loans match these filters.</td></tr>
+        {% endfor %}
+      </tbody>
     </table>
-</div>
+  </div>
 
-<div class="pagination">
+  <div class="pagination">
     <span class="step-links">
-        {% if page_obj.has_previous %}
-            <a href="?page=1{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">First</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Previous</a>
-        {% endif %}
-        <span class="current">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-        </span>
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Next</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Last</a>
-        {% endif %}
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+      {% endif %}
+      <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }})</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+      {% endif %}
     </span>
+  </div>
 </div>
-
-<form method="get" action="{% url 'generate_report' %}">
-    <input type="hidden" name="status" value="{{ status }}">
-    <button type="submit">Generate Report</button>
-</form>
 {% endblock %}

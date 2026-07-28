@@ -1,0 +1,56 @@
+{% comment %}AI Application Decision Card — assistive only{% endcomment %}
+{% if decision_card %}
+<article class="ci-decision-card dec-{{ decision_card.decision.code }}">
+  <header class="ci-decision-head">
+    <div>
+      <p class="ci-eyebrow-dark">AI decision assist</p>
+      <h3>{{ decision_card.decision.label }}</h3>
+      <p class="ci-decision-rationale">{{ decision_card.decision.rationale }}</p>
+    </div>
+    <div class="ci-decision-score">
+      {% if decision_card.score_1000 %}
+      <div class="total">{{ decision_card.score_1000 }} <span>/ 1000</span></div>
+      {% elif decision_card.score_total %}
+      <div class="total">{{ decision_card.score_total|floatformat:1 }} <span>/ 100</span></div>
+      {% else %}
+      <div class="total">—</div>
+      {% endif %}
+      <span class="ci-band band-{{ decision_card.band }}">{{ decision_card.band_label|default:decision_card.band|default:"Unscored" }}</span>
+    </div>
+  </header>
+
+  <div class="ci-decision-grid">
+    <div>
+      <h4>Positive indicators</h4>
+      <ul>
+        {% for p in decision_card.positives %}
+        <li>{{ p }}</li>
+        {% empty %}
+        <li class="muted">None flagged yet</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h4>Risk / warning indicators</h4>
+      <ul>
+        {% for r in decision_card.risks %}
+        <li>{{ r }}</li>
+        {% empty %}
+        <li class="muted">No elevated risks from scorecard</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h4>Required actions</h4>
+      <ul>
+        {% for a in decision_card.required_actions %}
+        <li>{{ a }}</li>
+        {% empty %}
+        <li class="muted">Continue appraisal sheets</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <p class="ci-decision-disclaimer">{{ decision_card.disclaimer }}</p>
+</article>
+{% endif %}

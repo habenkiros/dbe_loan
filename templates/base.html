@@ -5,6 +5,7 @@
     <title>{% block title %}AI-powered Credit Intelligence{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/loan_workbench.css' %}">
     {% block extra_head %}{% endblock %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
@@ -448,13 +449,17 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Approval queue
                 </a>
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
                 <a href="{% url 'loan_notifications_list' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="notifications" only %}
                     Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}
                 </a>
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
-                    Generate Report
+                    Reports
                 </a>
 
             {% elif user.role == 'operation_manager' %}
@@ -466,13 +471,17 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Approval queue
                 </a>
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
                 <a href="{% url 'collateral:dashboard' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="building" only %}
                     Collateral
                 </a>
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
-                    Generate Report
+                    Reports
                 </a>
 
             {% elif user.role == 'finance_manager' %}
@@ -484,9 +493,13 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Approval queue
                 </a>
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
-                    Generate Report
+                    Reports
                 </a>
 
             {% elif user.role == 'credit_committee' or user.role == 'accountant' or user.role == 'district_manager' or user.role == 'ceo' or user.role == 'vp' or user.role == 'board_member' %}
@@ -494,6 +507,12 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Approval queue
                 </a>
+                {% if user.role == 'accountant' %}
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
+                {% endif %}
                 <a href="{% url 'view_loan_requests_manager' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="committee" only %}
                     Committee loans
@@ -504,7 +523,7 @@
                 </a>
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
-                    Generate Report
+                    Reports
                 </a>
 
             {% elif user.role == 'engineering_head' or user.role == 'Engineering Head' %}
@@ -548,35 +567,34 @@
                 </a>
 
             {% elif user.role == 'admin' or user.role == 'superadmin' %}
-                <a href="{% url 'view_loan_requests' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="loan" only %}
-                    Loan requests
-                </a>
-                <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="catalog" only %}
-                    Catalog
-                </a>
-                <a href="{% url 'collateral:unit_price_list' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="money" only %}
-                    Unit prices
-                </a>
-                {% if user.role == 'superadmin' %}
-                <a href="{% url 'collateral:collateral_list_superadmin' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="building" only %}
-                    Collateral
-                </a>
-                {% else %}
-                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="building" only %}
-                    Collateral
-                </a>
-                {% if not user.is_superuser %}
-                <a href="{% url 'collateral:unlock_queue' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="unlock" only %}
-                    Unlock queue
-                </a>
-                {% endif %}
-                {% endif %}
+                <div class="dropdown">
+                    <button type="button" class="dropbtn">
+                        {% include "includes/nav_icon.html" with icon="loan" only %}
+                        Checkup
+                        <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="dropdown-content">
+                        {% url 'view_loan_requests' as checkup_loans_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_loans_url icon="loan" label="Loan requests" only %}
+                        {% url 'post_approval_queue' as checkup_post_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_post_url icon="money" label="Post-approval" only %}
+                        {% url 'view_report_options' as checkup_reports_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_reports_url icon="report" label="Reports" only %}
+                        {% url 'branch_report_dashboard' as checkup_dash_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_dash_url icon="report" label="Branch dashboard" only %}
+                        {% url 'collateral:catalog_index' as checkup_catalog_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_catalog_url icon="catalog" label="Catalog" only %}
+                        {% url 'collateral:unit_price_list' as checkup_prices_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_prices_url icon="money" label="Unit prices" only %}
+                        {% if user.role == 'superadmin' %}
+                        {% url 'collateral:collateral_list_superadmin' as checkup_collateral_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_collateral_url icon="building" label="Collateral" only %}
+                        {% else %}
+                        {% url 'collateral:dashboard' as checkup_collateral_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_collateral_url icon="building" label="Collateral" only %}
+                        {% endif %}
+                    </div>
+                </div>
             {% endif %}
 
             {% if user.is_authenticated and user.is_superuser %}

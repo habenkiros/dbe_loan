@@ -39,9 +39,10 @@
         {% if loan_request.assigned_engineer %} · Field engineer: {{ loan_request.assigned_engineer.get_full_name|default:loan_request.assigned_engineer.username }}{% endif %}
       </small>
     </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
-      <a href="#qa-decision" class="btn btn-green">Approve / return</a>
-      <a href="{% url 'collateral:summary' loan_request.id %}" class="btn btn-blue">Full summary</a>
+    <div class="list-actions">
+      {% include "includes/list_action.html" with href="#qa-decision" icon="vote" label="Approve / return" tone="green" only %}
+      {% url 'collateral:summary' loan_request.id as sum_url %}
+      {% include "includes/list_action.html" with href=sum_url icon="summary" label="Full summary" tone="blue" only %}
     </div>
   </div>
 
@@ -57,22 +58,32 @@
         — {% if row.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}<span style="color:#856404;">incomplete</span>{% endif %}
         · {{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos
         · BOQ {{ row.readiness.building_total|floatformat:0 }}
-        · <a href="{% url 'collateral:field_visit' row.building.id %}">Field visit</a>
-        · <a href="{% url 'collateral:building_estimation_summary' row.building.id %}">መጠቃለሊ</a>
+        <span class="list-actions" style="margin-left:0.35rem;">
+        {% url 'collateral:field_visit' row.building.id as visit_url %}
+        {% include "includes/list_action.html" with href=visit_url icon="open" label="Field visit" tone="green" only %}
+        {% url 'collateral:building_estimation_summary' row.building.id as est_url %}
+        {% include "includes/list_action.html" with href=est_url icon="summary" label="Estimation summary" tone="blue" only %}
+        </span>
       </li>
       {% endfor %}
       {% if readiness.land %}
       <li>
         <strong>Land</strong>
         — {% if readiness.land.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}incomplete{% endif %}
-        · <a href="{% url 'collateral:land_field_visit' loan_request.id %}">Field visit</a>
+        · <span class="list-actions">
+        {% url 'collateral:land_field_visit' loan_request.id as land_visit_url %}
+        {% include "includes/list_action.html" with href=land_visit_url icon="open" label="Field visit" tone="green" only %}
+        </span>
       </li>
       {% endif %}
       {% for row in readiness.other_items %}
       <li>
         <strong>{{ row.item.name }}</strong>
         — {% if row.readiness.ready %}<span style="color:#155724;">ready</span>{% else %}incomplete{% endif %}
-        · <a href="{% url 'collateral:other_field_visit' row.item.id %}">Field visit</a>
+        · <span class="list-actions">
+        {% url 'collateral:other_field_visit' row.item.id as other_visit_url %}
+        {% include "includes/list_action.html" with href=other_visit_url icon="open" label="Field visit" tone="green" only %}
+        </span>
       </li>
       {% endfor %}
     </ul>
@@ -90,7 +101,12 @@
           <td>{{ row.building.name }}</td>
           <td style="text-align:center;">{{ row.line_count }}</td>
           <td style="text-align:right;">{{ row.total|floatformat:2 }}</td>
-          <td><a href="{% url 'collateral:valuation_list' row.building.id %}">Desktop BOQ</a></td>
+          <td>
+            <div class="list-actions">
+            {% url 'collateral:valuation_list' row.building.id as boq_url %}
+            {% include "includes/list_action.html" with href=boq_url icon="list" label="Desktop BOQ" tone="blue" only %}
+            </div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

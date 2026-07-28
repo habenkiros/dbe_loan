@@ -206,24 +206,45 @@ def declared_address_for_loan(loan_request) -> str:
     return text
 
 
-def map_provider_context() -> Dict[str, Any]:
-    """Template/JS config for collateral maps (Leaflet today; Gebeta tiles when keyed)."""
+def resolve_map_tiles_provider() -> str:
+    """
+    Effective map UI provider for collateral canvases.
+    - gebeta: MapLibre GL + Gebeta vector/raster styles (needs API key)
+    - leaflet_osm: Leaflet + OpenStreetMap / Esri (fallback)
+    """
     configured = gebeta_maps_configured()
+    setting = (getattr(settings, 'GEBETA_MAPS_TILES_PROVIDER', None) or 'auto').strip().lower()
+    if setting in ('auto', ''):
+        return 'gebeta' if configured else 'leaflet_osm'
+    if setting == 'gebeta':
+        return 'gebeta' if configured else 'leaflet_osm'
+    return 'leaflet_osm'
+
+
+def map_provider_context() -> Dict[str, Any]:
+    """Template/JS config for collateral maps (Gebeta/MapLibre or Leaflet/OSM)."""
+    configured = gebeta_maps_configured()
+    geocode_setting = (getattr(settings, 'GEBETA_MAPS_GEOCODE_PROVIDER', None) or 'auto').strip().lower()
+    tiles_provider = resolve_map_tiles_provider()
     return {
         'gebeta_maps_configured': configured,
         'geocode_provider': (
-            'gebeta' if configured and (getattr(settings, 'GEBETA_MAPS_GEOCODE_PROVIDER', 'auto') or 'auto') != 'nominatim'
-            else 'nominatim'
+            'gebeta' if configured and geocode_setting != 'nominatim' else 'nominatim'
         ),
-        # Map UI still Leaflet/OSM until Phase 2 swaps to Gebeta tiles SDK.
-        'map_tiles_provider': getattr(settings, 'GEBETA_MAPS_TILES_PROVIDER', 'leaflet_osm'),
+        'map_tiles_provider': tiles_provider,
+        'map_tiles_setting': (getattr(settings, 'GEBETA_MAPS_TILES_PROVIDER', None) or 'auto'),
         'gebeta_maps_api_key': _gebeta_api_key() if configured else '',
-        'gebeta_maps_sdk_css': getattr(
-            settings, 'GEBETA_MAPS_SDK_CSS',
-            'https://tiles.gebeta.app/static/gebeta-maps-lib.css',
+        'gebeta_style_standard': getattr(
+            settings, 'GEBETA_MAPS_STYLE_STANDARD',
+            'https://tiles.gebeta.app/styles/standard/style.json',
         ),
-        'gebeta_maps_sdk_js': getattr(
-            settings, 'GEBETA_MAPS_SDK_JS',
-            'https://tiles.gebeta.app/static/gebeta-maps.umd.js',
+        'gebeta_style_satellite': getattr(
+            settings, 'GEBETA_MAPS_STYLE_SATELLITE',
+            'https://tiles.gebeta.app/styles/raster/raster.json',
         ),
+        'gebeta_style_terrain': getattr(
+            settings, 'GEBETA_MAPS_STYLE_TERRAIN',
+            'https://tiles.gebeta.app/styles/standard/terrain/terrain.json',
+        ),
+        'gebeta_maps_docs': 'https://docs.gebeta.app/docs',
     }

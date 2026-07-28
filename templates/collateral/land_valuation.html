@@ -8,14 +8,15 @@
 {% block content %}
 <h2>Land valuation</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
-<p>
-    <a href="{% url 'collateral:land_field_visit' loan_request.id %}" class="field-btn field-btn-primary" style="padding:0.4rem 0.8rem;font-size:0.9rem;display:inline-block;">Continue land field visit</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:building_list' loan_request.id %}">Buildings</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
+<p class="list-actions" style="margin:0.75rem 0;">
+    {% url 'collateral:land_field_visit' loan_request.id as visit_url %}
+    {% include "includes/list_action.html" with href=visit_url icon="open" label="Continue land field visit" tone="green" only %}
+    {% url 'collateral:building_list' loan_request.id as buildings_url %}
+    {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
+    {% url 'collateral:other_collateral_list' loan_request.id as other_url %}
+    {% include "includes/list_action.html" with href=other_url icon="vehicle" label="Other" tone="blue" only %}
+    {% url 'collateral:summary' loan_request.id as sum_url %}
+    {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="green" only %}
 </p>
 <p class="help">Field visit (GPS + photos) is the primary path. Desktop form below is for value edits only.</p>
 {% if readiness %}

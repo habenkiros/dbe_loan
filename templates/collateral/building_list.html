@@ -7,20 +7,21 @@
 {% block content %}
 <h2>Buildings – {{ loan_request.loan_request_id }}</h2>
 <p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
-<p>
-    <a href="{% url 'collateral:building_add' loan_request.id %}">Add building</a>
+<p class="list-actions" style="margin:0.75rem 0;">
+    {% url 'collateral:building_add' loan_request.id as add_url %}
+    {% include "includes/list_action.html" with href=add_url icon="add" label="Add building" tone="green" only %}
     {% if "land" in collateral_type_lower %}
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:land_valuation' loan_request.id %}">Land</a>
+    {% url 'collateral:land_valuation' loan_request.id as land_url %}
+    {% include "includes/list_action.html" with href=land_url icon="land" label="Land" tone="blue" only %}
     {% endif %}
     {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:other_collateral_list' loan_request.id %}">Other (vehicle, machinery)</a>
+    {% url 'collateral:other_collateral_list' loan_request.id as other_url %}
+    {% include "includes/list_action.html" with href=other_url icon="vehicle" label="Other (vehicle, machinery)" tone="blue" only %}
     {% endif %}
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:summary' loan_request.id %}">Summary</a>
-    &nbsp;|&nbsp;
-    <a href="{% url 'collateral:dashboard' %}">Back to list</a>
+    {% url 'collateral:summary' loan_request.id as sum_url %}
+    {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="green" only %}
+    {% url 'collateral:dashboard' as dash_url %}
+    {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Back to list" tone="gray" only %}
 </p>
 
 {% if locked %}
@@ -48,13 +49,16 @@
                   <br><small>{{ r.image_count }}/{{ r.min_images }} photos · {{ r.valuation_count }} BOQ · {{ r.building_total|floatformat:0 }}</small>
                 </td>
                 <td>
-                    <a href="{% url 'collateral:field_visit' b.id %}" class="field-btn field-btn-primary" style="padding:0.35rem 0.65rem;font-size:0.85rem;display:inline-block;margin-bottom:0.25rem;">Continue field visit</a>
-                    <br>
-                    <small>
-                      <a href="{% url 'collateral:valuation_list' b.id %}">Desktop BOQ</a>
-                      · <a href="{% url 'collateral:building_images' b.id %}">Images</a>
-                      · <a href="{% url 'collateral:building_edit' b.id %}">Edit</a>
-                    </small>
+                    <div class="list-actions">
+                    {% url 'collateral:field_visit' b.id as visit_url %}
+                    {% include "includes/list_action.html" with href=visit_url icon="open" label="Continue field visit" tone="green" only %}
+                    {% url 'collateral:valuation_list' b.id as boq_url %}
+                    {% include "includes/list_action.html" with href=boq_url icon="list" label="Desktop BOQ" tone="blue" only %}
+                    {% url 'collateral:building_images' b.id as img_url %}
+                    {% include "includes/list_action.html" with href=img_url icon="summary" label="Images" tone="gray" only %}
+                    {% url 'collateral:building_edit' b.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit building" tone="blue" only %}
+                    </div>
                 </td>
             </tr>
             {% endwith %}

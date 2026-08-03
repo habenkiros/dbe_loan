@@ -30,6 +30,26 @@
     {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Back to list" tone="gray" only %}
 </p>
 
+{% if loan_request.collateral_engineering_status == 'returned' and not loan_request.collateral_submitted_at %}
+<div class="summary-action-strip" style="border-color:#c62828;background:#fff8f6;">
+  <strong style="color:#c62828;">Returned for correction by engineering</strong>
+  {% if loan_request.collateral_engineering_reviewed_at %}
+  <br><small>Returned {{ loan_request.collateral_engineering_reviewed_at|date:"SHORT_DATETIME_FORMAT" }}
+    {% if loan_request.collateral_engineering_reviewed_by %}
+    by {{ loan_request.collateral_engineering_reviewed_by.get_full_name|default:loan_request.collateral_engineering_reviewed_by.username }}
+    {% endif %}
+  </small>
+  {% endif %}
+  {% if loan_request.collateral_engineering_return_note %}
+  <div style="margin-top:0.55rem;padding:0.65rem 0.75rem;background:#fff3cd;border:1px solid #e0b84a;border-radius:6px;">
+    <strong>What to fix:</strong><br>
+    {{ loan_request.collateral_engineering_return_note|linebreaksbr }}
+  </div>
+  {% endif %}
+  <p style="margin:0.65rem 0 0;" class="help">You can edit field visits / BOQ / photos again. When finished, submit collateral for engineering review.</p>
+</div>
+{% endif %}
+
 <div class="summary-action-strip">
   <div style="display:flex; flex-wrap:wrap; gap:0.75rem 1.25rem; align-items:center; justify-content:space-between;">
     <div>
@@ -41,6 +61,8 @@
         {% if loan_request.collateral_engineering_status == 'approved' %} — Engineering approved{% endif %}
         {% if loan_request.collateral_engineering_status == 'returned' %} — Returned for correction{% endif %}
       </small>
+      {% elif loan_request.collateral_engineering_status == 'returned' %}
+      <br><small style="color:#c62828;">Returned for correction — edit, then resubmit</small>
       {% elif can_submit_collateral %}
       <br><small style="color:#155724;">Ready to submit</small>
       {% elif submit_blockers %}
@@ -54,7 +76,11 @@
       <form method="post" action="{% url 'collateral:collateral_submit' loan_request.id %}" style="display:inline;">
         {% csrf_token %}
         {% if can_submit_collateral %}
-        {% include "includes/list_action_submit.html" with icon="check" label="Submit collateral" tone="green" only %}
+          {% if loan_request.collateral_engineering_status == 'returned' %}
+          {% include "includes/list_action_submit.html" with icon="check" label="Resubmit collateral" tone="green" only %}
+          {% else %}
+          {% include "includes/list_action_submit.html" with icon="check" label="Submit collateral" tone="green" only %}
+          {% endif %}
         {% else %}
         {% include "includes/list_action_submit.html" with icon="check" label="Submit collateral" tone="green" disabled=1 only %}
         {% endif %}
@@ -210,23 +236,28 @@
 <p>
     <strong>Submitted</strong> on {{ loan_request.collateral_submitted_at|date:"SHORT_DATETIME_FORMAT" }}{% if loan_request.collateral_submitted_by %} by {{ loan_request.collateral_submitted_by.get_full_name|default:loan_request.collateral_submitted_by.username }}{% endif %}.
     {% if loan_request.collateral_engineering_status == 'pending_review' %}
-    <em style="color:#856404;"> — Pending engineering QA.</em>
+    <em style="color:#856404;"> — Pending engineering QA. Only engineering can return this for correction.</em>
     {% elif loan_request.collateral_engineering_status == 'approved' %}
     <em style="color:#155724;"> — Engineering approved.</em>
-    {% elif loan_request.collateral_engineering_status == 'returned' and loan_request.collateral_engineering_return_note %}
-    <br><em style="color:#c62828;">Returned: {{ loan_request.collateral_engineering_return_note|truncatewords:30 }}</em>
     {% endif %}
 </p>
-    {% if can_request_unlock %}
+    {% if loan_request.collateral_engineering_status == 'pending_review' %}
+    <p class="help" style="margin-top:0.5rem;padding:0.65rem 0.75rem;border:1px solid #ffe082;border-radius:6px;background:#fffde7;">
+      Loan officers cannot unlock while engineering review is pending.
+      Wait for engineering to <strong>Return for correction</strong> — then you can edit and resubmit.
+    </p>
+    {% elif can_request_unlock %}
     <form method="post" action="{% url 'collateral:unlock_request' loan_request.id %}" style="margin-top:0.75rem;padding:0.75rem;border:1px solid #ffc107;border-radius:6px;background:#fff8e1;">
       {% csrf_token %}
-      <label for="unlock-reason"><strong>Request supervisor unlock</strong> (corrections needed)</label><br>
+      <label for="unlock-reason"><strong>Request engineering reopen</strong> (approved collateral needs correction)</label><br>
       <textarea id="unlock-reason" name="reason" rows="3" cols="60" required minlength="20" placeholder="Describe what must be corrected (min 20 characters)"></textarea><br>
       <button type="submit" class="btn btn-orange" style="margin-top:0.5rem;">Submit unlock request</button>
     </form>
     {% elif pending_unlock %}
-    <p><em style="color:#856404;">Unlock request pending supervisor review.</em></p>
+    <p><em style="color:#856404;">Unlock request pending engineering review.</em></p>
     {% endif %}
+{% elif loan_request.collateral_engineering_status == 'returned' %}
+<p class="help">Engineering returned this collateral for correction. Fix the issues above, then use <strong>Resubmit collateral</strong>.</p>
 {% else %}
 <p class="help">All collateral data is saved as you edit. Use the sticky bar at the top to submit when ready.</p>
     {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}

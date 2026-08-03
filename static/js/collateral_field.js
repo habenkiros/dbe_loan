@@ -9,7 +9,32 @@
   }
 
   function isMobile() {
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    return preferNativeCamera();
+  }
+
+  function preferNativeCamera() {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua)) return true;
+    // iPadOS 13+ can report as desktop Safari
+    if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
+    if ((navigator.maxTouchPoints || 0) > 1) return true;
+    try {
+      if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  function openFilePicker(input, mode) {
+    if (!input) return;
+    input.setAttribute('accept', 'image/*');
+    if (mode === 'camera') {
+      input.setAttribute('capture', 'environment');
+    } else {
+      input.removeAttribute('capture');
+    }
+    // Reset value so selecting the same file again still fires change
+    try { input.value = ''; } catch (e) { /* ignore */ }
+    input.click();
   }
 
   function geoBlockedReason() {
@@ -27,9 +52,17 @@
 
   function geoErrorText(err) {
     if (!err) return 'Location unavailable';
-    if (err.code === 1) return 'Location permission denied — allow location for this site in browser settings';
-    if (err.code === 2) return 'Location unavailable — check OS location services (Wi‑Fi/GPS)';
-    if (err.code === 3) return 'Location timed out — try again near a window or enable Wi‑Fi';
+    if (err.code === 1) {
+      return 'Location permission denied — allow location for this site/app, then Try again';
+    }
+    if (err.code === 2) {
+      return isMobile()
+        ? 'Location unavailable — turn on GPS / high-accuracy location'
+        : 'PC has no GPS — enable browser location (Wi‑Fi estimate) or capture GPS on the phone at the site';
+    }
+    if (err.code === 3) {
+      return 'Location timed out — try again near a window, outdoors, or with Wi‑Fi on';
+    }
     return 'GPS error: ' + (err.message || 'unknown');
   }
 
@@ -150,8 +183,10 @@
             'Capturing…'
           );
         }
-        var targetAccuracy = 35;
-        if (best && (best.coords.accuracy <= targetAccuracy || samples >= 6)) {
+        // Phones: wait for ~35m. Desktop PWA: accept weaker Wi‑Fi fix sooner.
+        var targetAccuracy = isMobile() ? 35 : 150;
+        var minSamples = isMobile() ? 6 : 2;
+        if (best && (best.coords.accuracy <= targetAccuracy || samples >= minSamples)) {
           finish(best, null);
         }
       }
@@ -170,12 +205,12 @@
               finish(null, { code: 3, message: 'Location timed out' });
             }
           }
-        }, 28000);
+        }, isMobile() ? 28000 : 12000);
       } else {
         navigator.geolocation.getCurrentPosition(
           function (pos) { finish(pos, null); },
           function (err) { finish(null, err); },
-          { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: isMobile() ? 25000 : 12000, maximumAge: 0 }
         );
       }
     });
@@ -186,7 +221,13 @@
   }
 
   function compressImage(file, maxWidth, quality, callback) {
-    if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+    if (!file) {
+      callback(file);
+      return;
+    }
+    // Some phone cameras omit type or use HEIC — still try decode; fall back to original.
+    var type = (file.type || '').toLowerCase();
+    if (type && type.indexOf('image/') !== 0 && type !== 'application/octet-stream') {
       callback(file);
       return;
     }
@@ -194,23 +235,37 @@
     reader.onload = function (e) {
       var img = new Image();
       img.onload = function () {
-        var w = img.width;
-        var h = img.height;
-        if (w > maxWidth) {
-          h = Math.round(h * (maxWidth / w));
-          w = maxWidth;
+        try {
+          var w = img.width || 0;
+          var h = img.height || 0;
+          if (!w || !h) {
+            callback(file);
+            return;
+          }
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            function (blob) {
+              if (!blob) {
+                callback(file);
+                return;
+              }
+              var name = (file.name || 'photo.jpg').replace(/\.(heic|heif|png|webp)$/i, '.jpg');
+              if (!/\.jpe?g$/i.test(name)) name += '.jpg';
+              callback(new File([blob], name, { type: 'image/jpeg' }));
+            },
+            'image/jpeg',
+            quality || 0.82
+          );
+        } catch (err) {
+          callback(file);
         }
-        var canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          function (blob) {
-            callback(blob ? new File([blob], file.name || 'photo.jpg', { type: 'image/jpeg' }) : file);
-          },
-          'image/jpeg',
-          quality || 0.82
-        );
       };
       img.onerror = function () { callback(file); };
       img.src = e.target.result;
@@ -323,20 +378,34 @@
     var input = byId('field-photo-input');
     var status = byId('photo-gps-status');
     var btn = byId('btn-capture-photo-gps');
+    var takeBtn = byId('btn-take-photo');
+    var galleryBtn = byId('btn-pick-gallery');
     if (!form || !input) return;
 
-    if (isMobile()) {
+    var native = preferNativeCamera();
+    input.setAttribute('accept', 'image/*');
+    if (native) {
       input.setAttribute('capture', 'environment');
     } else {
       input.removeAttribute('capture');
     }
-    input.setAttribute('accept', 'image/*');
 
     function refreshPhotoGps() {
       captureGps('', status, btn);
     }
     if (btn) {
       btn.addEventListener('click', refreshPhotoGps);
+    }
+
+    if (takeBtn) {
+      takeBtn.addEventListener('click', function () {
+        openFilePicker(input, 'camera');
+      });
+    }
+    if (galleryBtn) {
+      galleryBtn.addEventListener('click', function () {
+        openFilePicker(input, 'gallery');
+      });
     }
 
     input.addEventListener('change', function () {
@@ -355,7 +424,7 @@
       submitLabel: 'Save photo',
     });
 
-    initWebcam(input, status);
+    initWebcam(input, status, { desktopOnly: true });
   }
 
   function stopStream(stream) {
@@ -363,7 +432,8 @@
     stream.getTracks().forEach(function (t) { t.stop(); });
   }
 
-  function initWebcam(input, gpsStatus) {
+  function initWebcam(input, gpsStatus, opts) {
+    opts = opts || {};
     var openBtn = byId('btn-webcam-open');
     var snapBtn = byId('btn-webcam-snap');
     var closeBtn = byId('btn-webcam-close');
@@ -372,6 +442,17 @@
     if (!openBtn || !input) return;
 
     var stream = null;
+    var native = preferNativeCamera();
+
+    // Phones/tablets: never use in-browser webcam stream — use rear camera / gallery buttons.
+    if (opts.desktopOnly && native) {
+      openBtn.hidden = true;
+      openBtn.style.display = 'none';
+      return;
+    }
+    openBtn.hidden = false;
+    openBtn.style.display = '';
+    openBtn.textContent = native ? 'Open phone rear camera' : 'Use laptop webcam';
 
     function closePanel() {
       stopStream(stream);
@@ -381,12 +462,16 @@
     }
 
     openBtn.addEventListener('click', function () {
+      if (preferNativeCamera()) {
+        openFilePicker(input, 'camera');
+        return;
+      }
       if (!window.isSecureContext) {
         alert(geoBlockedReason());
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Webcam is not supported in this browser. Use “Choose file” instead.');
+        alert('Webcam is not supported in this browser. Use “Choose from gallery” instead.');
         return;
       }
       openBtn.disabled = true;
@@ -404,9 +489,20 @@
         openBtn.disabled = false;
         openBtn.textContent = 'Use laptop webcam';
       }).catch(function (err) {
-        openBtn.disabled = false;
-        openBtn.textContent = 'Use laptop webcam';
-        alert('Could not open camera: ' + (err.message || err.name) + '. Allow camera access for this site.');
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function (s) {
+          stream = s;
+          if (video) {
+            video.srcObject = s;
+            video.play();
+          }
+          if (panel) panel.hidden = false;
+          openBtn.disabled = false;
+          openBtn.textContent = 'Use laptop webcam';
+        }).catch(function (err2) {
+          openBtn.disabled = false;
+          openBtn.textContent = 'Use laptop webcam';
+          alert('Could not open camera: ' + ((err2 && err2.message) || err.message || err.name) + '. Allow camera access for this site.');
+        });
       });
     });
 
@@ -474,7 +570,7 @@
     });
 
     bindSubmitWithGps(form, '', null, { optional: true, submitLabel: 'Upload' });
-    initWebcam(input, null);
+    initWebcam(input, null, { desktopOnly: true });
   }
 
   document.addEventListener('DOMContentLoaded', function () {

@@ -2,7 +2,7 @@
   "name": "DECSI Collateral Field Visit",
   "short_name": "Collateral Field",
   "description": "Offline-capable collateral field visit for loan officers and engineers",
-  "start_url": "/collateral/",
+  "start_url": "/collateral/offline/shell/",
   "scope": "/collateral/",
   "display": "standalone",
   "orientation": "portrait-primary",

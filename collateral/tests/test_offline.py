@@ -10,7 +10,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from PIL import Image
 
-from collateral.models import Building, BuildingImage, LandValuation
+from collateral.models import Building, BuildingImage, LandValuation, OtherCollateralItem
 from collateral.policy import clear_policy_cache
 from loans.models import (
     Branch, CollateralEstimationConfig, CollateralType, District, LoanCategory,
@@ -73,12 +73,24 @@ class CollateralOfflineTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn('application/javascript', res['Content-Type'])
         self.assertEqual(res['Service-Worker-Allowed'], '/collateral/')
-        self.assertIn(b'collateral-field-v1', res.content)
+        self.assertIn(b'collateral-field-v9', res.content)
 
     def test_offline_manifest(self):
         res = self.client.get(reverse('collateral:offline_manifest'))
         self.assertEqual(res.status_code, 200)
         self.assertIn(b'Collateral Field', res.content)
+
+    def test_offline_phone_setup_and_ca(self):
+        setup = self.client.get(reverse('collateral:offline_setup'))
+        self.assertEqual(setup.status_code, 200)
+        self.assertContains(setup, 'Phone offline setup')
+        self.assertContains(setup, 'Download CA certificate')
+        ca = self.client.get(reverse('collateral:offline_ca'))
+        # CA may be missing in CI without gen script; endpoint should still respond.
+        self.assertIn(ca.status_code, (200, 404))
+        if ca.status_code == 200:
+            self.assertIn(b'BEGIN CERTIFICATE', ca.content)
+            self.assertIn('ca-cert', ca['Content-Type'])
 
     def test_field_checklist_page(self):
         url = reverse('collateral:field_checklist')
@@ -96,6 +108,8 @@ class CollateralOfflineTests(TestCase):
         self.assertEqual(data['bundle']['loan_request_code'], 'LR-OFF-001')
         self.assertEqual(len(data['bundle']['buildings']), 1)
         self.assertEqual(data['bundle']['buildings'][0]['name'], 'Site House')
+        self.assertIn('precache_urls', data['bundle'])
+        self.assertTrue(any('/field-visit/' in u for u in data['bundle']['precache_urls']))
 
     def test_sync_building_site_gps(self):
         url = reverse('collateral:offline_sync')
@@ -183,3 +197,58 @@ class CollateralOfflineTests(TestCase):
         land.refresh_from_db()
         self.assertEqual(land.land_size_sqm, Decimal('250'))
         self.assertIsNotNone(land.site_gps_lat)
+
+    def test_offline_ping(self):
+        res = self.client.get(reverse('collateral:offline_ping'))
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['ok'])
+
+    def test_sync_photo_idempotent_by_client_uid(self):
+        url = reverse('collateral:offline_sync')
+        payload = {
+            'kind': 'photo',
+            'loan_request_id': self.loan.pk,
+            'visit_kind': 'building',
+            'subject_id': self.building.pk,
+            'client_uid': 'off-test-uid-1',
+            'fields': {
+                'photo_type': 'front',
+                'caption': 'First sync',
+                'gps_lat': '13.4969',
+                'gps_lon': '39.4769',
+                'gps_accuracy_m': '8',
+            },
+            'image': {
+                'name': 'offline.jpg',
+                'type': 'image/jpeg',
+                'data_base64': _tiny_jpeg_b64(),
+            },
+        }
+        first = self.client.post(url, data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(first.status_code, 200, first.content)
+        self.assertTrue(first.json()['ok'])
+        second = self.client.post(url, data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(second.status_code, 200, second.content)
+        self.assertTrue(second.json()['ok'])
+        self.assertEqual(BuildingImage.objects.filter(building=self.building).count(), 1)
+
+    def test_other_collateral_delete_requires_post(self):
+        item = OtherCollateralItem.objects.create(
+            loan_request=self.loan,
+            name='Toyota Hilux',
+            estimated_value=Decimal('500000'),
+        )
+        url = reverse('collateral:other_collateral_delete', args=[item.pk])
+        get_res = self.client.get(url)
+        self.assertEqual(get_res.status_code, 302)
+        self.assertTrue(OtherCollateralItem.objects.filter(pk=item.pk).exists())
+        post_res = self.client.post(url)
+        self.assertEqual(post_res.status_code, 302)
+        self.assertFalse(OtherCollateralItem.objects.filter(pk=item.pk).exists())
+
+    def test_building_delete_post(self):
+        url = reverse('collateral:building_delete', args=[self.building.pk])
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.assertTrue(Building.objects.filter(pk=self.building.pk).exists())
+        self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertFalse(Building.objects.filter(pk=self.building.pk).exists())

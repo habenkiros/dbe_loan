@@ -142,12 +142,67 @@ def offline_loan_bundle(request, loan_request_id):
         'other_items': other_items,
         'summary_path': f'/collateral/loan/{loan.pk}/summary/',
     }
+    # Full loan officer pack: every field step + static assets needed with no network
+    precache = [
+        '/collateral/',
+        '/collateral/field-checklist/',
+        '/collateral/offline/shell/',
+        '/collateral/offline/setup/',
+        '/collateral/sw.js',
+        '/collateral/offline/manifest.webmanifest',
+        '/static/css/styles.css',
+        '/static/css/loan_workbench.css',
+        '/static/css/collateral_field.css',
+        '/static/css/collateral_offline.css',
+        '/static/js/collateral_field.js',
+        '/static/js/collateral_map.js',
+        '/static/js/collateral_offline_db.js',
+        '/static/js/collateral_offline.js',
+        '/static/vendor/jquery/jquery-3.6.0.min.js',
+        '/static/vendor/leaflet/leaflet.css',
+        '/static/vendor/leaflet/leaflet.js',
+        '/static/vendor/leaflet/images/marker-icon.png',
+        '/static/vendor/leaflet/images/marker-icon-2x.png',
+        '/static/vendor/leaflet/images/marker-shadow.png',
+        '/static/img/collateral-pwa-192.png',
+        '/static/img/collateral-pwa-512.png',
+        '/static/manifest-collateral.webmanifest',
+        bundle['summary_path'],
+    ]
+    for b in buildings:
+        base = b['field_visit_path'].rstrip('/')
+        precache.extend([f'{base}/', f'{base}/1/', f'{base}/2/', f'{base}/3/', f'{base}/4/'])
+    if land_payload:
+        base = land_payload['field_visit_path'].rstrip('/')
+        precache.extend([f'{base}/', f'{base}/1/', f'{base}/2/', f'{base}/3/'])
+    for item in other_items:
+        base = item['field_visit_path'].rstrip('/')
+        precache.extend([f'{base}/', f'{base}/1/', f'{base}/2/', f'{base}/3/'])
+    # de-dupe preserve order
+    seen = set()
+    bundle['precache_urls'] = [u for u in precache if not (u in seen or seen.add(u))]
     return JsonResponse({'ok': True, 'bundle': bundle})
 
 
-def _resolve_subject(loan, visit_kind: str, subject_id: Optional[int]):
+def _resolve_subject(loan, visit_kind: str, subject_id: Optional[int], subject_type: str = ''):
     visit_kind = (visit_kind or '').strip().lower()
-    if visit_kind in ('building', 'building_site', ''):
+    subject_type = (subject_type or '').strip().lower()
+    # Prefer explicit visit_kind; otherwise infer from subject_type / subject existence.
+    if not visit_kind:
+        if subject_type in ('building', 'building_site'):
+            visit_kind = 'building'
+        elif subject_type in ('land', 'land_valuation'):
+            visit_kind = 'land'
+        elif subject_type in ('other', 'other_collateral', 'othercollateralitem'):
+            visit_kind = 'other'
+        elif subject_id and OtherCollateralItem.objects.filter(pk=subject_id, loan_request=loan).exists():
+            visit_kind = 'other'
+        elif subject_id and LandValuation.objects.filter(pk=subject_id, loan_request=loan).exists():
+            visit_kind = 'land'
+        elif subject_id and Building.objects.filter(pk=subject_id, loan_request=loan).exists():
+            visit_kind = 'building'
+
+    if visit_kind in ('building', 'building_site'):
         if not subject_id:
             return None, 'building subject_id required'
         building = Building.objects.filter(pk=subject_id, loan_request=loan).first()
@@ -168,7 +223,7 @@ def _resolve_subject(loan, visit_kind: str, subject_id: Optional[int]):
         if not item:
             return None, 'Other collateral item not found'
         return ('other', item), None
-    return None, f'Unknown visit_kind: {visit_kind}'
+    return None, f'Unknown visit_kind: {visit_kind or "(empty)"}'
 
 
 def _sync_building_site(building, fields, user) -> Tuple[bool, str]:
@@ -215,11 +270,32 @@ def _sync_asset_site(kind: str, instance, fields, user) -> Tuple[bool, str]:
     return True, 'Asset site saved'
 
 
-def _sync_photo(kind: str, instance, fields, image_payload, user) -> Tuple[bool, str]:
+def _sync_photo(kind: str, instance, fields, image_payload, user, client_uid: str = '') -> Tuple[bool, str]:
     post = _post_like(fields)
     files = _image_files_from_payload(image_payload)
     if not files:
         return False, 'No image in offline payload'
+    # Idempotency: same offline queue item must not create duplicate photos on retry.
+    uid = (client_uid or post.get('offline_client_uid') or '').strip()[:80]
+    if uid:
+        marker = f'offline:{uid}'
+        existing_caption = (post.get('caption') or '').strip()
+        if marker not in existing_caption:
+            post['caption'] = (f'{existing_caption} {marker}'.strip())[:255]
+        else:
+            post['caption'] = existing_caption[:255]
+        if kind == 'building':
+            from collateral.models import BuildingImage
+            if BuildingImage.objects.filter(building=instance, caption__contains=marker).exists():
+                return True, 'Photo already synced'
+        elif kind == 'land':
+            from collateral.models import LandValuationImage
+            if LandValuationImage.objects.filter(land_valuation=instance, caption__contains=marker).exists():
+                return True, 'Photo already synced'
+        else:
+            from collateral.models import OtherCollateralItemImage
+            if OtherCollateralItemImage.objects.filter(item=instance, caption__contains=marker).exists():
+                return True, 'Photo already synced'
     if kind == 'building':
         return save_field_visit_photo(instance, post, files, user)
     if kind == 'land':
@@ -251,6 +327,19 @@ def _sync_boq(building, fields, user) -> Tuple[bool, str]:
 
 @login_required
 @user_passes_test(_can_access_collateral)
+@require_GET
+def offline_ping(request):
+    """Cheap reachability probe (not cached by the service worker)."""
+    return JsonResponse({'ok': True, 'ts': timezone_now_iso()})
+
+
+def timezone_now_iso():
+    from django.utils import timezone
+    return timezone.now().isoformat()
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
 @require_POST
 @ensure_csrf_cookie
 def offline_sync_item(request):
@@ -269,27 +358,28 @@ def offline_sync_item(request):
 
     kind = (payload.get('kind') or '').strip()
     visit_kind = (payload.get('visit_kind') or '').strip()
+    subject_type = (payload.get('subject_type') or '').strip()
     subject_id = payload.get('subject_id')
     try:
         subject_id = int(subject_id) if subject_id is not None else None
     except (TypeError, ValueError):
         subject_id = None
 
-    # Map queue kinds to visit context when visit_kind omitted
+    # Map queue kinds to visit context when visit_kind omitted (never guess other→land).
     if not visit_kind:
         if kind == 'building_site' or kind == 'boq':
             visit_kind = 'building'
-        elif kind == 'asset_site':
-            visit_kind = 'land'  # client should send visit_kind; fallback land is weak
-        elif kind == 'photo':
-            visit_kind = 'building'
+        # asset_site / photo: resolve via subject_type / subject_id below
 
-    resolved, err = _resolve_subject(loan, visit_kind, subject_id)
+    resolved, err = _resolve_subject(loan, visit_kind, subject_id, subject_type=subject_type)
     if err:
         return JsonResponse({'ok': False, 'error': err}, status=400)
     subject_kind, instance = resolved
     fields = payload.get('fields') or {}
     image = payload.get('image')
+    client_uid = (payload.get('client_uid') or payload.get('id') or '')
+    if client_uid is not None:
+        client_uid = str(client_uid)
 
     try:
         if kind == 'building_site':
@@ -301,7 +391,7 @@ def offline_sync_item(request):
                 return JsonResponse({'ok': False, 'error': 'asset_site requires land or other subject'}, status=400)
             ok, msg = _sync_asset_site(subject_kind, instance, fields, request.user)
         elif kind == 'photo':
-            ok, msg = _sync_photo(subject_kind, instance, fields, image, request.user)
+            ok, msg = _sync_photo(subject_kind, instance, fields, image, request.user, client_uid=client_uid)
         elif kind == 'boq':
             if subject_kind != 'building':
                 return JsonResponse({'ok': False, 'error': 'boq requires building subject'}, status=400)
@@ -312,11 +402,12 @@ def offline_sync_item(request):
         return JsonResponse({'ok': False, 'error': str(exc)[:500]}, status=500)
 
     if not ok:
-        return JsonResponse({'ok': False, 'error': msg}, status=400)
+        return JsonResponse({'ok': False, 'error': msg, 'permanent': True}, status=400)
     return JsonResponse({
         'ok': True,
         'message': msg,
         'client_id': payload.get('id'),
+        'client_uid': client_uid,
         'kind': kind,
     })
 
@@ -331,4 +422,49 @@ def field_tablet_checklist(request):
         'page_is_secure': request.is_secure(),
         'site_url': getattr(settings, 'SITE_URL', ''),
         'https_proxy_enabled': os.getenv('USE_HTTPS_PROXY', '') == '1',
+    })
+
+
+@require_GET
+def offline_shell(request):
+    """
+    Lightweight offline landing page (cached by Prepare Offline).
+    No login required so the installed PWA can open when the server is unreachable.
+    """
+    return render(request, 'collateral/offline_shell.html', {
+        'page_host': request.get_host(),
+    })
+
+
+@require_GET
+def offline_ca_certificate(request):
+    """Serve the local field CA so phones can install trust (required for SW on Android)."""
+    for path in (
+        Path(settings.BASE_DIR) / 'deploy' / 'https' / 'certs' / 'decsi-field-ca.crt',
+        Path(settings.BASE_DIR) / 'static' / 'certs' / 'decsi-field-ca.crt',
+    ):
+        if path.is_file():
+            body = path.read_bytes()
+            response = HttpResponse(body, content_type='application/x-x509-ca-cert')
+            response['Content-Disposition'] = 'attachment; filename="decsi-field-ca.crt"'
+            response['Cache-Control'] = 'no-cache'
+            return response
+    return HttpResponse(
+        'CA certificate not found. Run scripts/gen_field_https_certs.sh on the PC.',
+        status=404,
+        content_type='text/plain; charset=utf-8',
+    )
+
+
+@require_GET
+def offline_phone_setup(request):
+    """Phone-first instructions: install CA → trust HTTPS → download pack → Airplane test."""
+    ca_path = Path(settings.BASE_DIR) / 'deploy' / 'https' / 'certs' / 'decsi-field-ca.crt'
+    if not ca_path.is_file():
+        ca_path = Path(settings.BASE_DIR) / 'static' / 'certs' / 'decsi-field-ca.crt'
+    return render(request, 'collateral/offline_phone_setup.html', {
+        'page_host': request.get_host(),
+        'page_is_secure': request.is_secure(),
+        'site_url': getattr(settings, 'SITE_URL', '') or f'https://{request.get_host()}',
+        'ca_ready': ca_path.is_file(),
     })

@@ -1,0 +1,29 @@
+{% comment %}
+Shared photo capture controls for building / land / other field visits.
+Expects: none (ids are fixed for collateral_field.js)
+{% endcomment %}
+<div class="field-action-stack field-photo-capture">
+  <div class="field-action-row field-photo-primary-actions">
+    <button type="button" class="field-btn field-btn-primary field-btn-block" id="btn-take-photo">
+      Take photo (rear camera)
+    </button>
+    <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-pick-gallery">
+      Choose from gallery
+    </button>
+  </div>
+  <div class="field-action-row">
+    <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-capture-photo-gps">
+      Refresh GPS
+    </button>
+    <button type="button" class="field-btn field-btn-secondary field-btn-block field-desktop-only" id="btn-webcam-open" hidden>
+      Use laptop webcam
+    </button>
+  </div>
+  <div>
+    <label for="field-photo-input" class="field-sr-only">Selected photo</label>
+    <input type="file" name="image" id="field-photo-input" accept="image/*" class="field-input-lg" required>
+    <p class="field-upload-hint" id="field-photo-hint">
+      On phones/tablets use <strong>Take photo</strong> for the rear camera, or <strong>Gallery</strong> for an existing image.
+    </p>
+  </div>
+</div>

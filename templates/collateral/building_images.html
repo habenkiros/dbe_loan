@@ -26,7 +26,7 @@
     {% csrf_token %}
     <input type="hidden" name="action" value="upload_photo">
     <p>
-      <button type="button" class="field-btn field-btn-secondary" id="btn-webcam-open">Use laptop webcam</button>
+      <button type="button" class="field-btn field-btn-secondary" id="btn-webcam-open">Open device camera</button>
     </p>
     <p>
       <label for="id_photo_type">Photo type</label><br>
@@ -66,5 +66,5 @@
     {% endfor %}
 </div>
 
-<script src="{% static 'js/collateral_field.js' %}"></script>
+<script src="{% static 'js/collateral_field.js' %}?v=field-cam-3"></script>
 {% endblock %}

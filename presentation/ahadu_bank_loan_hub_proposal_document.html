@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Detailed Proposal — AI-powered Credit Intelligence for Ahadu Bank</title>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela  ·  Confidential  ·  Ahadu Bank";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.58;font-size:10.5pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:18mm 16mm;box-shadow:0 4px 24px rgba(6,69,40,.08);}
+.screen.cover{padding:0;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:0;box-shadow:none;max-width:none;min-height:0;}
+  .screen.letter{padding:7mm 10mm 5mm;}
+  .screen.cover{padding:0;}
+  .no-print{display:none!important;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;page-break-after:avoid;}
+  figure.shot{break-inside:avoid;page-break-inside:avoid;}
+  table{break-inside:auto;}
+  tr{break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+  .cover{
+    min-height:0 !important;
+    height:auto !important;
+    max-height:269mm;
+    overflow:hidden;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  .letter{
+    min-height:0 !important;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  .letter p{font-size:9.3pt;margin-bottom:4px;line-height:1.38;}
+  .letter .sign{margin-top:6px;}
+  .letter .sign .name{margin-top:10px;}
+  .letter .cc{margin-top:6px;padding-top:5px;}
+  .letter-head{margin-bottom:6px;padding-bottom:5px;}
+  .letter .date{margin:4px 0 6px;}
+  .letter .addr{margin-bottom:6px;}
+  .letter .re{margin:0 0 6px;padding:5px 7px;font-size:9.4pt;}
+  .letter .encl{font-size:8.4pt;margin-top:6px;line-height:1.35;}
+  .letter-head .logo-img{height:52px;margin-bottom:4px;}
+  .cover-hero{padding:9mm 0 7mm;}
+  .cover .brand-row{margin-bottom:6mm;}
+  .cover-body{padding:6mm 14mm 7mm;flex:0 1 auto;justify-content:flex-start;gap:6px;}
+  .cover h1{font-size:20pt;margin-bottom:6px;}
+  .cover .bank{font-size:16pt;}
+  .cover .bank-sub{margin-bottom:8px;}
+  .cover .tagline{font-size:10pt;}
+  .cover .pillars{gap:6px;margin-bottom:6px;}
+  .cover .pillar{padding:7px 8px;}
+  .cover .pillar span{font-size:8pt;}
+  .badges{margin:6px 0;}
+  .meta{padding:8px 10px;font-size:9pt;}
+  .cover-foot{margin-top:6px;padding-top:6px;}
+  .logo-img.lg{height:56px;}
+}
+.screen.cover{padding:0;overflow:hidden;}
+.cover{min-height:262mm;display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:14mm 0 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover-inner{padding:0 16mm;}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;letter-spacing:.02em;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover .for-label{font-size:8pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e8d48a;margin-bottom:6px;}
+.cover .bank{font-family:Fraunces,Georgia,serif;font-size:20pt;font-weight:700;margin:0 0 2px;line-height:1.2;}
+.cover .bank-sub{font-size:10pt;color:#b7d9c6;margin:0 0 14px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:26pt;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.02em;max-width:155mm;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:155mm;line-height:1.5;margin:0;}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:10mm 16mm 14mm;}
+.cover .pillars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
+.cover .pillar{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);}
+.cover .pillar strong{display:block;color:var(--gd);font-size:9.5pt;margin-bottom:2px;}
+.cover .pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+.badge{border:1px solid rgba(11,107,58,.25);color:var(--g);padding:3px 9px;border-radius:999px;font-size:8pt;font-weight:600;}
+.cover-foot{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--line);padding-top:8px;margin-top:8px;font-size:8pt;color:var(--muted);}
+.cover-foot strong{color:var(--gd);}
+.letter{min-height:262mm;display:flex;flex-direction:column;}
+.letter-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--g);padding-bottom:10px;margin-bottom:12px;}
+.letter-head .from-name{font-family:Fraunces,Georgia,serif;font-size:16pt;color:var(--gd);font-weight:700;}
+.letter-head .from-meta{font-size:8.5pt;color:var(--muted);line-height:1.45;margin-top:3px;}
+.letter-head .from-right{text-align:right;font-size:8.5pt;color:var(--muted);line-height:1.45;}
+.letter-head .from-right .goldline{color:var(--gold);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:7.5pt;margin-bottom:4px;}
+.letter .date{margin:10px 0 12px;font-size:10pt;}
+.letter .addr{font-size:10pt;line-height:1.45;margin-bottom:12px;}
+.letter .addr strong{color:var(--gd);}
+.letter .re{background:var(--bg);border-left:3px solid var(--gold);padding:8px 10px;margin:0 0 12px;font-size:10pt;}
+.letter .re strong{color:var(--gd);}
+.letter .salutation{margin:0 0 10px;font-size:10.5pt;}
+.letter p{font-size:10.2pt;text-align:justify;}
+.letter .sign{margin-top:16px;}
+.letter .sign .name{font-weight:700;color:var(--gd);margin-top:28px;margin-bottom:0;}
+.letter .sign .title{font-size:9.5pt;color:var(--muted);margin:2px 0 0;}
+.letter .cc{margin-top:14px;font-size:8.5pt;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;}
+.letter .encl{font-size:9pt;margin-top:8px;}
+h2{font-family:Fraunces,Georgia,serif;font-size:15pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11.5pt;color:var(--g);margin:10px 0 5px;}
+h4{font-size:10.5pt;color:var(--gd);margin:10px 0 4px;}
+p,li{margin:0 0 7px;}
+ul,ol{margin:0 0 9px;padding-left:1.2em;}
+.toc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;font-size:9.5pt;margin:0 0 12px;padding:0;list-style:none;}
+.toc-grid li{margin:0 0 5px;padding:0;break-inside:avoid;display:flex;gap:6px;}
+.toc-grid li span.n{flex:0 0 1.4em;font-weight:700;color:var(--g);}
+.toc-grid li span.t{flex:1;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7.5pt;color:var(--muted);margin-top:2px;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:9px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;break-inside:avoid;}
+.box h4{margin:0 0 4px;}
+.box.gold{border-top:3px solid var(--gold);}
+.box.green{border-top:3px solid var(--g);}
+.box.red{border-top:3px solid var(--danger);}
+.box.ok{border-top:3px solid var(--ok);}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:9pt;}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7.5pt;text-transform:uppercase;letter-spacing:.04em;}
+figure.shot{
+  margin:8px 0 0;
+  break-inside:avoid;
+  page-break-inside:avoid;
+  border:1px solid var(--line);
+  border-radius:8px;
+  overflow:hidden;
+  background:#fff;
+  width:100%;
+}
+figure.shot img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:175mm;
+  object-fit:cover;
+  object-position:top center;
+  background:#fff;
+}
+figure.shot.fit img{
+  object-fit:contain;
+  max-height:160mm;
+  background:#f7faf8;
+}
+figcaption{
+  font-size:8pt;
+  color:var(--muted);
+  padding:6px 9px;
+  background:var(--bg);
+  border-top:1px solid var(--line);
+  line-height:1.35;
+}
+.shot-lead{margin:0 0 6px;}
+.footer{margin-top:14px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+.small{font-size:9pt;color:var(--muted);}
+.logo-img{height:56px;width:auto;display:block;object-fit:contain;}
+.logo-img.lg{height:72px;}
+.letter-head .logo-img{height:64px;margin-bottom:8px;}
+.cover .brand-row .logo-img{height:52px;background:transparent;}
+.cover-hero .brand-row{align-items:center;}
+
+</style>
+</head>
+<body>
+<div class="doc">
+
+<section class="screen letter">
+  <div class="letter-head">
+    <div>
+      <img class="logo-img" src="logo.png" alt="Seqela"/>
+      <div class="from-name" style="margin-top:6px;">Seqela</div>
+      <div class="from-meta">
+        Digital solutions for banks, MFIs &amp; SACCOs<br>
+        Addis Ababa, Ethiopia<br>
+        info@seqela.com · +251 964 790 724<br>
+        seqela.com
+      </div>
+    </div>
+    <div class="from-right">
+      <div class="goldline">Official correspondence</div>
+      Ref: SEQ/AH/CAPH/2026-07<br>
+      Classification: Confidential<br>
+      Enclosure: Detailed proposal (PDF)
+    </div>
+  </div>
+
+  <p class="date">31 July 2026</p>
+
+  <div class="addr">
+    <strong>Ahadu Bank S.C.</strong><br>
+    Head Office<br>
+    Sunshine Building, Africa Avenue<br>
+    Addis Ababa, Ethiopia
+  </div>
+
+  <div class="re">
+    <strong>Re:</strong> Proposal for AI-powered Credit Intelligence — digitizing secured MSME and corporate lending to complement Ahadu Le Kulu and Mahder
+  </div>
+
+  <p class="salutation">Dear Sir/Madam,</p>
+
+  <p>
+    On behalf of Seqela, we are pleased to submit the enclosed proposal for Ahadu Bank’s consideration —
+    a proven <strong>AI-powered Credit Intelligence</strong> platform for secured MSME and corporate lending
+    that complements Ahadu Le Kulu, Mahder, and the Bank’s inclusive digital agenda.
+  </p>
+  <p>
+    Ahadu Le Kulu and Mahder have strengthened retail and MSME digital engagement. The enclosed solution
+    addresses the complementary need: branch-driven institutional credit where cashflow appraisal,
+    GPS-governed collateral, document authentication, and multi-level committees determine portfolio quality
+    and turnaround time.
+  </p>
+  <p>
+    The platform digitizes end-to-end secured lending — bilingual (English + Amharic) document authentication,
+    a seven-step cashflow appraisal (MSME and corporate modes), field collateral with offline tablet support,
+    and configurable Branch → District → Head Office committee decisioning — integrating with core banking
+    for customer prefill while leaving disbursement in the Bank’s system of record.
+  </p>
+  <p>
+    The proposal includes live system screenshots, a DECSI reference case, and a six-month path to a controlled pilot.
+    We respectfully request a 90-minute live demonstration for Credit, Digital Banking, IT, and Risk leadership,
+    and are ready to commence discovery upon your guidance.
+  </p>
+  <p>Thank you for your time and consideration.</p>
+
+  <div class="sign">
+    <p>Yours sincerely,</p>
+    <p class="name">For Seqela</p>
+    <p class="title">Business Development · Credit Technology Solutions</p>
+    <p class="title">info@seqela.com · +251 964 790 724 · seqela.com</p>
+  </div>
+
+  <div class="encl"><strong>Enclosure:</strong> AI-powered Credit Intelligence — Detailed Proposal (with UI evidence) · <strong>Attention:</strong> Credit Operation Management · Digital Banking · IT · Enterprise Risk &amp; Compliance</div>
+</section>
+
+<section class="screen cover pagebreak">
+  <div class="cover-hero">
+    <div class="cover-inner">
+      <div class="brand-row">
+        <div>
+          <img class="logo-img lg" src="logo.png" alt="Seqela"/>
+          <div class="seqela" style="margin-top:8px;">Seqela<span>Banking technology · Ethiopia</span></div>
+        </div>
+        <div class="conf">Confidential proposal</div>
+      </div>
+      <p class="for-label">Prepared for</p>
+      <p class="bank">Ahadu Bank</p>
+      <p class="bank-sub">አሐዱ ባንክ · From the Many to the Many · Head Office, Addis Ababa</p>
+      <h1>AI-powered Credit Intelligence</h1>
+      <p class="tagline">
+        A complete digital credit factory for secured MSME and corporate lending —
+        cashflow appraisal, bilingual document authentication, GPS-governed collateral,
+        and multi-level committee decisioning — designed to complement Ahadu Le Kulu and Mahder.
+      </p>
+    </div>
+  </div>
+  <div class="cover-body">
+    <div>
+      <div class="pillars">
+        <div class="pillar"><strong>Faster decisions</strong><span>Compress multi-level approvals from weeks toward days without weakening credit standards.</span></div>
+        <div class="pillar"><strong>Stronger portfolio</strong><span>Enforce DSCR, qualitative, E&amp;S, and collateral coverage gates before committee.</span></div>
+        <div class="pillar"><strong>Audit-ready files</strong><span>One dossier: documents, scores, GPS evidence, votes, and lock history.</span></div>
+        <div class="pillar"><strong>CBS complementary</strong><span>Customer prefill from core banking; disbursement remains in the Bank’s system of record.</span></div>
+      </div>
+      <div class="badges">
+        <span class="badge">Complements Ahadu Le Kulu</span>
+        <span class="badge">Complements Mahder</span>
+        <span class="badge">Excel-faithful appraisal</span>
+        <span class="badge">GPS collateral evidence</span>
+        <span class="badge">NBE-ready controls</span>
+        <span class="badge">Live UI screenshots</span>
+      </div>
+      <div class="meta">
+        <div><div class="l">Document type</div><div class="v">Business &amp; technical proposal</div></div>
+        <div><div class="l">Version / date</div><div class="v">July 2026</div></div>
+        <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
+        <div><div class="l">Reference</div><div class="v">SEQ/AH/CAPH/2026-07</div></div>
+        <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
+        <div><div class="l">Companion deck</div><div class="v">Slide presentation (HTML)</div></div>
+      </div>
+    </div>
+    <div class="cover-foot">
+      <div><strong>Seqela</strong> · seqela.com</div>
+      <div>For Ahadu Bank evaluation only · Not for redistribution</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak body-start">
+  <h2>Contents</h2>
+  <p class="small">Preceded by: Cover letter · Formal title page. Page numbers appear in the footer of this PDF.</p>
+  <ul class="toc-grid">
+    <li><span class="n">1.</span><span class="t">Executive summary &amp; the ask</span></li>
+    <li><span class="n">2.</span><span class="t">Strategic fit with Ahadu Le Kulu &amp; Mahder</span></li>
+    <li><span class="n">3.</span><span class="t">Problems in institutional credit today</span></li>
+    <li><span class="n">4.</span><span class="t">Day in the life — before vs after</span></li>
+    <li><span class="n">5.</span><span class="t">Solution overview &amp; end-to-end lifecycle</span></li>
+    <li><span class="n">6.</span><span class="t">Live system evidence — dashboards &amp; pipeline</span></li>
+    <li><span class="n">7.</span><span class="t">Module A — Intake &amp; document authentication</span></li>
+    <li><span class="n">8.</span><span class="t">Module B — 7-step cashflow appraisal (MSME)</span></li>
+    <li><span class="n">9.</span><span class="t">Module B2 — Corporate appraisal mode</span></li>
+    <li><span class="n">10.</span><span class="t">Module C — Scorecard, gates &amp; analysis assist</span></li>
+    <li><span class="n">11.</span><span class="t">Module D — GPS collateral &amp; evidence packs</span></li>
+    <li><span class="n">12.</span><span class="t">Module E — Committees &amp; approval queues</span></li>
+    <li><span class="n">13.</span><span class="t">Roles, administration &amp; reporting</span></li>
+    <li><span class="n">14.</span><span class="t">Core banking integration &amp; security</span></li>
+    <li><span class="n">15.</span><span class="t">Complete capability catalog</span></li>
+    <li><span class="n">16.</span><span class="t">Problem → solution → benefit matrix</span></li>
+    <li><span class="n">17.</span><span class="t">Reference case — DECSI</span></li>
+    <li><span class="n">18.</span><span class="t">Business case, ROI &amp; cost of inaction</span></li>
+    <li><span class="n">19.</span><span class="t">Implementation roadmap (6 months)</span></li>
+    <li><span class="n">20.</span><span class="t">Engagement model, commercials path &amp; next steps</span></li>
+    <li><span class="n">21.</span><span class="t">Appendix — screenshot index &amp; glossary</span></li>
+  </ul>
+  <h3>Document control</h3>
+  <table>
+    <tr><th>Item</th><th>Detail</th></tr>
+    <tr><td>Audience</td><td>Credit, Digital Banking, IT, Risk &amp; Compliance, Executive sponsors</td></tr>
+    <tr><td>Purpose</td><td>Secure approval to proceed to discovery + pilot for secured MSME/corporate credit digitization</td></tr>
+    <tr><td>Evidence</td><td>Screenshots captured from a live running instance of the AI-powered Credit Intelligence (July 2026)</td></tr>
+    <tr><td>Positioning</td><td>Complements Ahadu Le Kulu / Mahder; does not replace core banking</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>1. Executive Summary &amp; The Ask</h2>
+  <div class="exec">
+    <p style="margin:0;"><strong>The ask:</strong> Approve a discovery workshop and fixed-scope pilot to deploy Seqela’s AI-powered Credit Intelligence for Ahadu Bank’s secured MSME and corporate lending — extending the Bank’s digital leadership from Ahadu Le Kulu and Mahder into the institutional credit factory.</p>
+  </div>
+  <p>Ahadu Bank has already invested in inclusive digital banking — Ahadu Le Kulu for retail customers and Mahder for MSME cash-book and operational tools, built in-house under the “From the Many to the Many” promise. The remaining operational opportunity is branch-driven secured credit: document chasing, Excel appraisal variance, informal field evidence, and slow multi-level approvals.</p>
+  <p>This Hub digitizes that factory end-to-end: bilingual (English + Amharic) document authentication, a seven-step cashflow appraisal for MSME and corporate modes, GPS-governed collateral with lock/audit/evidence packs, and configurable Branch → District → Head Office committees — sitting <em>beside</em> core banking, not replacing it.</p>
+  <div class="kpi">
+    <div><div class="v">50–70%</div><div class="l">Wait-time reduction target</div></div>
+    <div><div class="v">Weeks → Days</div><div class="l">Approval cycle</div></div>
+    <div><div class="v">95%+</div><div class="l">Doc completeness goal</div></div>
+    <div><div class="v">6 months</div><div class="l">Pilot-ready delivery</div></div>
+  </div>
+  <div class="callout"><strong>Board message:</strong> Ahadu Le Kulu and Mahder grow everyday digital banking. AI-powered Credit Intelligence professionalizes secured MSME and corporate origination — protecting asset quality while accelerating turnaround and audit readiness as the Bank scales.</div>
+  <h3>What decision-makers get from saying yes</h3>
+  <ul>
+    <li><strong>Credit:</strong> One enforced methodology; DSCR, qualitative, E&amp;S, and coverage gates before committee.</li>
+    <li><strong>Operations:</strong> Live pipeline, role queues, fewer customer callbacks, less rework.</li>
+    <li><strong>Risk &amp; Audit:</strong> Reconstructable dossiers — documents, scores, GPS evidence, votes, lock history.</li>
+    <li><strong>Digital / IT:</strong> Docker/PostgreSQL deployment, CBS customer prefill, bank-controlled data residency.</li>
+  </ul>
+</section>
+
+<section class="screen pagebreak">
+  <h2>2. Strategic Fit with Ahadu Le Kulu &amp; Mahder</h2>
+  <p>This proposal is deliberately complementary. It does not replace Ahadu Le Kulu, Mahder, or core banking. It extends Ahadu’s digital ambition into secured and cashflow-based credit — where underwriting depth, collateral, and committees are non-negotiable.</p>
+  <div class="two">
+    <div class="box gold"><h4>Ahadu Le Kulu &amp; Mahder — existing strength</h4>
+      <ul>
+        <li>Ahadu Le Kulu — retail mobile banking (in-house)</li>
+        <li>Mahder — MSME digital vault &amp; cash book</li>
+        <li>Self-registration and remote payments</li>
+        <li>Inclusive intermediation · “From the Many to the Many”</li>
+        <li>Customer convenience and MSME engagement</li>
+      </ul>
+    </div>
+    <div class="box green"><h4>AI-powered Credit Intelligence — proposed</h4>
+      <ul>
+        <li>Secured MSME &amp; corporate facilities</li>
+        <li>Cashflow / DSCR appraisal methodology</li>
+        <li>GPS collateral valuation &amp; evidence packs</li>
+        <li>Officer → manager → committee workflow</li>
+        <li>Policy gates, E&amp;S, and audit governance</li>
+      </ul>
+    </div>
+  </div>
+  <h3>Why now — digital growth &amp; NBE expectations</h3>
+  <ul>
+    <li>Ahadu is scaling digital channels and physical footprint; institutional credit must keep pace with the same modern standard.</li>
+    <li>Mahder helps MSMEs manage day-to-day cash; secured facilities still need a professional appraisal and collateral factory.</li>
+    <li>NBE expectations demand consistent methodology, E&amp;S screening, identity assurance, and decision audit trails.</li>
+    <li>Competitors who digitize secured credit first will win MSME customers who refuse to wait weeks.</li>
+  </ul>
+  <div class="callout"><strong>Strategic framing:</strong> One bank. Two credit engines. Ahadu Le Kulu / Mahder for everyday digital banking; AI-powered Credit Intelligence for disciplined institutional origination — shared brand promise of inclusive, modern banking.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>3. Problems in Institutional Credit Today</h2>
+  <p>When secured lending stays in paper and Excel, the Bank pays in cycle time, uneven risk, and audit cost:</p>
+  <table>
+    <tr><th>Pain point</th><th>What happens</th><th>Cost to Ahadu Bank</th></tr>
+    <tr><td><strong>Slow multi-level approvals</strong></td><td>Files wait on desks; sequential Branch → District → HO handoffs</td><td>Lost customers, overtime, weak CX</td></tr>
+    <tr><td><strong>Inconsistent Excel appraisal</strong></td><td>Different officers apply different spreadsheet logic</td><td>Uneven portfolio quality across branches</td></tr>
+    <tr><td><strong>Incomplete / weak documents</strong></td><td>Customers return 2–3 times; weak identity checks</td><td>Rework, fraud gaps, delayed analysis</td></tr>
+    <tr><td><strong>Collateral evidence gaps</strong></td><td>Photos via WhatsApp; GPS unclear; coverage debated</td><td>Committee returns; weak security</td></tr>
+    <tr><td><strong>No single pipeline view</strong></td><td>“Where is my loan?” unanswered; late manual reports</td><td>Management by guesswork</td></tr>
+    <tr><td><strong>Audit reconstruction pain</strong></td><td>Rationale scattered across paper, email, Excel</td><td>High audit cost; regulatory findings</td></tr>
+    <tr><td><strong>CBS re-keying</strong></td><td>Same customer data typed again into appraisal</td><td>Typos, mismatches, delay</td></tr>
+    <tr><td><strong>Rural connectivity</strong></td><td>Field work stalls without reliable signal</td><td>Incomplete valuations; rescheduling</td></tr>
+  </table>
+  <p class="small">The following sections show, with live screenshots, exactly how AI-powered Credit Intelligence removes each of these frictions for Ahadu Bank.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>4. Day in the Life — Before vs After</h2>
+  <div class="two">
+    <div class="box red"><h4>Today — without the Hub</h4>
+      <ul>
+        <li>Customer returns repeatedly with missing documents</li>
+        <li>Officer re-keys CBS data into Excel</li>
+        <li>Appraisal standards vary by officer</li>
+        <li>Field photos informal; location disputed</li>
+        <li>File sits waiting for physical sign-offs</li>
+        <li>Committee gets incomplete packs</li>
+        <li>Audit reconstruction takes days</li>
+      </ul>
+      <p><strong>Typical cycle: 2–6+ weeks</strong></p>
+    </div>
+    <div class="box ok"><h4>With the AI-powered Credit Intelligence</h4>
+      <ul>
+        <li>Guided checklist + OCR blocks incomplete packs early</li>
+        <li>Customer number prefills Sheet 1 from CBS</li>
+        <li>One enforced 7-step methodology bank-wide</li>
+        <li>GPS-attested visits; evidence pack for voters</li>
+        <li>Digital queues with notifications</li>
+        <li>Committee sees scorecard, DSCR, E&amp;S, coverage</li>
+        <li>Full trail: who did what, when, why</li>
+      </ul>
+      <p><strong>Target cycle: days, not weeks</strong></p>
+    </div>
+  </div>
+  <h3>End-to-end lifecycle (8 stages)</h3>
+  <ol>
+    <li><strong>Intake</strong> — Create request; assign officer; customer number; CBS pull</li>
+    <li><strong>Documents</strong> — Checklist; OCR eng+amh; identity match; verify/reject</li>
+    <li><strong>Appraisal</strong> — Seven MSME/corporate sheets with policy gates</li>
+    <li><strong>Collateral</strong> — Building/land/movable; GPS field; offline tablet</li>
+    <li><strong>Governance</strong> — Submit &amp; lock; unlock requests; engineering QA</li>
+    <li><strong>Pre-committee</strong> — Operations and finance manager queues</li>
+    <li><strong>Committee</strong> — Amount-routed multi-level vote; pack; return option</li>
+    <li><strong>Booking</strong> — Handoff to core banking for disbursement</li>
+  </ol>
+</section>
+
+<section class="screen pagebreak">
+  <h3>End-to-end system flow</h3>
+  <p class="shot-lead">Application → documents → collateral → appraisal → authorization → disbursement.</p>
+<figure class="shot fit">
+  <img src="system_flow.png" alt="Figure 1 — End-to-end system flow (application → documents → collateral → appraisal → authorization → disbursement)." />
+  <figcaption>Figure 1 — End-to-end system flow (application → documents → collateral → appraisal → authorization → disbursement).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h2>5. Solution Overview — Live System Evidence</h2>
+  <p>The screenshots in this proposal were captured from a live running instance of the Hub. They show the actual operator experience Ahadu Bank staff would use — not mockups.</p>
+  <h3>5.1 Management dashboard &amp; pipeline visibility</h3>
+  <p><strong>Problem solved:</strong> No single view of Total / Approved / Pending / Rejected; late manual reporting.</p>
+<figure class="shot">
+  <img src="screenshots/print/02-dashboard-home.png" alt="Figure 2 — Loan Dashboard: live totals, status distribution, and role navigation (Home, Loan requests, Catalog, Unit prices, Collateral, Users, Districts, Branches)." />
+  <figcaption>Figure 2 — Loan Dashboard: live totals, status distribution, and role navigation (Home, Loan requests, Catalog, Unit prices, Collateral, Users, Districts, Branches).</figcaption>
+</figure>
+  <p><strong>Bank benefit:</strong> Executives and admins manage by exception. Branch hierarchy is first-class (Districts / Branches / Area).</p>
+</section>
+
+<section class="screen pagebreak">
+  <h3>5.2 Centralized loan request pipeline</h3>
+  <p>Search by name/ID/phone, filter by status and date, see assignment and review dates, and act from one table.</p>
+<figure class="shot">
+  <img src="screenshots/print/03-loan-list.png" alt="Figure 3 — View Loan Requests: searchable, filterable pipeline with status, assignee, and actions." />
+  <figcaption>Figure 3 — View Loan Requests: searchable, filterable pipeline with status, assignee, and actions.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>5.3 Loan detail — one record for every actor</h3>
+  <p class="shot-lead">From a single loan detail page, officers and managers see applicant context, documents, appraisal progress, collateral links, and next actions — ending the “file hunting” culture.</p>
+<figure class="shot">
+  <img src="screenshots/print/04b-officer-loan-detail.png" alt="Figure 4 — Officer loan detail for a live file (HK-000015919), tying intake, appraisal, and collateral into one record." />
+  <figcaption>Figure 4 — Officer loan detail for a live file (HK-000015919), tying intake, appraisal, and collateral into one record.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h2>6. Module A — Intake &amp; Document Authentication</h2>
+  <p><strong>Problem solved:</strong> Incomplete packs, weak identity assurance, trusted-but-unchecked attachments, repeated branch visits.</p>
+  <h3>6.1 Create loan request (branch manager)</h3>
+<figure class="shot">
+  <img src="screenshots/print/16-create-loan.png" alt="Figure 5 — Create Loan Request: branch-owned intake with product, amount, collateral type, and customer details." />
+  <figcaption>Figure 5 — Create Loan Request: branch-owned intake with product, amount, collateral type, and customer details.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>6.2 Application documents with auth workflow</h3>
+  <ul>
+    <li>Configurable required document types (e.g. National ID, TIN, Business licence)</li>
+    <li>Pre-upload validation: extension, size, MIME/type, content checks</li>
+    <li>OCR in <strong>English + Amharic</strong></li>
+    <li>Identity matching on name / phone / TIN (optional business name)</li>
+    <li>Statuses: Pending → Auto-passed → Needs manual review → Verified / Rejected</li>
+  </ul>
+<figure class="shot">
+  <img src="screenshots/print/05-documents.png" alt="Figure 6 — Application Documents: required types, auth status (“Needs manual review”), View links, and replace-aware upload." />
+  <figcaption>Figure 6 — Application Documents: required types, auth status (“Needs manual review”), View links, and replace-aware upload.</figcaption>
+</figure>
+  <p><strong>Bank benefit:</strong> Higher first-time completeness (target 95%+), fewer fraud gaps, cleaner files entering credit analysis.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>7. Module B — 7-Step Cashflow Appraisal</h2>
+  <p><strong>Problem solved:</strong> Shadow Excel files and inconsistent underwriting across branches. AI-powered Credit Intelligence digitizes cashflow-based MSME methodology (with a corporate mode) as a guided wizard.</p>
+  <table>
+    <tr><th>Step</th><th>MSME</th><th>Corporate</th><th>Locks in</th></tr>
+    <tr><td>1</td><td>Basic info &amp; loan request</td><td>Entity KYC / legal registration</td><td>CBS/OCR provenance</td></tr>
+    <tr><td>2</td><td>Business &amp; character (10 factors)</td><td>Governance &amp; character</td><td>≥75% qualitative gate</td></tr>
+    <tr><td>3</td><td>Cashflow / DSCR / stress</td><td>Financial statements &amp; ratios</td><td>Capacity vs ask</td></tr>
+    <tr><td>4</td><td colspan="2">E&amp;S — 21 items, 5 sections</td><td>PASS / ACTIONS / REJECT</td></tr>
+    <tr><td>5</td><td colspan="2">Collateral worksheet</td><td>Coverage from field valuation</td></tr>
+    <tr><td>6</td><td colspan="2">Summary, scorecard, recommendation</td><td>Approve / Decline / Escalate</td></tr>
+    <tr><td>7</td><td colspan="2">Repayment &amp; amortization</td><td>Schedule for booking</td></tr>
+  </table>
+  <h3>7.1 Sheet 1 — Basic info with core banking prefill</h3>
+  <p>Customer number lookup fills empty fields. Conflicts are listed for officer Accept (banking wins). Every field shows provenance: Core banking / OCR / Officer.</p>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step1.png" alt="Figure 7 — Appraisal Sheet 1: stepper (7 steps), workbook requirements, “Look up & fill from core banking,” conflict resolution, and sourced fields." />
+  <figcaption>Figure 7 — Appraisal Sheet 1: stepper (7 steps), workbook requirements, “Look up & fill from core banking,” conflict resolution, and sourced fields.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>7.2 Sheet 2 — Business &amp; character (qualitative)</h3>
+  <p>Ten weighted factors (MSME) or governance factors (corporate). Default pass gate: <strong>≥75%</strong>. Excel-faithful rating lists keep officer language familiar.</p>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step2.png" alt="Figure 8 — Sheet 2 Business & character assessment with structured qualitative factors and NBE credit-report flags." />
+  <figcaption>Figure 8 — Sheet 2 Business & character assessment with structured qualitative factors and NBE credit-report flags.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>7.3 Sheet 3 — Cashflow, DSCR &amp; stress</h3>
+  <p class="shot-lead">Monthly P&amp;L, net cashflow, monthly/annual DSCR, stress test (sales drop / cost increase), max loan capacity, balance-sheet ratios, and a 12-month cashflow grid with “seed from averages.”</p>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step3.png" alt="Figure 9 — Sheet 3 Cashflow analysis: DSCR, stress test, annual capacity, ratios, and 12-month grid — the analytical heart of MSME underwriting." />
+  <figcaption>Figure 9 — Sheet 3 Cashflow analysis: DSCR, stress test, annual capacity, ratios, and 12-month grid — the analytical heart of MSME underwriting.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>7.4 Sheets 4–7 — E&amp;S, collateral, decision, amortization</h3>
+  <div class="two">
+    <div class="box green"><h4>Sheet 4 — E&amp;S</h4><p>21 checklist items in 5 sections; risk Low/Medium/High; eligibility PASS / PASS WITH ACTION POINTS / REJECT; sign-off trail.</p></div>
+    <div class="box green"><h4>Sheet 5 — Collateral worksheet</h4><p>Prefills from field valuation; coverage ratio visible before decision.</p></div>
+    <div class="box green"><h4>Sheet 6 — Summary &amp; decision</h4><p>4-pillar scorecard, strengths/weaknesses, recommendation, recommended amount (drives committee routing).</p></div>
+    <div class="box green"><h4>Sheet 7 — Amortization</h4><p>Generate repayment schedule for committee and CBS booking.</p></div>
+  </div>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step6.png" alt="Figure 10 — Sheet 6 Summary & decision with scorecard and officer recommendation (feeds committee)." />
+  <figcaption>Figure 10 — Sheet 6 Summary & decision with scorecard and officer recommendation (feeds committee).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Sheet 4 — Environmental &amp; Social</h3>
+  <p class="shot-lead">21 checklist items across 5 sections; risk Low/Medium/High; eligibility PASS / PASS WITH ACTION POINTS / REJECT.</p>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step4.png" alt="Figure 11 — Sheet 4 Environmental & Social assessment checklist and risk decision." />
+  <figcaption>Figure 11 — Sheet 4 Environmental & Social assessment checklist and risk decision.</figcaption>
+</figure>
+</section>
+
+
+<section class="screen pagebreak">
+  <h2>7B. Corporate Appraisal Mode — Same Wizard, Different Depth</h2>
+  <p>
+    AI-powered Credit Intelligence is not MSME-only. When the loan product is configured as
+    <strong>Corporate</strong>, the same seven-step wizard switches labels, KYC depth, qualitative factors,
+    and financial statement fields — so commercial/corporate credit officers work in one platform.
+  </p>
+  <div class="two">
+    <div class="box green">
+      <h4>MSME mode (shown earlier)</h4>
+      <ul>
+        <li>Business &amp; character (10 MSME factors)</li>
+        <li>Cashflow analysis / monthly grid</li>
+        <li>Owner/operator KYC focus</li>
+      </ul>
+    </div>
+    <div class="box gold">
+      <h4>Corporate mode (this section)</h4>
+      <ul>
+        <li>Governance &amp; character (board, audit, covenants)</li>
+        <li>Financial statements &amp; cashflow + ratios</li>
+        <li>Legal registration, directors &amp; UBO summary</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small">Live demo file: <strong>Horizon Agro Industries PLC</strong> — Corporate Term Loan — ETB 15,000,000 — Bishoftu Industrial Park, Ethiopia.</p>
+<figure class="shot">
+  <img src="screenshots/print/31-corporate-step1.png" alt="Corporate appraisal Sheet 1" />
+  <figcaption>Figure 12 — Corporate Sheet 1: entity KYC with legal registration, directors summary, UBO summary, and Corporate mode badge.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Corporate Sheet 2 — Governance &amp; character</h3>
+  <p>Ten corporate qualitative factors (board/governance, management depth, financial discipline, transparency, related-party, industry position, shareholder stability, audit quality, covenant compliance, reputation) with the same ≥75% pass gate.</p>
+<figure class="shot">
+  <img src="screenshots/print/31-corporate-step2.png" alt="Corporate governance and character" />
+  <figcaption>Figure 13 — Corporate Sheet 2: Governance &amp; character scorecard (qualitative total 100 — passed).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Corporate Sheet 3 — Financial statements &amp; cashflow</h3>
+  <p>Corporate annual revenue / operating profit, balance-sheet ratios, DSCR and stress testing — sized for larger facilities.</p>
+<figure class="shot">
+  <img src="screenshots/print/31-corporate-step3.png" alt="Corporate financial statements and cashflow" />
+  <figcaption>Figure 14 — Corporate Sheet 3: financial statements &amp; cashflow (annual revenue ETB 185m, DSCR 6.47, stressed DSCR 4.29).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Corporate decision pack</h3>
+  <p>Sheet 6 recommendation and the committee pack use the same explainable scorecard — Strong band in this demo — so corporate files enter the same approval factory as MSME.</p>
+<figure class="shot">
+  <img src="screenshots/print/31-corporate-step6.png" alt="Corporate summary and decision" />
+  <figcaption>Figure 15 — Corporate Sheet 6: summary, scorecard, and approve recommendation for ETB 15,000,000.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Corporate committee appraisal pack</h3>
+  <p class="shot-lead">Read-only pack for Horizon Agro Industries PLC — same explainable scorecard factory as MSME.</p>
+<figure class="shot">
+  <img src="screenshots/print/32-corporate-committee-pack.png" alt="Corporate committee pack" />
+  <figcaption>Figure 16 — Corporate committee appraisal pack (read-only) for Horizon Agro Industries PLC.</figcaption>
+</figure>
+  <div class="callout"><strong>Bank benefit:</strong> One credit factory for MSME and corporate — product mode is configured per loan category, not a separate system.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>8. Module C — Scorecard, Gates &amp; Analysis Assist</h2>
+  <p><strong>Problem solved:</strong> Subjective “gut feel” decisions and files that reach committee before policy is met.</p>
+  <h3>8.1 Explainable 4-pillar score (/100)</h3>
+  <table>
+    <tr><th>Pillar</th><th>Weight</th><th>What it measures</th></tr>
+    <tr><td>Qualitative / character</td><td>25</td><td>Sheet 2 business &amp; character quality</td></tr>
+    <tr><td>Financial / cashflow</td><td>35</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Environmental &amp; social</td><td>15</td><td>Risk category &amp; eligibility outcome</td></tr>
+    <tr><td>Collateral coverage</td><td>25</td><td>Coverage vs ask (e.g. ≥1.5× full points)</td></tr>
+  </table>
+  <p>Bands: <strong>Strong ≥80</strong> · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40.</p>
+  <h3>8.2 Hard policy gates (bank-configurable)</h3>
+  <ul>
+    <li>Qualitative &lt;75% → hard block</li>
+    <li>E&amp;S REJECT → hard block</li>
+    <li>Annual / stressed DSCR &lt;1.0 → hard block</li>
+    <li>Bureau defaults → hard block option</li>
+    <li>Incomplete sheets 1–6 → cannot finish</li>
+    <li>Collateral coverage warning at policy minimum (default 1.0×)</li>
+  </ul>
+  <h3>8.3 Analysis Assist — decision support, not auto-approve</h3>
+  <p>Surfaces weak/thin pillars, ask vs max cashflow capacity, bureau flags (thin file, defaults, score/band), corporate registration/audit flags, and hard blocks — so officers fix issues before committee waste.</p>
+  <div class="callout"><strong>Credit philosophy:</strong> AI-powered Credit Intelligence enforces standards and explains risk. Humans still decide. That is how you win both Risk and Business sponsors.</div>
+<figure class="shot">
+  <img src="screenshots/print/06-appraisal-step7.png" alt="Figure 17 — Sheet 7 repayment & amortization with schedule generation for booking." />
+  <figcaption>Figure 17 — Sheet 7 repayment & amortization with schedule generation for booking.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h2>9. Module D — GPS Collateral &amp; Evidence Packs</h2>
+  <p><strong>Problem solved:</strong> WhatsApp photo chaos, unclear site presence, disputed coverage, weak dual control.</p>
+  <h3>9.1 Field visit with offline sync &amp; map verification</h3>
+  <ul>
+    <li>Building BOQ (construction catalog × woreda unit prices), land, other/movable</li>
+    <li>GPS site mark with accuracy; EXIF vs live GPS mismatch warnings</li>
+    <li>Min photos (e.g. 5 building / 3 land); photo distance policy (default 200m)</li>
+    <li>Offline tablet PWA: prepare offline → capture → Sync now</li>
+    <li>Lock after submit; supervised unlock; engineering QA pipeline</li>
+  </ul>
+<figure class="shot">
+  <img src="screenshots/print/10-field-visit.png" alt="Figure 18 — Field visit: offline/sync bar, 4-step wizard (Site → BOQ → Photos → Review), GPS (±18m), and map with field-site pin." />
+  <figcaption>Figure 18 — Field visit: offline/sync bar, 4-step wizard (Site → BOQ → Photos → Review), GPS (±18m), and map with field-site pin.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>9.2 Collateral evidence pack for committee &amp; audit</h3>
+  <p>One dossier: coverage vs ask, policy checks, BOQ summary, GPS-tagged photos, map, and recent audit events — with Print/PDF, Export JSON, Export ZIP.</p>
+<figure class="shot">
+  <img src="screenshots/print/12-evidence-pack.png" alt="Figure 19 — Collateral evidence pack: coverage adequacy, GPS map, BOQ totals, field photos, and audit trail (engineering approved, site GPS marked, dossier exported)." />
+  <figcaption>Figure 19 — Collateral evidence pack: coverage adequacy, GPS map, BOQ totals, field photos, and audit trail (engineering approved, site GPS marked, dossier exported).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>9.3 Policy configuration</h3>
+  <p class="shot-lead">Bank risk teams tune min photos, GPS accuracy thresholds, coverage minimums, and distance flags — without code changes.</p>
+<figure class="shot">
+  <img src="screenshots/print/13-collateral-policy.png" alt="Figure 20 — Collateral policy configuration (bank-tunable GPS and coverage rules)." />
+  <figcaption>Figure 20 — Collateral policy configuration (bank-tunable GPS and coverage rules).</figcaption>
+</figure>
+  <p><strong>Bank benefit:</strong> Committee-ready proof; dual control; rural-ready offline capture; reconstructable audit.</p>
+</section>
+
+
+<section class="screen pagebreak">
+  <h2>10. Module E — Approval Committee (live screenshots)</h2>
+  <p><strong>Problem solved:</strong> Incomplete packs, unclear routing, slow sequential sign-offs, and opaque returns. This section shows the <em>actual</em> committee workflow from the running system.</p>
+  <h3>10.1 Officer submits to the approval committee</h3>
+  <p>After Sheets 1–7 are finished, the loan officer submits the file to the configured Branch → District → Head Office → Management pathway, with optional notes for voters.</p>
+<figure class="shot">
+  <img src="screenshots/print/25-officer-committee-status.png" alt="Officer loan detail — approval committee status" />
+  <figcaption>Figure 21 — Officer loan detail: approval committee status after submission (pending at Branch approval committee), with routing visibility.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>10.2 My approval queue — votes waiting for you</h3>
+  <p>Committee members open a dedicated queue of loans requiring their vote at the current level — no chasing paper files across desks.</p>
+<figure class="shot">
+  <img src="screenshots/print/26-approval-queue.png" alt="Approval committee queue" />
+  <figcaption>Figure 22 — Approval queue (“My votes”): Aster Bekele Trading PLC awaiting Branch approval committee action.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>10.3 Cast your vote at the current level</h3>
+  <p class="shot-lead">Voters see overall status, current level, approval routing/pipeline, Sheet 6 recommendation summary, link to the full appraisal pack, and a vote form (Approve / Decline, amount supported, comments). They can also <strong>return to loan officer</strong> with required feedback.</p>
+<figure class="shot">
+  <img src="screenshots/print/27-committee-vote.png" alt="Approval committee review and vote form" />
+  <figcaption>Figure 23 — Approval committee review: pipeline, Sheet 6 summary, return-to-officer, and cast-your-vote form at Branch approval committee.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>10.4 One-screen committee appraisal pack</h3>
+  <p>Before voting, members open a read-only pack covering Sheets 1–7 — scorecard, cashflow/DSCR, E&amp;S, collateral coverage, strengths/weaknesses — Print/PDF ready.</p>
+<figure class="shot">
+  <img src="screenshots/print/07-committee-pack.png" alt="Committee appraisal pack" />
+  <figcaption>Figure 24 — Read-only committee appraisal pack for Aster Bekele Trading PLC (MSME / cashflow mode).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>10.5 Amount-routed levels (configurable to Ahadu Bank)</h3>
+  <table>
+    <tr><th>Level</th><th>Typical voters</th><th>Default votes</th></tr>
+    <tr><td>Branch</td><td>Loan officer, branch manager, accountant</td><td>Min 2 approve / 2 decline</td></tr>
+    <tr><td>District</td><td>District manager + peers</td><td>2 / 2</td></tr>
+    <tr><td>Head office</td><td>Ops, finance, credit committee</td><td>2 / 2</td></tr>
+    <tr><td>Management</td><td>CEO / VP / board as configured</td><td>2 / 2</td></tr>
+  </table>
+  <p>Outcomes: <strong>Approve</strong> · <strong>Decline</strong> · <strong>Return to officer</strong> with notes. Operations/finance queues provide pre-committee control when configured.</p>
+<figure class="shot">
+  <img src="screenshots/print/24-ops-queue.png" alt="Operations manager queue" />
+  <figcaption>Figure 25 — Operation manager approval queue (pre-committee control).</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h2>11. Roles, Administration &amp; Reporting</h2>
+  <p>Sixteen role types out of the box — renamed and scoped to Ahadu Bank’s Branch → District/Region → Head Office model.</p>
+  <table>
+    <tr><th>Role family</th><th>Typical use</th></tr>
+    <tr><td>Loan officer / branch manager</td><td>Documents, appraisal, request creation, committee submit</td></tr>
+    <tr><td>Engineer / engineering head</td><td>Catalog, unit prices, field visits, engineering QA</td></tr>
+    <tr><td>Operations / finance managers</td><td>Pre-committee approval queues</td></tr>
+    <tr><td>District / executives / committee</td><td>Escalated reviews and voting</td></tr>
+    <tr><td>Risk / auditor</td><td>Review access and audit trails</td></tr>
+    <tr><td>Admin</td><td>Users, products, geography, policy</td></tr>
+  </table>
+  <figure class="shot">
+  <img src="screenshots/print/20-manage-users.png" alt="Figure 26 — User & role administration." />
+  <figcaption>Figure 26 — User &amp; role administration.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Branch master data &amp; reporting</h3>
+<figure class="shot">
+  <img src="screenshots/print/21-manage-branches.png" alt="Figure 27 — Branch master data aligned to bank geography." />
+  <figcaption>Figure 27 — Branch master data aligned to bank geography.</figcaption>
+</figure>
+<figure class="shot">
+  <img src="screenshots/print/14-reports.png" alt="Figure 28 — Reporting / generate report options for management information." />
+  <figcaption>Figure 28 — Reporting options for management information.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h3>Field tablet checklist</h3>
+<figure class="shot">
+  <img src="screenshots/print/19-field-checklist.png" alt="Figure 29 — Field tablet checklist supporting offline collateral operations." />
+  <figcaption>Figure 29 — Field tablet checklist supporting offline collateral operations.</figcaption>
+</figure>
+</section>
+
+<section class="screen pagebreak">
+  <h2>12. Core Banking Integration &amp; Security</h2>
+  <p>AI-powered Credit Intelligence is the <strong>credit factory</strong>. Core banking remains the system of record for accounts and disbursement. There is no Temenos-class rip-and-replace.</p>
+  <div class="three">
+    <div class="box green"><h4>Customer lookup</h4><p>Customer number → party API → name, phone, TIN, address, gender, status (Temenos-style aliases supported).</p></div>
+    <div class="box green"><h4>Smart prefill</h4><p>Fills empty Sheet 1 fields; conflicts listed for Accept; provenance retained (banking / OCR / officer).</p></div>
+    <div class="box green"><h4>Disbursement handoff</h4><p>After final approval, booking and fund release stay in CBS.</p></div>
+  </div>
+  <h3>Controls Risk will respect</h3>
+  <ul>
+    <li>Role-based access on every screen</li>
+    <li>Document authentication status trail</li>
+    <li>Field-source provenance</li>
+    <li>Hard &amp; soft policy gates</li>
+    <li>Collateral lock + supervised unlock</li>
+    <li>Field audit log (GPS, photos, unlocks, QA)</li>
+    <li>Engineering dual control when enabled</li>
+    <li>Committee votes with thresholds &amp; return notes</li>
+    <li>Evidence pack / dossier export (PDF/JSON/ZIP)</li>
+    <li>E&amp;S screening with eligibility decisions</li>
+    <li>NBE credit-report / bureau flags on file</li>
+    <li>Aligned to NBE credit governance expectations</li>
+  </ul>
+  <h3>Technology</h3>
+  <p>Python / Django, PostgreSQL, Docker — on-premises or private cloud with bank-controlled data residency. Optional REST API for future channel integrations. Tesseract OCR (<code>eng+amh</code>). Leaflet maps for collateral.</p>
+</section>
+
+<section class="screen pagebreak">
+  <h2>13. Complete Capability Catalog</h2>
+  <table>
+    <tr><th>Area</th><th>What Ahadu Bank gets</th></tr>
+    <tr><td>Intake</td><td>Loan requests, officer assignment, customer #, products, status tracking across branches</td></tr>
+    <tr><td>Documents</td><td>Configurable types, OCR eng+amh, identity match, integrity checks, verify/reject workflow</td></tr>
+    <tr><td>Appraisal</td><td>MSME + corporate 7-step cashflow; qualitative; DSCR; E&amp;S 21 items; scorecard; assist; amortization</td></tr>
+    <tr><td>Collateral</td><td>Building BOQ catalog, land, movable; GPS rules; offline PWA; maps; coverage; evidence pack</td></tr>
+    <tr><td>Governance</td><td>Lock/unlock, engineering QA, audit log, policy config</td></tr>
+    <tr><td>Approvals</td><td>Ops/finance queues; 4-level committee; branch overrides; notifications</td></tr>
+    <tr><td>Admin</td><td>Geography, branches, users, categories, bulk CSV imports, analysis policy</td></tr>
+    <tr><td>Tech</td><td>Django + PostgreSQL + Docker; CBS customer API; optional REST</td></tr>
+  </table>
+  <h2>14. Problem → Solution → Benefit Matrix</h2>
+  <table>
+    <tr><th>Problem</th><th>Hub response</th><th>Benefit</th></tr>
+    <tr><td>Slow multi-level approvals</td><td>Digital queues, notifications, amount routing, return-with-notes</td><td>Weeks → days</td></tr>
+    <tr><td>Inconsistent Excel appraisal</td><td>Mandatory 7-step MSME/corporate wizard + completeness gates</td><td>One standard bank-wide</td></tr>
+    <tr><td>Incomplete / fake documents</td><td>Eng+Amh OCR, identity match, integrity checks, verify trail</td><td>Fewer rejections &amp; fraud gaps</td></tr>
+    <tr><td>Weak collateral evidence</td><td>GPS rules, lock, eng QA, evidence pack</td><td>Committee-ready proof</td></tr>
+    <tr><td>No pipeline visibility</td><td>Role dashboards &amp; status by branch</td><td>Manage by exception</td></tr>
+    <tr><td>Audit / NBE exposure</td><td>Scorecard, E&amp;S, votes, field audit, dossier export</td><td>Audit in hours, not days</td></tr>
+    <tr><td>CBS vs appraisal mismatch</td><td>Customer # lookup + conflict-aware prefill</td><td>Less re-keying, cleaner KYC</td></tr>
+    <tr><td>Rural connectivity</td><td>Offline collateral PWA with later sync</td><td>Field work continues</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>15. Reference Case — DECSI</h2>
+  <p>Designed around Dedebit Credit and Savings Institution (DECSI) practices — branch → district → HO, construction-based building valuation, and cashflow MSME appraisal.</p>
+  <div class="kpi">
+    <div><div class="v">50,000+</div><div class="l">Loan applicants</div></div>
+    <div><div class="v">30,000+</div><div class="l">Approved loans</div></div>
+    <div><div class="v">9+ Bn</div><div class="l">Birr disbursed (scale)</div></div>
+    <div><div class="v">12–18 mo</div><div class="l">Projected break-even</div></div>
+  </div>
+  <p>Expected operational benefits: 50–70% wait-time reduction, weeks-to-days multi-level approvals, 95%+ document completeness.<br>
+  <strong>Reference:</strong> Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978.</p>
+  <h2>16. Business Case, ROI &amp; Cost of Inaction</h2>
+  <div class="two">
+    <div class="box green"><h4>Revenue &amp; growth</h4><ul><li>Faster turnaround → higher MSME conversion</li><li>More files per officer without proportional headcount</li><li>Competitive edge vs paper/Excel banks</li></ul></div>
+    <div class="box green"><h4>Cost &amp; risk</h4><ul><li>Less courier, printing, rework, overtime</li><li>Fewer weak approvals via DSCR/E&amp;S/coverage gates</li><li>Lower audit cost via digital dossiers</li></ul></div>
+  </div>
+  <h3>Cost of waiting</h3>
+  <ul>
+    <li>Competitors digitize first — MSME customers choose banks that answer in days.</li>
+    <li>Portfolio quality drift — Excel variance creates invisible underwriting gaps.</li>
+    <li>Staff cost rises with volume — without better control.</li>
+    <li>Audit pressure rises as volume grows.</li>
+  </ul>
+  <h3>Build vs buy</h3>
+  <table>
+    <tr><th>Build yourself</th><th>Deploy AI-powered Credit Intelligence with Seqela</th></tr>
+    <tr><td>12–24+ months to parity; rediscover GPS/committee/appraisal edge cases; delayed credit factory</td><td>Proven Ethiopian MFI ops; Excel-faithful appraisal + GPS governance built; pilot in ~6 months</td></tr>
+  </table>
+</section>
+
+<section class="screen pagebreak">
+  <h2>17. Implementation Roadmap (6 Months to Pilot)</h2>
+  <table>
+    <tr><th>Phase</th><th>Timing</th><th>Focus</th></tr>
+    <tr><td>Discovery</td><td>Month 1</td><td>Credit policy workshop, hierarchy mapping, CBS interface design, pilot selection, KPIs</td></tr>
+    <tr><td>Configure &amp; integrate</td><td>Months 2–4</td><td>Appraisal modes, collateral catalog, committees, customer API, notifications, OB branding</td></tr>
+    <tr><td>UAT &amp; harden</td><td>Month 5</td><td>Credit / Engineering / Risk UAT, security review, parallel-run samples</td></tr>
+    <tr><td>Pilot &amp; train</td><td>Month 6</td><td>Pilot go-live, role training, hypercare, national rollout plan</td></tr>
+  </table>
+  <p><strong>Configured for Ahadu Bank:</strong> branding, role hierarchy, loan products, appraisal modes, committee thresholds, collateral unit-price catalog, CBS hooks, policy gates (DSCR, E&amp;S, coverage).</p>
+  <p><strong>Pilot success metrics (agreed upfront):</strong> cycle time, document completeness %, committee return rate, collateral coverage adequacy, audit retrieval time.</p>
+  <h2>18. Engagement Model &amp; Next Steps</h2>
+  <h3>Low-risk path to “yes”</h3>
+  <ol>
+    <li>90-minute live demonstration for Credit, IT, and Risk (walk the screens in this document live)</li>
+    <li>2–3 week discovery and solution blueprint</li>
+    <li>Fixed-scope pilot (selected products and branches)</li>
+    <li>KPI review → network rollout with SLAs and support</li>
+  </ol>
+  <h3>What we need from Ahadu Bank</h3>
+  <ul>
+    <li>Executive sponsor (Credit / Digital)</li>
+    <li>Sample MSME and corporate policy packs</li>
+    <li>CBS customer API contact / sandbox</li>
+    <li>Pilot branch and product shortlist</li>
+    <li>Success KPIs agreed upfront</li>
+  </ul>
+  <p>Detailed commercial terms (license/subscription, implementation, training, annual support) are issued after discovery confirms scope, integration depth, and hosting model.</p>
+  <div class="callout">
+    <strong>Decide this week:</strong> Book the demo → share sample policy → name the pilot → receive discovery SOW and commercial quote.<br><br>
+    <strong>Seqela</strong> · info@seqela.com · +251 964 790 724 · seqela.com
+  </div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>19. Closing</h2>
+  <p>Seqela is ready to help Ahadu Bank extend its digital leadership into disciplined, high-quality institutional credit origination — preserving credit standards while compressing cycle times and strengthening audit readiness.</p>
+  <p><strong>Ahadu Le Kulu and Mahder showed what digital banking can be for customers and MSMEs.<br>AI-powered Credit Intelligence shows what secured institutional credit can be for the bank.</strong></p>
+  <p>The screenshots in this proposal are not aspirational art — they are the working system. A live walkthrough can be arranged immediately for Credit, IT, and Risk leadership.</p>
+
+  <h2>20. Appendix A — Screenshot Index</h2>
+  <table>
+    <tr><th>Fig</th><th>File</th><th>Shows</th></tr>
+    <tr><td>1</td><td>system_flow.png</td><td>End-to-end lifecycle diagram</td></tr>
+    <tr><td>2</td><td>02-dashboard-home.png</td><td>Management dashboard &amp; KPIs</td></tr>
+    <tr><td>3</td><td>03-loan-list.png</td><td>Loan request pipeline</td></tr>
+    <tr><td>4</td><td>04b-officer-loan-detail.png</td><td>Officer loan detail</td></tr>
+    <tr><td>5</td><td>16-create-loan.png</td><td>Create loan request</td></tr>
+    <tr><td>6</td><td>05-documents.png</td><td>Document auth workflow</td></tr>
+    <tr><td>7–11</td><td>06-appraisal-step*.png</td><td>MSME appraisal sheets</td></tr>
+    <tr><td>12–16</td><td>31-corporate-step*.png / pack</td><td>Corporate appraisal mode</td></tr>
+    <tr><td>17</td><td>06-appraisal-step7.png</td><td>Amortization / Sheet 7</td></tr>
+    <tr><td>18</td><td>10-field-visit.png</td><td>GPS field visit + offline</td></tr>
+    <tr><td>19</td><td>12-evidence-pack.png</td><td>Collateral evidence pack</td></tr>
+    <tr><td>20</td><td>13-collateral-policy.png</td><td>Collateral policy config</td></tr>
+    <tr><td>21–25</td><td>committee / ops screens</td><td>Submit, queue, vote, pack, ops</td></tr>
+    <tr><td>26–29</td><td>admin / reports / checklist</td><td>Users, branches, reports, field checklist</td></tr>
+  </table>
+
+  <h2>Appendix B — Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>DSCR</td><td>Debt Service Coverage Ratio — cashflow available vs debt service</td></tr>
+    <tr><td>E&amp;S</td><td>Environmental &amp; Social assessment</td></tr>
+    <tr><td>CBS</td><td>Core Banking System</td></tr>
+    <tr><td>BOQ</td><td>Bill of Quantities — construction valuation breakdown</td></tr>
+    <tr><td>PWA</td><td>Progressive Web App — offline-capable field client</td></tr>
+    <tr><td>NBE</td><td>National Bank of Ethiopia</td></tr>
+  </table>
+
+  <div class="footer">
+    <p><strong>Seqela</strong> · info@seqela.com · +251 964 790 724 · seqela.com</p>
+    <p>Confidential — for Ahadu Bank evaluation only. Companion slide deck: <em>ahadu_bank_loan_hub_proposal.html</em>.</p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

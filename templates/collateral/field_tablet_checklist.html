@@ -22,10 +22,29 @@
 {% block content %}
 <div class="field-check-page">
   <h1>Tablet field checklist</h1>
-  <p class="lead">Use this before leaving the branch and on site. GPS and camera need a <strong>secure page</strong> (HTTPS or localhost).</p>
+  <p class="lead">Download the loan pack on branch Wi‑Fi, work on site with no internet, sync when you return. GPS/camera still need HTTPS when you first install.</p>
 
   <div id="secure-context-banner" class="offline-status-banner offline-syncing" role="status">
     <span id="secure-context-text">Checking this device…</span>
+  </div>
+
+  <div class="check-card">
+    <h2>The model (pack → work → sync)</h2>
+    <ol>
+      <li><span class="ctx-ok">Download for offline</span> caches this loan’s field steps + scripts on the phone.</li>
+      <li><span class="ctx-ok">Install app</span> (Add to Home Screen). On site open that icon only — do not type an IP.</li>
+      <li>Captures queue on the phone. Back on PC Wi‑Fi, tap <strong>Sync now</strong>.</li>
+    </ol>
+    <p><span class="ctx-warn">Not magic remote access:</span> the phone cannot invent a path to a PC that is off the network. After download, the phone itself is the source of the pages.</p>
+  </div>
+
+  <div class="check-card">
+    <h2>Important: phone hotspot vs PC hotspot</h2>
+    <ul>
+      <li><span class="ctx-bad">Problem setup:</span> phone hotspot → PC joins → you walk away with the phone. The PC drops and Chrome tries the dead IP.</li>
+      <li><span class="ctx-ok">Better:</span> PC hotspot (or travel router); phone joins while downloading.</li>
+      <li><span class="ctx-ok">True offline test:</span> After Download + Install, Airplane Mode → Home Screen app → loan still opens. If not, do not leave yet.</li>
+    </ul>
   </div>
 
   <div class="check-card">
@@ -38,45 +57,46 @@
   </div>
 
   <div class="check-card">
-    <h2>2. Before leaving the branch (online)</h2>
+    <h2>2. Before leaving the branch (on PC Wi‑Fi)</h2>
     <ol>
-      <li>Open the app on the tablet via <strong>HTTPS</strong> (or <code>http://localhost</code> only on the laptop itself — phones need HTTPS).</li>
-      <li>Accept the certificate warning once if using the local self-signed cert.</li>
-      <li>Log in, open the loan → <strong>Field visit</strong> (or Summary).</li>
-      <li>Tap <strong>Prepare offline</strong> so the loan is cached on this device.</li>
-      <li>Optional: add the PWA to the home screen (browser menu → Install / Add to Home Screen).</li>
+      <li>Phone on same Wi‑Fi / hotspot as the PC.</li>
+      <li>Open <strong>https://&lt;pc-lan-ip&gt;:8443</strong>, accept the certificate once.</li>
+      <li>Log in → loan → <strong>Field visit</strong>.</li>
+      <li>Tap <strong>Download for offline</strong> until it says the loan pack is ready.</li>
+      <li><strong>Install / Add to Home Screen</strong> (required).</li>
+      <li>Airplane Mode test: open installed app → field visit still works.</li>
     </ol>
   </div>
 
   <div class="check-card">
-    <h2>3. On site (weak or no signal)</h2>
+    <h2>3. On site</h2>
     <ol>
-      <li>Keep using the same tablet browser / installed PWA.</li>
-      <li>Mark site GPS, take photos, enter BOQ / asset details — they queue on the device when offline.</li>
-      <li>Do <strong>not</strong> expect final <strong>Submit collateral</strong> offline (policy and coverage stay online).</li>
+      <li>Open the <strong>Home Screen app</strong> only (starts on Offline packs).</li>
+      <li>Tap the prepared loan → field visit steps.</li>
+      <li>Capture GPS/photos — they queue on the device.</li>
+      <li>Final <strong>Submit collateral</strong> stays online after sync.</li>
     </ol>
   </div>
 
   <div class="check-card">
-    <h2>4. Back online</h2>
+    <h2>4. Back with the PC</h2>
     <ol>
-      <li>Reconnect to branch Wi‑Fi or mobile data.</li>
-      <li>Tap <strong>Sync now</strong> (or wait for auto-sync) until the pending badge clears.</li>
-      <li>Finish review, then <strong>Submit collateral</strong> from Summary.</li>
+      <li>Reconnect phone to PC Wi‑Fi / hotspot.</li>
+      <li>Auto-retry runs, or tap <strong>Sync now</strong>.</li>
+      <li>Use <strong>Retry abandoned</strong> if needed, then submit from Summary.</li>
     </ol>
   </div>
 
   <div class="check-card">
-    <h2>5. Ops: enable HTTPS for LAN tablets</h2>
-    <p>On the server / laptop that runs Docker:</p>
+    <h2>5. Ops: enable HTTPS for tablets</h2>
     <div class="code-block">./scripts/gen_field_https_certs.sh
-docker compose -f docker-compose.yml -f docker-compose.https.yml up --build</div>
-    <p style="margin-top:0.75rem;">Then open <code>https://&lt;this-machine-lan-ip&gt;:8443</code> on the tablet. Laptop testing can stay on <code>http://localhost:8000</code>.</p>
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d</div>
+    <p style="margin-top:0.75rem;">Phone URL: <code>https://&lt;pc-lan-ip&gt;:8443</code></p>
   </div>
 
   <p>
     <a href="{% url 'collateral:dashboard' %}" class="btn btn-blue">Collateral dashboard</a>
-    <a href="{% url 'collateral:offline_manifest' %}" class="btn btn-gray">PWA manifest</a>
+    <a href="{% url 'collateral:offline_shell' %}" class="btn btn-gray">Offline shell</a>
   </p>
 </div>
 <script>

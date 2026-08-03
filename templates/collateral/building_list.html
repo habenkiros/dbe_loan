@@ -58,6 +58,12 @@
                     {% include "includes/list_action.html" with href=img_url icon="summary" label="Images" tone="gray" only %}
                     {% url 'collateral:building_edit' b.id as edit_url %}
                     {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit building" tone="blue" only %}
+                    {% if not locked %}
+                    <form method="post" action="{% url 'collateral:building_delete' b.id %}" style="display:inline;" onsubmit="return confirm('Remove this building and its BOQ/photos?');">
+                        {% csrf_token %}
+                        {% include "includes/list_action_submit.html" with icon="delete" label="Remove building" tone="red" only %}
+                    </form>
+                    {% endif %}
                     </div>
                 </td>
             </tr>

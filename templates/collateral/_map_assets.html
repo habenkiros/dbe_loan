@@ -1,11 +1,14 @@
 {% load static %}
-{# Phase 2: Gebeta tiles via MapLibre when keyed; Leaflet/OSM fallback. Docs: https://docs.gebeta.app/docs #}
+{# Local Leaflet for offline field visits (CDN fails when PC/hotspot unreachable). #}
 {% if map_provider.map_tiles_provider == 'gebeta' and map_provider.gebeta_maps_configured %}
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
+{# Gebeta GL optional when online; Leaflet always available offline #}
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
 {% else %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}"></script>
 {% endif %}
 <script>
 window.COLLATERAL_MAP_PROVIDER = {
@@ -20,5 +23,8 @@ window.COLLATERAL_MAP_PROVIDER = {
   },
   docsUrl: "{{ map_provider.gebeta_maps_docs|default:'https://docs.gebeta.app/docs'|escapejs }}"
 };
+if (window.L && L.Icon && L.Icon.Default) {
+  L.Icon.Default.imagePath = "{% static 'vendor/leaflet/images/' %}";
+}
 </script>
-<script src="{% static 'js/collateral_map.js' %}"></script>
+<script src="{% static 'js/collateral_map.js' %}?v=map-offline-1"></script>

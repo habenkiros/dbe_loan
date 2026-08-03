@@ -111,6 +111,11 @@ def schedule_summary(loan_request, appraisal=None) -> Dict[str, Any]:
 
 def disbursement_readiness(loan_request) -> Dict[str, Any]:
     blockers = []
+    # Repair stuck committee routing (e.g. advanced to District after amount bands changed).
+    if not is_post_approval(loan_request) and loan_request.committee_status == loan_request.COMMITTEE_PENDING:
+        from loans.committee import reconcile_approval_routing
+        reconcile_approval_routing(loan_request)
+        loan_request.refresh_from_db()
     if not is_post_approval(loan_request):
         blockers.append('Loan must be committee-approved first.')
     open_cps = open_required_cps(loan_request)

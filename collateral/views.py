@@ -1,7 +1,7 @@
 # collateral/views.py
 from collections import OrderedDict
 from decimal import Decimal
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -68,9 +68,25 @@ def _can_request_collateral_unlock(user, loan_request) -> bool:
         loan_request=loan_request, status=CollateralUnlockRequest.STATUS_PENDING,
     ).exists():
         return False
-    if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+
+    from .engineering_qa import engineering_review_required
+    from loans.models import LoanRequest
+
+    role = getattr(user, 'role', None)
+    # When engineering QA is on, only the engineering team may reopen locked collateral.
+    # Pending review: no unlock requests — use Engineering "Return for correction".
+    if engineering_review_required():
+        if loan_request.collateral_engineering_status == LoanRequest.ENG_COLLATERAL_PENDING:
+            return False
+        if role in ('engineering_head', 'admin', 'superadmin'):
+            return True
+        if role == 'engineer' and loan_request.assigned_engineer_id == user.id:
+            return True
+        return False
+
+    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
         return True
-    if user.role == 'engineer' and loan_request.assigned_engineer_id == user.id:
+    if role == 'engineer' and loan_request.assigned_engineer_id == user.id:
         return True
     if loan_request.collateral_submitted_by_id == user.id:
         return True
@@ -83,7 +99,13 @@ def _can_review_collateral_unlock(user, loan_request) -> bool:
         return True
     if role == 'engineering_head':
         return True
-    if role == 'branch_manager' and getattr(user, 'branch_id', None) == loan_request.branch_id:
+    from .engineering_qa import engineering_review_required
+    # Branch managers only approve unlocks when engineering QA is not the gatekeeper.
+    if (
+        not engineering_review_required()
+        and role == 'branch_manager'
+        and getattr(user, 'branch_id', None) == loan_request.branch_id
+    ):
         return True
     return False
 
@@ -119,10 +141,52 @@ def _collateral_eligible_loans(user=None):
                 qs = qs.none()
         elif role == 'engineering_head':
             if mode in ('engineering_team', 'both'):
-                qs = qs.filter(sent_to_engineering_at__isnull=False)
+                # Include LO-submitted collateral awaiting QA (may never set sent_to_engineering_at).
+                qs = qs.filter(
+                    Q(sent_to_engineering_at__isnull=False)
+                    | Q(collateral_submitted_at__isnull=False)
+                    | Q(collateral_engineering_status__in=(
+                        LoanRequest.ENG_COLLATERAL_PENDING,
+                        LoanRequest.ENG_COLLATERAL_RETURNED,
+                        LoanRequest.ENG_COLLATERAL_APPROVED,
+                    ))
+                )
             else:
                 qs = qs.none()
     return qs
+
+
+def _user_can_access_loan_collateral(user, loan_request) -> bool:
+    """
+    Whether the user may open this loan's collateral field/summary pages.
+    Broader than dashboard listing: engineering reviewers must open field evidence
+    even when the loan is not in their estimation assignment list.
+    """
+    if not user or not getattr(user, 'is_authenticated', False) or loan_request is None:
+        return False
+    if _collateral_eligible_loans(user).filter(pk=loan_request.pk).exists():
+        return True
+    role = getattr(user, 'role', None)
+    if role in ('admin', 'superadmin'):
+        return True
+    if role == 'branch_manager' and getattr(user, 'branch_id', None) == loan_request.branch_id:
+        return True
+    if allows_engineering_team():
+        if role == 'engineering_head':
+            return True
+        if role == 'engineer' and loan_request.assigned_engineer_id == user.id:
+            return True
+        from .engineering_qa import can_review_engineering
+        if can_review_engineering(user, loan_request):
+            return True
+    return False
+
+
+def _require_loan_collateral_access(user, loan_request):
+    """Raise 404 when the user cannot access this loan's collateral pages."""
+    if not _user_can_access_loan_collateral(user, loan_request):
+        raise Http404('No LoanRequest matches the given query.')
+    return loan_request
 
 
 @login_required
@@ -272,6 +336,24 @@ def building_edit(request, building_id):
         'zones_url': request.build_absolute_uri(reverse('ajax_load_zones_by_region')),
         'cities_url': request.build_absolute_uri(reverse('ajax_load_cities_by_zone')),
     })
+
+
+@login_required
+@user_passes_test(_can_access_collateral)
+def building_delete(request, building_id):
+    """Remove a building (and cascaded BOQ/photos) until collateral is submitted."""
+    building = get_object_or_404(Building, pk=building_id)
+    loan_request = building.loan_request
+    loan_request_id = loan_request.pk
+    if request.method != 'POST':
+        return redirect('collateral:building_list', loan_request_id=loan_request_id)
+    blocked = block_if_collateral_locked(request, loan_request, 'collateral:building_list', loan_request_id)
+    if blocked:
+        return blocked
+    name = building.name
+    building.delete()
+    messages.success(request, f'Building “{name}” removed.')
+    return redirect('collateral:building_list', loan_request_id=loan_request_id)
 
 
 @login_required
@@ -663,8 +745,7 @@ def field_visit(request, building_id, step=1):
         Building.objects.select_related('loan_request', 'loan_request__collateral', 'city', 'city__zone', 'city__zone__region'),
         pk=building_id,
     )
-    loan_request = building.loan_request
-    get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request.pk)
+    loan_request = _require_loan_collateral_access(request.user, building.loan_request)
 
     step = int(step)
     if step < 1 or step > 4:
@@ -771,7 +852,11 @@ def field_visit(request, building_id, step=1):
 @user_passes_test(_can_access_collateral)
 def land_field_visit(request, loan_request_id, step=1):
     """Field visit for land collateral: details + GPS → photos → review."""
-    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
+    loan_request = get_object_or_404(
+        LoanRequest.objects.filter(Q(queue_approved=True) | Q(status__iexact='Approved')),
+        pk=loan_request_id,
+    )
+    _require_loan_collateral_access(request.user, loan_request)
     land, _ = LandValuation.objects.get_or_create(loan_request=loan_request)
     step = int(step)
     if step < 1 or step > 3:
@@ -839,8 +924,7 @@ def land_field_visit(request, loan_request_id, step=1):
 def other_field_visit(request, item_id, step=1):
     """Field visit for vehicle / machinery / equipment: details + GPS → photos → review."""
     item = get_object_or_404(OtherCollateralItem.objects.select_related('loan_request'), pk=item_id)
-    loan_request = item.loan_request
-    get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request.pk)
+    loan_request = _require_loan_collateral_access(request.user, item.loan_request)
     step = int(step)
     if step < 1 or step > 3:
         return redirect('collateral:other_field_visit', item_id=item_id)
@@ -1263,11 +1347,13 @@ def collateral_submit(request, loan_request_id):
 
     eng_status = initial_engineering_status(request.user)
     loan_request.collateral_engineering_status = eng_status
+    loan_request.collateral_engineering_return_note = ''
     if eng_status == LoanRequest.ENG_COLLATERAL_APPROVED:
         loan_request.collateral_engineering_reviewed_at = timezone.now()
         loan_request.collateral_engineering_reviewed_by = request.user
     update_fields = [
-        'collateral_submitted_at', 'collateral_submitted_by', 'collateral_engineering_status',
+        'collateral_submitted_at', 'collateral_submitted_by',
+        'collateral_engineering_status', 'collateral_engineering_return_note',
     ]
     if eng_status == LoanRequest.ENG_COLLATERAL_APPROVED:
         update_fields.extend(['collateral_engineering_reviewed_at', 'collateral_engineering_reviewed_by'])

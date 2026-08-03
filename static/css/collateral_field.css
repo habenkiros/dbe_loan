@@ -23,19 +23,27 @@
   display: flex;
   gap: 0.35rem;
   margin: 1rem 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.field-stepper::-webkit-scrollbar {
+  display: none;
 }
 .field-stepper a {
-  flex: 1;
-  min-width: 4.5rem;
+  flex: 0 0 auto;
+  min-width: 5.5rem;
   text-align: center;
-  padding: 0.5rem 0.35rem;
-  border-radius: 8px;
+  padding: 0.65rem 0.6rem;
+  border-radius: 999px;
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   border: 2px solid #dee2e6;
   color: #333;
   background: #fff;
+  white-space: nowrap;
 }
 .field-stepper a.active {
   border-color: #064420;
@@ -49,9 +57,10 @@
 .field-card {
   background: #fff;
   border: 1px solid #dee2e6;
-  border-radius: 10px;
-  padding: 1rem;
+  border-radius: 14px;
+  padding: 1rem 0.95rem;
   margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .field-card h3 {
   margin: 0 0 0.75rem;
@@ -59,13 +68,16 @@
 }
 .field-btn {
   display: inline-block;
-  padding: 0.75rem 1.25rem;
+  padding: 0.9rem 1.1rem;
   font-size: 1rem;
-  border-radius: 8px;
+  font-weight: 600;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   text-decoration: none;
   text-align: center;
+  min-height: 48px;
+  box-sizing: border-box;
 }
 .field-btn-primary {
   background: #064420;
@@ -87,7 +99,7 @@
   right: 0;
   background: #fff;
   border-top: 1px solid #ccc;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.9rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   gap: 0.5rem;
   z-index: 100;
@@ -97,10 +109,10 @@
   flex: 1;
 }
 .field-gps-status {
-  padding: 0.65rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  margin: 0.5rem 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  margin: 0.65rem 0;
 }
 .field-gps-ok { background: #d4edda; color: #155724; }
 .field-gps-warn { background: #fff3cd; color: #856404; }
@@ -122,15 +134,15 @@
 .field-check-fail { color: #856404; font-weight: 700; }
 .field-photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
   margin: 0.75rem 0;
 }
 .field-photo-grid img {
   width: 100%;
-  height: 100px;
+  height: 128px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 10px;
   border: 1px solid #ddd;
 }
 .field-boq-row {
@@ -158,10 +170,10 @@
 }
 .field-input-lg {
   width: 100%;
-  padding: 0.6rem;
+  padding: 0.85rem 0.9rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 12px;
   box-sizing: border-box;
 }
 .field-locked-banner {
@@ -329,8 +341,71 @@
 }
 .field-photo-meta {
   display: block;
-  margin-top: 0.2rem;
-  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.field-section-note {
+  margin: 0 0 0.85rem;
+  color: #475467;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.field-status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0.9rem;
+}
+.field-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  background: #f2f4f7;
+  border: 1px solid #e4e7ec;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.field-status-pill.ok {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+  color: #155724;
+}
+.field-status-pill.warn {
+  background: #fff8e1;
+  border-color: #ffe082;
+  color: #8a5b00;
+}
+.field-action-stack {
+  display: grid;
+  gap: 0.65rem;
+}
+.field-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.field-upload-hint {
+  margin: 0.15rem 0 0;
+  color: #667085;
+  font-size: 0.82rem;
+}
+.field-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.field-photo-capture .field-photo-primary-actions .field-btn-primary {
+  background: #0b5d2a;
 }
 .field-gps-warn-text {
   color: #c62828;
@@ -365,4 +440,35 @@
 }
 @media (min-width: 768px) {
   .field-visit-header { margin-left: 0; margin-right: 0; border-radius: 8px; }
+  .field-photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .field-visit-wrap {
+    padding-bottom: 6.2rem;
+  }
+  .field-visit-header {
+    padding: 1rem 1rem 0.9rem;
+  }
+  .field-visit-header h1 {
+    font-size: 1.15rem;
+  }
+  .field-card {
+    padding: 0.9rem 0.8rem;
+    border-radius: 12px;
+  }
+  .field-stepper a {
+    min-width: 5rem;
+    font-size: 0.8rem;
+  }
+  .field-action-row {
+    grid-template-columns: 1fr;
+  }
+  .field-sticky-bar {
+    gap: 0.4rem;
+  }
+  .field-btn {
+    padding: 0.95rem 1rem;
+  }
 }

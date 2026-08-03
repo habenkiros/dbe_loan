@@ -48,6 +48,88 @@ def get_levels_for_loan(loan_request) -> List:
     return [level for level in levels if level.applies_to_amount(amount)]
 
 
+def reconcile_approval_routing(loan_request) -> bool:
+    """
+    Align in-flight committee progress with current amount thresholds.
+
+    If a loan was advanced to District/HO under an older config, then the admin
+    tightened bands so only Branch applies, those higher pending levels are
+    skipped and the loan is finalized for disbursement when Branch already approved.
+
+    Returns True if the workflow was finalized to committee_approved.
+    """
+    from loans.models import LoanApprovalLevelProgress, LoanRequest
+
+    if loan_request.committee_status != LoanRequest.COMMITTEE_PENDING:
+        return False
+
+    applicable = get_levels_for_loan(loan_request)
+    applicable_ids = {level.id for level in applicable}
+    now = timezone.now()
+
+    # Skip pending progress rows for levels that no longer apply to this amount.
+    for prog in loan_request.approval_level_progress.filter(
+        status=LoanApprovalLevelProgress.STATUS_PENDING,
+    ).select_related('level'):
+        if prog.level_id not in applicable_ids:
+            prog.status = LoanApprovalLevelProgress.STATUS_SKIPPED
+            prog.completed_at = now
+            prog.save(update_fields=['status', 'completed_at'])
+
+    # Ensure a progress row exists for every currently applicable level.
+    for level in applicable:
+        LoanApprovalLevelProgress.objects.get_or_create(
+            loan_request=loan_request,
+            level=level,
+            defaults={
+                'status': LoanApprovalLevelProgress.STATUS_PENDING,
+                'started_at': None,
+                'completed_at': None,
+            },
+        )
+
+    next_level = None
+    for level in applicable:
+        prog = loan_request.approval_level_progress.filter(level=level).first()
+        if prog is None:
+            continue
+        if prog.status == LoanApprovalLevelProgress.STATUS_DECLINED:
+            return False
+        if prog.status == LoanApprovalLevelProgress.STATUS_PENDING:
+            next_level = level
+            break
+
+    if next_level is not None:
+        nprog = loan_request.approval_level_progress.filter(level=next_level).first()
+        updates = []
+        if nprog and nprog.started_at is None:
+            nprog.started_at = now
+            nprog.save(update_fields=['started_at'])
+        if loan_request.current_approval_level_id != next_level.id:
+            loan_request.current_approval_level = next_level
+            loan_request.save(update_fields=['current_approval_level'])
+            updates.append('current')
+        return False
+
+    # No applicable pending levels left.
+    last_approved = (
+        loan_request.approval_level_progress.filter(
+            status=LoanApprovalLevelProgress.STATUS_APPROVED,
+        )
+        .select_related('level')
+        .order_by('-completed_at', '-id')
+        .first()
+    )
+    if not last_approved:
+        # Nothing approved and nothing pending for this amount — keep pending
+        # (misconfigured bands can leave a hole with no applicable levels).
+        loan_request.current_approval_level = None
+        loan_request.save(update_fields=['current_approval_level'])
+        return False
+
+    return _finalize_committee_approved(loan_request, last_approved.level)
+
+
 def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
     """Levels that will run vs skipped, with amount-based reasons (for UI before/after submit)."""
     from loans.models import ApprovalCommitteeLevel
@@ -440,6 +522,10 @@ def get_approval_pipeline(loan_request, current_user=None) -> List[Dict[str, Any
 
 def get_committee_tally(loan_request, current_user=None) -> Dict[str, Any]:
     """Summary for templates: current level + full pipeline."""
+    # Auto-repair loans stuck on levels that no longer match amount bands.
+    if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
+        reconcile_approval_routing(loan_request)
+        loan_request.refresh_from_db()
     level = loan_request.current_approval_level
     current_tally = get_level_tally(loan_request, level, current_user) if level else None
     return {
@@ -635,7 +721,10 @@ def start_approval_workflow(loan_request) -> None:
         loan_request.committee_returned_by = None
 
     levels = get_levels_for_loan(loan_request)
+    level_ids = [level.id for level in levels]
     now = timezone.now()
+    # Drop stale progress from prior configs (levels that no longer apply).
+    loan_request.approval_level_progress.exclude(level_id__in=level_ids).delete()
     for i, level in enumerate(levels):
         LoanApprovalLevelProgress.objects.update_or_create(
             loan_request=loan_request,
@@ -677,6 +766,30 @@ def _resolve_final_amount(loan_request, appraisal, level) -> Optional[Decimal]:
     return None
 
 
+def _finalize_committee_approved(loan_request, level) -> bool:
+    """Mark loan committee-approved and open the disbursement track."""
+    appraisal = get_appraisal_for_loan(loan_request)
+    loan_request.committee_status = loan_request.COMMITTEE_APPROVED
+    loan_request.committee_final_decision = 'approve'
+    loan_request.committee_final_amount = _resolve_final_amount(loan_request, appraisal, level)
+    loan_request.committee_decided_at = timezone.now()
+    loan_request.date_reviewed = timezone.now()
+    loan_request.current_approval_level = None
+    loan_request.save(
+        update_fields=[
+            'committee_status', 'committee_final_decision', 'committee_final_amount',
+            'committee_decided_at', 'date_reviewed', 'current_approval_level',
+        ]
+    )
+    if appraisal and loan_request.committee_final_amount is not None:
+        appraisal.amount_approved = loan_request.committee_final_amount
+        appraisal.save(update_fields=['amount_approved'])
+    from loans.disbursement import start_disbursement_track
+    start_disbursement_track(loan_request)
+    _notify_committee_workflow(loan_request, event='approved', level=level)
+    return True
+
+
 def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
     """
     Mark level progress complete; advance to next level or finalize loan.
@@ -709,16 +822,28 @@ def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
         _notify_committee_workflow(loan_request, event='declined', level=level)
         return True
 
+    # Re-read amount bands after this level — config may have changed mid-flight.
+    if reconcile_approval_routing(loan_request):
+        return True
+
     levels = get_levels_for_loan(loan_request)
     try:
         idx = next(i for i, l in enumerate(levels) if l.id == level.id)
     except StopIteration:
-        idx = -1
+        # Current level no longer applies (e.g. amount band changed); reconcile handles it.
+        return reconcile_approval_routing(loan_request)
 
     next_level = levels[idx + 1] if idx + 1 < len(levels) else None
     if next_level:
-        nprog = loan_request.approval_level_progress.filter(level=next_level).first()
-        if nprog:
+        nprog, _created = LoanApprovalLevelProgress.objects.get_or_create(
+            loan_request=loan_request,
+            level=next_level,
+            defaults={
+                'status': LoanApprovalLevelProgress.STATUS_PENDING,
+                'started_at': timezone.now(),
+            },
+        )
+        if not _created:
             nprog.status = LoanApprovalLevelProgress.STATUS_PENDING
             nprog.started_at = timezone.now()
             nprog.save(update_fields=['status', 'started_at'])
@@ -727,32 +852,19 @@ def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
         _notify_committee_workflow(loan_request, event='advanced', level=level, next_level=next_level)
         return False
 
-    appraisal = get_appraisal_for_loan(loan_request)
-    loan_request.committee_status = LoanRequest.COMMITTEE_APPROVED
-    loan_request.committee_final_decision = 'approve'
-    loan_request.committee_final_amount = _resolve_final_amount(loan_request, appraisal, level)
-    loan_request.committee_decided_at = timezone.now()
-    loan_request.date_reviewed = timezone.now()
-    loan_request.current_approval_level = None
-    loan_request.save(
-        update_fields=[
-            'committee_status', 'committee_final_decision', 'committee_final_amount',
-            'committee_decided_at', 'date_reviewed', 'current_approval_level',
-        ]
-    )
-    if appraisal and loan_request.committee_final_amount is not None:
-        appraisal.amount_approved = loan_request.committee_final_amount
-        appraisal.save(update_fields=['amount_approved'])
-    from loans.disbursement import start_disbursement_track
-    start_disbursement_track(loan_request)
-    _notify_committee_workflow(loan_request, event='approved', level=level)
-    return True
+    return _finalize_committee_approved(loan_request, level)
 
 
 def try_finalize_level_decision(loan_request, level) -> bool:
     """Check votes at current level; advance or finalize if thresholds met."""
     if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
         return False
+    # Repair stuck routing before tallying (e.g. district pending after band change).
+    if reconcile_approval_routing(loan_request):
+        return True
+    loan_request.refresh_from_db()
+    if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
+        return True
     if loan_request.current_approval_level_id != level.id:
         return False
 

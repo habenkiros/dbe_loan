@@ -70,8 +70,10 @@
                     {% url 'collateral:other_collateral_edit' row.item.id as edit_url %}
                     {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit item" tone="blue" only %}
                     {% if not locked %}
-                    {% url 'collateral:other_collateral_delete' row.item.id as del_url %}
-                    {% include "includes/list_action.html" with href=del_url icon="delete" label="Remove item" tone="red" onclick="return confirm('Remove this collateral item?');" only %}
+                    <form method="post" action="{% url 'collateral:other_collateral_delete' row.item.id %}" style="display:inline;" onsubmit="return confirm('Remove this collateral item?');">
+                        {% csrf_token %}
+                        {% include "includes/list_action_submit.html" with icon="delete" label="Remove item" tone="red" only %}
+                    </form>
                     {% endif %}
                     </div>
                 </td>

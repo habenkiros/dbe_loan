@@ -23,6 +23,10 @@
   background: #e3f2fd;
   border-color: #90caf9;
 }
+.offline-status-banner.offline-warn {
+  background: #fff3e0;
+  border-color: #ffcc80;
+}
 .offline-status-banner .offline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -40,9 +44,36 @@
   font-weight: 700;
   text-align: center;
 }
+.offline-badge-abandoned {
+  background: #6d4c41;
+}
 .offline-help {
   width: 100%;
   margin: 0;
   font-size: 0.8rem;
   color: #546e7a;
+}
+@media (max-width: 480px) {
+  .offline-status-banner {
+    padding: 0.9rem;
+    border-radius: 12px;
+    gap: 0.6rem;
+  }
+  .offline-status-banner .offline-actions {
+    width: 100%;
+    margin-left: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .offline-status-banner .offline-actions .field-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  #offline-retry-abandoned-btn {
+    grid-column: 1 / -1;
+  }
+  .offline-help {
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
 }

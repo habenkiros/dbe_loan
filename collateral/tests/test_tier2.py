@@ -147,3 +147,80 @@ class CollateralTier2Tests(TestCase):
         readiness = get_other_item_readiness(vehicle)
         self.assertTrue(readiness['ready'])
         self.assertFalse(vehicle.site_gps_lat)
+
+    def test_pending_qa_blocks_officer_unlock_request(self):
+        from collateral.views import _can_request_collateral_unlock, _can_review_collateral_unlock
+
+        self.loan.collateral_submitted_at = timezone.now()
+        self.loan.collateral_submitted_by = self.officer
+        self.loan.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_PENDING
+        self.loan.save()
+        self.assertFalse(_can_request_collateral_unlock(self.officer, self.loan))
+        self.assertFalse(_can_request_collateral_unlock(self.engineer, self.loan))
+        eng_head = User.objects.create_user(
+            username='enghead2', password='pass', phone_number='0911000012', role='engineering_head',
+        )
+        self.assertTrue(_can_review_collateral_unlock(eng_head, self.loan))
+        bm = User.objects.create_user(
+            username='bm2', password='pass', phone_number='0911000013',
+            role='branch_manager', branch=self.loan.branch,
+        )
+        self.assertFalse(_can_review_collateral_unlock(bm, self.loan))
+
+    def test_engineering_head_can_open_other_field_visit_for_qa(self):
+        """QA review links must not 404 when loan was never 'sent to engineering'."""
+        from django.test import Client
+        from django.urls import reverse
+        from collateral.models import OtherCollateralItem
+        from collateral.views import _user_can_access_loan_collateral
+
+        eng_head = User.objects.create_user(
+            username='enghead_qa', password='pass', phone_number='0911000099', role='engineering_head',
+        )
+        item = OtherCollateralItem.objects.create(
+            loan_request=self.loan,
+            name='Sample movable asset',
+            estimated_value=Decimal('100000'),
+        )
+        self.loan.collateral_submitted_at = timezone.now()
+        self.loan.collateral_submitted_by = self.officer
+        self.loan.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_PENDING
+        self.loan.sent_to_engineering_at = None
+        self.loan.save()
+        self.assertTrue(_user_can_access_loan_collateral(eng_head, self.loan))
+        client = Client()
+        self.assertTrue(client.login(username='enghead_qa', password='pass'))
+        res = client.get(reverse('collateral:other_field_visit', args=[item.pk]))
+        self.assertEqual(res.status_code, 200, res.content[:300])
+        self.assertContains(res, 'Sample movable asset')
+
+    def test_summary_shows_return_note_after_engineering_return(self):
+        from django.template.loader import render_to_string
+        from collateral.pipeline import collateral_pipeline_stage, pipeline_stage_label
+
+        self.loan.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_RETURNED
+        self.loan.collateral_engineering_return_note = 'Add clearer front facade photos.'
+        self.loan.collateral_submitted_at = None
+        self.loan.collateral_submitted_by = None
+        self.loan.save()
+
+        # Template-level check (LO visibility depends on estimation mode config).
+        html = render_to_string('collateral/summary.html', {
+            'loan_request': self.loan,
+            'collateral_type_lower': 'building',
+            'grand_total': Decimal('0'),
+            'coverage': {},
+            'can_submit_collateral': True,
+            'submit_blockers': [],
+            'loan_readiness': {'applies': False},
+            'min_images_per_building': 3,
+            'buildings_below_image_min': [],
+            'can_request_unlock': False,
+            'pending_unlock': None,
+            'pipeline_stage': collateral_pipeline_stage(self.loan),
+            'pipeline_label': pipeline_stage_label(collateral_pipeline_stage(self.loan)),
+        })
+        self.assertIn('Returned for correction by engineering', html)
+        self.assertIn('Add clearer front facade photos.', html)
+        self.assertIn('Resubmit collateral', html)
+        self.assertIn('What to fix:', html)

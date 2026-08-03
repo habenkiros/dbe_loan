@@ -114,9 +114,18 @@
   {% elif step == 2 %}
   <div class="field-card">
     <h3>Step 2 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
+    <div class="field-status-pills">
+      <span class="field-status-pill {% if readiness.image_count >= min_images %}ok{% else %}warn{% endif %}">Photos {{ readiness.image_count }}/{{ min_images }}</span>
+      <span class="field-status-pill">GPS on save</span>
+      {% if visit_kind == 'other' %}
+      <span class="field-status-pill warn">Plate + asset + serial needed</span>
+      {% else %}
+      <span class="field-status-pill">Plot evidence</span>
+      {% endif %}
+    </div>
     {% if visit_kind == 'other' %}
     {% include "collateral/_other_asset_summary.html" %}
-    <p class="help">Capture <strong>plate</strong>, <strong>full asset</strong>, and <strong>serial/chassis</strong> photos (required). GPS is taken when you save each photo.</p>
+    <p class="field-section-note">Capture <strong>plate</strong>, <strong>full asset</strong>, and <strong>serial/chassis</strong> photos. GPS is taken when you save each photo.</p>
     {% if required_photo_type_status %}
     <ul class="field-checklist" style="margin:0.75rem 0;">
       {% for row in required_photo_type_status %}
@@ -140,13 +149,8 @@
         <select name="photo_type" id="field-photo-type" class="field-input-lg">
           {% for val, lbl in photo_types %}<option value="{{ val }}">{{ lbl }}</option>{% endfor %}
         </select></p>
-      <p>
-        <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-webcam-open">Use laptop webcam</button>
-      </p>
-      <p><label for="field-photo-input">Or choose image file</label><br>
-        <input type="file" name="image" id="field-photo-input" accept="image/*" class="field-input-lg" required></p>
+      {% include "collateral/_field_photo_capture.html" %}
       <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS captured when you save a photo.</div>
-      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-capture-photo-gps">Refresh GPS before upload</button>
       {% include "collateral/_gps_attestation_photo.html" %}
       <button type="submit" class="field-btn field-btn-primary field-btn-block">Save photo</button>
     </form>
@@ -238,7 +242,7 @@
 {% if step == 1 %}
 <script>window.COLLATERAL_SITE_MAP_ID = '{% if visit_kind == "land" %}land-field-map{% else %}other-field-map{% endif %}';</script>
 {% endif %}
-<script src="{% static 'js/collateral_field.js' %}"></script>
+<script src="{% static 'js/collateral_field.js' %}?v=field-cam-3"></script>
 {% if visit_kind == 'land' %}
 {% include "collateral/_offline_scripts.html" with visit_kind="land" subject_id=land.id subject_type="LandValuation" %}
 {% else %}

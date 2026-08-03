@@ -8,10 +8,20 @@
 
 <div id="offline-status-banner" class="offline-status-banner offline-online" role="status">
   <span id="offline-status-text">Checking connection…</span>
-  <span id="offline-pending-count" class="offline-badge" hidden>0</span>
+  <span id="offline-pending-count" class="offline-badge" hidden title="Pending / retrying">0</span>
+  <span id="offline-abandoned-count" class="offline-badge offline-badge-abandoned" hidden title="Abandoned after max retries">0</span>
   <div class="offline-actions">
-    <button type="button" class="field-btn field-btn-secondary" id="offline-prep-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;">Prepare offline</button>
+    <button type="button" class="field-btn field-btn-secondary" id="offline-prep-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;">Download for offline</button>
     <button type="button" class="field-btn field-btn-primary" id="offline-sync-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;" disabled>Sync now</button>
+    <button type="button" class="field-btn field-btn-secondary" id="offline-retry-abandoned-btn" style="padding:0.35rem 0.7rem;font-size:0.85rem;" hidden disabled>Retry abandoned</button>
   </div>
-  <p class="offline-help">While online, tap <strong>Prepare offline</strong> before leaving the branch. On site without signal, captures queue on this device; tap <strong>Sync now</strong> when connected again. Final collateral submit stays online. <a href="{% url 'collateral:field_checklist' %}">Tablet field checklist</a> (HTTPS / GPS).</p>
+  <p class="offline-help">
+    <strong>Phone first:</strong> <a href="{% url 'collateral:offline_setup' %}">Install CA + check service worker</a>
+    (required — PC app can work without this; phones cannot).
+    Then <strong>Download for offline</strong> → Install app → Airplane Mode test.
+    <strong>Site:</strong> open Home Screen app only. <strong>Return:</strong> Sync now.
+    <a href="{% url 'collateral:offline_shell' %}">My offline packs</a> ·
+    <a href="{% url 'collateral:field_checklist' %}">Checklist</a>.
+  </p>
+  <p id="offline-sw-health" class="offline-help" hidden></p>
 </div>

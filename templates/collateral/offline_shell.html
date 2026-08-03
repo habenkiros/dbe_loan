@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#064420">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="{% url 'collateral:offline_manifest' %}">
+  <link rel="stylesheet" href="{% static 'css/collateral_offline.css' %}">
+  <title>Collateral Field — Offline pack</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f7f5; color: #1a1a1a; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
+    h1 { font-size: 1.25rem; color: #064420; margin: 0 0 0.35rem; }
+    .lead { color: #455a64; margin: 0 0 1rem; line-height: 1.45; }
+    .card { background: #fff; border: 1px solid #d5e0d8; border-radius: 12px; padding: 1rem; margin: 0.75rem 0; }
+    .ok { color: #155724; font-weight: 600; }
+    .warn { color: #8a5b00; font-weight: 600; }
+    .bad { color: #b71c1c; font-weight: 600; }
+    .btn { display: block; text-align: center; padding: 0.85rem 1rem; border-radius: 12px; text-decoration: none; font-weight: 600; margin: 0.45rem 0; }
+    .btn-primary { background: #064420; color: #fff; }
+    .btn-secondary { background: #e9ecef; color: #212529; }
+    .btn-loan { background: #0b5c2e; color: #fff; text-align: left; }
+    .btn-loan small { display: block; font-weight: 500; opacity: 0.9; margin-top: 0.25rem; }
+    .muted { color: #607d8b; font-size: 0.9rem; }
+    ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+    li { margin: 0.35rem 0; line-height: 1.4; }
+    code { background: #eceff1; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem; }
+    .loan-links { margin: 0.5rem 0 0; padding: 0; list-style: none; }
+    .loan-links a { color: #064420; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Offline loan packs</h1>
+    <p class="lead">
+      Download a loan on branch Wi‑Fi, then work anywhere with no IP and no internet.
+      Open this installed app only — never type the PC address on site.
+    </p>
+    <p id="net-status" class="warn">Checking connection…</p>
+
+    <div class="card">
+      <strong>Prepared on this phone</strong>
+      <div id="loan-pack-list" class="muted" style="margin-top:0.6rem;">Loading…</div>
+    </div>
+
+    <div class="card">
+      <strong>How it works</strong>
+      <ul>
+        <li><strong>Branch:</strong> open field visit → <em>Download for offline</em> → Install app → Airplane Mode test.</li>
+        <li><strong>Site:</strong> open Home Screen app → pick loan below → capture GPS/photos (saved on phone).</li>
+        <li><strong>Return:</strong> join PC Wi‑Fi → Sync now → submit collateral online.</li>
+      </ul>
+    </div>
+
+    <a class="btn btn-primary" href="/collateral/offline/setup/">Phone offline setup (install CA)</a>
+    <a class="btn btn-secondary" href="/collateral/">Collateral dashboard</a>
+    <a class="btn btn-secondary" href="/collateral/field-checklist/">Field checklist</a>
+
+    <p class="muted" style="margin-top:1rem;">Host used at prepare time: <code id="host">{{ page_host }}</code></p>
+  </div>
+  <script src="{% static 'js/collateral_offline_db.js' %}"></script>
+  <script>
+  (function () {
+    var el = document.getElementById('net-status');
+    var host = document.getElementById('host');
+    var list = document.getElementById('loan-pack-list');
+    if (host) host.textContent = window.location.host || host.textContent;
+
+    function refreshNet() {
+      if (navigator.onLine) {
+        el.innerHTML = 'Device may show online (Wi‑Fi or mobile data). If the PC is unreachable, this app still serves cached loan packs.';
+        el.className = 'warn';
+      } else {
+        el.textContent = 'Fully offline — using cached loan packs on this device.';
+        el.className = 'ok';
+      }
+    }
+
+    function visitLink(path) {
+      if (!path) return '';
+      var p = String(path).replace(/\/+$/, '');
+      return p + '/1/';
+    }
+
+    function renderBundles(rows) {
+      if (!rows || !rows.length) {
+        list.innerHTML = '<p class="warn">No loan pack yet. On PC Wi‑Fi, open a field visit and tap <strong>Download for offline</strong>.</p>';
+        return;
+      }
+      var html = '';
+      rows.forEach(function (b) {
+        var ready = b.offline_ready ? '<span class="ok">Ready</span>' : '<span class="warn">Partial — re-download</span>';
+        var cached = (b.cached_pages || 0) + '/' + (b.cached_total || '?');
+        html += '<div style="border-top:1px solid #e0e0e0;padding:0.75rem 0;">';
+        html += '<div><strong>' + (b.loan_request_code || ('Loan #' + b.loan_request_id)) + '</strong> · ' + ready + '</div>';
+        html += '<div class="muted">' + (b.applicant_name || '') + ' · cached ' + cached + '</div>';
+        html += '<ul class="loan-links">';
+        (b.buildings || []).forEach(function (x) {
+          html += '<li><a href="' + visitLink(x.field_visit_path) + '">Building: ' + (x.name || ('#' + x.id)) + '</a></li>';
+        });
+        if (b.land && b.land.field_visit_path) {
+          html += '<li><a href="' + visitLink(b.land.field_visit_path) + '">Land field visit</a></li>';
+        }
+        (b.other_items || []).forEach(function (x) {
+          html += '<li><a href="' + visitLink(x.field_visit_path) + '">Other: ' + (x.name || ('#' + x.id)) + '</a></li>';
+        });
+        if (b.summary_path) {
+          html += '<li><a href="' + b.summary_path + '">Summary</a></li>';
+        }
+        html += '</ul></div>';
+      });
+      list.innerHTML = html;
+    }
+
+    refreshNet();
+    window.addEventListener('online', refreshNet);
+    window.addEventListener('offline', refreshNet);
+
+    if (window.CollateralOfflineDB && CollateralOfflineDB.listBundles) {
+      CollateralOfflineDB.listBundles().then(renderBundles).catch(function () {
+        list.innerHTML = '<p class="bad">Could not read local packs.</p>';
+      });
+    } else {
+      list.innerHTML = '<p class="bad">Offline storage unavailable in this browser.</p>';
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/collateral/sw.js', { scope: '/collateral/' }).catch(function () {});
+    }
+  })();
+  </script>
+</body>
+</html>

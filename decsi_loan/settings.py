@@ -216,9 +216,24 @@ GEBETA_MAPS_STYLE_TERRAIN = os.getenv(
 # HTTPS reverse proxy for tablet field visits (see docker-compose.https.yml)
 if os.getenv('USE_HTTPS_PROXY', '') == '1':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    USE_X_FORWARDED_HOST = True
+    # Default off: Secure cookies break login on http://LAN:8000 and are often
+    # dropped by mobile browsers on self-signed https://LAN:8443.
+    # Set HTTPS_SECURE_COOKIES=1 only with a trusted/public TLS cert.
+    _secure_cookies = os.getenv('HTTPS_SECURE_COOKIES', '0') == '1'
+    SESSION_COOKIE_SECURE = _secure_cookies
+    CSRF_COOKIE_SECURE = _secure_cookies
 
 _csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '').strip()
-if _csrf_trusted:
-    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
+_csrf_origins = [o.strip() for o in _csrf_trusted.split(',') if o.strip()] if _csrf_trusted else []
+# Field HTTPS: always include SITE_URL + localhost so login/sync work after
+# regenerating deploy/https/.env.https (LAN IP changes with Wi‑Fi DHCP).
+_site_url = os.getenv('SITE_URL', '').strip().rstrip('/')
+if _site_url.startswith(('https://', 'http://')) and _site_url not in _csrf_origins:
+    _csrf_origins.append(_site_url)
+if os.getenv('USE_HTTPS_PROXY', '') == '1':
+    for _base in ('https://localhost:8443', 'https://127.0.0.1:8443'):
+        if _base not in _csrf_origins:
+            _csrf_origins.append(_base)
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = _csrf_origins

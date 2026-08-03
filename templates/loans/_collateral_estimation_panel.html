@@ -37,9 +37,15 @@
     </div>
   </div>
 
-  {% if loan_request.collateral_engineering_status == 'returned' and loan_request.collateral_engineering_return_note %}
+  {% if loan_request.collateral_engineering_status == 'returned' %}
   <div style="margin-top:0.75rem; padding:0.65rem 0.75rem; background:#fff3cd; border:1px solid #e0b84a; border-radius:6px;">
-    <strong>Returned by engineering:</strong> {{ loan_request.collateral_engineering_return_note|linebreaksbr }}
+    <strong>Returned by engineering</strong>
+    {% if not loan_request.collateral_submitted_at %}
+    — you may edit and resubmit from summary.
+    {% endif %}
+    {% if loan_request.collateral_engineering_return_note %}
+    <br>{{ loan_request.collateral_engineering_return_note|linebreaksbr }}
+    {% endif %}
   </div>
   {% endif %}
 

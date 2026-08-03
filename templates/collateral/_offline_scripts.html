@@ -3,6 +3,7 @@
 window.COLLATERAL_OFFLINE = {
   csrfToken: "{{ csrf_token }}",
   syncUrl: "{% url 'collateral:offline_sync' %}",
+  pingUrl: "{% url 'collateral:offline_ping' %}",
   bundleUrlTpl: "/collateral/offline/bundle/{id}/",
   swUrl: "{% url 'collateral:offline_sw' %}",
   loanRequestId: {{ loan_request.id|default:'null' }},

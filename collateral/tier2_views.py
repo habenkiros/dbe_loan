@@ -110,7 +110,7 @@ def engineering_qa_review(request, loan_request_id):
             if img.image:
                 photo_previews.append({
                     'url': img.image.url,
-                    'label': f'{b.name} — {img.get_photo_type_display}',
+                    'label': f'{b.name} — {img.get_photo_type_display()}',
                     'has_gps': bool(img.gps_lat),
                 })
     try:
@@ -119,7 +119,7 @@ def engineering_qa_review(request, loan_request_id):
             if img.image:
                 photo_previews.append({
                     'url': img.image.url,
-                    'label': f'Land — {img.get_photo_type_display}',
+                    'label': f'Land — {img.get_photo_type_display()}',
                     'has_gps': bool(img.gps_lat),
                 })
     except LandValuation.DoesNotExist:

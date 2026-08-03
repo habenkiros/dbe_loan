@@ -1088,13 +1088,9 @@ def loan_appraisal_step(request, loan_request_id, step):
             form = AppraisalSummaryForm(request.POST, instance=appraisal)
             risk_formset = RiskFormSet(request.POST, instance=appraisal, prefix='risk')
             cond_formset = CondFormSet(request.POST, instance=appraisal, prefix='cond')
-            blocks, _warnings = evaluate_analysis_gates(appraisal, basic_info)
-            if blocks and request.POST.get('force_continue') != '1':
-                messages.error(request, 'Hard blocks must be resolved before saving recommendation.')
-                return render(
-                    request, 'loans/loan_appraisal_step6.html',
-                    _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
-                )
+            # Always allow saving Sheet 6 draft first. Hard blocks were previously checked
+            # before save, which blocked entering recommendation/strengths/weaknesses
+            # (those empty fields were themselves listed as hard blocks).
             if form.is_valid() and risk_formset.is_valid() and cond_formset.is_valid():
                 obj = form.save(commit=False)
                 if not obj.created_by_id:
@@ -1105,7 +1101,10 @@ def loan_appraisal_step(request, loan_request_id, step):
                 persist_credit_scorecard(appraisal)
                 appraisal.refresh_from_db()
 
-                if request.POST.get('finish_and_submit'):
+                finishing = bool(
+                    request.POST.get('finish_and_submit') or request.POST.get('finish_appraisal')
+                )
+                if finishing:
                     ok, err = _try_finish_appraisal(
                         request, loan_request, appraisal, basic_info, policy,
                     )
@@ -1115,31 +1114,23 @@ def loan_appraisal_step(request, loan_request_id, step):
                             request, 'loans/loan_appraisal_step6.html',
                             _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
                         )
-                    loan_request.refresh_from_db()
-                    notes = request.POST.get('committee_submission_notes', '')
-                    submitted, submit_errs = _try_submit_to_committee(request, loan_request, notes=notes)
-                    if submitted:
-                        messages.success(
-                            request,
-                            'Appraisal finished and submitted to the approval committee '
-                            '(branch → district → head office → management as configured).',
+                    if request.POST.get('finish_and_submit'):
+                        loan_request.refresh_from_db()
+                        notes = request.POST.get('committee_submission_notes', '')
+                        submitted, submit_errs = _try_submit_to_committee(
+                            request, loan_request, notes=notes,
                         )
+                        if submitted:
+                            messages.success(
+                                request,
+                                'Appraisal finished and submitted to the approval committee '
+                                '(branch → district → head office → management as configured).',
+                            )
+                            return redirect('loan_request_detail', loan_request_id=loan_request_id)
+                        messages.success(request, 'Appraisal finished.')
+                        for e in submit_errs:
+                            messages.warning(request, e)
                         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-                    messages.success(request, 'Appraisal finished.')
-                    for e in submit_errs:
-                        messages.warning(request, e)
-                    return redirect('loan_request_detail', loan_request_id=loan_request_id)
-
-                if request.POST.get('finish_appraisal'):
-                    ok, err = _try_finish_appraisal(
-                        request, loan_request, appraisal, basic_info, policy,
-                    )
-                    if not ok:
-                        messages.error(request, err)
-                        return render(
-                            request, 'loans/loan_appraisal_step6.html',
-                            _step6_context(form=form, risk_formset=risk_formset, cond_formset=cond_formset),
-                        )
                     messages.success(
                         request,
                         'Appraisal finished. Submit to the approval committee from the loan detail page '
@@ -1391,8 +1382,8 @@ def assign_loan_officer(request, loan_request_id):
     if request.method == 'POST':
         form = AssignLoanOfficerForm(request.POST, branch=loan_request.branch)
         if form.is_valid():
-            loan_request.assigned_loan_officer_id = form.cleaned_data.get('assigned_loan_officer') or None
-            loan_request.save()
+            loan_request.assigned_loan_officer = form.cleaned_data.get('assigned_loan_officer')
+            loan_request.save(update_fields=['assigned_loan_officer'])
             messages.success(request, 'Assigned loan officer updated.')
             return redirect('loan_request_detail', loan_request_id=loan_request.id)
     else:
@@ -1467,8 +1458,8 @@ def assign_engineer(request, loan_request_id):
     if request.method == 'POST':
         form = AssignEngineerForm(request.POST)
         if form.is_valid():
-            loan_request.assigned_engineer_id = form.cleaned_data.get('assigned_engineer') or None
-            loan_request.save(update_fields=['assigned_engineer_id'])
+            loan_request.assigned_engineer = form.cleaned_data.get('assigned_engineer')
+            loan_request.save(update_fields=['assigned_engineer'])
             if loan_request.assigned_engineer_id:
                 from collateral.services.notifications import notify_collateral_assigned
                 notify_collateral_assigned(loan_request, loan_request.assigned_engineer)

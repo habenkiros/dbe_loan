@@ -9,7 +9,32 @@
   }
 
   function isMobile() {
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    return preferNativeCamera();
+  }
+
+  function preferNativeCamera() {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua)) return true;
+    // iPadOS 13+ can report as desktop Safari
+    if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
+    if ((navigator.maxTouchPoints || 0) > 1) return true;
+    try {
+      if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  function openFilePicker(input, mode) {
+    if (!input) return;
+    input.setAttribute('accept', 'image/*');
+    if (mode === 'camera') {
+      input.setAttribute('capture', 'environment');
+    } else {
+      input.removeAttribute('capture');
+    }
+    // Reset value so selecting the same file again still fires change
+    try { input.value = ''; } catch (e) { /* ignore */ }
+    input.click();
   }
 
   function geoBlockedReason() {
@@ -323,20 +348,34 @@
     var input = byId('field-photo-input');
     var status = byId('photo-gps-status');
     var btn = byId('btn-capture-photo-gps');
+    var takeBtn = byId('btn-take-photo');
+    var galleryBtn = byId('btn-pick-gallery');
     if (!form || !input) return;
 
-    if (isMobile()) {
+    var native = preferNativeCamera();
+    input.setAttribute('accept', 'image/*');
+    if (native) {
       input.setAttribute('capture', 'environment');
     } else {
       input.removeAttribute('capture');
     }
-    input.setAttribute('accept', 'image/*');
 
     function refreshPhotoGps() {
       captureGps('', status, btn);
     }
     if (btn) {
       btn.addEventListener('click', refreshPhotoGps);
+    }
+
+    if (takeBtn) {
+      takeBtn.addEventListener('click', function () {
+        openFilePicker(input, 'camera');
+      });
+    }
+    if (galleryBtn) {
+      galleryBtn.addEventListener('click', function () {
+        openFilePicker(input, 'gallery');
+      });
     }
 
     input.addEventListener('change', function () {
@@ -355,7 +394,7 @@
       submitLabel: 'Save photo',
     });
 
-    initWebcam(input, status);
+    initWebcam(input, status, { desktopOnly: true });
   }
 
   function stopStream(stream) {
@@ -363,7 +402,8 @@
     stream.getTracks().forEach(function (t) { t.stop(); });
   }
 
-  function initWebcam(input, gpsStatus) {
+  function initWebcam(input, gpsStatus, opts) {
+    opts = opts || {};
     var openBtn = byId('btn-webcam-open');
     var snapBtn = byId('btn-webcam-snap');
     var closeBtn = byId('btn-webcam-close');
@@ -372,6 +412,17 @@
     if (!openBtn || !input) return;
 
     var stream = null;
+    var native = preferNativeCamera();
+
+    // Phones/tablets: never use in-browser webcam stream — use rear camera / gallery buttons.
+    if (opts.desktopOnly && native) {
+      openBtn.hidden = true;
+      openBtn.style.display = 'none';
+      return;
+    }
+    openBtn.hidden = false;
+    openBtn.style.display = '';
+    openBtn.textContent = native ? 'Open phone rear camera' : 'Use laptop webcam';
 
     function closePanel() {
       stopStream(stream);
@@ -381,12 +432,16 @@
     }
 
     openBtn.addEventListener('click', function () {
+      if (preferNativeCamera()) {
+        openFilePicker(input, 'camera');
+        return;
+      }
       if (!window.isSecureContext) {
         alert(geoBlockedReason());
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Webcam is not supported in this browser. Use “Choose file” instead.');
+        alert('Webcam is not supported in this browser. Use “Choose from gallery” instead.');
         return;
       }
       openBtn.disabled = true;
@@ -404,9 +459,20 @@
         openBtn.disabled = false;
         openBtn.textContent = 'Use laptop webcam';
       }).catch(function (err) {
-        openBtn.disabled = false;
-        openBtn.textContent = 'Use laptop webcam';
-        alert('Could not open camera: ' + (err.message || err.name) + '. Allow camera access for this site.');
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function (s) {
+          stream = s;
+          if (video) {
+            video.srcObject = s;
+            video.play();
+          }
+          if (panel) panel.hidden = false;
+          openBtn.disabled = false;
+          openBtn.textContent = 'Use laptop webcam';
+        }).catch(function (err2) {
+          openBtn.disabled = false;
+          openBtn.textContent = 'Use laptop webcam';
+          alert('Could not open camera: ' + ((err2 && err2.message) || err.message || err.name) + '. Allow camera access for this site.');
+        });
       });
     });
 
@@ -474,7 +540,7 @@
     });
 
     bindSubmitWithGps(form, '', null, { optional: true, submitLabel: 'Upload' });
-    initWebcam(input, null);
+    initWebcam(input, null, { desktopOnly: true });
   }
 
   document.addEventListener('DOMContentLoaded', function () {

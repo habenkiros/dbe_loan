@@ -112,7 +112,12 @@
   {% elif step == 3 %}
   <div class="field-card">
     <h3>Step 3 — Photos ({{ readiness.image_count }} / {{ min_images }})</h3>
-    <p>Capture photos at the collateral site. Each photo GPS is mapped against the registered site from step 1.</p>
+    <p class="field-section-note">Capture photos at the collateral site. Each saved photo is checked against the registered site from step 1.</p>
+    <div class="field-status-pills">
+      <span class="field-status-pill {% if readiness.image_count >= min_images %}ok{% else %}warn{% endif %}">Photos {{ readiness.image_count }}/{{ min_images }}</span>
+      <span class="field-status-pill">GPS on save</span>
+      <span class="field-status-pill">Phone camera ready</span>
+    </div>
 
     {% include "collateral/_collateral_location_map.html" with map_id="field-visit-verify-map" map_config_id="field-visit-verify-map-data" map_data=map_data map_title="Site vs photo locations" %}
 
@@ -131,15 +136,8 @@
           {% endfor %}
         </select>
       </p>
-      <p>
-        <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-webcam-open">Use laptop webcam</button>
-      </p>
-      <p>
-        <label for="field-photo-input">Or choose image file</label><br>
-        <input type="file" name="image" id="field-photo-input" accept="image/*" class="field-input-lg" required>
-      </p>
+      {% include "collateral/_field_photo_capture.html" %}
       <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS will be captured when you take a photo.</div>
-      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-capture-photo-gps">Refresh GPS before upload</button>
       {% include "collateral/_gps_attestation_photo.html" %}
       <button type="submit" class="field-btn field-btn-primary field-btn-block">Save photo</button>
     </form>
@@ -228,7 +226,7 @@
 
 <script>window.COLLATERAL_GPS_WEAK_M = {{ gps_weak_threshold_m|default:100 }};</script>
 {% if step == 1 %}<script>window.COLLATERAL_SITE_MAP_ID = 'field-visit-map';</script>{% endif %}
-<script src="{% static 'js/collateral_field.js' %}"></script>
+<script src="{% static 'js/collateral_field.js' %}?v=field-cam-3"></script>
 {% include "collateral/_offline_scripts.html" with visit_kind="building" subject_id=building.id subject_type="Building" %}
 {% if step == 1 %}
 <script>

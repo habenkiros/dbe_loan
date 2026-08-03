@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#064420">
+  <title>Phone offline setup — DECSI Field</title>
+  <link rel="stylesheet" href="{% static 'css/collateral_offline.css' %}">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f7f5; color: #1a1a1a; }
+    .wrap { max-width: 520px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+    h1 { font-size: 1.3rem; color: #064420; margin: 0 0 0.35rem; }
+    .lead { color: #455a64; line-height: 1.45; margin: 0 0 1rem; }
+    .card { background: #fff; border: 1px solid #d5e0d8; border-radius: 12px; padding: 1rem; margin: 0.75rem 0; }
+    .card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; color: #064420; }
+    ol, ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+    li { margin: 0.4rem 0; line-height: 1.45; }
+    .ok { color: #155724; font-weight: 600; }
+    .bad { color: #b71c1c; font-weight: 600; }
+    .warn { color: #8a5b00; font-weight: 600; }
+    .btn { display: block; text-align: center; padding: 0.9rem 1rem; border-radius: 12px; text-decoration: none; font-weight: 700; margin: 0.5rem 0; border: 0; width: 100%; box-sizing: border-box; font-size: 1rem; cursor: pointer; }
+    .btn-primary { background: #064420; color: #fff; }
+    .btn-secondary { background: #e9ecef; color: #212529; }
+    code { background: #eceff1; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem; word-break: break-all; }
+    .muted { color: #607d8b; font-size: 0.9rem; }
+    #sw-status, #tls-status { margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Phone offline setup</h1>
+    <p class="lead">
+      PC Chrome can run the field app offline with a self-signed warning.
+      <strong>Phones cannot</strong> — Android/iOS Chrome refuse the service worker until this CA is installed.
+      Without that step, Airplane Mode shows “site can’t be reached.”
+    </p>
+
+    <div class="card">
+      <h2>1. Install DECSI Field CA on this phone</h2>
+      {% if ca_ready %}
+      <a class="btn btn-primary" href="{% url 'collateral:offline_ca' %}">Download CA certificate</a>
+      {% else %}
+      <p class="bad">CA file missing on the PC. Run <code>./scripts/gen_field_https_certs.sh</code> then restart nginx.</p>
+      {% endif %}
+      <p class="muted">Stay on PC Wi‑Fi for this download.</p>
+      <p><strong>Android</strong></p>
+      <ol>
+        <li>Open the downloaded <code>decsi-field-ca.crt</code>.</li>
+        <li>Settings → Security → Encryption &amp; credentials → <strong>Install a certificate</strong> → <strong>CA certificate</strong>.</li>
+        <li>Confirm install (phone may warn that it can monitor traffic — expected for a local CA).</li>
+      </ol>
+      <p><strong>iPhone</strong></p>
+      <ol>
+        <li>Open the download in Safari → Install Profile.</li>
+        <li>Settings → General → VPN &amp; Device Management → install the DECSI profile.</li>
+        <li>Settings → General → About → Certificate Trust Settings → enable full trust for DECSI Field Local CA.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>2. Confirm HTTPS is trusted</h2>
+      <p>Close all DECSI tabs, then reopen:</p>
+      <p><code id="site-url">{{ site_url }}</code></p>
+      <p>Address bar must show a lock — <em>no</em> “Your connection is not private” warning.</p>
+      <p id="tls-status" class="warn">Checking…</p>
+    </div>
+
+    <div class="card">
+      <h2>3. Service worker (required for offline)</h2>
+      <p id="sw-status" class="warn">Checking…</p>
+      <button type="button" class="btn btn-secondary" id="btn-recheck">Recheck</button>
+    </div>
+
+    <div class="card">
+      <h2>4. Pack → Install → Airplane test</h2>
+      <ol>
+        <li>Login as loan officer → open a field visit.</li>
+        <li>Tap <strong>Download for offline</strong> until it says loan pack ready.</li>
+        <li>Browser menu → <strong>Install app</strong> / Add to Home Screen.</li>
+        <li>Airplane Mode → open <strong>only</strong> the Home Screen app (never type the PC IP).</li>
+        <li>Open the loan from Offline packs → capture GPS/photos → turn Wi‑Fi back on → Sync now.</li>
+      </ol>
+      <a class="btn btn-primary" href="{% url 'collateral:offline_shell' %}">Open offline packs</a>
+      <a class="btn btn-secondary" href="/collateral/">Collateral dashboard</a>
+    </div>
+
+    <p class="muted">Host: <code>{{ page_host }}</code> · Secure: {{ page_is_secure|yesno:"yes,no" }}</p>
+  </div>
+  <script>
+  (function () {
+    var tls = document.getElementById('tls-status');
+    var swEl = document.getElementById('sw-status');
+    function checkTls() {
+      if (location.protocol === 'https:') {
+        tls.innerHTML = '<span class="ok">Opened over HTTPS.</span> If you still saw a cert warning this session, install the CA and reopen in a fresh tab.';
+        tls.className = 'ok';
+      } else {
+        tls.innerHTML = '<span class="bad">Not HTTPS.</span> Use https:// and port 8443.';
+        tls.className = 'bad';
+      }
+    }
+    function checkSw() {
+      if (!('serviceWorker' in navigator)) {
+        swEl.innerHTML = '<span class="bad">This browser has no service worker support.</span>';
+        swEl.className = 'bad';
+        return;
+      }
+      navigator.serviceWorker.register('/collateral/sw.js', { scope: '/collateral/' })
+        .then(function (reg) {
+          return navigator.serviceWorker.ready.then(function () {
+            var controlling = !!navigator.serviceWorker.controller || !!(reg.active);
+            if (controlling) {
+              swEl.innerHTML = '<span class="ok">Service worker registered.</span> Offline pack can work after Download for offline.';
+              swEl.className = 'ok';
+            } else {
+              swEl.innerHTML = '<span class="warn">Registered — reload once</span> so it can control this page.';
+              swEl.className = 'warn';
+            }
+          });
+        })
+        .catch(function (err) {
+          var msg = (err && err.message) || String(err);
+          swEl.innerHTML = '<span class="bad">Service worker failed:</span> ' + msg +
+            '<br><br>Almost always means the CA is not trusted yet. Install the CA (step 1), then reopen this page with a lock icon.';
+          swEl.className = 'bad';
+        });
+    }
+    checkTls();
+    checkSw();
+    document.getElementById('btn-recheck').addEventListener('click', function () {
+      checkTls();
+      checkSw();
+    });
+  })();
+  </script>
+</body>
+</html>

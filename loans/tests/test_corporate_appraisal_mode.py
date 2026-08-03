@@ -77,6 +77,44 @@ class CorporateAppraisalModeTests(TestCase):
         )
         self.assertEqual(resolve_appraisal_mode(msme_loan), MODE_MSME)
 
+    def test_sheet6_draft_save_allowed_when_recommendation_was_empty(self):
+        """Hard blocks must not prevent saving the Sheet 6 fields that clear those blocks."""
+        from django.urls import reverse
+        from loans.models import LoanAnalysisPolicyConfig
+
+        LoanAnalysisPolicyConfig.objects.all().delete()
+        LoanAnalysisPolicyConfig.objects.create(hard_block_incomplete_sheets=True)
+        self.assertFalse(self.appraisal.recommendation)
+        self.assertFalse(self.appraisal.strengths)
+        self.assertFalse(self.appraisal.weaknesses)
+
+        self.client.login(username='corp_officer', password='pass')
+        url = reverse('loan_appraisal_step', args=[self.loan.pk, 6])
+        res = self.client.post(url, {
+            'recommendation': 'approve',
+            'recommendation_comment': 'Strong cashflow and collateral coverage.',
+            'strengths': 'Registered corporate; stable revenue.',
+            'weaknesses': 'Sector concentration.',
+            'committee_comments': '',
+            'amount_approved': '500000',
+            'term_approved_months': '36',
+            'rate_approved': '14.5',
+            'save': '1',
+            'risk-TOTAL_FORMS': '0',
+            'risk-INITIAL_FORMS': '0',
+            'risk-MIN_NUM_FORMS': '0',
+            'risk-MAX_NUM_FORMS': '1000',
+            'cond-TOTAL_FORMS': '0',
+            'cond-INITIAL_FORMS': '0',
+            'cond-MIN_NUM_FORMS': '0',
+            'cond-MAX_NUM_FORMS': '1000',
+        })
+        self.assertEqual(res.status_code, 302, getattr(res, 'content', b'')[:500])
+        self.appraisal.refresh_from_db()
+        self.assertEqual(self.appraisal.recommendation, 'approve')
+        self.assertIn('Registered corporate', self.appraisal.strengths)
+        self.assertIn('concentration', self.appraisal.weaknesses)
+
     def test_corporate_qualitative_factors_seeded(self):
         _ensure_qualitative_factors(self.appraisal)
         keys = set(self.appraisal.qualitative_factors.values_list('factor_key', flat=True))

@@ -64,7 +64,7 @@ def collateral_unlock_request(request, loan_request_id):
             user=request.user,
             payload={'reason': form.cleaned_data['reason'][:500]},
         )
-        messages.success(request, 'Unlock request sent to supervisor.')
+        messages.success(request, 'Unlock request sent for engineering review.')
     else:
         messages.error(request, 'Please provide a detailed reason (min 20 characters).')
     return redirect('collateral:summary', loan_request_id=loan_request_id)
@@ -114,7 +114,26 @@ def collateral_unlock_review(request, request_id):
             unlock_req.save()
             loan_request.collateral_submitted_at = None
             loan_request.collateral_submitted_by = None
-            loan_request.save(update_fields=['collateral_submitted_at', 'collateral_submitted_by'])
+            update_fields = ['collateral_submitted_at', 'collateral_submitted_by']
+            from .engineering_qa import engineering_review_required
+            from loans.models import LoanRequest
+            from .services.notifications import notify_engineering_returned
+
+            # Keep LO visibility consistent with engineering return.
+            if engineering_review_required():
+                loan_request.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_RETURNED
+                loan_request.collateral_engineering_return_note = (
+                    note or 'Reopened by engineering for correction.'
+                )[:2000]
+                loan_request.collateral_engineering_reviewed_at = timezone.now()
+                loan_request.collateral_engineering_reviewed_by = request.user
+                update_fields.extend([
+                    'collateral_engineering_status',
+                    'collateral_engineering_return_note',
+                    'collateral_engineering_reviewed_at',
+                    'collateral_engineering_reviewed_by',
+                ])
+            loan_request.save(update_fields=update_fields)
             log_collateral_event(
                 loan_request,
                 CollateralFieldAuditLog.EVT_UNLOCK_APPROVED,
@@ -129,6 +148,13 @@ def collateral_unlock_review(request, request_id):
                     'note': note[:500],
                 },
             )
+            if engineering_review_required():
+                officer = loan_request.assigned_loan_officer
+                notify_engineering_returned(
+                    loan_request,
+                    officer,
+                    loan_request.collateral_engineering_return_note,
+                )
             messages.success(
                 request,
                 f'Collateral unlocked for {loan_request.loan_request_id}. Officer may edit and re-submit.',

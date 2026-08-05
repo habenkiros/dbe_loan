@@ -1,16 +1,15 @@
 <!-- templates/loans/update_finance_manager_approval.html -->
 {% extends "base.html" %}
 
-{% block title %}Update Finance Manager Approval{% endblock %}
+{% block title %}Finance Disbursement Approval{% endblock %}
 
 {% block content %}
-<h1>Update Finance Manager Approval</h1>
+<h1>Finance Disbursement Approval</h1>
 
 <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px;">
-  <strong>Initial queue approval</strong> — operation and finance managers review new loan requests
-  <em>before</em> the branch assigns a loan officer or sends the loan to engineering.
-  When <strong>both</strong> approve, status becomes <em>Approved</em> and the branch can proceed.
-  Credit committee review happens later, after appraisal.
+  <strong>Disbursement approval</strong> — Finance reviews loans that are
+  <em>ready for disbursement</em> after committee approval and conditions clearance.
+  Approving here allows the assigned loan officer to confirm funds released.
 </div>
 
 <form method="post">
@@ -25,54 +24,34 @@
             <td>{{ loan_request.applicant_name }}</td>
         </tr>
         <tr>
-            <th>Phone Number</th>
-            <td>{{ loan_request.phone_number }}</td>
-        </tr>
-        <tr>
-            <th>Email</th>
-            <td>{{ loan_request.email }}</td>
-        </tr>
-        <tr>
-            <th>Category</th>
-            <td>{{ loan_request.category.name }}</td>
-        </tr>
-        <tr>
-            <th>Collateral</th>
-            <td>{{ loan_request.collateral.name }}</td>
+            <th>Branch</th>
+            <td>{{ loan_request.branch.name }}</td>
         </tr>
         <tr>
             <th>Amount Requested</th>
             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
         </tr>
         <tr>
-            <th>Reason</th>
-            <td>{{ loan_request.reason }}</td>
+            <th>Committee status</th>
+            <td>{{ loan_request.get_committee_status_display }}</td>
         </tr>
         <tr>
-            <th>Status</th>
-            <td>{{ loan_request.status }}</td>
+            <th>Disbursement status</th>
+            <td>{{ loan_request.get_disbursement_status_display }}</td>
         </tr>
         <tr>
-            <th>Operation Manager Approval</th>
-            <td>{{ loan_request.operation_manager_approval }}</td>
-        </tr>
-        <tr>
-            <th>Finance Approval</th>
+            <th>Finance disbursement approval</th>
             <td>
-                <select name="finance_approval">
-                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approved</option>
-                    <option value="False" {% if not loan_request.finance_approval %}selected{% endif %}>Reject</option>
+                <select name="finance_disbursement_approval">
+                    <option value="True" {% if loan_request.finance_disbursement_approval %}selected{% endif %}>Approved</option>
+                    <option value="False" {% if not loan_request.finance_disbursement_approval %}selected{% endif %}>Not approved</option>
                 </select>
             </td>
-        </tr>
-        <tr>
-            <th>Cutomer History</th>
-            <td>{{ loan_request.customer_history }}</td>
         </tr>
     </table>
     <button type="submit">Save Changes</button>
 </form>
 
-<a href="{% url 'view_loan_requests_finance_manager' %}">Back to Loan Requests</a>
+<a href="{% url 'view_loan_requests_finance_manager' %}">Back to Finance disbursement queue</a>
 
 {% endblock %}

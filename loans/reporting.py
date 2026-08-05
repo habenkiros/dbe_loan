@@ -17,8 +17,21 @@ from openpyxl.utils import get_column_letter
 
 
 REPORT_ROLES = (
-    'branch_manager', 'operation_manager', 'finance_manager', 'credit_committee',
+    'branch_manager', 'cooperative_manager', 'operation_manager', 'finance_manager',
+    'credit_head', 'credit_loan_officer',
     'loan_officer', 'district_manager', 'accountant', 'admin', 'superadmin',
+    'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
+    'board_member', 'risk_compliance', 'auditor',
+    'engineer', 'engineering_head',
+)
+
+# Organization-wide MIS (not limited to one branch/district).
+# Accountant/auditor are org-wide only when they have no branch/district attachment.
+ORG_WIDE_REPORT_ROLES = (
+    'admin', 'superadmin', 'cooperative_manager', 'operation_manager', 'finance_manager',
+    'credit_head',
+    'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
+    'board_member', 'risk_compliance',
 )
 
 
@@ -30,19 +43,104 @@ def user_can_access_reports(user) -> bool:
     return getattr(user, 'role', None) in REPORT_ROLES
 
 
+def is_org_wide_reporter(user) -> bool:
+    if not user:
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    role = getattr(user, 'role', None)
+    if role in ORG_WIDE_REPORT_ROLES:
+        return True
+    # Unscoped HO accountant / auditor (no branch or district) sees org-wide.
+    if role in ('accountant', 'auditor'):
+        if not getattr(user, 'branch_id', None) and not getattr(user, 'district_id', None):
+            return True
+    return False
+
+
+def is_engineering_reporter(user) -> bool:
+    return getattr(user, 'role', None) in ('engineer', 'engineering_head')
+
+
+def engineering_queue_q():
+    """Loans in the engineering / collateral QA pipeline (shared with collateral views)."""
+    from loans.models import LoanRequest
+
+    return (
+        Q(sent_to_engineering_at__isnull=False)
+        | Q(collateral_submitted_at__isnull=False)
+        | Q(collateral_engineering_status__in=(
+            LoanRequest.ENG_COLLATERAL_PENDING,
+            LoanRequest.ENG_COLLATERAL_RETURNED,
+            LoanRequest.ENG_COLLATERAL_APPROVED,
+        ))
+        | Q(assigned_engineer__isnull=False)
+    )
+
+
+def report_scope_kind(user) -> str:
+    """branch | district | assigned | engineering_assigned | engineering_queue | organization | none"""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return 'none'
+    if is_org_wide_reporter(user):
+        return 'organization'
+    role = getattr(user, 'role', None)
+    if role in ('loan_officer', 'credit_loan_officer'):
+        return 'assigned'
+    if role == 'engineer':
+        return 'engineering_assigned'
+    if role == 'engineering_head':
+        return 'engineering_queue'
+    if role in ('accountant', 'auditor', 'branch_manager'):
+        if getattr(user, 'branch_id', None):
+            return 'branch'
+        if getattr(user, 'district_id', None):
+            return 'district'
+        return 'none'
+    if role == 'district_manager':
+        return 'district' if getattr(user, 'district_id', None) else 'none'
+    return 'none'
+
+
+def report_scope_label(user) -> str:
+    """Human-readable scope for Reports / CI badges."""
+    kind = report_scope_kind(user)
+    if kind == 'organization':
+        return 'Organization-wide'
+    if kind == 'assigned':
+        return 'Assigned to you'
+    if kind == 'engineering_assigned':
+        return 'Assigned to you (engineering)'
+    if kind == 'engineering_queue':
+        return 'Engineering / collateral queue'
+    if kind == 'branch':
+        branch = getattr(user, 'branch', None)
+        return branch.name if branch else 'Your branch'
+    if kind == 'district':
+        district = getattr(user, 'district', None)
+        if district:
+            return f'District: {district.name}'
+        return 'Your district'
+    return 'No scope assigned'
+
+
 def reporting_base_queryset(user) -> QuerySet:
     from loans.models import LoanRequest
 
     qs = LoanRequest.objects.select_related(
         'branch', 'branch__district', 'category', 'collateral',
-        'assigned_loan_officer', 'appraisal',
+        'assigned_loan_officer', 'assigned_engineer', 'appraisal',
     ).order_by('-date_requested', '-id')
     role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'operation_manager', 'finance_manager', 'credit_committee', 'accountant'):
+    if is_org_wide_reporter(user):
         return qs
-    if role == 'loan_officer':
+    if role in ('loan_officer', 'credit_loan_officer'):
         return qs.filter(assigned_loan_officer=user)
-    if role == 'branch_manager':
+    if role == 'engineer':
+        return qs.filter(assigned_engineer=user)
+    if role == 'engineering_head':
+        return qs.filter(engineering_queue_q())
+    if role in ('branch_manager', 'accountant', 'auditor'):
         if getattr(user, 'branch_id', None):
             return qs.filter(branch_id=user.branch_id)
         if getattr(user, 'district_id', None):
@@ -51,6 +149,42 @@ def reporting_base_queryset(user) -> QuerySet:
     if role == 'district_manager' and getattr(user, 'district_id', None):
         return qs.filter(branch__district_id=user.district_id)
     return qs.none()
+
+
+def _branch_in_user_scope(user, branch_id: str) -> bool:
+    """True if branch_id is within the user's reporting scope."""
+    if not branch_id:
+        return False
+    if is_org_wide_reporter(user) or getattr(user, 'role', None) == 'engineering_head':
+        return True
+    role = getattr(user, 'role', None)
+    if role in ('branch_manager', 'accountant', 'auditor'):
+        if getattr(user, 'branch_id', None):
+            return str(user.branch_id) == str(branch_id)
+        if getattr(user, 'district_id', None):
+            from loans.models import Branch
+            return Branch.objects.filter(pk=branch_id, district_id=user.district_id).exists()
+        return False
+    if role == 'district_manager' and getattr(user, 'district_id', None):
+        from loans.models import Branch
+        return Branch.objects.filter(pk=branch_id, district_id=user.district_id).exists()
+    return False
+
+
+def _district_in_user_scope(user, district_id: str) -> bool:
+    if not district_id:
+        return False
+    if is_org_wide_reporter(user) or getattr(user, 'role', None) == 'engineering_head':
+        return True
+    role = getattr(user, 'role', None)
+    if role == 'district_manager':
+        return str(getattr(user, 'district_id', '') or '') == str(district_id)
+    if role in ('branch_manager', 'accountant', 'auditor'):
+        branch = getattr(user, 'branch', None)
+        if branch and branch.district_id:
+            return str(branch.district_id) == str(district_id)
+        return str(getattr(user, 'district_id', '') or '') == str(district_id)
+    return False
 
 
 def apply_report_filters(qs: QuerySet, params: Dict[str, Any], user=None) -> QuerySet:
@@ -69,20 +203,15 @@ def apply_report_filters(qs: QuerySet, params: Dict[str, Any], user=None) -> Que
     if disbursement_status:
         qs = qs.filter(disbursement_status=disbursement_status)
 
-    # Branch managers are already scoped; still allow explicit branch if in scope
-    role = getattr(user, 'role', None) if user else None
-    can_pick_branch = (
-        not user
-        or getattr(user, 'is_superuser', False)
-        or role in ('admin', 'superadmin', 'operation_manager', 'finance_manager', 'credit_committee', 'accountant', 'district_manager')
-    )
-    if branch_id and can_pick_branch:
-        qs = qs.filter(branch_id=branch_id)
-    elif branch_id and role == 'branch_manager' and str(getattr(user, 'branch_id', '')) == str(branch_id):
+    # Narrow only — never widen past reporting_base_queryset.
+    if branch_id and (not user or _branch_in_user_scope(user, branch_id)):
         qs = qs.filter(branch_id=branch_id)
 
-    if district_id and can_pick_branch:
-        qs = qs.filter(branch__district_id=district_id)
+    if district_id and (not user or _district_in_user_scope(user, district_id)):
+        # LO / BM with fixed branch: district filter is redundant; only apply when valid.
+        role = getattr(user, 'role', None) if user else None
+        if not user or is_org_wide_reporter(user) or role in ('district_manager', 'engineering_head'):
+            qs = qs.filter(branch__district_id=district_id)
 
     if date_from:
         qs = qs.filter(date_requested__date__gte=date_from)
@@ -129,10 +258,11 @@ def build_pipeline_workbook(qs: QuerySet) -> BytesIO:
     ws.title = 'Pipeline'
     headers = [
         'Loan ID', 'Applicant', 'Phone', 'Branch', 'District', 'Category',
-        'Amount requested', 'Status', 'OM approval', 'Finance approval',
+        'Amount requested', 'Status', 'Cooperative approval', 'Finance disbursement',
         'Committee status', 'Recommended amount', 'Final amount',
         'Credit score', 'Score band', 'Recommendation',
-        'Disbursement status', 'Officer',
+        'Disbursement status', 'Officer', 'Assigned engineer', 'Engineering status',
+        'Collateral submitted', 'Sent to engineering',
         'Date requested', 'Date reviewed', 'Appraisal finished',
         'Committee decided', 'Disbursed at',
     ]
@@ -141,6 +271,7 @@ def build_pipeline_workbook(qs: QuerySet) -> BytesIO:
     loans = list(qs[:5000])
     for lr in loans:
         appraisal = getattr(lr, 'appraisal', None)
+        eng = getattr(lr, 'assigned_engineer', None)
         ws.append([
             _cell(lr.loan_request_id),
             _cell(lr.applicant_name),
@@ -151,7 +282,7 @@ def build_pipeline_workbook(qs: QuerySet) -> BytesIO:
             _cell(lr.amount_requested),
             _cell(lr.status),
             'Yes' if lr.operation_manager_approval else 'No',
-            'Yes' if lr.finance_approval else 'No',
+            'Yes' if getattr(lr, 'finance_disbursement_approval', False) else 'No',
             _cell(lr.get_committee_status_display() if lr.committee_status else ''),
             _cell(appraisal.amount_approved if appraisal else None),
             _cell(lr.committee_final_amount),
@@ -163,6 +294,13 @@ def build_pipeline_workbook(qs: QuerySet) -> BytesIO:
                 (lr.assigned_loan_officer.get_full_name() or lr.assigned_loan_officer.username)
                 if lr.assigned_loan_officer_id else ''
             ),
+            _cell((eng.get_full_name() or eng.username) if eng else ''),
+            _cell(
+                lr.get_collateral_engineering_status_display()
+                if getattr(lr, 'collateral_engineering_status', None) else ''
+            ),
+            _cell(lr.collateral_submitted_at),
+            _cell(lr.sent_to_engineering_at),
             _cell(lr.date_requested),
             _cell(lr.date_reviewed),
             _cell(lr.appraisal_completed_at),
@@ -300,6 +438,8 @@ def pipeline_export_filename(params: Optional[Dict[str, Any]] = None) -> str:
 
 
 def branch_dashboard_stats(qs: QuerySet) -> Dict[str, Any]:
+    from django.db.models import Avg
+
     total = qs.count()
     approved = qs.filter(status__iexact='Approved').count()
     pending = qs.filter(status__iexact='Pending').count()
@@ -315,6 +455,11 @@ def branch_dashboard_stats(qs: QuerySet) -> Dict[str, Any]:
         total=Sum('committee_final_amount')
     )['total'] or Decimal('0')
 
+    scored = qs.filter(appraisal__credit_score_total__isnull=False)
+    scored_n = scored.count()
+    avg_score = scored.aggregate(v=Avg('appraisal__credit_score_total'))['v']
+    weak_n = qs.filter(appraisal__credit_score_band__in=('weak', 'unacceptable')).count()
+
     by_branch = list(
         qs.values('branch_id', 'branch__name', 'branch__district__name')
         .annotate(
@@ -323,6 +468,11 @@ def branch_dashboard_stats(qs: QuerySet) -> Dict[str, Any]:
             committee_ok=Count('id', filter=Q(committee_status='committee_approved')),
             disbursed=Count('id', filter=Q(disbursement_status='disbursed')),
             pending_committee=Count('id', filter=Q(committee_status='pending_committee')),
+            avg_score=Avg('appraisal__credit_score_total'),
+            weak_band=Count(
+                'id',
+                filter=Q(appraisal__credit_score_band__in=('weak', 'unacceptable')),
+            ),
         )
         .order_by('-total')[:25]
     )
@@ -338,7 +488,77 @@ def branch_dashboard_stats(qs: QuerySet) -> Dict[str, Any]:
         'amount_requested': amount,
         'final_approved_amount': final_amt,
         'approval_rate': round((approved / total) * 100, 1) if total else 0,
+        'avg_credit_score': round(float(avg_score), 1) if avg_score is not None else None,
+        'scored_loans': scored_n,
+        'weak_band_count': weak_n,
+        'weak_band_share': round((weak_n / scored_n) * 100, 1) if scored_n else 0,
         'by_branch': by_branch,
+    }
+
+
+def engineering_workload_stats(qs: QuerySet) -> Dict[str, Any]:
+    """Collateral / engineering QA workload KPIs for eng roles (and others viewing eng columns)."""
+    from loans.models import LoanRequest
+
+    total = qs.count()
+    pending = qs.filter(
+        collateral_engineering_status=LoanRequest.ENG_COLLATERAL_PENDING,
+    ).count()
+    returned = qs.filter(
+        collateral_engineering_status=LoanRequest.ENG_COLLATERAL_RETURNED,
+    ).count()
+    approved = qs.filter(
+        collateral_engineering_status=LoanRequest.ENG_COLLATERAL_APPROVED,
+    ).count()
+    submitted = qs.filter(collateral_submitted_at__isnull=False).count()
+    sent = qs.filter(sent_to_engineering_at__isnull=False).count()
+    unassigned = qs.filter(
+        assigned_engineer__isnull=True,
+    ).filter(
+        Q(sent_to_engineering_at__isnull=False)
+        | Q(collateral_engineering_status=LoanRequest.ENG_COLLATERAL_PENDING)
+    ).count()
+
+    by_engineer = list(
+        qs.exclude(assigned_engineer__isnull=True)
+        .values(
+            'assigned_engineer_id',
+            'assigned_engineer__username',
+            'assigned_engineer__first_name',
+            'assigned_engineer__last_name',
+        )
+        .annotate(
+            total=Count('id'),
+            pending=Count(
+                'id',
+                filter=Q(collateral_engineering_status=LoanRequest.ENG_COLLATERAL_PENDING),
+            ),
+            returned=Count(
+                'id',
+                filter=Q(collateral_engineering_status=LoanRequest.ENG_COLLATERAL_RETURNED),
+            ),
+            approved=Count(
+                'id',
+                filter=Q(collateral_engineering_status=LoanRequest.ENG_COLLATERAL_APPROVED),
+            ),
+        )
+        .order_by('-total')[:25]
+    )
+    for row in by_engineer:
+        first = (row.get('assigned_engineer__first_name') or '').strip()
+        last = (row.get('assigned_engineer__last_name') or '').strip()
+        name = f'{first} {last}'.strip()
+        row['name'] = name or row.get('assigned_engineer__username') or '—'
+
+    return {
+        'total': total,
+        'pending_review': pending,
+        'returned': returned,
+        'approved': approved,
+        'collateral_submitted': submitted,
+        'sent_to_engineering': sent,
+        'unassigned': unassigned,
+        'by_engineer': by_engineer,
     }
 
 
@@ -348,18 +568,25 @@ def filter_choices_for_user(user) -> Dict[str, Any]:
     role = getattr(user, 'role', None)
     districts = District.objects.none()
     branches = Branch.objects.none()
-    if getattr(user, 'is_superuser', False) or role in (
-        'admin', 'superadmin', 'operation_manager', 'finance_manager', 'credit_committee', 'accountant',
-    ):
+    if is_org_wide_reporter(user) or role == 'engineering_head':
         districts = District.objects.order_by('name')
         branches = Branch.objects.select_related('district').order_by('district__name', 'name')
     elif role == 'district_manager' and getattr(user, 'district_id', None):
         districts = District.objects.filter(pk=user.district_id)
-        branches = Branch.objects.filter(district_id=user.district_id).order_by('name')
-    elif role == 'branch_manager' and getattr(user, 'branch_id', None):
-        branches = Branch.objects.filter(pk=user.branch_id)
-        if user.branch.district_id:
-            districts = District.objects.filter(pk=user.branch.district_id)
+        branches = Branch.objects.filter(district_id=user.district_id).select_related('district').order_by('name')
+    elif role == 'branch_manager':
+        if getattr(user, 'branch_id', None):
+            branches = Branch.objects.filter(pk=user.branch_id).select_related('district')
+            if user.branch and user.branch.district_id:
+                districts = District.objects.filter(pk=user.branch.district_id)
+        elif getattr(user, 'district_id', None):
+            districts = District.objects.filter(pk=user.district_id)
+            branches = Branch.objects.filter(district_id=user.district_id).select_related('district').order_by('name')
+
+    # Geo pickers only when the user can meaningfully narrow a wider scope.
+    can_pick_geo = is_org_wide_reporter(user) or role in ('district_manager', 'engineering_head') or (
+        role == 'branch_manager' and not getattr(user, 'branch_id', None) and getattr(user, 'district_id', None)
+    )
 
     return {
         'districts': districts,
@@ -374,10 +601,8 @@ def filter_choices_for_user(user) -> Dict[str, Any]:
         'disbursement_status_choices': [('', 'All disbursement')] + [
             c for c in LoanRequest.DISBURSE_STATUS_CHOICES if c[0]
         ],
-        'can_pick_geo': districts.exists() or (
-            getattr(user, 'is_superuser', False) or role in (
-                'admin', 'superadmin', 'operation_manager', 'finance_manager',
-                'credit_committee', 'accountant', 'district_manager',
-            )
-        ),
+        'can_pick_geo': can_pick_geo,
+        'scope_label': report_scope_label(user),
+        'scope_kind': report_scope_kind(user),
+        'show_engineering_workload': is_engineering_reporter(user) or is_org_wide_reporter(user),
     }

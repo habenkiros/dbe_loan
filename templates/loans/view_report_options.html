@@ -3,13 +3,76 @@
 {% block content %}
 <div class="lw-wrap">
   <h1>Reports &amp; exports</h1>
-  <p class="help">Filter the pipeline, open the branch dashboard, or download Excel. Appraisal packs print to PDF from the browser.</p>
+  <p class="help" style="margin-bottom:0.35rem;">
+    Filter the pipeline, open the dashboard, or download Excel. Appraisal packs print to PDF from the browser.
+  </p>
+  <p class="help" style="margin-top:0;">
+    <strong>Your scope:</strong> {{ scope_label|default:"—" }}
+    {% if scope_kind == 'branch' %}(branch only — other branches are hidden)
+    {% elif scope_kind == 'district' %}(district only)
+    {% elif scope_kind == 'assigned' %}(your assigned loans)
+    {% elif scope_kind == 'engineering_assigned' %}(loans assigned to you as engineer)
+    {% elif scope_kind == 'engineering_queue' %}(engineering / collateral QA pipeline)
+    {% elif scope_kind == 'organization' %}(all branches)
+    {% endif %}
+  </p>
+
+  {% if eng_stats %}
+  <div class="lw-panel" style="border-color:#1565c0;">
+    <h3>Engineering workload</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.75rem;">
+      <div><div class="help">In scope</div><strong>{{ eng_stats.total }}</strong></div>
+      <div><div class="help">Pending QA</div><strong>{{ eng_stats.pending_review }}</strong></div>
+      <div><div class="help">Returned</div><strong>{{ eng_stats.returned }}</strong></div>
+      <div><div class="help">Eng. approved</div><strong>{{ eng_stats.approved }}</strong></div>
+      <div><div class="help">Submitted</div><strong>{{ eng_stats.collateral_submitted }}</strong></div>
+      <div><div class="help">Unassigned</div><strong>{{ eng_stats.unassigned }}</strong></div>
+    </div>
+    {% if eng_stats.by_engineer %}
+    <div style="margin-top:0.85rem;overflow-x:auto;">
+      <table class="table" style="width:100%;font-size:0.92rem;">
+        <thead><tr><th>Engineer</th><th>Total</th><th>Pending</th><th>Returned</th><th>Approved</th></tr></thead>
+        <tbody>
+          {% for row in eng_stats.by_engineer %}
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.total }}</td>
+            <td>{{ row.pending }}</td>
+            <td>{{ row.returned }}</td>
+            <td>{{ row.approved }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    <p class="help" style="margin:0.75rem 0 0;">
+      <a href="{% url 'collateral:engineering_qa_queue' %}">Open Engineering QA queue</a>
+      · <a href="{% url 'collateral:dashboard' %}">Collateral dashboard</a>
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="lw-panel" style="border-color:#064420;">
+    <h3>Scope snapshot</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.75rem;">
+      <div><div class="help">Loans</div><strong>{{ stats.total }}</strong></div>
+      <div><div class="help">Approval rate</div><strong>{{ stats.approval_rate }}%</strong></div>
+      <div><div class="help">Committee pending</div><strong>{{ stats.committee_pending }}</strong></div>
+      <div><div class="help">Disbursed</div><strong>{{ stats.disbursed }}</strong></div>
+      <div>
+        <div class="help">Avg credit score</div>
+        <strong>{% if stats.avg_credit_score != None %}{{ stats.avg_credit_score }}{% else %}—{% endif %}</strong>
+      </div>
+      <div><div class="help">Weak / unacceptable</div><strong>{{ stats.weak_band_share }}%</strong></div>
+    </div>
+  </div>
 
   <div class="lw-panel" style="border-color:#064420;">
     <h3>Quick links</h3>
     <div class="list-actions list-actions-lg">
       {% url 'branch_report_dashboard' as dash_url %}
-      {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Branch dashboard" tone="green" only %}
+      {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Portfolio dashboard" tone="green" only %}
       {% url 'view_report' as table_url %}
       {% include "includes/list_action.html" with href=table_url icon="list" label="Pipeline table" tone="blue" only %}
       {% url 'generate_report' as export_url %}
@@ -48,7 +111,7 @@
       <div>
         <label for="district_id"><strong>District</strong></label><br>
         <select name="district_id" id="district_id" class="form-control">
-          <option value="">All districts</option>
+          <option value="">All districts in scope</option>
           {% for d in districts %}
           <option value="{{ d.id }}">{{ d.name }}</option>
           {% endfor %}
@@ -57,7 +120,7 @@
       <div>
         <label for="branch_id"><strong>Branch</strong></label><br>
         <select name="branch_id" id="branch_id" class="form-control">
-          <option value="">All branches</option>
+          <option value="">All branches in scope</option>
           {% for b in branches %}
           <option value="{{ b.id }}">{{ b.name }}{% if b.district %} ({{ b.district.name }}){% endif %}</option>
           {% endfor %}

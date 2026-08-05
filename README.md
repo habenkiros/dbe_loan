@@ -101,14 +101,20 @@ Two Django apps share the `LoanRequest` model as the central entity:
 |------|------------------------|
 | `superadmin` / `admin` | System configuration, user management, policy settings |
 | `branch_manager` | Create loan requests, assign officers, send to engineering, submit to committee |
-| `loan_officer` | Upload documents, complete appraisal, collateral estimation (when configured) |
+| `loan_officer` | Appraisal/docs/collateral on assigned loans (branch or district-scoped) |
+| `accountant` | Committee vote + post-approval mark-ready; scoped by branch or district |
+| `auditor` | View/reports only; scoped by branch or district when attached |
+| `district_manager` | District oversight, assign district LOs, district committee |
+| `cooperative_manager` | Branch Cooperative **intake queue** approval (sole gate before LO work) |
+| `finance_manager` | **Disbursement** approval after committee (not intake); HO committee vote |
+| `credit_head` | HO Credit oversight, approval committee configuration, HO loans |
+| `credit_loan_officer` | Create/appraise head-office Credit loans |
 | `engineering_head` | Receive collateral assignments, assign engineers, engineering QA oversight |
 | `engineer` | Building valuation, unit prices, field visits, engineering QA review |
-| `operation_manager` / `finance_manager` | Queue-based loan approvals |
-| `district_manager` | District-level oversight |
-| `credit_committee` / `ceo` / `vp` / `board_member` | Committee voting at configured approval levels |
-| `accountant` | Branch-level committee participation |
-| `risk_compliance` / `auditor` | Review and audit access |
+| `ceo` / `vp` / `vp_operations` / `vp_it` / `vp_customer_service` / `board_member` | Management / board committee voting |
+| `risk_compliance` | Review and audit access |
+
+Committee voters are configured from these real roles (branch/district/HO/management) — there is no separate “Credit Committee Member” role. Head-office staff can be linked to a `Department` (Cooperative, Finance, Credit, Management, Board).
 
 Roles are defined on the custom `CustomUser` model (`loans.CustomUser`) and drive URL access and dashboard routing.
 
@@ -125,22 +131,23 @@ flowchart LR
     E --> F[Collateral submit]
     F --> G{Engineering QA?}
     G -->|Yes| H[Engineering review]
-    G -->|No| I[Op / Finance queues]
+    G -->|No| I[Branch Cooperative queue]
     H --> I
     I --> J[Submit to committee]
     J --> K[Multi-level approval]
-    K --> L[Approved / Declined / Returned]
+    K --> L[Finance disbursement approval]
+    L --> M[Disbursed]
 ```
 
-1. **Intake** — Branch staff create a `LoanRequest` with applicant details, category, collateral type, and amount.
+1. **Intake** — Branch staff (or HO Credit) create a `LoanRequest` with applicant details, category, collateral type, and amount.
 2. **Documents** — Required document types are uploaded; automated checks run (file integrity, OCR, phrase matching, optional identity match).
 3. **Appraisal** — Assigned loan officer completes sheets 1–7 (see [Loan appraisal](#loan-appraisal)).
 4. **Collateral** — Depending on `CollateralEstimationConfig`, a loan officer or engineer estimates building/land/other collateral with field photos and GPS.
 5. **Submit & lock** — Collateral is submitted and locked; an unlock workflow exists for corrections.
 6. **Engineering QA** — When engineering-team mode is enabled, submitted collateral enters an engineering review queue.
-7. **Manager queues** — Operation and finance managers approve from their respective queues.
-8. **Committee** — Branch manager submits to the credit committee; loans route through configurable approval levels based on amount.
-9. **Decision** — Approved, declined, or returned to the loan officer for rework.
+7. **Cooperative queue** — Branch Cooperative approves branch-originated loans before LO assignment (HO Credit loans skip this).
+8. **Committee** — Loan is submitted to configurable approval levels based on amount (branch → district → HO → management/board).
+9. **Finance disbursement** — After committee approve and readiness, Finance approves disbursement; officer confirms funds released.
 
 ---
 

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Manage Departments{% endblock %}
+{% block content %}
+<h1>Head-office departments</h1>
+<p class="help">Organizational units for Cooperative, Finance, Credit, Management, and Board. Users can be linked to a department.</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add department</button>
+</form>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Name</th>
+                <th>Active</th>
+                <th>Order</th>
+                <th>Users</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for department in departments %}
+            <tr>
+                <td><code>{{ department.key }}</code></td>
+                <td>{{ department.name }}</td>
+                <td>{% if department.is_active %}Yes{% else %}No{% endif %}</td>
+                <td>{{ department.sort_order }}</td>
+                <td>{{ department.users.count }}</td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'edit_department' department.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit department" tone="blue" only %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No departments yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

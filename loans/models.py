@@ -54,6 +54,33 @@ class Branch(models.Model):
     def __str__(self):
         return f"{self.name} ({self.district.name})"
 
+
+class Department(models.Model):
+    """Head-office / governance departments (Cooperative, Finance, Credit, Management, Board)."""
+    KEY_COOPERATIVE = 'cooperative'
+    KEY_FINANCE = 'finance'
+    KEY_CREDIT = 'credit'
+    KEY_MANAGEMENT = 'management'
+    KEY_BOARD = 'board'
+    KEY_CHOICES = [
+        (KEY_COOPERATIVE, 'Branch Cooperative'),
+        (KEY_FINANCE, 'Finance'),
+        (KEY_CREDIT, 'Credit'),
+        (KEY_MANAGEMENT, 'Management'),
+        (KEY_BOARD, 'Board of Directors'),
+    ]
+
+    key = models.CharField(max_length=30, unique=True, choices=KEY_CHOICES)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
 class LoanCategory(models.Model):
     MODE_MSME = 'msme'
     MODE_CORPORATE = 'corporate'
@@ -317,19 +344,48 @@ class CustomUser(AbstractUser):
         ('branch_manager', 'Branch Manager'),
         ('accountant', 'Accountant'),
         ('district_manager', 'District Manager'),
-        ('operation_manager', 'Operation Manager'),
+        ('cooperative_manager', 'Branch Cooperative Manager'),
         ('finance_manager', 'Finance Manager'),
-        ('credit_committee', 'Credit Committee Member'),
+        ('credit_head', 'Credit Department Head'),
+        ('credit_loan_officer', 'Credit Loan Officer'),
         ('ceo', 'Chief Executive Officer'),
         ('vp', 'Vice President'),
+        ('vp_operations', 'VP Operations'),
+        ('vp_it', 'VP IT'),
+        ('vp_customer_service', 'VP Customer Service'),
         ('board_member', 'Board Member'),
         ('risk_compliance', 'Risk & Compliance Officer'),
         ('auditor', 'Auditor / Viewer'),
+        # Legacy aliases (data-migrated; kept so old rows/forms do not crash).
+        ('operation_manager', 'Operation Manager (legacy)'),
+        ('credit_committee', 'Credit Committee Member (legacy)'),
     ]
+    MANAGEMENT_VP_ROLES = ('vp', 'vp_operations', 'vp_it', 'vp_customer_service')
+
     role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='loan_officer')
     phone_number = models.CharField(max_length=20)
     district = models.ForeignKey(District, on_delete=models.SET_NULL, null=True, blank=True)
     branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey(
+        'Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        help_text='Head-office department (Cooperative, Finance, Credit, Management, Board).',
+    )
+
+    def is_cooperative_manager(self) -> bool:
+        return self.role in ('cooperative_manager', 'operation_manager')
+
+    def is_credit_staff(self) -> bool:
+        return self.role in ('credit_head', 'credit_loan_officer')
+
+    def is_district_loan_officer(self) -> bool:
+        return self.role == 'loan_officer' and bool(self.district_id) and not self.branch_id
+
+    def is_management_vp(self) -> bool:
+        return self.role in self.MANAGEMENT_VP_ROLES
 
 # loans/models.py
 class LatestLoanRequestID(models.Model):
@@ -357,8 +413,31 @@ class LoanRequest(models.Model):
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
     reason = models.TextField()
     status = models.CharField(max_length=20, null=True, blank=True)
-    operation_manager_approval = models.BooleanField(default=False)
-    finance_approval = models.BooleanField(default=False)
+    operation_manager_approval = models.BooleanField(
+        default=False,
+        help_text='Branch Cooperative intake-queue approval (field name kept for DB compatibility).',
+    )
+    finance_approval = models.BooleanField(
+        default=False,
+        help_text='Legacy intake flag; no longer required for queue. Prefer finance_disbursement_approval.',
+    )
+    finance_disbursement_approval = models.BooleanField(
+        default=False,
+        help_text='Finance department approval required before confirming disbursement.',
+    )
+    ORIGIN_BRANCH = 'branch'
+    ORIGIN_HEAD_OFFICE = 'head_office'
+    ORIGIN_CHOICES = [
+        (ORIGIN_BRANCH, 'Branch'),
+        (ORIGIN_HEAD_OFFICE, 'Head Office / Credit'),
+    ]
+    origin_level = models.CharField(
+        max_length=20,
+        choices=ORIGIN_CHOICES,
+        default=ORIGIN_BRANCH,
+        db_index=True,
+        help_text='Where the loan was originated: branch (default) or head-office Credit.',
+    )
     # date_requested = models.DateTimeField(auto_now_add=True)
     date_requested = models.DateTimeField(default=timezone.now)
     date_reviewed = models.DateTimeField(null=True, blank=True)
@@ -375,8 +454,8 @@ class LoanRequest(models.Model):
         null=True,
         blank=True,
         related_name='assigned_loan_requests',
-        limit_choices_to={'role': 'loan_officer'},
-        help_text='Loan officer assigned by branch manager for analysis and collateral estimation.',
+        limit_choices_to=models.Q(role__in=['loan_officer', 'credit_loan_officer']),
+        help_text='Loan officer assigned for analysis and collateral estimation.',
     )
     collateral_submitted_at = models.DateTimeField(
         null=True,
@@ -615,9 +694,20 @@ class LoanRequest(models.Model):
     #     # Otherwise, preserve whatever status is already set (e.g., during migration)
     #     super(LoanRequest, self).save(*args, **kwargs)
     
+    @property
+    def cooperative_approval(self) -> bool:
+        """Alias for Branch Cooperative intake approval."""
+        return bool(self.operation_manager_approval)
+
+    @cooperative_approval.setter
+    def cooperative_approval(self, value: bool) -> None:
+        self.operation_manager_approval = bool(value)
+
     def managers_queue_approved(self) -> bool:
-        """Initial queue gate: operation + finance managers (before loan officer / engineering)."""
-        return self.operation_manager_approval and self.finance_approval
+        """Initial queue gate: Branch Cooperative only (before loan officer / engineering)."""
+        if self.origin_level == self.ORIGIN_HEAD_OFFICE:
+            return True
+        return bool(self.operation_manager_approval)
 
     def committee_allows_final_approval(self) -> bool:
         """Post-appraisal credit committee decision (separate from initial manager queue)."""
@@ -637,6 +727,8 @@ class LoanRequest(models.Model):
         return 'Complete appraisal and submit to the credit committee.'
 
     def save(self, *args, **kwargs):
+        if self.origin_level == self.ORIGIN_HEAD_OFFICE and not self.operation_manager_approval:
+            self.operation_manager_approval = True
         if self.managers_queue_approved():
             self.status = 'Approved'
             self.queue_approved = True
@@ -1719,6 +1811,16 @@ class ApprovalCommitteeLevel(models.Model):
     min_declines_required = models.PositiveIntegerField(
         default=2,
         help_text='Decline votes needed to reject at this level.',
+    )
+    tiebreaker_role = models.CharField(
+        max_length=30,
+        blank=True,
+        choices=CustomUser.ROLE_CHOICES,
+        help_text=(
+            'When approve and decline votes are equal, this role’s vote decides. '
+            'Defaults by level: branch→branch_manager, district→district_manager, '
+            'head_office→credit_head, management→board_member then ceo.'
+        ),
     )
     min_loan_amount = models.DecimalField(
         max_digits=20,

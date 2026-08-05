@@ -2,8 +2,9 @@
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.db.models import Q
 from .models import (
-    CustomUser, LoanRequest, District, Branch, Region, Zone, City,
+    CustomUser, LoanRequest, District, Branch, Department, Region, Zone, City,
     LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalPurposeLine, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
     AppraisalRiskMitigation, AppraisalCondition,
@@ -13,13 +14,29 @@ from .models import (
     es_checklist_item_count,
 )
 
+# Roles shown in user admin forms (exclude legacy aliases).
+ACTIVE_USER_ROLE_CHOICES = [
+    c for c in CustomUser.ROLE_CHOICES
+    if c[0] not in ('operation_manager', 'credit_committee')
+]
+
+
+class DepartmentForm(forms.ModelForm):
+    class Meta:
+        model = Department
+        fields = ['key', 'name', 'is_active', 'sort_order']
+
+
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = CustomUser
-        fields = ['username', 'password1', 'password2', 'role', 'phone_number', 'district', 'branch']
+        fields = ['username', 'password1', 'password2', 'role', 'phone_number', 'department', 'district', 'branch']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['role'].choices = ACTIVE_USER_ROLE_CHOICES
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['department'].required = False
         self.fields['branch'].queryset = Branch.objects.none()
 
         if 'district' in self.data:
@@ -34,7 +51,13 @@ class CustomUserCreationForm(UserCreationForm):
 class CustomUserChangeForm(UserChangeForm):
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'role', 'phone_number', 'district', 'branch']
+        fields = ['username', 'email', 'role', 'phone_number', 'department', 'district', 'branch']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = ACTIVE_USER_ROLE_CHOICES
+        self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['department'].required = False
 
 
 class DistrictForm(forms.ModelForm):
@@ -263,8 +286,15 @@ class LoanRequestForm(forms.ModelForm):
             'date_requested': forms.DateInput(attrs={'type': 'date'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, credit_origin=False, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
+        if credit_origin:
+            self.fields['branch'] = forms.ModelChoiceField(
+                queryset=Branch.objects.select_related('district').order_by('district__name', 'name'),
+                required=True,
+                widget=forms.Select(attrs={'class': 'form-control'}),
+                help_text='Servicing branch for this head-office Credit loan.',
+            )
 
 
 class LoanRequestBasicInfoForm(forms.ModelForm):
@@ -950,6 +980,7 @@ class ApprovalCommitteeLevelForm(forms.ModelForm):
         fields = [
             'name', 'voter_scope', 'sequence_order', 'is_active',
             'min_approvals_required', 'min_declines_required',
+            'tiebreaker_role',
             'min_loan_amount', 'max_loan_amount',
         ]
         widgets = {
@@ -959,9 +990,19 @@ class ApprovalCommitteeLevelForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(),
             'min_approvals_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'min_declines_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'tiebreaker_role': forms.Select(attrs={'class': 'form-control'}),
             'min_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'max_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['tiebreaker_role'].required = False
+        self.fields['tiebreaker_role'].choices = [('', '— Default by level —')] + list(ACTIVE_USER_ROLE_CHOICES)
+        self.fields['tiebreaker_role'].help_text = (
+            'On equal approve/reject votes, this role decides. '
+            'Defaults: Branch→BM, District→DM, HO→Credit Head, Management→Board then CEO.'
+        )
 
 
 class ApprovalCommitteeLevelCreateForm(forms.ModelForm):
@@ -972,6 +1013,7 @@ class ApprovalCommitteeLevelCreateForm(forms.ModelForm):
         fields = [
             'name', 'key', 'voter_scope', 'sequence_order', 'is_active',
             'min_approvals_required', 'min_declines_required',
+            'tiebreaker_role',
             'min_loan_amount', 'max_loan_amount',
         ]
         widgets = {
@@ -985,6 +1027,7 @@ class ApprovalCommitteeLevelCreateForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(),
             'min_approvals_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'min_declines_required': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'tiebreaker_role': forms.Select(attrs={'class': 'form-control'}),
             'min_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'max_loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
@@ -995,6 +1038,8 @@ class ApprovalCommitteeLevelCreateForm(forms.ModelForm):
         self.fields['key'].help_text = 'Unique slug. Leave blank to generate from the name.'
         self.fields['min_loan_amount'].required = False
         self.fields['max_loan_amount'].required = False
+        self.fields['tiebreaker_role'].required = False
+        self.fields['tiebreaker_role'].choices = [('', '— Default by level —')] + list(ACTIVE_USER_ROLE_CHOICES)
 
     def clean_key(self):
         from django.utils.text import slugify
@@ -1033,6 +1078,7 @@ class ApprovalCommitteeMemberRuleForm(forms.ModelForm):
         self.fields['user'].queryset = CustomUser.objects.filter(is_active=True).order_by('username')
         self.fields['user'].required = False
         self.fields['role'].required = False
+        self.fields['role'].choices = [('', '---------')] + list(ACTIVE_USER_ROLE_CHOICES)
         self.fields['label'].required = False
 
     def clean(self):
@@ -1118,7 +1164,7 @@ class LoanAppraisalForm(forms.ModelForm):
 
 
 class AssignLoanOfficerForm(forms.Form):
-    """Branch manager assigns a loan officer to a loan request (analysis and collateral)."""
+    """Assign a loan officer (branch, district, or credit) to a loan request."""
     assigned_loan_officer = forms.ModelChoiceField(
         queryset=CustomUser.objects.none(),
         required=False,
@@ -1126,14 +1172,21 @@ class AssignLoanOfficerForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
 
-    def __init__(self, *args, branch=None, **kwargs):
+    def __init__(self, *args, branch=None, district=None, credit_origin=False, **kwargs):
         super().__init__(*args, **kwargs)
-        if branch:
-            self.fields['assigned_loan_officer'].queryset = CustomUser.objects.filter(
+        qs = CustomUser.objects.filter(is_active=True)
+        if credit_origin:
+            qs = qs.filter(role='credit_loan_officer')
+        else:
+            branch_officers = Q(role='loan_officer', branch=branch) if branch else Q(pk__in=[])
+            district_id = getattr(district, 'id', None) or district
+            district_officers = Q(
                 role='loan_officer',
-                branch=branch,
-                is_active=True,
-            ).order_by('username')
+                district_id=district_id,
+                branch__isnull=True,
+            ) if district_id else Q(pk__in=[])
+            qs = qs.filter(branch_officers | district_officers)
+        self.fields['assigned_loan_officer'].queryset = qs.order_by('username')
 
 
 class AssignEngineerForm(forms.Form):

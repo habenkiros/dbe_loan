@@ -4,7 +4,10 @@
 {% block title %}Create Loan Request{% endblock %}
 
 {% block content %}
-<h1>Create Loan Request</h1>
+<h1>{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Create Loan Request{% endif %}</h1>
+{% if is_credit_origin %}
+<p class="help">Head-office Credit loans skip Branch Cooperative intake and are handled by the Credit department.</p>
+{% endif %}
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

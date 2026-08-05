@@ -73,7 +73,9 @@
       <span class="lbl">District / branch</span><span>{{ loan_request.branch.district.name }} / {{ loan_request.branch.name }}</span>
       <span class="lbl">OM / Finance</span>
       <span>
-        {% if loan_request.operation_manager_approval %}<span class="lw-badge lw-ok">OM ✓</span>{% else %}<span class="lw-badge lw-warn">OM pending</span>{% endif %}
+        {% if loan_request.origin_level == 'head_office' %}
+        <span class="lw-badge lw-ok">HO Credit</span>
+        {% elif loan_request.operation_manager_approval %}<span class="lw-badge lw-ok">Cooperative ✓</span>{% else %}<span class="lw-badge lw-warn">Cooperative pending</span>{% endif %}
         {% if loan_request.finance_approval %}<span class="lw-badge lw-ok">Finance ✓</span>{% else %}<span class="lw-badge lw-warn">Finance pending</span>{% endif %}
       </span>
       <span class="lbl">Requested</span><span>{{ loan_request.date_requested|date:"Y-m-d H:i"|default:loan_request.date_requested }}</span>

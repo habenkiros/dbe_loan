@@ -13,8 +13,11 @@
 
   <section class="dash-hero">
     <div>
-      <h1>Branch reporting dashboard</h1>
-      <p>Portfolio KPIs for your scope — committee and disbursement included.</p>
+      <h1>Portfolio reporting dashboard</h1>
+      <p>
+        KPIs for <strong>{{ scope_label|default:"your scope" }}</strong>
+        — committee, disbursement, and credit scores included.
+      </p>
     </div>
     <div class="dash-hero-meta">
       {% url 'generate_report' as gen_url %}
@@ -65,6 +68,62 @@
     </div>
   </form>
 
+  {% if eng_stats %}
+  <section class="dash-kpis" style="margin-top:1rem;">
+    <article class="dash-kpi kpi-total">
+      <p class="dash-kpi-label">Eng scope</p>
+      <p class="dash-kpi-value">{{ eng_stats.total }}</p>
+    </article>
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Pending QA</p>
+      <p class="dash-kpi-value">{{ eng_stats.pending_review }}</p>
+    </article>
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Returned</p>
+      <p class="dash-kpi-value">{{ eng_stats.returned }}</p>
+    </article>
+    <article class="dash-kpi kpi-approved">
+      <p class="dash-kpi-label">Eng approved</p>
+      <p class="dash-kpi-value">{{ eng_stats.approved }}</p>
+    </article>
+    <article class="dash-kpi kpi-rate">
+      <p class="dash-kpi-label">Unassigned</p>
+      <p class="dash-kpi-value">{{ eng_stats.unassigned }}</p>
+      <p class="dash-kpi-hint">Need engineer assignment</p>
+    </article>
+  </section>
+  {% if eng_stats.by_engineer %}
+  <section class="dash-grid" style="margin-top:1rem;">
+    <div class="dash-panel" style="grid-column:1 / -1;">
+      <h2>By engineer</h2>
+      <div class="dash-table-wrap">
+        <table class="dash-table">
+          <thead>
+            <tr><th>Engineer</th><th>Total</th><th>Pending QA</th><th>Returned</th><th>Approved</th></tr>
+          </thead>
+          <tbody>
+            {% for row in eng_stats.by_engineer %}
+            <tr>
+              <td>{{ row.name }}</td>
+              <td>{{ row.total }}</td>
+              <td>{{ row.pending }}</td>
+              <td>{{ row.returned }}</td>
+              <td>{{ row.approved }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5"><div class="dash-empty">No assigned engineers in filter.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="help" style="margin:0.75rem 0 0;">
+        <a href="{% url 'collateral:engineering_qa_queue' %}">Engineering QA queue</a>
+      </p>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+
   <section class="dash-kpis" style="margin-top:1rem;">
     <article class="dash-kpi kpi-total">
       <p class="dash-kpi-label">Loans</p>
@@ -91,6 +150,16 @@
       <p class="dash-kpi-value">{{ stats.disbursed }}</p>
       <p class="dash-kpi-hint">Final amt {{ stats.final_approved_amount|floatformat:0 }}</p>
     </article>
+    <article class="dash-kpi kpi-approved">
+      <p class="dash-kpi-label">Avg credit score</p>
+      <p class="dash-kpi-value">{% if stats.avg_credit_score != None %}{{ stats.avg_credit_score }}{% else %}—{% endif %}</p>
+      <p class="dash-kpi-hint">{{ stats.scored_loans }} scored</p>
+    </article>
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Weak / unacceptable</p>
+      <p class="dash-kpi-value">{{ stats.weak_band_share }}%</p>
+      <p class="dash-kpi-hint">{{ stats.weak_band_count }} loans</p>
+    </article>
   </section>
 
   <section class="dash-grid" style="margin-top:1.25rem;">
@@ -99,7 +168,7 @@
       <div class="dash-table-wrap">
         <table class="dash-table">
           <thead>
-            <tr><th>Branch</th><th>District</th><th>Loans</th><th>Amount</th><th>Committee ✓</th><th>Disbursed</th></tr>
+            <tr><th>Branch</th><th>District</th><th>Loans</th><th>Amount</th><th>Avg score</th><th>Weak</th><th>Committee ✓</th><th>Disbursed</th></tr>
           </thead>
           <tbody>
             {% for row in stats.by_branch %}
@@ -108,11 +177,13 @@
               <td>{{ row.branch__district__name|default:"—" }}</td>
               <td>{{ row.total }}</td>
               <td>{{ row.amount|floatformat:0 }}</td>
+              <td>{% if row.avg_score != None %}{{ row.avg_score|floatformat:1 }}{% else %}—{% endif %}</td>
+              <td>{{ row.weak_band }}</td>
               <td>{{ row.committee_ok }}</td>
               <td>{{ row.disbursed }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6"><div class="dash-empty">No loans in this filter.</div></td></tr>
+            <tr><td colspan="8"><div class="dash-empty">No loans in this filter.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>

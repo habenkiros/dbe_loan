@@ -97,7 +97,10 @@ class CbsLedgerTests(TestCase):
         self.loan.refresh_from_db()
         self.loan.disbursement_status = LoanRequest.DISBURSE_READY
         self.loan.schedule_confirmed_at = timezone.now()
-        self.loan.save(update_fields=['disbursement_status', 'schedule_confirmed_at'])
+        self.loan.finance_disbursement_approval = True
+        self.loan.save(update_fields=[
+            'disbursement_status', 'schedule_confirmed_at', 'finance_disbursement_approval',
+        ])
 
     def tearDown(self):
         set_ledger_adapter(None)

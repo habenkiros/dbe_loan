@@ -4,16 +4,115 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from django.db.models import Q
 from django.utils import timezone
+
+
+# When approve == decline, these roles cast the deciding vote (by amount level).
+# Order within a tuple = priority (first matching cast vote wins).
+DEFAULT_LEVEL_TIEBREAKER_ROLES = {
+    'branch': ('branch_manager',),
+    'district': ('district_manager',),
+    'head_office': ('credit_head',),
+    'management': ('board_member', 'ceo'),
+    'board': ('board_member',),
+}
 
 
 def get_appraisal_for_loan(loan_request):
     from loans.models import LoanAppraisal
 
     return LoanAppraisal.objects.filter(loan_request=loan_request).first()
+
+
+def get_tiebreaker_roles_for_level(level) -> Tuple[str, ...]:
+    """Roles whose vote breaks an approve/decline tie at this level."""
+    configured = (getattr(level, 'tiebreaker_role', None) or '').strip()
+    if configured:
+        return (configured,)
+    return DEFAULT_LEVEL_TIEBREAKER_ROLES.get(getattr(level, 'key', ''), ())
+
+
+def _member_in_level_scope(member, loan_request, level) -> bool:
+    from loans.models import ApprovalCommitteeLevel
+
+    scope = level.voter_scope
+    if scope == ApprovalCommitteeLevel.SCOPE_BRANCH:
+        return bool(member.branch_id and member.branch_id == loan_request.branch_id)
+    if scope == ApprovalCommitteeLevel.SCOPE_DISTRICT:
+        member_district = member.district_id
+        if not member_district and member.branch_id:
+            member_district = getattr(member.branch, 'district_id', None)
+        return bool(member_district and member_district == _loan_district_id(loan_request))
+    # Organization-wide
+    return True
+
+
+def find_tiebreaker_vote(loan_request, level, votes) -> Optional[Any]:
+    """
+    Among cast votes, return the tiebreaker member's vote for this level.
+    Prefers board → CEO at management when both configured as priority list.
+    """
+    roles = get_tiebreaker_roles_for_level(level)
+    if not roles:
+        return None
+    for role in roles:
+        for vote in votes:
+            member = vote.member
+            if getattr(member, 'role', None) != role:
+                continue
+            if not _member_in_level_scope(member, loan_request, level):
+                continue
+            return vote
+    return None
+
+
+def resolve_level_vote_decision(loan_request, level, tally) -> Tuple[Optional[str], str]:
+    """
+    Decide approve / decline / wait for a committee level.
+
+    Returns (decision, reason) where decision is 'approve', 'decline', or None (wait).
+    On equal approve/decline counts, the level chair (BM / DM / credit head / CEO / board)
+    provides the deciding weight.
+    """
+    from loans.models import LoanCommitteeVote
+
+    approve = tally['approve_count']
+    decline = tally['decline_count']
+    min_a = tally['min_approvals']
+    min_d = tally['min_declines']
+    votes = tally['votes']
+    eligible = tally.get('eligible_count') or 0
+    voted = len(votes)
+    all_voted = eligible > 0 and voted >= eligible
+
+    # Tie: same number of approvals and rejections — chair weight decides
+    if approve > 0 and approve == decline:
+        thresholds_both = approve >= min_a and decline >= min_d
+        if thresholds_both or all_voted:
+            tb = find_tiebreaker_vote(loan_request, level, votes)
+            if tb is not None:
+                decision = (
+                    'approve'
+                    if tb.vote == LoanCommitteeVote.VOTE_APPROVE
+                    else 'decline'
+                )
+                who = tb.member.get_full_name() or tb.member.username
+                role = tb.member.get_role_display() if hasattr(tb.member, 'get_role_display') else tb.member.role
+                return decision, (
+                    f'Tie {approve}–{decline} broken by {role} ({who}).'
+                )
+            roles = ', '.join(get_tiebreaker_roles_for_level(level)) or 'chair'
+            return None, f'Tie {approve}–{decline}: waiting for tiebreaker vote ({roles}).'
+        return None, f'Tie {approve}–{decline}: waiting for more votes or tiebreaker.'
+
+    if approve >= min_a:
+        return 'approve', f'Approvals reached ({approve} ≥ {min_a}).'
+    if decline >= min_d:
+        return 'decline', f'Declines reached ({decline} ≥ {min_d}).'
+    return None, 'Thresholds not yet met.'
 
 
 def _loan_district_id(loan_request) -> Optional[int]:
@@ -481,6 +580,10 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
         user_vote = next((v for v in votes if v.member_id == current_user.id), None)
         can_vote = user_can_vote_at_level(current_user, loan_request, level)
 
+    tb_roles = get_tiebreaker_roles_for_level(level)
+    tb_vote = find_tiebreaker_vote(loan_request, level, votes)
+    is_tied = approve_count > 0 and approve_count == decline_count
+
     return {
         'level': level,
         'votes': votes,
@@ -495,6 +598,9 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
         'uses_branch_override': branch_override is not None,
         'user_vote': user_vote,
         'can_vote': can_vote,
+        'is_tied': is_tied,
+        'tiebreaker_roles': tb_roles,
+        'tiebreaker_vote': tb_vote,
     }
 
 
@@ -856,7 +962,7 @@ def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
 
 
 def try_finalize_level_decision(loan_request, level) -> bool:
-    """Check votes at current level; advance or finalize if thresholds met."""
+    """Check votes at current level; advance or finalize if thresholds met (or tie broken)."""
     if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
         return False
     # Repair stuck routing before tallying (e.g. district pending after band change).
@@ -869,10 +975,9 @@ def try_finalize_level_decision(loan_request, level) -> bool:
         return False
 
     tally = get_level_tally(loan_request, level)
-    if tally['approve_count'] >= tally['min_approvals']:
-        return _advance_after_level_decision(loan_request, level, 'approve')
-    if tally['decline_count'] >= tally['min_declines']:
-        return _advance_after_level_decision(loan_request, level, 'decline')
+    decision, _reason = resolve_level_vote_decision(loan_request, level, tally)
+    if decision in ('approve', 'decline'):
+        return _advance_after_level_decision(loan_request, level, decision)
     return False
 
 

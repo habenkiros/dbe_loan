@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Edit Department{% endblock %}
+{% block content %}
+<h1>Edit department: {{ department.name }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+<p><a href="{% url 'manage_departments' %}">← Back to departments</a></p>
+{% endblock %}

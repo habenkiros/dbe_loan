@@ -114,7 +114,8 @@ def _can_access_collateral(user):
     """Roles that can work on collateral (loan officer, engineer, branch manager, etc.)."""
     return user.role in (
         'branch_manager', 'loan_officer', 'engineer', 'engineering_head',
-        'operation_manager', 'finance_manager', 'credit_committee',
+        'cooperative_manager', 'operation_manager', 'finance_manager',
+        'credit_head', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
         'admin', 'superadmin',
     )
 

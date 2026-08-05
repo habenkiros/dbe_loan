@@ -93,13 +93,13 @@
     {% url 'branch_report_dashboard' as dash_url %}
     {% include "includes/list_action.html" with href=dash_url icon="dashboard" label="Branch dashboard" tone="orange" only %}
     {% endif %}
-    {% if user.role == 'branch_manager' %}
+    {% if user.role == 'branch_manager' or user.role == 'credit_head' or user.role == 'credit_loan_officer' %}
     {% url 'create_loan_request' as create_url %}
     {% include "includes/list_action.html" with href=create_url icon="add" label="New loan request" tone="blue" only %}
     {% endif %}
-    {% if user.role == 'operation_manager' %}
+    {% if user.role == 'cooperative_manager' or user.role == 'operation_manager' %}
     {% url 'view_loan_requests_operation_manager' as op_url %}
-    {% include "includes/list_action.html" with href=op_url icon="list" label="Operation queue" tone="green" only %}
+    {% include "includes/list_action.html" with href=op_url icon="list" label="Cooperative queue" tone="green" only %}
     {% url 'post_approval_queue' as pa_url %}
     {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
     {% url 'view_report_options' as reports_url %}
@@ -107,13 +107,17 @@
     {% endif %}
     {% if user.role == 'finance_manager' %}
     {% url 'view_loan_requests_finance_manager' as fin_url %}
-    {% include "includes/list_action.html" with href=fin_url icon="list" label="Finance queue" tone="green" only %}
+    {% include "includes/list_action.html" with href=fin_url icon="money" label="Disbursement queue" tone="green" only %}
     {% url 'post_approval_queue' as pa_url %}
     {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
     {% url 'view_report_options' as reports_url %}
     {% include "includes/list_action.html" with href=reports_url icon="summary" label="Reports" tone="blue" only %}
     {% endif %}
-    {% if user.role == 'loan_officer' or user.role == 'branch_manager' or user.role == 'engineer' or user.role == 'engineering_head' %}
+    {% if user.role == 'credit_head' %}
+    {% url 'manage_approval_committees' as committees_url %}
+    {% include "includes/list_action.html" with href=committees_url icon="users" label="Approval committees" tone="green" only %}
+    {% endif %}
+    {% if user.role == 'loan_officer' or user.role == 'credit_loan_officer' or user.role == 'credit_head' or user.role == 'branch_manager' or user.role == 'engineer' or user.role == 'engineering_head' %}
     {% url 'collateral:dashboard' as coll_url %}
     {% include "includes/list_action.html" with href=coll_url icon="building" label="Collateral" tone="orange" only %}
     {% endif %}
@@ -164,7 +168,7 @@
             <td>{{ loan.date_requested|date:"Y-m-d" }}</td>
             <td>
               <div class="list-actions">
-              {% if user.role == 'operation_manager' %}
+              {% if user.role == 'cooperative_manager' or user.role == 'operation_manager' %}
               {% url 'loan_request_detail_operation_manager' loan.id as recent_url %}
               {% elif user.role == 'finance_manager' %}
               {% url 'loan_request_detail_finance' loan.id as recent_url %}

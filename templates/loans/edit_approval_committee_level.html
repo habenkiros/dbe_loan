@@ -42,11 +42,14 @@
          &nbsp; <label>{{ form.is_active }} Active</label></p>
       <p>{{ form.min_approvals_required.label_tag }} {{ form.min_approvals_required }}
          &nbsp; {{ form.min_declines_required.label_tag }} {{ form.min_declines_required }}</p>
+      <p>{{ form.tiebreaker_role.label_tag }} {{ form.tiebreaker_role }}</p>
+      {% if form.tiebreaker_role.help_text %}<p class="help">{{ form.tiebreaker_role.help_text }}</p>{% endif %}
       <p>
         {{ form.min_loan_amount.label_tag }} {{ form.min_loan_amount }}
         &nbsp; {{ form.max_loan_amount.label_tag }} {{ form.max_loan_amount }}
       </p>
       <p class="help">Leave both amount fields blank to always include this level. Amount uses Sheet 6 recommended amount when set.</p>
+      <p class="help">If approve and reject votes are equal, the tiebreaker role’s vote decides for that amount level (Branch Manager, District Manager, Credit Head, CEO / Board).</p>
     </fieldset>
 
     <fieldset>

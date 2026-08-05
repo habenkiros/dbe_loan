@@ -7,6 +7,7 @@
     · <a href="{% url 'branch_report_dashboard' %}?{{ request.GET.urlencode }}">Branch dashboard</a>
   </p>
   <h1>Pipeline report</h1>
+  <p class="help" style="margin-top:0;"><strong>Your scope:</strong> {{ scope_label|default:"—" }}</p>
 
   <form method="get" class="lw-panel" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.65rem; align-items:end;">
     <div>

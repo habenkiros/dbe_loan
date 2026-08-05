@@ -1,16 +1,16 @@
 <!-- templates/loans/update_operation_manager_approval.html -->
 {% extends "base.html" %}
 
-{% block title %}Update Operation Manager Approval{% endblock %}
+{% block title %}Branch Cooperative Approval{% endblock %}
 
 {% block content %}
-<h1>Update Operation Manager Approval</h1>
+<h1>Branch Cooperative Intake Approval</h1>
 
 <div style="background:#e8f4ec; border:1px solid #064420; padding:0.75rem 1rem; margin-bottom:1rem; border-radius:6px;">
-  <strong>Initial queue approval</strong> — operation and finance managers review new loan requests
+  <strong>Initial queue approval</strong> — Branch Cooperative reviews new branch loan requests
   <em>before</em> the branch assigns a loan officer or sends the loan to engineering.
-  When <strong>both</strong> approve, status becomes <em>Approved</em> and the branch can proceed.
-  Credit committee review happens later, after appraisal.
+  When Cooperative approves, status becomes <em>Approved</em> and the branch can proceed.
+  Credit committee review happens later, after appraisal. Head-office Credit loans skip this queue.
 </div>
 
 <form method="post">
@@ -27,10 +27,6 @@
         <tr>
             <th>Phone Number</th>
             <td>{{ loan_request.phone_number }}</td>
-        </tr>
-        <tr>
-            <th>Email</th>
-            <td>{{ loan_request.email }}</td>
         </tr>
         <tr>
             <th>Category</th>
@@ -53,7 +49,7 @@
             <td>{{ loan_request.status }}</td>
         </tr>
         <tr>
-            <th>Operation Manager Approval</th>
+            <th>Branch Cooperative Approval</th>
             <td>
                 <select name="operation_manager_approval">
                     <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approved</option>
@@ -62,17 +58,13 @@
             </td>
         </tr>
         <tr>
-            <th>Finance Approval</th>
-            <td>{{ loan_request.finance_approval }}</td>
-        </tr>
-        <tr>
-            <th>Cutomer History</th>
+            <th>Customer History</th>
             <td>{{ loan_request.customer_history }}</td>
         </tr>
     </table>
     <button type="submit">Save Changes</button>
 </form>
 
-<a href="{% url 'view_loan_requests_operation_manager' %}">Back to Loan Requests</a>
+<a href="{% url 'view_loan_requests_operation_manager' %}">Back to Cooperative queue</a>
 
 {% endblock %}

@@ -147,6 +147,11 @@ class DisbursementTrackTests(TestCase):
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.disbursement_status, LoanRequest.DISBURSE_READY)
 
+        # Finance gate required before officer can confirm disbursement
+        self.assertFalse(can_mark_disbursed(self.officer, self.loan))
+        self.loan.finance_disbursement_approval = True
+        self.loan.save(update_fields=['finance_disbursement_approval'])
+
         self.assertTrue(can_mark_disbursed(self.officer, self.loan))
         self.assertFalse(can_mark_disbursed(self.accountant, self.loan))
 
@@ -167,6 +172,8 @@ class DisbursementTrackTests(TestCase):
         _generate_amortization_schedule(self.appraisal, self.basic, self.loan)
         confirm_schedule(self.loan, self.officer)
         mark_ready_for_disbursement(self.loan, self.officer)
+        self.loan.finance_disbursement_approval = True
+        self.loan.save(update_fields=['finance_disbursement_approval'])
         self.loan.refresh_from_db()
 
         admin = User.objects.create_user(

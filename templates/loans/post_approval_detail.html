@@ -175,6 +175,17 @@
     <p><span class="pa-badge pa-ok">Ready for disbursement</span>
       {% if loan_request.ready_for_disbursement_at %} since {{ loan_request.ready_for_disbursement_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
     </p>
+    {% if loan_request.finance_disbursement_approval %}
+    <p><span class="pa-badge pa-ok">Finance disbursement approved</span></p>
+    {% elif can_approve_finance_disbursement %}
+    <form method="post" action="{% url 'update_finance_manager_approval' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="finance_disbursement_approval" value="True">
+      <p><button type="submit" class="btn btn-green">Approve disbursement (Finance)</button></p>
+    </form>
+    {% else %}
+    <p class="help">Waiting for Finance department to approve disbursement.</p>
+    {% endif %}
     {% if can_mark_disbursed %}
     {% if not loan_request.customer_number %}
     <p class="help" style="color:#c0392b;">Set a core-banking <strong>customer number</strong> on the loan (Sheet 1) before confirming CBS disbursement.</p>
@@ -185,7 +196,7 @@
       <textarea name="disbursement_notes" rows="2" style="width:100%; max-width:480px;"></textarea>
       <p><button type="submit" class="btn btn-green" onclick="return confirm('Book in CBS (or mock) and mark this loan as disbursed?');"{% if not loan_request.customer_number %} disabled{% endif %}>Confirm disbursement (CBS)</button></p>
     </form>
-    {% else %}
+    {% elif loan_request.finance_disbursement_approval %}
     <p class="help">Assigned loan officer confirms disbursement once funds are released (CBS booking runs on confirm).</p>
     {% endif %}
     {% else %}

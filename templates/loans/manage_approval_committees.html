@@ -45,7 +45,12 @@
           </td>
           <td><small>{{ level.get_voter_scope_display }}</small></td>
           <td>{% if level.is_active %}<span class="badge-on">Active</span>{% else %}<span class="badge-off">Inactive</span>{% endif %}</td>
-          <td>{{ level.min_approvals_required }} approve / {{ level.min_declines_required }} decline</td>
+          <td>
+            {{ level.min_approvals_required }} approve / {{ level.min_declines_required }} decline
+            {% if level.tiebreaker_role %}
+            <br><small>Tie → {{ level.get_tiebreaker_role_display }}</small>
+            {% endif %}
+          </td>
           <td>
             {% if level.min_loan_amount or level.max_loan_amount %}
               {% if level.min_loan_amount %}≥ {{ level.min_loan_amount|floatformat:0 }}{% endif %}

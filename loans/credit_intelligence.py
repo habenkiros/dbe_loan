@@ -23,29 +23,10 @@ WEAK_BANDS = ('weak', 'unacceptable')
 
 
 def scoped_loans(user) -> Tuple[QuerySet, str]:
-    """Role-scoped loan queryset + human scope label (same rules as home)."""
-    qs = reporting_base_queryset(user)
-    role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin'):
-        label = 'Organization-wide'
-    elif role == 'loan_officer':
-        label = 'Assigned to you'
-    elif role == 'branch_manager':
-        if getattr(user, 'branch', None):
-            label = user.branch.name
-        elif getattr(user, 'district_id', None):
-            label = getattr(user.district, 'name', 'Your district')
-        else:
-            label = 'No branch assigned'
-    elif role == 'district_manager' and getattr(user, 'district', None):
-        label = getattr(user.district, 'name', 'Your district')
-    elif role in (
-        'operation_manager', 'finance_manager', 'credit_committee', 'accountant',
-    ):
-        label = 'Organization-wide'
-    else:
-        label = 'Your scope'
-    return qs, label
+    """Role-scoped loan queryset + human scope label (same rules as Reports)."""
+    from loans.reporting import report_scope_label
+
+    return reporting_base_queryset(user), report_scope_label(user)
 
 
 def _money(v) -> float:

@@ -158,9 +158,9 @@ def can_manage_conditions(user, loan_request) -> bool:
     if loan_request.disbursement_status == loan_request.DISBURSE_DISBURSED:
         return False
     role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'branch_manager'):
+    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'branch_manager', 'credit_head'):
         return True
-    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+    if role in ('loan_officer', 'credit_loan_officer') and loan_request.assigned_loan_officer_id == user.id:
         return True
     return False
 
@@ -175,25 +175,45 @@ def can_mark_ready(user, loan_request) -> bool:
     if loan_request.disbursement_status == loan_request.DISBURSE_DISBURSED:
         return False
     role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'branch_manager', 'accountant'):
+    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'branch_manager', 'accountant', 'credit_head'):
         return True
-    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+    if role in ('loan_officer', 'credit_loan_officer') and loan_request.assigned_loan_officer_id == user.id:
         return True
     return False
 
 
-def can_mark_disbursed(user, loan_request) -> bool:
-    """Assigned loan officer confirms disbursement (not admin / finance desk)."""
+def can_approve_finance_disbursement(user, loan_request) -> bool:
+    """Finance manager approves release of funds after loan is ready for disbursement."""
     if not is_post_approval(loan_request):
         return False
     if loan_request.disbursement_status != loan_request.DISBURSE_READY:
         return False
+    if loan_request.finance_disbursement_approval:
+        return False
     role = getattr(user, 'role', None)
-    if role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id:
+    return getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'finance_manager')
+
+
+def set_finance_disbursement_approval(loan_request, user, *, approved: bool = True) -> None:
+    loan_request.finance_disbursement_approval = bool(approved)
+    loan_request.save(update_fields=['finance_disbursement_approval'])
+
+
+def can_mark_disbursed(user, loan_request) -> bool:
+    """Assigned loan officer / BM confirms disbursement after Finance approval."""
+    if not is_post_approval(loan_request):
+        return False
+    if loan_request.disbursement_status != loan_request.DISBURSE_READY:
+        return False
+    if not loan_request.finance_disbursement_approval:
+        return False
+    role = getattr(user, 'role', None)
+    if role in ('loan_officer', 'credit_loan_officer') and loan_request.assigned_loan_officer_id == user.id:
         return True
-    # Branch manager may confirm for loans in their branch
     if role == 'branch_manager' and getattr(user, 'branch_id', None):
         return loan_request.branch_id == user.branch_id
+    if role == 'credit_head' and loan_request.origin_level == loan_request.ORIGIN_HEAD_OFFICE:
+        return True
     return False
 
 
@@ -267,11 +287,14 @@ def mark_ready_for_disbursement(loan_request, user, *, notes: str = '') -> Tuple
     from loans.models import LoanNotification
     from loans.services.notifications import notify_users
 
-    recipients = []
+    from loans.models import CustomUser
+
+    recipients = list(
+        CustomUser.objects.filter(role='finance_manager', is_active=True)[:5]
+    )
     if loan_request.assigned_loan_officer_id and loan_request.assigned_loan_officer.is_active:
         recipients.append(loan_request.assigned_loan_officer)
     if loan_request.branch_id:
-        from loans.models import CustomUser
         recipients.extend(list(
             CustomUser.objects.filter(
                 role='branch_manager',
@@ -297,7 +320,7 @@ def mark_ready_for_disbursement(loan_request, user, *, notes: str = '') -> Tuple
             message=(
                 f'{loan_request.applicant_name} — amount '
                 f'{final_loan_amount(loan_request)}. '
-                'Assigned loan officer should confirm once funds are disbursed.'
+                'Finance must approve disbursement, then the assigned officer confirms funds released.'
             ),
             url=reverse('post_approval_detail', args=[loan_request.pk]),
         )
@@ -313,6 +336,8 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
 
     if loan_request.disbursement_status != loan_request.DISBURSE_READY:
         return False, ['Loan must be marked ready for disbursement first.']
+    if not loan_request.finance_disbursement_approval:
+        return False, ['Finance department must approve disbursement before confirmation.']
 
     booking_note = ''
     if getattr(settings, 'DECSI_CBS_BOOK_ON_DISBURSE', True):
@@ -392,6 +417,20 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
     return True, []
 
 
+def _scope_queryset_by_org(qs, user):
+    """Filter queryset by branch/district attachment for accountant/auditor/DM."""
+    role = getattr(user, 'role', None)
+    if role == 'accountant' or role == 'auditor':
+        if getattr(user, 'branch_id', None):
+            return qs.filter(branch_id=user.branch_id)
+        if getattr(user, 'district_id', None):
+            return qs.filter(branch__district_id=user.district_id)
+        return qs  # HO-attached accountant/auditor without branch/district
+    if role == 'district_manager' and getattr(user, 'district_id', None):
+        return qs.filter(branch__district_id=user.district_id)
+    return qs
+
+
 def post_approval_queue_queryset(user):
     from loans.models import LoanRequest
 
@@ -403,19 +442,38 @@ def post_approval_queue_queryset(user):
         'branch', 'assigned_loan_officer', 'appraisal',
     ).order_by('-committee_decided_at')
     role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'operation_manager', 'finance_manager'):
+    if getattr(user, 'is_superuser', False) or role in (
+        'admin', 'superadmin', 'cooperative_manager', 'operation_manager',
+        'finance_manager', 'credit_head',
+    ):
         return qs
-    if role == 'loan_officer':
+    if role in ('loan_officer', 'credit_loan_officer'):
         return qs.filter(assigned_loan_officer=user)
     if role == 'branch_manager' and user.branch_id:
         return qs.filter(branch_id=user.branch_id)
     if role == 'accountant':
-        # Accountants can still view schedule-confirmed / ready items, but
-        # marking disbursed is the assigned loan officer's action.
-        return qs.filter(
+        scoped = _scope_queryset_by_org(qs, user)
+        return scoped.filter(
             disbursement_status__in=(
                 LoanRequest.DISBURSE_SCHEDULE_CONFIRMED,
                 LoanRequest.DISBURSE_READY,
             )
         )
+    if role == 'district_manager':
+        return _scope_queryset_by_org(qs, user)
+    return qs.none()
+
+
+def finance_disbursement_queue_queryset(user):
+    """Loans ready for disbursement awaiting Finance approval."""
+    from loans.models import LoanRequest
+
+    qs = LoanRequest.objects.filter(
+        committee_status=LoanRequest.COMMITTEE_APPROVED,
+        disbursement_status=LoanRequest.DISBURSE_READY,
+        finance_disbursement_approval=False,
+    ).select_related('branch', 'assigned_loan_officer').order_by('-ready_for_disbursement_at')
+    role = getattr(user, 'role', None)
+    if getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'finance_manager'):
+        return qs
     return qs.none()

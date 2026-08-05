@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.urls import reverse
 from .models import (
-    Zone, Branch, LoanCategory, CollateralType,
+    Zone, Branch, Department, LoanCategory, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
@@ -159,6 +159,14 @@ class LoanDocumentRequestAdmin(admin.ModelAdmin):
     list_filter = ('document_type',)
     search_fields = ('loan_request__loan_request_id',)
     readonly_fields = ('requested_at',)
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key', 'is_active', 'sort_order')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'key')
+    ordering = ('sort_order', 'name')
 
 
 admin.site.register(CustomUser)

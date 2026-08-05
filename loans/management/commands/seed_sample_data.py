@@ -26,6 +26,7 @@ from collateral.models import (
     SubWorkUnitPrice,
 )
 from loans.models import (
+    Department,
     ApprovalCommitteeLevel,
     ApprovalCommitteeMemberRule,
     AppraisalAmortizationEntry,
@@ -359,23 +360,33 @@ class Command(BaseCommand):
             role='district_manager', first_name='Berhanu', last_name='Tadesse',
             district=d['Mekelle District'],
         )
+        users['dlo1'] = self._ensure_user(
+            'lo.district.mekele', email='lo.district.mekele@decsi.local', phone_number='0911000041',
+            role='loan_officer', first_name='District', last_name='Officer',
+            district=d['Mekelle District'], branch=None,
+        )
+        users['auditor_br'] = self._ensure_user(
+            'auditor.mekele', email='auditor.mekele@decsi.local', phone_number='0911000082',
+            role='auditor', first_name='Branch', last_name='Auditor',
+            district=d['Mekelle District'], branch=b['Mekelle Main Branch'],
+        )
         users['op'] = self._ensure_user(
-            'op.manager', email='op.manager@decsi.local', phone_number='0911000050',
-            role='operation_manager', first_name='Mulugeta', last_name='Assefa',
+            'coop.manager', email='coop.manager@decsi.local', phone_number='0911000050',
+            role='cooperative_manager', first_name='Mulugeta', last_name='Assefa',
+        )
+        # Alias for older seed references
+        users['coop'] = users['op']
+        users['credit_head'] = self._ensure_user(
+            'credit.head', email='credit.head@decsi.local', phone_number='0911000052',
+            role='credit_head', first_name='Selam', last_name='Berhe',
+        )
+        users['credit_lo'] = self._ensure_user(
+            'credit.lo', email='credit.lo@decsi.local', phone_number='0911000053',
+            role='credit_loan_officer', first_name='Hagos', last_name='Alemu',
         )
         users['fin'] = self._ensure_user(
             'fin.manager', email='fin.manager@decsi.local', phone_number='0911000051',
             role='finance_manager', first_name='Rahel', last_name='Gebremichael',
-        )
-        users['cc1'] = self._ensure_user(
-            'cc.member1', email='cc1@decsi.local', phone_number='0911000060',
-            role='credit_committee', first_name='Fitsum', last_name='Negash',
-            district=d['Mekelle District'], branch=b['Mekelle Main Branch'],
-        )
-        users['cc2'] = self._ensure_user(
-            'cc.member2', email='cc2@decsi.local', phone_number='0911000061',
-            role='credit_committee', first_name='Liya', last_name='Haile',
-            district=d['Eastern District'], branch=b['Adigrat Branch'],
         )
         users['ceo'] = self._ensure_user(
             'ceo', email='ceo@decsi.local', phone_number='0911000070',
@@ -384,6 +395,18 @@ class Command(BaseCommand):
         users['vp'] = self._ensure_user(
             'vp', email='vp@decsi.local', phone_number='0911000071',
             role='vp', first_name='Executive', last_name='VP',
+        )
+        users['vp_ops'] = self._ensure_user(
+            'vp.operations', email='vp.operations@decsi.local', phone_number='0911000073',
+            role='vp_operations', first_name='Operations', last_name='VP',
+        )
+        users['vp_it'] = self._ensure_user(
+            'vp.it', email='vp.it@decsi.local', phone_number='0911000074',
+            role='vp_it', first_name='IT', last_name='VP',
+        )
+        users['vp_cs'] = self._ensure_user(
+            'vp.customerservice', email='vp.cs@decsi.local', phone_number='0911000075',
+            role='vp_customer_service', first_name='Customer', last_name='Service VP',
         )
         users['board'] = self._ensure_user(
             'board.member', email='board@decsi.local', phone_number='0911000072',
@@ -406,6 +429,47 @@ class Command(BaseCommand):
             admin.set_password(DEFAULT_PASSWORD)
             admin.save()
             users['admin'] = admin
+
+
+        # Departments + HO attachments
+        dept_defs = [
+            (Department.KEY_COOPERATIVE, 'Branch Cooperative', 1),
+            (Department.KEY_FINANCE, 'Finance', 2),
+            (Department.KEY_CREDIT, 'Credit', 3),
+            (Department.KEY_MANAGEMENT, 'Management', 4),
+            (Department.KEY_BOARD, 'Board of Directors', 5),
+        ]
+        depts = {}
+        for key, name, order in dept_defs:
+            dept, _ = Department.objects.get_or_create(
+                key=key, defaults={'name': name, 'sort_order': order, 'is_active': True},
+            )
+            depts[key] = dept
+        role_dept = {
+            'cooperative_manager': Department.KEY_COOPERATIVE,
+            'finance_manager': Department.KEY_FINANCE,
+            'credit_head': Department.KEY_CREDIT,
+            'credit_loan_officer': Department.KEY_CREDIT,
+            'ceo': Department.KEY_MANAGEMENT,
+            'vp': Department.KEY_MANAGEMENT,
+            'vp_operations': Department.KEY_MANAGEMENT,
+            'vp_it': Department.KEY_MANAGEMENT,
+            'vp_customer_service': Department.KEY_MANAGEMENT,
+            'board_member': Department.KEY_BOARD,
+        }
+        for u in users.values():
+            key = role_dept.get(getattr(u, 'role', None))
+            if key and getattr(u, 'department_id', None) != depts[key].id:
+                u.department = depts[key]
+                u.save(update_fields=['department'])
+
+
+        # Retire legacy Credit Committee Member demo accounts
+        for uname in ('cc.member1', 'cc.member2'):
+            legacy = CustomUser.objects.filter(username=uname).first()
+            if legacy and legacy.role == 'credit_committee':
+                legacy.role = 'accountant'
+                legacy.save(update_fields=['role'])
 
         self.stdout.write(self.style.SUCCESS(f'  Users: {CustomUser.objects.count()}'))
         return users
@@ -436,14 +500,16 @@ class Command(BaseCommand):
         rules = [
             (ApprovalCommitteeLevel.LEVEL_BRANCH, 'role', 'branch_manager', None),
             (ApprovalCommitteeLevel.LEVEL_BRANCH, 'role', 'accountant', None),
-            (ApprovalCommitteeLevel.LEVEL_BRANCH, 'role', 'credit_committee', None),
             (ApprovalCommitteeLevel.LEVEL_DISTRICT, 'role', 'district_manager', None),
-            (ApprovalCommitteeLevel.LEVEL_DISTRICT, 'role', 'credit_committee', None),
-            (ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE, 'role', 'operation_manager', None),
+            (ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE, 'role', 'credit_head', None),
+            (ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE, 'role', 'credit_loan_officer', None),
             (ApprovalCommitteeLevel.LEVEL_HEAD_OFFICE, 'role', 'finance_manager', None),
-            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'user', '', users['ceo']),
-            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'user', '', users['vp']),
-            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'user', '', users['board']),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'ceo', None),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'vp', None),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'vp_operations', None),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'vp_it', None),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'vp_customer_service', None),
+            (ApprovalCommitteeLevel.LEVEL_MANAGEMENT, 'role', 'board_member', None),
         ]
         for key, ptype, role, user in rules:
             lvl = level_objs[key]

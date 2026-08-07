@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DECSI × Seqela Milestone — ChatGPT Style</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; font-family: Inter, system-ui, sans-serif; padding: 20px; }
+  .label { color: #777; font-size: 12px; margin-bottom: 8px; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* ===== FULL POSTER 1024x1536 ===== */
+  .poster {
+    width: 1024px;
+    height: 1536px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #071a12 0%, #0a2418 18%, #06140e 55%, #030c08 100%);
+    color: #fff;
+  }
+
+  /* subtle grid / glow */
+  .poster::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 90% 40% at 50% 22%, rgba(34,170,95,.22), transparent 60%),
+      radial-gradient(ellipse 70% 30% at 80% 70%, rgba(212,175,55,.08), transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .layer { position: relative; z-index: 1; }
+
+  /* HEADER */
+  .hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 36px 12px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand img.seqela {
+    height: 42px;
+    width: auto;
+  }
+  .brand .name {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    line-height: 1.25;
+  }
+  .brand .name span {
+    display: block;
+    color: #3dce78;
+    font-size: 10px;
+    letter-spacing: .16em;
+  }
+  .tag {
+    font-size: 12px;
+    font-weight: 600;
+    color: #c8e6d4;
+    text-align: right;
+    max-width: 280px;
+    line-height: 1.35;
+  }
+  .tag em { color: #3dce78; font-style: normal; font-weight: 700; }
+
+  /* HERO TEXT + SCENE */
+  .hero-block {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 18px;
+    padding: 8px 36px 0;
+    min-height: 520px;
+  }
+  .hero-copy .kicker {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    color: #2fd873;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .hero-copy h1 {
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .hero-copy h1 .amt {
+    color: #2fd873;
+    display: block;
+    font-size: 36px;
+  }
+  .hero-copy .sub {
+    font-size: 13px;
+    font-weight: 600;
+    color: #a8d4bb;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .hero-copy p {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #d5e8dc;
+    max-width: 430px;
+  }
+
+  .scene-wrap {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45), 0 0 0 1px rgba(61,206,120,.25);
+    min-height: 460px;
+    background: #0a1f14;
+  }
+  .scene-wrap img.scene {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 35%;
+    display: block;
+    min-height: 460px;
+  }
+  .scene-cap {
+    position: absolute;
+    left: 12px; right: 12px; bottom: 12px;
+    background: rgba(3,16,10,.78);
+    border: 1px solid rgba(61,206,120,.35);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.35;
+    backdrop-filter: blur(6px);
+  }
+  .scene-cap strong { color: #2fd873; }
+
+  /* features stack floating on right of scene - absolute over scene? keep below in grid */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 16px 36px 8px;
+  }
+  .feat {
+    background: linear-gradient(180deg, rgba(18,60,38,.75), rgba(8,28,18,.85));
+    border: 1px solid rgba(61,206,120,.28);
+    border-radius: 12px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .feat .ico {
+    width: 36px; height: 36px;
+    margin: 0 auto 8px;
+    border-radius: 50%;
+    background: rgba(47,216,115,.12);
+    border: 1px solid rgba(47,216,115,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .feat .t {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e8f7ee;
+    line-height: 1.25;
+  }
+
+  /* thank you + big number */
+  .thanks {
+    margin: 14px 36px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px;
+    align-items: center;
+    background: linear-gradient(90deg, rgba(12,48,30,.9), rgba(18,70,42,.55), rgba(12,48,30,.9));
+    border: 1px solid rgba(212,175,55,.35);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .badge {
+    width: 92px; height: 92px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #1fa85a, #0d5c32 70%);
+    border: 3px solid #d4af37;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    box-shadow: 0 0 24px rgba(212,175,55,.35);
+    position: relative;
+  }
+  .badge img.decsi {
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fff;
+  }
+  .thanks-copy {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #d8eee1;
+  }
+  .thanks-copy strong {
+    display: block;
+    color: #f0e2a8;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .big-num {
+    text-align: right;
+  }
+  .big-num .v {
+    font-size: 28px;
+    font-weight: 900;
+    color: #f0d878;
+    letter-spacing: -.02em;
+    line-height: 1.05;
+  }
+  .big-num .l {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: #b7d4c3;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* impact */
+  .impact {
+    padding: 6px 36px 10px;
+  }
+  .impact h2 {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #2fd873;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .impact-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .impact-item {
+    background: rgba(10,40,24,.75);
+    border: 1px solid rgba(61,206,120,.22);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .impact-item .ico {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  .impact-item .t {
+    font-size: 10px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+  .impact-item .d {
+    font-size: 9px;
+    color: #9fc1ad;
+    line-height: 1.3;
+  }
+
+  /* bottom stats + quote */
+  .bottom {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 14px;
+    padding: 12px 36px 0;
+  }
+  .quote {
+    background: rgba(8,32,20,.8);
+    border-left: 3px solid #2fd873;
+    border-radius: 0 12px 12px 0;
+    padding: 14px 16px;
+  }
+  .quote p {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #cfe8d9;
+    font-style: italic;
+  }
+  .quote .by {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #2fd873;
+    font-style: normal;
+  }
+  .stats4 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat {
+    background: linear-gradient(145deg, rgba(18,60,38,.9), rgba(8,28,18,.95));
+    border: 1px solid rgba(61,206,120,.3);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .stat .v {
+    font-size: 18px;
+    font-weight: 900;
+    color: #f0d878;
+    line-height: 1.1;
+  }
+  .stat .l {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #a8cbb8;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  /* about strip */
+  .about {
+    margin: 14px 36px 0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(232,212,138,.18);
+    font-size: 11px;
+    line-height: 1.45;
+    color: #b7d4c3;
+  }
+  .about strong { color: #e8d48a; }
+
+  /* footer */
+  .ftr {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 36px 22px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+  }
+  .ftr .pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ftr .pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #c8e6d4;
+    border: 1px solid rgba(61,206,120,.35);
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+  .ftr .url {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2fd873;
+  }
+  .ftr-logos {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .ftr-logos img.decsi-sm {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: cover;
+  }
+  .ftr-logos img.seqela-sm {
+    height: 28px;
+  }
+</style>
+</head>
+<body>
+  <div class="label">ChatGPT-style poster · 1024×1536 · updated numbers + real logos</div>
+  <div class="poster" id="poster">
+    <div class="layer">
+      <div class="hdr">
+        <div class="brand">
+          <img class="seqela" src="seqela_logo_transparent.png" alt="Seqela" />
+          <div class="name">Seqela<span>AI Credit Intelligence</span></div>
+        </div>
+        <div class="tag">Smarter Technology.<br><em>Stronger Financial Institutions.</em></div>
+      </div>
+
+      <div class="hero-block">
+        <div class="hero-copy">
+          <div class="kicker">Proud Milestone</div>
+          <h1>
+            <span class="amt">17.03 Billion Birr</span>
+            Approved for MSMEs with Confidence
+          </h1>
+          <div class="sub">Through AI-Powered Mobile Collateral Inspection by Seqela AI Credit Intelligence — with Dedebit Credit &amp; Saving Institution (DECSI).</div>
+          <p>
+            We are proud to celebrate this milestone achieved together with DECSI.
+            ETB 17.03 billion in MSME secured loans approved—backed by intelligent collateral valuation,
+            real-time risk assessment, and seamless mobile inspections.
+            From ETB 29.56 billion requested across 53,901 applications—serving 25,397 approved customers.
+          </p>
+        </div>
+        <div class="scene-wrap">
+          <img class="scene" src="crops/tablet_area.png" alt="Field collateral inspection" />
+          <div class="scene-cap">
+            <strong>Mobile collateral inspection</strong> · GPS evidence · AI valuation · Approved with confidence
+          </div>
+        </div>
+      </div>
+
+      <div class="features">
+        <div class="feat"><div class="ico">📱</div><div class="t">Mobile Access</div></div>
+        <div class="feat"><div class="ico">📷</div><div class="t">Capture &amp; Verify</div></div>
+        <div class="feat"><div class="ico">☁</div><div class="t">Real-Time Sync</div></div>
+        <div class="feat"><div class="ico">⚙</div><div class="t">AI-Powered Valuation</div></div>
+      </div>
+
+      <div class="thanks">
+        <div class="badge"><img class="decsi" src="logod.jpeg" alt="DECSI" /></div>
+        <div class="thanks-copy">
+          <strong>A big thank you to DECSI</strong>
+          for your trust and partnership. Together, we are shaping the future of intelligent,
+          collateral-backed lending in Ethiopia — through Dedebit Microfinance’s network across Tigray and beyond.
+        </div>
+        <div class="big-num">
+          <div class="v">Br 17,025,387,000</div>
+          <div class="l">Approved for MSMEs</div>
+        </div>
+      </div>
+
+      <div class="impact">
+        <h2>The Impact We Create Together</h2>
+        <div class="impact-row">
+          <div class="impact-item"><div class="ico">🚀</div><div class="t">Faster Loan Approvals</div><div class="d">Digital credit factory</div></div>
+          <div class="impact-item"><div class="ico">🛡</div><div class="t">Smarter Risk Decisions</div><div class="d">Collateral + cashflow</div></div>
+          <div class="impact-item"><div class="ico">📱</div><div class="t">100% Mobile Inspections</div><div class="d">GPS field evidence</div></div>
+          <div class="impact-item"><div class="ico">📊</div><div class="t">Better Portfolio Quality</div><div class="d">Audit-ready dossiers</div></div>
+          <div class="impact-item"><div class="ico">👥</div><div class="t">More MSMEs Empowered</div><div class="d">25,397 approved clients</div></div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="quote">
+          <p>“Seqela’s AI-Powered Mobile Collateral Inspection has transformed our MSME lending. It’s faster, smarter, and more reliable. This is the future of credit.”</p>
+          <div class="by">— DECSI Management · Dedebit Microfinance, Mekelle</div>
+        </div>
+        <div class="stats4">
+          <div class="stat"><div class="v">53,901</div><div class="l">Total loan requests</div></div>
+          <div class="stat"><div class="v">25,397</div><div class="l">Approved customers</div></div>
+          <div class="stat"><div class="v">Br 17.03B</div><div class="l">Approved · secured MSME</div></div>
+          <div class="stat"><div class="v">Br 29.56B</div><div class="l">Total amount requested</div></div>
+        </div>
+      </div>
+
+      <div class="about">
+        <strong>About Dedebit Microfinance (DECSI):</strong>
+        Established 1993 and operational since 8 March 1994 under REST; share company since 1997.
+        Headquartered in Mekelle, Tigray — one of Ethiopia’s leading MFIs delivering savings and credit to rural and urban clients traditionally underserved by banks.
+      </div>
+    </div>
+
+    <div class="ftr">
+      <div class="ftr-logos">
+        <img class="decsi-sm" src="logod.jpeg" alt="DECSI" />
+        <img class="seqela-sm" src="seqela_logo_transparent.png" alt="Seqela" />
+        <div class="pills">
+          <span class="pill">AI-Powered</span>
+          <span class="pill">Smart</span>
+          <span class="pill">Secure</span>
+          <span class="pill">Connected</span>
+        </div>
+      </div>
+      <div class="url">www.seqela.io</div>
+    </div>
+  </div>
+</body>
+</html>

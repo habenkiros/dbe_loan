@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}DECSI Assist{% endblock %}
+{% block content %}
+<div class="lw-wrap" style="max-width:560px;">
+  <h1>DECSI Assist</h1>
+  <p class="help">
+    Open the green <strong>Assist</strong> bubble (lower right) on any page.
+    The chatbot holds a <strong>draft story</strong> you can correct in chat, creates the loan when you confirm,
+    and can generate scoped <strong>pipeline reports</strong> with Excel export links.
+  </p>
+  <p><a href="{% url 'home' %}?agent=1">Open home with chat</a></p>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>window.__DECSI_AGENT_AUTO_OPEN = true;</script>
+{% endblock %}

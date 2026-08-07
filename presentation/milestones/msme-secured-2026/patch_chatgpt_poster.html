@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Patch ChatGPT poster with correct numbers + logos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; padding: 16px; font-family: Inter, system-ui, -apple-system, sans-serif; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap');
+
+  .poster {
+    width: 1024px;
+    height: 1536px;
+    position: relative;
+    overflow: hidden;
+  }
+  .poster > img.bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Cover wrong headline number area - calibrated for source ChatGPT layout */
+  .patch {
+    position: absolute;
+    color: #fff;
+    z-index: 5;
+  }
+
+  /* Top logos bar */
+  .topbar {
+    top: 18px; left: 22px; right: 22px;
+    height: 58px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(4,18,12,.92), rgba(4,18,12,.55));
+    border-radius: 10px;
+    padding: 6px 14px;
+    border: 1px solid rgba(47,216,115,.25);
+  }
+  .topbar .left, .topbar .right {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .topbar img.seqela { height: 36px; }
+  .topbar img.decsi {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #fff; object-fit: cover;
+  }
+  .topbar .brand-txt {
+    font-size: 11px; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; line-height: 1.2; color: #fff;
+  }
+  .topbar .brand-txt span { display: block; color: #2fd873; font-size: 9px; }
+  .topbar .tag { font-size: 11px; font-weight: 600; color: #c8e6d4; text-align: right; }
+
+  /* Hero number replacement */
+  .hero-num {
+    top: 118px; left: 36px; width: 470px;
+    background: linear-gradient(180deg, rgba(6,28,18,.94), rgba(6,28,18,.88));
+    border-left: 4px solid #2fd873;
+    border-radius: 0 14px 14px 0;
+    padding: 14px 16px 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.45);
+  }
+  .hero-num .kicker {
+    color: #2fd873; font-weight: 900; font-size: 20px;
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .hero-num .amt {
+    font-size: 34px; font-weight: 900; line-height: 1.05;
+    color: #fff; text-transform: uppercase;
+  }
+  .hero-num .amt em {
+    font-style: normal; color: #2fd873; display: block; font-size: 36px;
+  }
+  .hero-num .sub {
+    margin-top: 8px; font-size: 12px; font-weight: 600;
+    color: #a8d4bb; line-height: 1.35;
+  }
+
+  /* Mid big amount */
+  .mid-amount {
+    top: 700px; right: 28px; width: 340px;
+    background: linear-gradient(135deg, rgba(8,36,22,.95), rgba(12,50,30,.92));
+    border: 1px solid rgba(240,216,120,.45);
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-align: right;
+    box-shadow: 0 10px 28px rgba(0,0,0,.4);
+  }
+  .mid-amount .v {
+    font-size: 24px; font-weight: 900; color: #f0d878; line-height: 1.1;
+  }
+  .mid-amount .l {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    color: #c8e6d4; text-transform: uppercase; margin-top: 4px;
+  }
+
+  /* Stats bar bottom */
+  .stats {
+    left: 24px; right: 24px; bottom: 78px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    background: linear-gradient(160deg, rgba(10,42,28,.96), rgba(4,18,12,.96));
+    border: 1px solid rgba(47,216,115,.35);
+    border-radius: 12px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat .v {
+    font-size: 18px; font-weight: 900; color: #f0d878;
+  }
+  .stat .l {
+    font-size: 9px; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: #a8cbb8; margin-top: 4px; line-height: 1.25;
+  }
+
+  /* thank ribbon */
+  .thanks {
+    left: 24px; right: 24px; top: 620px;
+    background: linear-gradient(90deg, rgba(8,40,24,.94), rgba(14,60,36,.9));
+    border: 1px solid rgba(212,175,55,.4);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .thanks img {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #fff; object-fit: cover; flex-shrink: 0;
+    border: 2px solid #d4af37;
+  }
+  .thanks p {
+    font-size: 12px; line-height: 1.4; color: #d8eee1;
+  }
+  .thanks p strong {
+    display: block; color: #f0e2a8; font-size: 13px;
+    letter-spacing: .04em; text-transform: uppercase; margin-bottom: 2px;
+  }
+
+  /* about */
+  .about {
+    left: 24px; right: 24px; bottom: 188px;
+    background: rgba(3,14,9,.88);
+    border: 1px solid rgba(232,212,138,.22);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 11px; line-height: 1.4; color: #b7d4c3;
+  }
+  .about strong { color: #e8d48a; }
+
+  .footer {
+    left: 24px; right: 24px; bottom: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #9fc1ad; font-size: 11px; font-weight: 700;
+  }
+  .footer span { color: #2fd873; }
+</style>
+</head>
+<body>
+  <div class="poster" id="poster">
+    <img class="bg" src="ChatGPT%20Image%20Aug%206,%202026,%2011_12_44%20PM.png" alt="" />
+
+    <div class="patch topbar">
+      <div class="left">
+        <img class="seqela" src="seqela_logo_transparent.png" alt="Seqela" />
+        <div class="brand-txt">Seqela<span>AI Credit Intelligence</span></div>
+      </div>
+      <div class="right">
+        <div class="tag">Smarter Technology.<br>Stronger Financial Institutions.</div>
+        <img class="decsi" src="logod.jpeg" alt="DECSI" />
+      </div>
+    </div>
+
+    <div class="patch hero-num">
+      <div class="kicker">Proud Milestone</div>
+      <div class="amt"><em>17.03 Billion Birr</em>Approved for MSMEs with Confidence</div>
+      <div class="sub">Through AI-Powered Mobile Collateral Inspection by Seqela · Partner: DECSI Dedebit Microfinance</div>
+    </div>
+
+    <div class="patch thanks">
+      <img src="logod.jpeg" alt="DECSI" />
+      <p>
+        <strong>A big thank you to DECSI</strong>
+        for your trust and partnership. Together shaping intelligent, collateral-backed MSME lending in Ethiopia.
+      </p>
+    </div>
+
+    <div class="patch mid-amount">
+      <div class="v">Br 17,025,387,000</div>
+      <div class="l">Approved for MSMEs</div>
+      <div class="l" style="color:#9fc1ad;margin-top:6px;font-size:10px;letter-spacing:0">Requested Br 29,562,221,974</div>
+    </div>
+
+    <div class="patch about">
+      <strong>About Dedebit Microfinance (DECSI):</strong>
+      Established 1993 · Operational 8 March 1994 (REST) · Share company since 1997 · HQ Mekelle, Tigray.
+      One of Ethiopia’s leading MFIs — savings and credit for rural &amp; urban clients underserved by banks.
+    </div>
+
+    <div class="patch stats">
+      <div class="stat"><div class="v">53,901</div><div class="l">Total requests</div></div>
+      <div class="stat"><div class="v">25,397</div><div class="l">Approved customers</div></div>
+      <div class="stat"><div class="v">Br 17.03B</div><div class="l">Approved amount</div></div>
+      <div class="stat"><div class="v">Br 29.56B</div><div class="l">Requested amount</div></div>
+    </div>
+
+    <div class="patch footer">
+      <div>AI-Powered · Smart · Secure · Connected</div>
+      <div><span>www.seqela.io</span> · DECSI × Seqela</div>
+    </div>
+  </div>
+</body>
+</html>

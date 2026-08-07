@@ -2175,3 +2175,87 @@ class LoanNotification(models.Model):
     def __str__(self):
         return f'{self.title} → {self.user.username}'
 
+
+class AgentRun(models.Model):
+    """Audit trail for in-app Agentic Assist pipeline runs."""
+    STATUS_OK = 'ok'
+    STATUS_ERROR = 'error'
+    STATUS_PARTIAL = 'partial'
+    STATUS_CHOICES = [
+        (STATUS_OK, 'Completed'),
+        (STATUS_ERROR, 'Failed'),
+        (STATUS_PARTIAL, 'Partial'),
+    ]
+
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='agent_runs',
+    )
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_runs',
+    )
+    conversation = models.ForeignKey(
+        'AgentConversation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='runs',
+    )
+    intent_text = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OK)
+    steps = models.JSONField(default=list, blank=True, help_text='Ordered tool results.')
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Agent assist run'
+        verbose_name_plural = 'Agent assist runs'
+
+    def __str__(self):
+        code = self.loan_request.loan_request_id if self.loan_request_id else '—'
+        return f'AgentRun #{self.pk} by {self.user_id} → {code} ({self.status})'
+
+
+class AgentConversation(models.Model):
+    """Multi-turn Agentic Assist chat (LLM + tool audit)."""
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='agent_conversations',
+    )
+    title = models.CharField(max_length=200, blank=True)
+    # OpenAI-compatible message list for continuity (user/assistant/tool).
+    messages = models.JSONField(default=list, blank=True)
+    # UI timeline: {role, content, tools?} without raw tool payloads.
+    ui_messages = models.JSONField(default=list, blank=True)
+    llm_provider = models.CharField(max_length=40, blank=True)
+    last_loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agent_conversations',
+    )
+    # Editable draft the user can correct before commit (loan bootstrap story).
+    story = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Held loan draft: applicant, amount, flags, revision history.',
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Agent conversation'
+        verbose_name_plural = 'Agent conversations'
+
+    def __str__(self):
+        return f'AgentChat #{self.pk} ({self.user_id}) {self.title[:40]}'
+

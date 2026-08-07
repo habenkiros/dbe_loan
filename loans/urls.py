@@ -3,10 +3,19 @@
 from django.urls import path
 from . import views
 from . import views_credit_intelligence as ci_views
+from . import views_agent
 
 urlpatterns = [
     path('', views.home, name='home'),
     path('classic-home/', views.classic_home, name='classic_home'),
+    path('agent/', views_agent.agent_assist_console, name='agent_assist'),
+    path('agent/chat/', views_agent.agent_chat_api, name='agent_chat_api'),
+    path(
+        'agent/conversations/<int:conversation_id>/',
+        views_agent.agent_conversation_api,
+        name='agent_conversation_api',
+    ),
+    path('agent/runs/<int:run_id>/', views_agent.agent_run_detail, name='agent_run_detail'),
     path(
         'credit-intelligence/',
         ci_views.credit_intelligence_overview,

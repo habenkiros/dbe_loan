@@ -1,8 +1,8 @@
 # DECSI Loan Hub
 
-A Django-based **loan application and processing platform** built for microfinance institutions. It digitizes the end-to-end MSME loan lifecycle—from branch intake and document verification through cashflow-based appraisal, collateral field valuation, and multi-level credit committee approval.
+A Django-based **loan origination and credit operations platform** for microfinance institutions. It digitizes the MSME (and corporate) loan lifecycle—from branch intake and document verification, through cashflow-based appraisal and GPS-backed collateral valuation, multi-level credit committee approval, post-approval conditions, and CBS-linked disbursement.
 
-The system is designed around **DECSI** (Dedebit Credit and Savings Institution) operational practices: branch → district → head-office workflows, construction-based building valuation catalogs, and alignment with the bank's Excel appraisal workbook.
+Built around **DECSI** (Dedebit Credit and Savings Institution) practices: branch → district → head-office workflows, construction-based building valuation catalogs, Excel-aligned appraisal sheets, and integrations with core banking and Ethiopia-local maps.
 
 ---
 
@@ -14,24 +14,35 @@ The system is designed around **DECSI** (Dedebit Credit and Savings Institution)
 - [Architecture](#architecture)
 - [User roles](#user-roles)
 - [Loan lifecycle](#loan-lifecycle)
+- [Agentic Assist](#agentic-assist)
+- [Credit Intelligence](#credit-intelligence)
 - [Collateral valuation](#collateral-valuation)
 - [Loan appraisal](#loan-appraisal)
 - [Document authentication](#document-authentication)
 - [Credit committee workflow](#credit-committee-workflow)
+- [Post-approval & disbursement](#post-approval--disbursement)
+- [Core banking & maps](#core-banking--maps)
 - [Project structure](#project-structure)
 - [Getting started](#getting-started)
 - [Environment variables](#environment-variables)
 - [Management commands](#management-commands)
 - [Running tests](#running-tests)
 - [CI/CD](#cicd)
+- [Related documentation](#related-documentation)
 
 ---
 
 ## Overview
 
-DECSI Loan Hub replaces manual queuing, incomplete document submissions, and sequential paper-based approvals with a centralized web application. Staff at branches, districts, and head office work from role-specific dashboards. Loan officers complete a **seven-step cashflow appraisal** (mirroring the bank's Excel tool), engineers or officers perform **GPS-backed collateral field visits**, and configurable **approval committees** route loans by amount and organizational level.
+DECSI Loan Hub replaces manual queuing, incomplete document submissions, and sequential paper approvals with a single staff web app. Branch, district, and head-office users work from **role-scoped** dashboards.
 
-The platform complements existing core banking (e.g. Temenos) and can integrate with external customer lookup APIs for identity verification.
+Officers complete a **seven-step appraisal** (MSME cashflow or corporate mode), capture **field evidence** for buildings/land/other collateral, and pass files through **configurable committees**. After approval, a **post-approval track** handles conditions, repayment schedules, readiness, and optional **CBS booking** on disbursement.
+
+Optional AI layers assist staff without replacing policy gates:
+
+- **Agentic Assist** — conversational loan draft + guarded tools (create request / list docs / read appraisal); **cannot** approve, value collateral, or disburse
+- **Credit Intelligence** — portfolio KPIs, officer/manager workspaces, collateral risk views, decision support
+- **Analysis assist** — in-appraisal scorecard insights and policy gate warnings
 
 ---
 
@@ -39,14 +50,17 @@ The platform complements existing core banking (e.g. Temenos) and can integrate 
 
 | Area | Capabilities |
 |------|-------------|
-| **Loan intake** | Create loan requests, assign loan officers, track status across branches and districts |
-| **Documents** | Configurable document types, upload/review workflow, OCR (English + Amharic), content validation, reference-sample matching, identity field checks |
-| **Appraisal** | Seven-step MSME cashflow appraisal: basic info, qualitative assessment, cashflow/DSCR, E&S checklist, collateral worksheet, summary/decision, repayment schedule |
-| **Collateral** | Building valuation (DECSI construction catalog), land valuation, other movable collateral, field photos with GPS, map views, coverage ratio checks |
-| **Governance** | Collateral lock after submit, audit trail, unlock-request workflow, engineering QA queue |
-| **Approvals** | Operation/finance manager queues, configurable multi-level credit committees (branch → district → HO → management), in-app and optional email notifications |
-| **Administration** | Geography (region/zone/city), branches, loan categories, collateral types, users, bulk CSV imports |
-| **Reporting** | Loan request reports and filtering |
+| **Loan intake** | Create requests (branch or HO Credit), assign loan officers, customer number / party API lookup |
+| **Documents** | Configurable types, upload/review, OCR (English + Amharic), content validation, reference-sample matching, identity field checks |
+| **Appraisal** | MSME cashflow or corporate mode; sheets 1–7; scorecard & analysis gates; Excel/PDF appraisal packs |
+| **Collateral** | DECSI construction catalog, land & other items, GPS photos, Gebeta/OSM maps, coverage rules, evidence pack |
+| **Governance** | Lock after submit, audit trail, unlock workflow, engineering QA queue |
+| **Approvals** | Branch Cooperative intake queue, multi-level committees (amount routing, tie-breakers), return-to-officer |
+| **Post-approval** | Conditions checklist, schedule confirm, mark ready, Finance gate, mark disbursed (CBS optional) |
+| **Agentic Assist** | Floating chat + `/agent/`; draft **story**; branch manager bootstrap; document checklist; appraisal read-only; full run audit |
+| **Credit Intelligence** | Overview KPIs, officer/manager workspaces, portfolio & collateral analytics, CI assistant APIs |
+| **Administration** | Geography, departments, branches, committees UI, document types, bulk CSV imports |
+| **Reporting** | Scoped reports, branch dashboard, exports |
 
 ---
 
@@ -56,42 +70,45 @@ The platform complements existing core banking (e.g. Temenos) and can integrate 
 |-------|------------|
 | Backend | Python 3.9, Django 3.2 |
 | Database | PostgreSQL 16 |
-| Frontend | Django templates, jQuery, custom CSS/JS (including Leaflet maps for collateral) |
-| Document processing | Tesseract OCR (`eng` + `amh`), Pillow, pypdf, pdf2image |
-| Data import/export | pandas, django-import-export, openpyxl |
-| API (optional) | Django REST Framework, drf-yasg, SimpleJWT |
-| Deployment | Docker, Docker Compose |
+| Frontend | Django templates, jQuery, Leaflet/MapLibre (Gebeta tiles), agent chat widget CSS/JS |
+| Documents | Tesseract OCR (`eng` + `amh`), Pillow, pypdf, pdf2image |
+| PDF/Excel packs | openpyxl, reportlab, WeasyPrint (HTML→PDF appraisal) |
+| Data import | pandas, django-import-export |
+| AI (optional) | OpenAI-compatible tool calling (or stub without key); Azure OpenAI supported |
+| API | DRF / SimpleJWT / drf-yasg (present); CI + agent JSON endpoints |
+| Deployment | Docker, Docker Compose, optional nginx HTTPS overlay for field tablets |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Web browser (staff)                       │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│  Django application (decsi_loan)                                 │
-│  ┌──────────────────┐  ┌────────────────────────────────────┐   │
-│  │   loans app      │  │   collateral app                    │   │
-│  │  • Loan requests │  │  • Building/land/other valuation   │   │
-│  │  • Appraisal     │  │  • Field visits & GPS photos         │   │
-│  │  • Documents     │  │  • Unit price catalog              │   │
-│  │  • Committees    │  │  • Policy, governance, evidence pack│   │
-│  └──────────────────┘  └────────────────────────────────────┘   │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-        PostgreSQL      Media files    External APIs
-        (loan data)     (uploads)      (core banking / OCR)
+┌──────────────────────────────────────────────────────────────────┐
+│  Staff browser · floating Agentic Assist · tablet field HTTPS     │
+└───────────────────────────────┬──────────────────────────────────┘
+                                │
+┌───────────────────────────────▼──────────────────────────────────┐
+│  Django (decsi_loan)                                              │
+│  ┌────────────────────────────┐  ┌────────────────────────────┐  │
+│  │ loans                      │  │ collateral                   │  │
+│  │ • Intake & documents       │  │ • Catalog & unit prices      │  │
+│  │ • Appraisal / scorecard    │  │ • Buildings / land / other   │  │
+│  │ • Committees & post-approve│  │ • Field visit + GPS + maps   │  │
+│  │ • Agent + Credit Intel.    │  │ • Policy, unlock, eng. QA    │  │
+│  │ • Disbursement + ledger    │  │ • Evidence pack              │  │
+│  └────────────────────────────┘  └────────────────────────────┘  │
+└───────────────────────────────┬──────────────────────────────────┘
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         ▼                      ▼                      ▼
+   PostgreSQL              Media files           External
+   (loan data)             (docs / photos)       DECSI party/CBS,
+                                                 Gebeta Maps, LLM
 ```
 
-Two Django apps share the `LoanRequest` model as the central entity:
-
-- **`loans`** — application intake, documents, appraisal, approvals, notifications, master data
-- **`collateral`** — physical collateral estimation, field capture, engineering QA, evidence packs
+- **`loans`** — users, origination, appraisal, AI assist, committees, notifications, reporting, disbursement
+- **`collateral`** — physical estimation, field capture, governance  
+(`partners` holds early PLSA-related scaffolding; not wired into `INSTALLED_APPS` for the loan hub runtime)
 
 ---
 
@@ -99,24 +116,22 @@ Two Django apps share the `LoanRequest` model as the central entity:
 
 | Role | Typical responsibilities |
 |------|------------------------|
-| `superadmin` / `admin` | System configuration, user management, policy settings |
-| `branch_manager` | Create loan requests, assign officers, send to engineering, submit to committee |
-| `loan_officer` | Appraisal/docs/collateral on assigned loans (branch or district-scoped) |
-| `accountant` | Committee vote + post-approval mark-ready; scoped by branch or district |
-| `auditor` | View/reports only; scoped by branch or district when attached |
-| `district_manager` | District oversight, assign district LOs, district committee |
-| `cooperative_manager` | Branch Cooperative **intake queue** approval (sole gate before LO work) |
-| `finance_manager` | **Disbursement** approval after committee (not intake); HO committee vote |
-| `credit_head` | HO Credit oversight, approval committee configuration, HO loans |
-| `credit_loan_officer` | Create/appraise head-office Credit loans |
-| `engineering_head` | Receive collateral assignments, assign engineers, engineering QA oversight |
-| `engineer` | Building valuation, unit prices, field visits, engineering QA review |
-| `ceo` / `vp` / `vp_operations` / `vp_it` / `vp_customer_service` / `board_member` | Management / board committee voting |
-| `risk_compliance` | Review and audit access |
+| `superadmin` / `admin` | System config, users, policies |
+| `branch_manager` | Create loans (incl. via agent), assign officers, engineering handoff, committee submit |
+| `loan_officer` | Docs, appraisal, collateral (when mode allows); agent document/appraisal tools |
+| `credit_loan_officer` | Head-office Credit loans and appraisal |
+| `credit_head` | HO credit oversight, committee configuration |
+| `cooperative_manager` | Branch Cooperative **intake queue** (gate before LO work on branch loans) |
+| `finance_manager` | Disbursement approval after committee readiness (not intake); HO committee |
+| `accountant` | Committee vote + post-approval mark-ready (branch/district scoped) |
+| `district_manager` | District oversight, district LO assignment, district committee |
+| `engineering_head` / `engineer` | Valuation queue, unit prices, field visits, engineering QA |
+| `ceo` / `vp` / `vp_operations` / `vp_it` / `vp_customer_service` / `board_member` | Management / board voting |
+| `risk_compliance` / `auditor` | Review, reports (scope by branch/district when set) |
 
-Committee voters are configured from these real roles (branch/district/HO/management) — there is no separate “Credit Committee Member” role. Head-office staff can be linked to a `Department` (Cooperative, Finance, Credit, Management, Board).
+Legacy role values (`operation_manager`, `credit_committee`) remain for old rows only. HO users may link to a **Department** (Cooperative, Finance, Credit, Management, Board).
 
-Roles are defined on the custom `CustomUser` model (`loans.CustomUser`) and drive URL access and dashboard routing.
+Roles live on `loans.CustomUser` and drive menus, reporting scope, agent capabilities, and committee membership.
 
 ---
 
@@ -124,117 +139,179 @@ Roles are defined on the custom `CustomUser` model (`loans.CustomUser`) and driv
 
 ```mermaid
 flowchart LR
-    A[Create request] --> B[Upload documents]
-    B --> C[Document auth / review]
-    C --> D[Loan appraisal<br/>7 steps]
-    D --> E[Collateral estimation]
-    E --> F[Collateral submit]
-    F --> G{Engineering QA?}
-    G -->|Yes| H[Engineering review]
-    G -->|No| I[Branch Cooperative queue]
-    H --> I
-    I --> J[Submit to committee]
-    J --> K[Multi-level approval]
-    K --> L[Finance disbursement approval]
-    L --> M[Disbursed]
+    A[Create request] --> B[Documents]
+    B --> C[Appraisal]
+    C --> D[Collateral]
+    D --> E[Submit / lock]
+    E --> F{Eng. QA?}
+    F -->|Yes| G[Engineering review]
+    F -->|No| H[Cooperative / ready path]
+    G --> H
+    H --> I[Committee levels]
+    I --> J[Post-approval track]
+    J --> K[Finance / disburse]
+    K --> L[Disbursed]
 ```
 
-1. **Intake** — Branch staff (or HO Credit) create a `LoanRequest` with applicant details, category, collateral type, and amount.
-2. **Documents** — Required document types are uploaded; automated checks run (file integrity, OCR, phrase matching, optional identity match).
-3. **Appraisal** — Assigned loan officer completes sheets 1–7 (see [Loan appraisal](#loan-appraisal)).
-4. **Collateral** — Depending on `CollateralEstimationConfig`, a loan officer or engineer estimates building/land/other collateral with field photos and GPS.
-5. **Submit & lock** — Collateral is submitted and locked; an unlock workflow exists for corrections.
-6. **Engineering QA** — When engineering-team mode is enabled, submitted collateral enters an engineering review queue.
-7. **Cooperative queue** — Branch Cooperative approves branch-originated loans before LO assignment (HO Credit loans skip this).
-8. **Committee** — Loan is submitted to configurable approval levels based on amount (branch → district → HO → management/board).
-9. **Finance disbursement** — After committee approve and readiness, Finance approves disbursement; officer confirms funds released.
+1. **Intake** — Branch manager (or HO Credit) creates a `LoanRequest`; optional party lookup by customer number.
+2. **Documents** — Type-driven uploads with automated auth pipeline.
+3. **Appraisal** — Assigned LO completes MSME or corporate sheets; analysis assist flags gates (not auto-approve).
+4. **Collateral** — Buildings/land/other + field GPS; optional engineering team mode.
+5. **Submit & lock** — Estimation locked; unlock requests for corrections.
+6. **Engineering QA** — When configured, pending → approved/returned.
+7. **Cooperative queue** — Branch Cooperative for branch-originated flow (HO Credit can skip).
+8. **Committee** — Amount-based levels; vote, decline, or return to officer; appraisal pack for members.
+9. **Post-approval** — Conditions → schedule confirm → mark ready → Finance / officer mark disbursed (optional CBS book).
+
+---
+
+## Agentic Assist
+
+In-app AI co-pilot for trusted staff (floating widget + `/agent/`).
+
+### Access
+
+| Capability | Roles (server-enforced) |
+|------------|-------------------------|
+| Open chat | Branch manager, LO, credit LO, admin, superadmin |
+| **Create / bootstrap loan** | **Branch manager only** |
+| Document checklist tools | BM, LO, credit LO, admin |
+| Read appraisal coach | LO, credit LO, BM, admin |
+
+### What it can do
+
+- Hold an editable **story** (draft borrower/amount/purpose) before any DB loan exists  
+- **commit_story** / **bootstrap_loan** — bare application; optional collateral **shells only**  
+- **register_collateral** — placeholders (no quantities/prices)  
+- **document_checklist**, **find_loans**, **pipeline_report**, **read_appraisal**, **lookup_workspace**
+
+### What it must not do (blocked server-side)
+
+Approve, committee submit, disburse, draft/seed full appraisal, attach fake docs as production path, or run valuation estimation tools.
+
+### Implementation
+
+| Module | Role |
+|--------|------|
+| `loans/agent_chat.py` | LLM tool-calling loop (OpenAI / Azure / stub) |
+| `loans/agent_tools.py` | Tool specs + dispatch |
+| `loans/agent.py` | Bootstrap policy & pipeline |
+| `loans/agent_permissions.py` | Role gates |
+| `loans/agent_story.py` | Conversation story |
+| `AgentConversation` / `AgentRun` | Persist chat, story, audit steps |
+| `static/js/agent_widget.js` + CSS | Floating UI |
+
+Configure via `AGENT_LLM_PROVIDER`, `OPENAI_*` (see [Environment variables](#environment-variables)).
+
+---
+
+## Credit Intelligence
+
+Role-scoped dashboard under `/credit-intelligence/`:
+
+| Surface | Purpose |
+|---------|---------|
+| Overview | Pipeline KPIs, MoM deltas, risk band, watchlist, insights |
+| Officer / Manager | Workspaces and alerts |
+| Portfolio | Analytics over book amounts (committee → appraisal → requested) |
+| Collateral | Collateral intelligence aggregates |
+| Assistant | Guided Q&A over scoped data |
+
+JSON APIs: `/api/credit-intelligence/overview/`, assistant, and per-application decision. Scope follows the same reporting rules as export reports. CBS outstanding/NPL may be stubbed when ledger is mock.
 
 ---
 
 ## Collateral valuation
 
-Collateral estimation supports three asset classes:
+### Asset classes
 
-### Buildings
+- **Buildings** — `MainWork` → `SubWork` → `SubSubWork`; woreda unit prices; photos with GPS  
+- **Land** — area × ETB/m² + field visit steps  
+- **Other** — movable items with estimate and field capture  
 
-- Valuation follows the **DECSI construction catalog**: `MainWork` → `SubWork` → `SubSubWork`
-- **Unit prices** are set per woreda (`City`) by the engineering team
-- Each building has quantity × unit price rows, site GPS, and categorized field photos (front, side, roof, etc.)
+### Policy & governance
 
-### Land
+`CollateralPolicyConfig`: min photos, GPS weak threshold, photo-to-site distance, coverage ratio, address mismatch rules.
 
-- Size (m²) × unit price per m², with dedicated field-visit steps and photos
+After submit: **immutable** (unless unlock approved), `CollateralFieldAuditLog`, evidence pack for committees, optional **engineering QA** in engineering-team mode.
 
-### Other collateral
+Maps: **Gebeta** (when API key set) or Leaflet/OSM fallback.
 
-- Movable items (vehicles, equipment, etc.) with estimated value and field capture
-
-### Field-work policy
-
-Bank-wide rules (`CollateralPolicyConfig`) govern:
-
-- Minimum photos per building/land/other item
-- GPS accuracy thresholds and officer attestation when signal is weak
-- Maximum distance between photo GPS and registered site
-- Collateral coverage ratio (collateral value ÷ loan amount)
-- Declared-address vs. site GPS distance checks
-
-### Governance (Tier 1)
-
-- Records are **locked after collateral submit**
-- Full **audit log** (`CollateralFieldAuditLog`) of field actions
-- **Unlock requests** — officers request corrections; supervisors approve/reject
-- **Evidence pack** — read-only bundle for committee review (totals, maps, photos, audit trail)
-
-### Engineering QA (Tier 2)
-
-When `CollateralEstimationConfig.mode` includes the engineering team, submitted collateral enters an engineering QA queue for head/engineer review before proceeding.
+Tablet field capture: use [HTTPS overlay](#https-for-tablets-gps--camera-on-lan) for secure-context GPS/camera on LAN devices.
 
 ---
 
 ## Loan appraisal
 
-The appraisal module mirrors the Excel workbook documented in `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md`:
+Aligned with `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md`.
 
-| Step | Sheet | Content |
-|------|-------|---------|
-| 1 | Basic Info | Client, business, loan request details |
-| 2 | Business & Character | Credit history, 10 qualitative factors (pass threshold ~75%) |
-| 3 | Cashflow Analysis | Income statement, balance sheet, monthly cashflow, DSCR, repayment capacity |
-| 4 | E&S Assessment | Environmental & social checklist (21 items), risk category, eligibility |
-| 5 | Collateral Worksheet | Immovable, movable, guarantors; total value and coverage |
-| 6 | Summary & Decision | Key indicators, decision factors, approve/decline recommendation |
-| 7 | Repayment Schedule | Amortization parameters and schedule |
+| Mode | When |
+|------|------|
+| **MSME / cashflow** | Default; full cashflow sheets |
+| **Corporate** | Category or appraisal `appraisal_mode=corporate` (qualitative + corporate gates) |
 
-Appraisal data is stored in `LoanAppraisal` and related models. Sheet completeness policies can gate progression to collateral or committee submission.
+| Step | Content |
+|------|---------|
+| 1 | Basic info / business / loan request (+ banking intake fields) |
+| 2 | Credit history + qualitative factors (~75% pass gate) |
+| 3 | Cashflow, ratios, DSCR, capacity |
+| 4 | E&S checklist and eligibility |
+| 5 | Collateral worksheet |
+| 6 | Summary, scorecard pillars, recommendation |
+| 7 | Repayment schedule / amortization |
+
+Extras: completeness policy, analysis assist panel, feature JSON for UI, **Excel + PDF pack** export for committee.
 
 ---
 
 ## Document authentication
 
-Each `LoanApplicationDocumentType` can be configured with:
+Per `LoanApplicationDocumentType`:
 
-- Allowed file extensions and max size
-- **OCR text extraction** (Tesseract, `eng+amh`)
-- **Content validation** — required phrases or similarity against a reference sample PDF
-- **Identity matching** — applicant name, phone, TIN, business name against OCR text
-- **Field extraction mappings** — auto-fill appraisal fields from document text
-- Officer verification and optional external ID checks via core banking API
+- Extension / size limits (global defaults on policy model)  
+- OCR (`DOCUMENT_OCR_LANG`, default `eng+amh`)  
+- Phrase and **reference-sample** similarity  
+- Identity fields (name, phone, TIN, business)  
+- Extraction mappings into appraisal  
+- Optional external party ID check  
 
-Documents progress through statuses: `pending` → `auto_passed` / `needs_review` → `verified` / `rejected`.
+Statuses: `pending` → `auto_passed` / `needs_review` → `verified` / `rejected`.
 
 ---
 
 ## Credit committee workflow
 
-Approval committees are fully configurable in Django admin:
+Configurable (admin + in-app manage screens):
 
-- **`ApprovalCommitteeLevel`** — ordered levels (e.g. branch, district, head office, CEO) with amount thresholds
-- **`ApprovalCommitteeMemberRule`** — who may vote at each level (by role or named user)
-- **`BranchCommitteeOverride`** — per-branch committee composition at the branch level
-- **`LoanApprovalLevelProgress`** — per-loan tracking of each level's status
+- **`ApprovalCommitteeLevel`** — sequence, amount min/max, active flag, tie-breaker role  
+- **`ApprovalCommitteeMemberRule`** — role or named user  
+- **`BranchCommitteeOverride`** — branch-specific branch-level roster  
+- **`LoanApprovalLevelProgress`** — per-loan level status  
 
-The routing engine (`loans/committee.py`) selects applicable levels based on the recommended or requested loan amount. Committee members cast votes; loans can be approved, declined, or returned to the loan officer. In-app notifications (and optional email) keep participants informed.
+`loans/committee.py` routes by recommended or requested amount. Outcomes: approve, decline, return to officer. Notifications in-app (email optional).
+
+---
+
+## Post-approval & disbursement
+
+After `committee_status = approved`, `/post_approval/`:
+
+1. Close/required **conditions**  
+2. Generate / confirm **repayment schedule**  
+3. Mark file **ready** for release  
+4. **Mark disbursed** — may call CBS book endpoint when `DECSI_CBS_BOOK_ON_DISBURSE` is on  
+
+See `loans/disbursement.py` and `loans/portfolio_ledger.py` (adapter: auto/CBS/stub/mock).
+
+---
+
+## Core banking & maps
+
+| Integration | Purpose |
+|-------------|---------|
+| DECSI party API | Customer details / transactions for intake (mock fallback available) |
+| CBS ledger adapter | Outstanding + disbursement booking |
+| Gebeta Maps | Geocoding + Ethiopia styles; Nominatim/OSM fallback |
 
 ---
 
@@ -242,27 +319,26 @@ The routing engine (`loans/committee.py`) selects applicable levels based on the
 
 ```
 decsi_loan/
-├── decsi_loan/          # Django project settings, URLs, WSGI
-├── loans/               # Core loan app
-│   ├── models.py        # Users, loan requests, appraisal, committees, documents
-│   ├── views.py         # Loan workflows, admin screens, reports
-│   ├── committee.py     # Multi-level approval engine
-│   ├── services/        # Document auth, notifications, customer API, prefill
-│   └── migrations/
-├── collateral/          # Collateral valuation app
-│   ├── models.py        # Buildings, catalog, land, other, policy, audit
-│   ├── views.py         # Valuation UI, field visits, catalog management
-│   ├── tier1_views.py   # Policy config, unlock queue, evidence pack
-│   ├── tier2_views.py   # Engineering QA
-│   ├── governance.py    # Lock, audit, GPS attestation
-│   ├── coverage.py      # Collateral coverage calculations
-│   └── tests/
-├── management/commands/ # Bulk import commands (users, branches, zones, etc.)
-├── templates/         # Django HTML templates
-├── static/            # CSS, JS (collateral maps, field capture)
-├── presentation/      # Appraisal Excel reference docs and proposal slides
-├── media/             # Uploaded documents and collateral photos
+├── decsi_loan/                 # Settings, root URLs, WSGI
+├── loans/
+│   ├── models.py               # Users, loans, appraisal, agent, committees…
+│   ├── views.py / views_agent.py / views_credit_intelligence.py
+│   ├── agent*.py               # Agentic Assist
+│   ├── credit_intelligence.py / ci_*.py
+│   ├── committee.py / disbursement.py / portfolio_ledger.py
+│   ├── appraisal_*.py / analysis_assist.py / cashflow_utils.py
+│   ├── reporting.py
+│   ├── services/               # Document auth, notifications, customer
+│   └── tests/                  # Unit/integration suites
+├── collateral/                 # Valuation, field, policy, eng. QA
+├── management/commands/        # CSV imports
+├── templates/ / static/        # UI, agent widget, maps JS
+├── deploy/https/               # nginx + cert config for field HTTPS
+├── scripts/gen_field_https_certs.sh
+├── presentation/               # Excel/appraisal reference docs
+├── docs/                       # PLSA and other product specs (related)
 ├── docker-compose.yml
+├── docker-compose.https.yml
 ├── Dockerfile
 ├── requirements.txt
 └── manage.py
@@ -274,39 +350,30 @@ decsi_loan/
 
 ### Prerequisites
 
-- Docker and Docker Compose, **or**
-- Python 3.9+, PostgreSQL 16, and system packages for OCR (`tesseract-ocr`, `tesseract-ocr-eng`, `tesseract-ocr-amh`, `poppler-utils`)
+- Docker Compose, **or** Python 3.9+, PostgreSQL 16  
+- Host OCR + PDF stack if not using Docker: Tesseract (eng/amh), poppler, WeasyPrint libs (Pango/Cairo)
 
-### Run with Docker Compose (recommended)
+### Docker Compose (recommended)
 
 ```bash
-# Clone the repository and enter the project directory
 cd decsi_loan
-
-# Build and start web + database
 docker compose up --build
-
-# In another terminal, run migrations (first time)
 docker compose exec web python manage.py migrate
-
-# Create a superuser
 docker compose exec web python manage.py createsuperuser
 ```
 
-The application is available at **http://localhost:8000**.
+App: **http://localhost:8000**
 
 #### HTTPS for tablets (GPS / camera on LAN)
 
-Phones and tablets block geolocation on plain `http://192.168.x.x`. For field testing on the LAN:
-
 ```bash
-./scripts/gen_field_https_certs.sh          # self-signed cert + CSRF origins for your LAN IP
+./scripts/gen_field_https_certs.sh
 docker compose -f docker-compose.yml -f docker-compose.https.yml up --build
 ```
 
-Open **https://YOUR-LAN-IP:8443** on the tablet (accept the certificate warning once). Laptop GPS testing can stay on **http://localhost:8000**. In-app steps: **Collateral → Tablet field checklist**.
+Open **https://YOUR-LAN-IP:8443** (accept self-signed cert once). Local laptop can stay on **http://localhost:8000**.
 
-Default database credentials (from `docker-compose.yml`):
+Default DB (compose):
 
 | Variable | Default |
 |----------|---------|
@@ -314,23 +381,20 @@ Default database credentials (from `docker-compose.yml`):
 | `POSTGRES_USER` | `decsiloandbuser` |
 | `POSTGRES_PASSWORD` | `decsiloandbpassword` |
 
-### Run locally (without Docker)
+### Local without Docker
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Configure PostgreSQL and set environment variables (see below)
-export DB_HOST=localhost
+# Point DATABASES host to localhost (settings default is `db` for Compose)
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
-### Initial data
+### Initial configuration
 
-Use Django admin (`/admin/`) or management commands to load master data:
+Imports:
 
 ```bash
 python manage.py import_zones <file>
@@ -341,33 +405,78 @@ python manage.py import_loan_requests <file>
 python manage.py import_collaterals <file>
 ```
 
-Configure singleton records in admin:
+In admin / superadmin UI, set:
 
-- **Collateral estimation config** — who performs collateral (loan officer, engineering team, or both)
-- **Collateral policy config** — field-work rules (photos, GPS, coverage)
-- **Document authentication policy** — global upload defaults
-- **Approval committee levels** — multi-level approval routing
+- Collateral estimation mode (LO / engineering / both)  
+- Collateral field policy  
+- Document authentication defaults and document types  
+- Approval committee levels and members  
 
 ---
 
 ## Environment variables
 
-Create a `.env` file in the project root (or set variables in your deployment environment):
+Create `.env` in the project root (and `deploy/https/.env.https` for field HTTPS).
+
+### Core
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SECRET_KEY` | Django secret key | `default_secret_key` |
-| `DEBUG` | Debug mode (`True` / `False`) | `False` |
-| `DB_NAME` | PostgreSQL database name | `decsiloandb` |
-| `DB_USER` | PostgreSQL user | `decsiloandbuser` |
-| `DB_PASSWORD` | PostgreSQL password | `decsiloandbpassword` |
-| `SITE_URL` | Base URL for notification links | `http://localhost:8000` |
-| `DEFAULT_FROM_EMAIL` | Sender address for emails | `noreply@decsi.local` |
-| `EMAIL_BACKEND` | Django email backend | Console backend |
-| `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` / `EMAIL_USE_TLS` | SMTP settings | — |
-| `DOCUMENT_OCR_LANG` | Tesseract language packs | `eng+amh` |
+| `SECRET_KEY` | Django secret | `default_secret_key` |
+| `DEBUG` | Debug flag (see settings) | `False` |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | PostgreSQL | `decsiloandb*` defaults |
+| `SITE_URL` | Absolute base URL (notifications, CSRF helpers) | `http://localhost:8000` |
+| `DOCUMENT_OCR_LANG` | Tesseract packs | `eng+amh` |
 
-> **Note:** When running with Docker Compose, the database host is `db` (set in `settings.py`). For local development without Docker, override `HOST` in database settings or set `DB_HOST=localhost`.
+### Email
+
+| Variable | Description |
+|----------|-------------|
+| `DEFAULT_FROM_EMAIL`, `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS` | Optional SMTP |
+
+### DECSI party & CBS
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DECSI_BASE_URL` | Core banking base URL | empty |
+| `DECSI_CUSTOMER_TIMEOUT` | Party API timeout | `8` |
+| `DECSI_CUSTOMER_FORCE_MOCK` / `DECSI_CUSTOMER_FALLBACK_MOCK` | Mock party when offline | fallback on |
+| `DECSI_LEDGER_ADAPTER` | `auto` \| `cbs` \| `stub` | `auto` |
+| `DECSI_CBS_ENABLED` | Enable CBS path | `True` |
+| `DECSI_CBS_USE_MOCK_LEDGER` | Offline outstanding/booking | `True` |
+| `DECSI_CBS_BOOK_ON_DISBURSE` | Require CBS success on mark disbursed | `True` |
+| `DECSI_CBS_API_KEY` | Optional API key | — |
+| `DECSI_OUTSTANDING_PATH` / `DECSI_DISBURSE_PATH` | Path templates | set in settings |
+
+### Maps
+
+| Variable | Description |
+|----------|-------------|
+| `GEBETA_MAPS_API_KEY` | Gebeta API key |
+| `GEBETA_MAPS_GEOCODE_PROVIDER` | `auto` \| `gebeta` \| `nominatim` |
+| `GEBETA_MAPS_TILES_PROVIDER` | `auto` \| `gebeta` \| `leaflet_osm` |
+| `GEBETA_MAPS_*_STYLE_*` | Style JSON URLs |
+
+### HTTPS field proxy
+
+| Variable | Description |
+|----------|-------------|
+| `USE_HTTPS_PROXY` | Set `1` behind nginx TLS |
+| `CSRF_TRUSTED_ORIGINS` | Comma-separated origins |
+| `HTTPS_SECURE_COOKIES` | `1` only with trusted public cert |
+
+### Agentic Assist LLM
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_LLM_PROVIDER` | `auto` \| `openai` \| `stub` | `auto` |
+| `OPENAI_API_KEY` | Required for live LLM | empty (stub) |
+| `OPENAI_BASE_URL` | OpenAI or Azure resource URL | `https://api.openai.com/v1` |
+| `OPENAI_MODEL` | Model / deployment name | `gpt-4o-mini` |
+| `OPENAI_API_VERSION` | Azure API version | empty |
+| `AGENT_LLM_TIMEOUT` | Seconds | `60` |
+
+Compose uses DB host **`db`**. Local runs need host `localhost` (edit settings or image env).
 
 ---
 
@@ -375,32 +484,37 @@ Create a `.env` file in the project root (or set variables in your deployment en
 
 | Command | Purpose |
 |---------|---------|
-| `import_zones` | Import region/zone/city geography from CSV |
-| `import_branches` | Import branches and districts |
-| `import_loan_categories` | Import loan product categories |
-| `import_users` | Bulk-create users with roles |
-| `import_loan_requests` | Import historical loan requests |
-| `import_collaterals` | Import collateral catalog data |
+| `import_zones` | Region / zone / city |
+| `import_branches` | Districts and branches |
+| `import_loan_categories` | Product categories |
+| `import_users` | Users and roles |
+| `import_loan_requests` | Historical requests |
+| `import_collaterals` | Construction catalog data |
 
 ---
 
 ## Running tests
 
 ```bash
-# All tests
 python manage.py test
 
-# Collateral module tests
+# Collateral
 python manage.py test collateral.tests
 
-# Specific suites
-python manage.py test collateral.tests.test_governance
-python manage.py test collateral.tests.test_tier1
-python manage.py test collateral.tests.test_tier2
-python manage.py test loans.tests
+# Loans (examples)
+python manage.py test loans.tests.test_agent_assist
+python manage.py test loans.tests.test_credit_intelligence
+python manage.py test loans.tests.test_credit_intelligence_phases
+python manage.py test loans.tests.test_disbursement_track
+python manage.py test loans.tests.test_cbs_ledger
+python manage.py test loans.tests.test_org_roles_restructure
+python manage.py test loans.tests.test_committee_tiebreaker
+python manage.py test loans.tests.test_analysis_assist_and_gates
+python manage.py test loans.tests.test_banking_intake
+python manage.py test loans.tests.test_corporate_appraisal_mode
 ```
 
-With Docker:
+Docker:
 
 ```bash
 docker compose exec web python manage.py test
@@ -410,21 +524,23 @@ docker compose exec web python manage.py test
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/docker-image.yml`) builds the Docker image on every push and pull request to `main`.
+`.github/workflows/docker-image.yml` builds the Docker image on pushes and PRs to `main`.
 
 ---
 
 ## Related documentation
 
-| File | Description |
+| Path | Description |
 |------|-------------|
-| `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md` | Excel workbook structure mapped to Django models |
-| `presentation/LOAN_APPRAISAL_EXCEL_DATA.md` | Detailed field-level Excel data reference |
-| `presentation/SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md` | Sheet 2 dropdowns and Sheet 3 cashflow analysis plan |
-| `presentation/loan_application_proposal.html` | Original project proposal and DECSI case study |
+| `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md` | Excel sheets ↔ appraisal feature map |
+| `presentation/LOAN_APPRAISAL_EXCEL_DATA.md` | Field-level Excel reference |
+| `presentation/SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md` | Qualitative + cashflow plan |
+| `presentation/loan_application_proposal.html` | Loan hub case study / proposal deck |
+| `docs/DECSI_PLSA_Technical_Specification.md` | PLSA engagement product (separate from loan hub; shared vendor/DECSI context) |
+| `docs/PLSA Project Marketing Plan & Strategy (3).pdf` | PLSA marketing source |
 
 ---
 
 ## License
 
-Proprietary — DECSI / internal use. Contact the project maintainers for licensing inquiries.
+Proprietary — DECSI / internal use. Contact project maintainers for licensing.

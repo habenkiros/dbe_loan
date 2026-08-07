@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ChatGPT style · real logos · live numbers</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; font-family: Inter, system-ui, sans-serif; }
+  .poster {
+    width: 1024px;
+    height: 1536px;
+    position: relative;
+    overflow: hidden;
+    background: #04120c;
+  }
+  .bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Soft scrub strips that match dark green base — erase fake AI logos under them */
+  .scrub {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .scrub-top {
+    top: 0; left: 0; right: 0; height: 78px;
+    background: linear-gradient(180deg, #04120c 0%, #04120c 55%, rgba(4,18,12,.0) 100%);
+  }
+  .scrub-bot {
+    left: 0; right: 0; bottom: 0; height: 72px;
+    background: linear-gradient(0deg, #020a07 0%, #020a07 50%, rgba(2,10,7,0) 100%);
+  }
+  /* cover fake seal on building area */
+  .scrub-building-logo {
+    top: 318px; right: 118px;
+    width: 118px; height: 118px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(8,28,18,.55), rgba(4,14,10,.92) 70%);
+    box-shadow: 0 0 24px rgba(0,0,0,.55);
+  }
+
+  .layer { position: absolute; z-index: 4; }
+
+  /* HEADER with real logos */
+  .hdr {
+    top: 14px; left: 22px; right: 22px;
+    height: 56px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hdr-left, .hdr-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hdr img.seqela {
+    height: 40px;
+    width: auto;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
+  }
+  .hdr img.decsi {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: cover;
+    box-shadow: 0 2px 10px rgba(0,0,0,.45);
+  }
+  .hdr .meta {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1.25;
+  }
+  .hdr .meta span { display: block; color: #3dce78; font-size: 9px; letter-spacing: .14em; }
+  .hdr .tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #c8e6d4;
+    text-align: right;
+    line-height: 1.3;
+    max-width: 260px;
+  }
+  .hdr .tag em { color: #3dce78; font-style: normal; font-weight: 700; }
+
+  /* Real DECSI seal on building */
+  .building-seal {
+    top: 322px; right: 124px;
+    width: 106px; height: 106px;
+    border-radius: 50%;
+    background: #fff;
+    padding: 3px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 0 2px rgba(61,206,120,.5);
+  }
+  .building-seal img {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Headline number corrector */
+  .headline {
+    top: 92px; left: 28px; width: 460px;
+    padding: 12px 14px 14px;
+    background: linear-gradient(100deg, rgba(3,16,11,.92) 0%, rgba(3,16,11,.78) 70%, rgba(3,16,11,0) 100%);
+    border-radius: 12px;
+  }
+  .headline .kicker {
+    color: #2fd873;
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .headline h1 {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.08;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .headline h1 em {
+    font-style: normal;
+    color: #2fd873;
+    display: block;
+    font-size: 34px;
+  }
+  .headline .sub {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a8d4bb;
+    line-height: 1.35;
+  }
+  .headline p {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #d5e8dc;
+  }
+
+  /* thanks band with real DECSI */
+  .thanks {
+    left: 22px; right: 22px;
+    top: 638px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: linear-gradient(90deg, rgba(6,32,20,.94), rgba(10,48,28,.92), rgba(6,32,20,.94));
+    border: 1px solid rgba(212,175,55,.42);
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  }
+  .thanks img {
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: cover;
+    border: 2px solid #d4af37;
+    flex-shrink: 0;
+  }
+  .thanks .copy { flex: 1; min-width: 0; }
+  .thanks .copy strong {
+    display: block;
+    color: #f0e2a8;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .thanks .copy p {
+    font-size: 11px;
+    line-height: 1.4;
+    color: #d0e8d9;
+  }
+  .thanks .amt {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .thanks .amt .v {
+    font-size: 18px;
+    font-weight: 900;
+    color: #f0d878;
+    line-height: 1.1;
+  }
+  .thanks .amt .l {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #b7d4c3;
+    margin-top: 3px;
+  }
+
+  /* about + stats replace bottom AI stats */
+  .about {
+    left: 22px; right: 22px;
+    bottom: 178px;
+    padding: 10px 14px;
+    background: rgba(2,12,8,.9);
+    border: 1px solid rgba(232,212,138,.24);
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #b7d4c3;
+  }
+  .about strong { color: #e8d48a; }
+
+  .stats {
+    left: 22px; right: 22px;
+    bottom: 82px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    background: linear-gradient(160deg, rgba(10,42,28,.96), rgba(3,16,10,.97));
+    border: 1px solid rgba(47,216,115,.35);
+    border-radius: 12px;
+    padding: 11px 8px;
+    text-align: center;
+  }
+  .stat .v {
+    font-size: 17px;
+    font-weight: 900;
+    color: #f0d878;
+    line-height: 1.1;
+  }
+  .stat .l {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #a8cbb8;
+    margin-top: 4px;
+    line-height: 1.25;
+  }
+
+  .ftr {
+    left: 22px; right: 22px;
+    bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ftr-logos {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ftr img.decsi {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    object-fit: cover;
+  }
+  .ftr img.seqela {
+    height: 26px;
+  }
+  .ftr .pills {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #c8e6d4;
+  }
+  .ftr .url {
+    font-size: 13px;
+    font-weight: 800;
+    color: #2fd873;
+  }
+</style>
+</head>
+<body>
+  <div class="poster" id="poster">
+    <img class="bg" src="ChatGPT%20Image%20Aug%206,%202026,%2011_12_44%20PM.png" alt="" />
+
+    <div class="scrub scrub-top"></div>
+    <div class="scrub scrub-bot"></div>
+    <div class="scrub scrub-building-logo"></div>
+
+    <div class="layer hdr">
+      <div class="hdr-left">
+        <img class="seqela" src="seqela_logo_transparent.png" alt="Seqela" />
+        <div class="meta">Seqela<span>AI Credit Intelligence</span></div>
+      </div>
+      <div class="hdr-right">
+        <div class="tag">Smarter Technology.<br><em>Stronger Financial Institutions.</em></div>
+        <img class="decsi" src="logod.jpeg" alt="DECSI" />
+      </div>
+    </div>
+
+    <div class="layer building-seal">
+      <img src="logod.jpeg" alt="DECSI" />
+    </div>
+
+    <div class="layer headline">
+      <div class="kicker">Proud Milestone</div>
+      <h1>
+        <em>17.03 Billion Birr</em>
+        Approved for MSMEs with Confidence
+      </h1>
+      <div class="sub">Through AI-Powered Mobile Collateral Inspection by Seqela AI Credit Intelligence · Partner: DECSI Dedebit Microfinance</div>
+      <p>
+        ETB 17,025,387,000 approved from ETB 29,562,221,974 requested —
+        25,397 approved customers across 53,901 loan requests.
+        Collateral-backed MSME credit, inspected and valued with confidence.
+      </p>
+    </div>
+
+    <div class="layer thanks">
+      <img src="logod.jpeg" alt="DECSI" />
+      <div class="copy">
+        <strong>A big thank you to DECSI</strong>
+        <p>for your trust and partnership. Together shaping the future of intelligent, collateral-backed lending in Ethiopia through Dedebit Microfinance.</p>
+      </div>
+      <div class="amt">
+        <div class="v">Br 17,025,387,000</div>
+        <div class="l">Approved for MSMEs</div>
+      </div>
+    </div>
+
+    <div class="layer about">
+      <strong>About Dedebit Microfinance (DECSI):</strong>
+      Established 1993 · operational since 8 March 1994 under REST · share company since 1997.
+      Headquartered in Mekelle, Tigray — one of Ethiopia’s leading MFIs delivering savings and credit to rural and urban clients traditionally underserved by conventional banks.
+    </div>
+
+    <div class="layer stats">
+      <div class="stat"><div class="v">53,901</div><div class="l">Total requests</div></div>
+      <div class="stat"><div class="v">25,397</div><div class="l">Approved customers</div></div>
+      <div class="stat"><div class="v">Br 17.03B</div><div class="l">Approved amount</div></div>
+      <div class="stat"><div class="v">Br 29.56B</div><div class="l">Requested amount</div></div>
+    </div>
+
+    <div class="layer ftr">
+      <div class="ftr-logos">
+        <img class="decsi" src="logod.jpeg" alt="DECSI" />
+        <img class="seqela" src="seqela_logo_transparent.png" alt="Seqela" />
+        <div class="pills">AI-Powered · Smart · Secure · Connected</div>
+      </div>
+      <div class="url">www.seqela.io</div>
+    </div>
+  </div>
+</body>
+</html>

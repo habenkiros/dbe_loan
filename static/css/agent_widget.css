@@ -1,0 +1,410 @@
+/* Floating Agentic Assist chatbot — lower right */
+
+.decsi-agent {
+  --da-green: #064420;
+  --da-green-mid: #0d6b36;
+  --da-green-soft: #e8f5e9;
+  --da-border: #c5d4cb;
+  --da-shadow: 0 12px 40px rgba(6, 68, 32, 0.22);
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 99990;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.decsi-agent-launcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(145deg, var(--da-green-mid), var(--da-green));
+  box-shadow: var(--da-shadow);
+  border-radius: 999px;
+  padding: 0.75rem 1.15rem 0.75rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.decsi-agent-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(6, 68, 32, 0.3);
+}
+
+.decsi-agent-launcher:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.decsi-agent-launcher-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.decsi-agent-launcher-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.decsi-agent.is-open .decsi-agent-launcher {
+  display: none;
+}
+
+.decsi-agent-panel {
+  display: none;
+  width: min(380px, calc(100vw - 1.5rem));
+  height: min(540px, calc(100vh - 5.5rem));
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--da-border);
+  border-radius: 16px;
+  box-shadow: var(--da-shadow);
+  overflow: hidden;
+  animation: decsi-agent-in 0.2s ease;
+}
+
+.decsi-agent.is-open .decsi-agent-panel {
+  display: flex;
+}
+
+@keyframes decsi-agent-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.decsi-agent-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: linear-gradient(135deg, var(--da-green) 0%, #0a5c2e 100%);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.decsi-agent-header-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.decsi-agent-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.decsi-agent-header-text strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.decsi-agent-header-text span {
+  display: block;
+  font-size: 0.72rem;
+  opacity: 0.88;
+  margin-top: 0.1rem;
+}
+
+.decsi-agent-story {
+  background: #f0f7f2;
+  border-bottom: 1px solid var(--da-border);
+  padding: 0.5rem 0.75rem;
+  flex-shrink: 0;
+  max-height: 9rem;
+  overflow-y: auto;
+}
+
+.decsi-agent-story-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #3d5c47;
+  margin-bottom: 0.25rem;
+}
+
+.decsi-agent-story-status {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--da-green-mid);
+}
+
+.decsi-agent-story-body {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  color: #1a2e22;
+}
+
+.decsi-agent-header-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.decsi-agent-icon-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decsi-agent-icon-btn[data-agent-clear] {
+  width: auto;
+  min-width: 2rem;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.decsi-agent-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.decsi-agent-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem;
+  background: linear-gradient(180deg, #f6faf7 0%, #eef4f0 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.decsi-agent-msg {
+  max-width: 92%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.decsi-agent-msg--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.decsi-agent-msg--assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.decsi-agent-bubble {
+  padding: 0.55rem 0.75rem;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.decsi-agent-msg--assistant .decsi-agent-bubble {
+  background: #fff;
+  border: 1px solid var(--da-border);
+  border-bottom-left-radius: 4px;
+  color: #1a2e22;
+}
+
+.decsi-agent-msg--user .decsi-agent-bubble {
+  background: var(--da-green);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.decsi-agent-tools {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.75rem;
+  color: #4a6354;
+  max-width: 100%;
+}
+
+.decsi-agent-tools a {
+  color: var(--da-green-mid);
+}
+
+.decsi-agent-typing {
+  align-self: flex-start;
+  display: none;
+  gap: 0.28rem;
+  padding: 0.55rem 0.85rem;
+  background: #fff;
+  border: 1px solid var(--da-border);
+  border-radius: 14px;
+}
+
+.decsi-agent-typing.is-on {
+  display: inline-flex;
+}
+
+.decsi-agent-typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7a9584;
+  animation: decsi-agent-dot 1s infinite ease-in-out;
+}
+
+.decsi-agent-typing i:nth-child(2) { animation-delay: 0.15s; }
+.decsi-agent-typing i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes decsi-agent-dot {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+
+.decsi-agent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem 0;
+  background: #fff;
+  border-top: 1px solid #e8efe9;
+  flex-shrink: 0;
+}
+
+.decsi-agent-chip {
+  border: 1px solid var(--da-border);
+  background: var(--da-green-soft);
+  color: var(--da-green);
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.decsi-agent-chip:hover {
+  background: #d7eddb;
+}
+
+.decsi-agent-composer {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  background: #fff;
+  border-top: 1px solid #e8efe9;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+.decsi-agent-composer textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--da-border);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  min-height: 2.6rem;
+  max-height: 6.5rem;
+  line-height: 1.35;
+  color: #1a2e22;
+}
+
+.decsi-agent-composer textarea:focus {
+  outline: none;
+  border-color: var(--da-green-mid);
+  box-shadow: 0 0 0 2px rgba(13, 107, 54, 0.15);
+}
+
+.decsi-agent-send {
+  border: none;
+  background: var(--da-green);
+  color: #fff;
+  border-radius: 12px;
+  width: 2.6rem;
+  height: 2.6rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decsi-agent-send:hover {
+  background: var(--da-green-mid);
+}
+
+.decsi-agent-send:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.decsi-agent-send svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.decsi-agent-status {
+  font-size: 0.7rem;
+  color: #5a7263;
+  padding: 0 0.85rem 0.5rem;
+  background: #fff;
+  min-height: 1rem;
+}
+
+@media (max-width: 480px) {
+  .decsi-agent {
+    right: 0.65rem;
+    bottom: 0.65rem;
+  }
+  .decsi-agent-panel {
+    width: calc(100vw - 1.3rem);
+    height: min(70vh, 560px);
+  }
+  .decsi-agent-launcher-label {
+    display: none;
+  }
+  .decsi-agent-launcher {
+    padding: 0.75rem;
+    border-radius: 50%;
+  }
+}

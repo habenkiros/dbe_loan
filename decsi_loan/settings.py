@@ -57,6 +57,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'loans.context_processors.loan_notifications',
+                'loans.context_processors.agent_assistant',
                 'collateral.context_processors.gebeta_maps',
             ],
         },
@@ -237,3 +238,15 @@ if os.getenv('USE_HTTPS_PROXY', '') == '1':
             _csrf_origins.append(_base)
 if _csrf_origins:
     CSRF_TRUSTED_ORIGINS = _csrf_origins
+
+# ---------------------------------------------------------------------------
+# Agentic Assist chatbot (OpenAI tool-calling; stub without key)
+# ---------------------------------------------------------------------------
+# Recommendation: OpenAI GPT-4o-mini — strong function calling, low cost.
+# Azure OpenAI: set OPENAI_BASE_URL to the deployment URL and OPENAI_API_VERSION.
+AGENT_LLM_PROVIDER = os.getenv('AGENT_LLM_PROVIDER', 'auto').strip().lower()  # auto|openai|stub
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '').strip()
+OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1').strip().rstrip('/')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini').strip() or 'gpt-4o-mini'
+OPENAI_API_VERSION = os.getenv('OPENAI_API_VERSION', '').strip()  # Azure only, e.g. 2024-08-01-preview
+AGENT_LLM_TIMEOUT = int(os.getenv('AGENT_LLM_TIMEOUT', '60') or '60')

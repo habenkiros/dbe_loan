@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Agent run #{{ run.id }}{% endblock %}
+{% block content %}
+<div class="lw-wrap" style="max-width:720px;">
+  <p class="help"><a href="{% url 'home' %}?agent=1">← Back · open Assist bubble</a></p>
+  <h1>Agent run #{{ run.id }}</h1>
+  <p>
+    <strong>{{ run.get_status_display }}</strong> · {{ run.created_at }}
+    · by {{ run.user.username }}
+  </p>
+  {% if run.loan_request %}
+  <p>
+    Loan <strong>{{ run.loan_request.loan_request_id }}</strong>
+    — {{ run.loan_request.applicant_name }}
+    · <a href="{% url 'loan_request_detail' run.loan_request_id %}">Open</a>
+  </p>
+  {% endif %}
+  {% if run.intent_text %}<p class="help">Intent: {{ run.intent_text }}</p>{% endif %}
+  {% if run.error %}<p style="color:#b71c1c;">{{ run.error }}</p>{% endif %}
+  <div class="lw-panel">
+    <h3>Steps</h3>
+    <ol>
+      {% for s in run.steps %}
+      <li>
+        <strong>{{ s.tool }}</strong> —
+        {% if s.ok %}OK{% else %}FAIL{% endif %} — {{ s.detail }}
+      </li>
+      {% empty %}
+      <li class="help">No step log.</li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+{% endblock %}

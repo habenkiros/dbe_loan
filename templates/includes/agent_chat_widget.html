@@ -1,0 +1,65 @@
+{% load static %}
+{% if agent_chat_enabled %}
+<link rel="stylesheet" href="{% static 'css/agent_widget.css' %}">
+<div
+  id="decsi-agent-widget"
+  class="decsi-agent"
+  data-api-url="{{ agent_chat_api_url }}"
+  data-history-url-tpl="{{ agent_chat_history_url_tpl }}"
+  data-csrf="{{ csrf_token }}"
+  data-provider="{{ agent_chat_provider }}"
+  {% if agent_chat_auto_open %}data-auto-open="1"{% endif %}
+>
+  <div class="decsi-agent-panel" role="dialog" aria-label="DECSI Assist chat">
+    <header class="decsi-agent-header">
+      <div class="decsi-agent-header-avatar" aria-hidden="true">AI</div>
+      <div class="decsi-agent-header-text">
+        <strong>DECSI Assist</strong>
+        <span>
+          {% if agent_chat_provider == 'openai' %}Online · story + reports
+          {% else %}Offline · story + reports (add OPENAI_API_KEY for full AI)
+          {% endif %}
+        </span>
+      </div>
+      <div class="decsi-agent-header-actions">
+        <button type="button" class="decsi-agent-icon-btn" data-agent-clear title="Clear chat cache" aria-label="Clear chat cache">Clear</button>
+        <button type="button" class="decsi-agent-icon-btn" data-agent-new title="New chat" aria-label="New chat">＋</button>
+        <button type="button" class="decsi-agent-icon-btn" data-agent-close title="Minimize" aria-label="Minimize chat">×</button>
+      </div>
+    </header>
+
+    <div class="decsi-agent-story" id="decsi-agent-story" hidden>
+      <div class="decsi-agent-story-head">
+        <strong>Held draft</strong>
+        <span class="decsi-agent-story-status" id="decsi-agent-story-status"></span>
+      </div>
+      <pre class="decsi-agent-story-body" id="decsi-agent-story-body"></pre>
+    </div>
+
+    <div class="decsi-agent-log" aria-live="polite"></div>
+    <div class="decsi-agent-typing" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="decsi-agent-chips">
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Draft a corporate loan for Demo Trade PLC, amount 2,000,000 ETB working capital — hold story only, do not create yet">Hold draft (BM)</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Confirm create the loan file">Confirm create</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Register building named Main site for the linked loan">Register building</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Document checklist for the linked loan">Docs (read-only)</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Pipeline report for my scope with Excel export link">Report</button>
+    </div>
+    <form class="decsi-agent-composer" autocomplete="off">
+      <textarea rows="1" placeholder="Chat: draft, correct, confirm, or ask for a report…" aria-label="Message"></textarea>
+      <button type="submit" class="decsi-agent-send" aria-label="Send">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+      </button>
+    </form>
+    <div class="decsi-agent-status"></div>
+  </div>
+
+  <button type="button" class="decsi-agent-launcher" aria-label="Open DECSI Assist chatbot">
+    <span class="decsi-agent-launcher-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </span>
+    <span class="decsi-agent-launcher-label">Assist</span>
+  </button>
+</div>
+<script src="{% static 'js/agent_widget.js' %}"></script>
+{% endif %}

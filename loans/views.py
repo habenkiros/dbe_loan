@@ -175,8 +175,8 @@ def create_loan_request(request):
                 if request.user.role == 'credit_loan_officer':
                     loan_request.assigned_loan_officer = request.user
             else:
-                loan_request.district = request.user.district
-                loan_request.branch = request.user.branch
+            loan_request.district = request.user.district
+            loan_request.branch = request.user.branch
                 loan_request.origin_level = LoanRequest.ORIGIN_BRANCH
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
@@ -298,7 +298,7 @@ def generate_incremental_loan_request_id():
 def update_loan_request_status(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
-        loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
+            loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
         loan_request.save()
         if loan_request.managers_queue_approved():
             messages.success(
@@ -460,7 +460,7 @@ def loan_request_detail(request, loan_request_id):
     elif user.role == 'engineer':
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=user)
     else:
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     collateral_mode = get_collateral_estimation_mode()
     document_types = LoanApplicationDocumentType.objects.all()
     _docs_qs = loan_request.application_documents.select_related(
@@ -2224,7 +2224,7 @@ def view_loan_requests_finance_manager(request):
         )
     loan_requests = loan_requests.select_related('branch', 'assigned_loan_officer').order_by(
         '-ready_for_disbursement_at', '-id'
-    )
+        )
     paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -2870,7 +2870,7 @@ def generate_report(request):
                 lr.date_requested,
                 lr.date_reviewed,
             ])
-        return response
+    return response
 
     bio = build_pipeline_workbook(qs)
     return excel_response(bio, pipeline_export_filename(params))
@@ -2966,7 +2966,7 @@ def classic_home(request):
         scope_label = 'Organization-wide'
 
     loans = loans.select_related('branch', 'category')
-    total_loans = loans.count()
+        total_loans = loans.count()
     approved_loans = loans.filter(status='Approved').count()
     pending_loans = loans.filter(status='Pending').count()
     rejected_loans = loans.filter(status='Rejected').count()

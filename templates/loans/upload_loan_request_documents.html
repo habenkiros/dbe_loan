@@ -2,7 +2,16 @@
 {% block title %}Application documents – {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
 <h2>Application documents – {{ loan_request.loan_request_id }}</h2>
-<p>Applicant: <strong>{{ loan_request.applicant_name }}</strong></p>
+<p>Applicant: <strong>{{ loan_request.applicant_name }}</strong>
+  {% if loan_category_name %}
+  · Loan type: <strong>{{ loan_category_name }}</strong>
+  {% endif %}
+</p>
+{% if using_category_pack %}
+<p class="help">Document checklist for this loan type is configured under Settings → Loan categories.</p>
+{% else %}
+<p class="help">No loan-type pack configured — showing global document list. Superadmin can set packs per product.</p>
+{% endif %}
 
 {% if document_requests %}
 <h3>Requested by loan officer / engineer</h3>
@@ -35,7 +44,7 @@
             {% for doc in existing_documents %}
             <tr>
                 <td>{{ doc.document_type.name }}</td>
-                <td>{% if doc.document_type.is_required %}Yes{% else %}Optional{% endif %}</td>
+                <td>{% if doc.checklist_required %}Yes{% else %}Optional{% endif %}</td>
                 <td>{% include "loans/_document_auth_status.html" %}</td>
                 <td>
                     <div class="list-actions">

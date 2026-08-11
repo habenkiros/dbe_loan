@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Digital apply settings{% endblock %}
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+{% endblock %}
+{% block content %}
+<div class="da-settings">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Digital apply settings</h1>
+      <p>
+        Control the public applicant portal at the site root
+        (<code style="opacity:0.95;">/</code>). Fee, password rules, and login security — without Django admin.
+      </p>
+    </div>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Portal</span>
+        <span class="value">
+          {% if policy.enabled %}
+          <span class="da-pill da-pill-on">Open</span>
+          {% else %}
+          <span class="da-pill da-pill-off">Closed</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Processing fee</span>
+        <span class="value">{{ policy.processing_fee_etb }} ETB</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Min password</span>
+        <span class="value">{{ policy.min_password_length }} chars</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Session idle</span>
+        <span class="value">{{ policy.session_idle_minutes }} min</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="da-note">
+    Applicants register and apply at the public root. Staff hub remains at
+    <code>/hub/</code>. Changes apply immediately to new registrations and drafts.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <section class="da-panel">
+      <h2><span>1</span> Portal access &amp; fee</h2>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <div class="da-check">
+            {{ form.enabled }}
+            <div>
+              <label for="{{ form.enabled.id_for_label }}">{{ form.enabled.label }}</label>
+              <span class="help">{{ form.enabled.help_text }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="da-field">
+          <label for="{{ form.processing_fee_etb.id_for_label }}">{{ form.processing_fee_etb.label }}</label>
+          {{ form.processing_fee_etb }}
+          <span class="help">{{ form.processing_fee_etb.help_text }}</span>
+          {{ form.processing_fee_etb.errors }}
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>2</span> Password policy</h2>
+      <div class="da-grid-2" style="margin-bottom:0.85rem;">
+        <div class="da-field">
+          <label for="{{ form.min_password_length.id_for_label }}">{{ form.min_password_length.label }}</label>
+          {{ form.min_password_length }}
+          {{ form.min_password_length.errors }}
+        </div>
+      </div>
+      <div class="da-checks">
+        <div class="da-check">
+          {{ form.require_uppercase }}
+          <label for="{{ form.require_uppercase.id_for_label }}">{{ form.require_uppercase.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.require_lowercase }}
+          <label for="{{ form.require_lowercase.id_for_label }}">{{ form.require_lowercase.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.require_digit }}
+          <label for="{{ form.require_digit.id_for_label }}">{{ form.require_digit.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.require_special }}
+          <label for="{{ form.require_special.id_for_label }}">{{ form.require_special.label }}</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>3</span> Login security</h2>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ form.max_failed_logins.id_for_label }}">{{ form.max_failed_logins.label }}</label>
+          {{ form.max_failed_logins }}
+          <span class="help">{{ form.max_failed_logins.help_text }}</span>
+        </div>
+        <div class="da-field">
+          <label for="{{ form.lockout_minutes.id_for_label }}">{{ form.lockout_minutes.label }}</label>
+          {{ form.lockout_minutes }}
+          <span class="help">{{ form.lockout_minutes.help_text }}</span>
+        </div>
+        <div class="da-field">
+          <label for="{{ form.register_rate_limit_per_hour.id_for_label }}">{{ form.register_rate_limit_per_hour.label }}</label>
+          {{ form.register_rate_limit_per_hour }}
+          <span class="help">{{ form.register_rate_limit_per_hour.help_text }}</span>
+        </div>
+        <div class="da-field">
+          <label for="{{ form.session_idle_minutes.id_for_label }}">{{ form.session_idle_minutes.label }}</label>
+          {{ form.session_idle_minutes }}
+          <span class="help">{{ form.session_idle_minutes.help_text }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>4</span> Compliance &amp; customer check</h2>
+      <div class="da-checks">
+        <div class="da-check">
+          {{ form.require_terms_acceptance }}
+          <div>
+            <label for="{{ form.require_terms_acceptance.id_for_label }}">{{ form.require_terms_acceptance.label }}</label>
+            <span class="help">{{ form.require_terms_acceptance.help_text }}</span>
+          </div>
+        </div>
+        <div class="da-check">
+          {{ form.require_customer_lookup }}
+          <div>
+            <label for="{{ form.require_customer_lookup.id_for_label }}">{{ form.require_customer_lookup.label }}</label>
+            <span class="help">{{ form.require_customer_lookup.help_text }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>5</span> Chapa payments</h2>
+      <p class="da-note" style="margin-top:0;">
+        {% if chapa_live %}
+        <span class="da-pill da-pill-on">Live</span>
+        Secret key is configured. Fees go through Chapa checkout.
+        {% if chapa_public_key %}<br>Public key: <code>{{ chapa_public_key|truncatechars:24 }}</code>{% endif %}
+        {% else %}
+        <span class="da-pill da-pill-warn">Mock mode</span>
+        Set <code>CHAPA_SECRET_KEY</code> and <code>CHAPA_PUBLIC_KEY</code> in the server environment
+        (dashboard.chapa.co) and restart the app for live payments. Mock mode is fine for demos.
+        {% endif %}
+        Webhook URL: <code>/payments/chapa/webhook/</code>
+      </p>
+      <p class="da-note" style="margin-bottom:0;">
+        Staff intake: <a href="{% url 'online_loan_intake' %}"><strong>Online loan intake</strong></a>
+      </p>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>6</span> DECSI customer account API</h2>
+      <p class="da-note" style="margin-top:0;">
+        Digital Apply registration is driven by <strong>customer number</strong>.
+        Set <code>DECSI_BASE_URL</code> (and optionally <code>DECSI_CBS_API_KEY</code>) when DECSI grants API access.
+        Live lookups use <code>/getCusByCusNo/.../custdets</code> and prefill name, phone, address, TIN, and status.
+        When the API is live, unknown customer numbers are rejected automatically
+        (or always if “Require core-banking customer match” is on).
+      </p>
+    </section>
+
+    <div class="da-actions">
+      <button type="submit" class="btn-primary">Save digital apply settings</button>
+      <a href="{% url 'home' %}">Back to hub home</a>
+      <a href="{% url 'online_loan_intake' %}">Online intake</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

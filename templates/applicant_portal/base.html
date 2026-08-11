@@ -1,0 +1,373 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#064420">
+  <title>{% block title %}Apply{% endblock %} · AI-powered Credit Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Align with hub brand (base.html / styles.css) + Seqela green */
+      --ink: #0e2418;
+      --muted: #4f6558;
+      --bg0: #053d1e;
+      --bg1: #e8f0eb;
+      --card: #ffffff;
+      --accent: #0a6b2e;
+      --accent-deep: #064420;
+      --accent-hover: #0d8038;
+      --seqela: #28b446;
+      --line: #c9dbd1;
+      --soft: #f3f8f5;
+      --ok: #0a6b2e;
+      --warn: #9b2c2c;
+      --gold: #b8892c;
+      --radius: 12px;
+      --shadow: 0 14px 36px rgba(6, 68, 32, 0.08);
+      --font: "Source Sans 3", system-ui, sans-serif;
+      --display: "Libre Baskerville", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%, rgba(10, 107, 46, 0.16), transparent 55%),
+        radial-gradient(ellipse 55% 40% at 100% 0%, rgba(40, 180, 70, 0.1), transparent 50%),
+        linear-gradient(180deg, #f4f9f6 0%, var(--bg1) 100%);
+    }
+    .ap-shell { min-height: 100vh; display: flex; flex-direction: column; }
+    .ap-top {
+      background: linear-gradient(135deg, #053d1e 0%, #064420 50%, #053d1e 100%);
+      color: #f4fbf6;
+      padding: 0.85rem 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .ap-top-inner {
+      max-width: 52rem;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .ap-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      color: #fff;
+      text-decoration: none;
+      min-width: 0;
+    }
+    .ap-brand-product {
+      display: block;
+      font-size: clamp(1rem, 2.6vw, 1.25rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+      color: #fff;
+    }
+    .ap-brand-line {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.88;
+      margin-top: 0.2rem;
+    }
+    .ap-brand-seqela {
+      flex-shrink: 0;
+      height: 2.35rem;
+      width: auto;
+      max-width: 5.25rem;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #000;
+      padding: 0.12rem 0.28rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .ap-nav { display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap; }
+    .ap-nav a {
+      color: #e8f6ee;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+    .ap-nav a:hover { text-decoration: underline; color: #fff; }
+    .ap-wrap {
+      width: 100%;
+      max-width: 52rem;
+      margin: 0 auto;
+      padding: 1.35rem 1.15rem 2.5rem;
+      flex: 1;
+      animation: ap-in 0.4s ease both;
+    }
+    .ap-narrow { max-width: 26rem; }
+    @keyframes ap-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .ap-hero-title {
+      font-family: var(--display);
+      font-size: clamp(1.55rem, 3vw, 2rem);
+      margin: 0 0 0.4rem;
+      color: var(--accent-deep);
+    }
+    .ap-sub { color: var(--muted); margin: 0 0 1.15rem; line-height: 1.5; }
+    .ap-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.15rem 1.2rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .ap-steps {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin: 0 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+    .ap-steps li {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+    }
+    .ap-steps li.is-active {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .ap-steps li.is-done {
+      color: var(--ok);
+      border-color: #b7d9c8;
+      background: #eef8f2;
+    }
+    label { display: block; font-weight: 600; font-size: 0.9rem; margin: 0.65rem 0 0.3rem; }
+    .ap-input, input[type=text], input[type=password], input[type=email],
+    input[type=number], input[type=file], select, textarea {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    textarea { resize: vertical; min-height: 4.5rem; }
+    .ap-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.15rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .ap-btn-primary { background: var(--accent); color: #fff; }
+    .ap-btn-primary:hover { background: var(--accent-hover); }
+    .ap-btn-ghost {
+      background: transparent;
+      color: var(--accent-deep);
+      border: 1px solid var(--line);
+    }
+    .ap-btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .ap-btn-row { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1rem; }
+    .ap-messages { list-style: none; margin: 0 0 1rem; padding: 0; }
+    .ap-messages li {
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+    }
+    .ap-messages li.success, .ap-messages li.info {
+      background: #eef8f2; color: var(--ok); border: 1px solid #b7d9c8;
+    }
+    .ap-messages li.error, .ap-messages li.warning {
+      background: #fdf0f0; color: var(--warn); border: 1px solid #f0c4c4;
+    }
+    .ap-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    .ap-table th, .ap-table td {
+      text-align: left; padding: 0.55rem 0.4rem; border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    .ap-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+    }
+    .ap-badge-ok { background: #eef8f2; border-color: #b7d9c8; color: var(--ok); }
+    .ap-badge-warn { background: #fdf6e8; border-color: #ebd29a; color: #8a6418; }
+    .ap-queue {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
+      color: var(--accent-deep);
+      font-weight: 700;
+    }
+    .ap-help { color: var(--muted); font-size: 0.88rem; margin: 0.25rem 0 0; }
+    .errorlist { color: var(--warn); margin: 0.25rem 0 0; padding-left: 1rem; font-size: 0.88rem; }
+    .ap-footer {
+      text-align: center;
+      color: #e8f6ee;
+      font-size: 0.85rem;
+      padding: 0.85rem 1rem;
+      background: #064420;
+      margin-top: auto;
+    }
+    .ap-footer-inner {
+      max-width: 52rem;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem 1.15rem;
+    }
+    .ap-footer a { color: #fff; text-decoration: none; font-weight: 600; }
+    .ap-footer a:hover { color: #ddd; }
+    .ap-footer-logo {
+      height: 1.75rem;
+      width: auto;
+      max-width: 5rem;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #000;
+      padding: 0.1rem 0.3rem;
+      vertical-align: middle;
+    }
+    .ap-footer-copy { opacity: 0.95; }
+
+    /* Loan status tracker */
+    .ap-status-head {
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 0.5rem;
+    }
+    .ap-status-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.8rem; font-weight: 700; padding: 0.4rem 0.75rem;
+      border-radius: 999px; border: 1px solid var(--line); background: var(--soft);
+    }
+    .ap-status-chip.tone-progress { background: #e8f4ec; border-color: #b7d9c8; color: var(--accent-deep); }
+    .ap-status-chip.tone-ok, .ap-status-chip.tone-done { background: #eef8f2; border-color: #b7d9c8; color: var(--ok); }
+    .ap-status-chip.tone-warn { background: #fdf0f0; border-color: #f0c4c4; color: var(--warn); }
+    .ap-timeline { list-style: none; margin: 1.1rem 0 0; padding: 0; }
+    .ap-timeline li {
+      position: relative; padding: 0 0 1.1rem 1.55rem;
+      border-left: 2px solid var(--line);
+    }
+    .ap-timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .ap-timeline li::before {
+      content: ""; position: absolute; left: -0.42rem; top: 0.15rem;
+      width: 0.72rem; height: 0.72rem; border-radius: 50%;
+      background: #fff; border: 2px solid var(--line);
+    }
+    .ap-timeline li.is-done { border-left-color: #8fc9a8; }
+    .ap-timeline li.is-done::before { background: var(--ok); border-color: var(--ok); }
+    .ap-timeline li.is-current::before {
+      background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(10, 107, 46, 0.18);
+    }
+    .ap-timeline li.is-blocked::before { background: var(--warn); border-color: var(--warn); }
+    .ap-timeline .ap-tl-label { font-weight: 700; font-size: 0.95rem; }
+    .ap-timeline .ap-tl-detail { color: var(--muted); font-size: 0.88rem; margin-top: 0.15rem; line-height: 1.4; }
+    .ap-facts {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 1rem;
+      margin: 1rem 0 0; padding: 0; list-style: none;
+    }
+    @media (max-width: 560px) {
+      .ap-facts { grid-template-columns: 1fr; }
+      .ap-brand-product { font-size: 0.92rem; }
+    }
+    .ap-facts li {
+      background: var(--soft); border: 1px solid var(--line);
+      border-radius: 10px; padding: 0.65rem 0.75rem;
+    }
+    .ap-facts .k { display: block; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .ap-facts .v { display: block; margin-top: 0.2rem; font-weight: 600; word-break: break-word; }
+    .ap-app-card {
+      display: grid; gap: 0.35rem 1rem;
+      grid-template-columns: 1fr auto; align-items: center;
+      padding: 0.9rem 0; border-bottom: 1px solid var(--line);
+    }
+    .ap-app-card:last-child { border-bottom: none; }
+    .ap-app-meta { color: var(--muted); font-size: 0.88rem; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="ap-shell">
+    <header class="ap-top">
+      <div class="ap-top-inner">
+        <a class="ap-brand" href="{% url 'applicant_portal:landing' %}">
+          <span>
+            <span class="ap-brand-product">AI-powered Credit Intelligence</span>
+            <span class="ap-brand-line">Digital Apply</span>
+          </span>
+          <img class="ap-brand-seqela" src="{% static 'logo_green.png' %}" alt="Seqela">
+        </a>
+        <nav class="ap-nav">
+          {% if request.session.applicant_portal_account_id %}
+            <a href="{% url 'applicant_portal:home' %}">My applications</a>
+            <a href="{% url 'applicant_portal:apply_start' %}">New apply</a>
+            <a href="{% url 'applicant_portal:change_password' %}">Password</a>
+            <a href="{% url 'applicant_portal:logout' %}">Sign out</a>
+          {% else %}
+            <a href="{% url 'applicant_portal:login' %}">Sign in</a>
+            <a href="{% url 'applicant_portal:register' %}">Register</a>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+    <main class="ap-wrap {% block wrap_class %}{% endblock %}">
+      {% if messages %}
+      <ul class="ap-messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="ap-footer">
+      <div class="ap-footer-inner">
+        <a href="https://seqela.com" target="_blank" rel="noopener noreferrer">
+          <img class="ap-footer-logo" src="{% static 'logo_green.png' %}" alt="Seqela">
+        </a>
+        <span class="ap-footer-copy">
+          &copy; <a href="https://seqela.com" target="_blank" rel="noopener noreferrer">Seqela Technologies</a>.
+          All rights reserved.
+        </span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

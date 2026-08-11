@@ -1,0 +1,25 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Apply for a loan online</h1>
+  <p class="ap-sub">
+    Digital Apply on AI-powered Credit Intelligence — register once, choose your loan product,
+    upload the documents for that product, pay the processing fee, and receive a queue ID for branch follow-up.
+    Powered by Seqela.
+  </p>
+  <div class="ap-btn-row">
+    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:register' %}">Create account</a>
+    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">I already have an account</a>
+  </div>
+</div>
+<div class="ap-card">
+  <h2 style="margin:0 0 0.5rem;font-size:1.05rem;">How it works</h2>
+  <ol style="margin:0;padding-left:1.2rem;color:var(--muted);line-height:1.55;">
+    <li>Register with your mobile number</li>
+    <li>Select loan type, branch, and amount</li>
+    <li>Upload required documents for that loan type</li>
+    <li>Pay processing fee and submit — keep your queue ID</li>
+  </ol>
+</div>
+{% endblock %}

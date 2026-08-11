@@ -926,11 +926,13 @@ def document_is_accepted_for_collateral(document) -> bool:
 
 
 def loan_documents_collateral_readiness(loan_request) -> Dict[str, Any]:
-    from loans.models import LoanApplicationDocumentType, LoanRequestDocument
+    from loans.models import LoanRequestDocument
+    from loans.document_checklist import checklist_for_loan, required_items
 
     policy = get_document_auth_policy()
     require_auth = getattr(policy, 'require_verified_documents_for_collateral', True)
-    required_types = list(LoanApplicationDocumentType.objects.filter(is_required=True))
+    checklist = checklist_for_loan(loan_request)
+    required_types = required_items(checklist)
     docs = list(loan_request.application_documents.select_related("document_type").all())
     by_type: Dict[int, List[Any]] = {}
     for d in docs:
@@ -941,7 +943,8 @@ def loan_documents_collateral_readiness(loan_request) -> Dict[str, Any]:
     rejected: List[str] = []
     pending_review: List[str] = []
 
-    for dt in required_types:
+    for item in required_types:
+        dt = item.document_type
         type_docs = by_type.get(dt.id, [])
         if not type_docs:
             missing_required.append(dt.name)
@@ -956,7 +959,7 @@ def loan_documents_collateral_readiness(loan_request) -> Dict[str, Any]:
             if d.auth_status == LoanRequestDocument.AUTH_REJECTED:
                 rejected.append(f"{dt.name} ({d.get_auth_status_display()})")
 
-    required_type_ids = {dt.id for dt in required_types}
+    required_type_ids = {item.id for item in required_types}
     for d in docs:
         if d.document_type_id not in required_type_ids:
             continue
@@ -970,4 +973,5 @@ def loan_documents_collateral_readiness(loan_request) -> Dict[str, Any]:
         "not_authenticated": not_authenticated,
         "rejected": rejected,
         "pending_review": pending_review,
+        "checklist_count": len(checklist),
     }

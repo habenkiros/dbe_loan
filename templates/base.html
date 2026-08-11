@@ -1,408 +1,46 @@
 <!-- templates/base.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>{% block title %}AI-powered Credit Intelligence{% endblock %}</title>
     {% load static %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#064420">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/loan_workbench.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/hub_shell.css' %}">
     {% block extra_head %}{% endblock %}
     <script src="{% static 'vendor/jquery/jquery-3.6.0.min.js' %}"></script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            flex: 1;
-            overflow: auto;
-            padding: 20px;
-        }
-        footer {
-            text-align: center;
-            padding: 10px 0;
-            background-color: #064420;
-            color: white;
-            position: relative;
-            bottom: 0;
-            width: 100%;
-        }
-        footer a {
-            color: white;
-            text-decoration: none; /* optional: removes underline */
-        }
-
-        footer a:hover {
-            color: #ddd; /* optional: slightly lighter on hover */
-        }
-        .table-container {
-            /*max-height: 400px;
-            overflow-y: auto;*/
-            margin-top: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            color: black;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        .flash-messages {
-            margin: 0 0 1.25rem 0;
-            padding: 0;
-            list-style: none;
-        }
-        .flash-messages li {
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            font-size: 0.95rem;
-        }
-        .flash-success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
-        .flash-error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
-        .flash-warning { background: #fff3cd; border-color: #ffeeba; color: #856404; }
-        .flash-info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
-        .flash-debug { background: #e2e3e5; border-color: #d6d8db; color: #383d41; }
-        header {
-            background-color: #064420;
-            color: white;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        header p {
-            margin: 0;
-        }
-        nav {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-            background: linear-gradient(135deg, #053d1e 0%, #064420 50%, #053d1e 100%);
-            overflow: visible;
-            padding: 12px 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-        /* Override styles.css float rules that break flex layout */
-        nav a,
-        nav .dropdown {
-            float: none !important;
-        }
-        .nav-link,
-        .dropbtn,
-        nav a.nav-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            height: 38px;
-            padding: 0 16px !important;
-            border-radius: 8px;
-            color: #fff !important;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-            line-height: 1;
-            box-sizing: border-box;
-            background: #0a6b2e;
-            border: 1px solid #085a26;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-            white-space: nowrap;
-            font-family: inherit;
-            cursor: pointer;
-            text-align: center;
-        }
-        .nav-link:hover,
-        .dropbtn:hover,
-        nav a.nav-link:hover,
-        .dropdown.show .dropbtn {
-            background: #0d8038 !important;
-            color: #fff !important;
-            border-color: #0a6b2e;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-        }
-        .nav-link:active,
-        .dropbtn:active {
-            background: #085a26;
-        }
-        .nav-link.selected,
-        .dropdown.show .dropbtn {
-            background: #064420 !important;
-            border-color: #043318;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-        .nav-ico {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-            opacity: 0.95;
-        }
-        .nav-ico svg {
-            width: 100%;
-            height: 100%;
-            fill: currentColor;
-        }
-        .nav-divider {
-            width: 1px;
-            height: 28px;
-            background: rgba(255, 255, 255, 0.25);
-            margin: 0 4px;
-            flex-shrink: 0;
-        }
-        .nav-group-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: rgba(255, 255, 255, 0.55);
-            padding: 0 4px;
-            align-self: center;
-        }
-        /* Page action buttons */
-        .btn,
-        button.btn,
-        input.btn[type="submit"] {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 8px 16px;
-            margin: 2px;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.3;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            text-decoration: none;
-            color: #fff;
-            cursor: pointer;
-            font-family: inherit;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        .btn:hover,
-        button.btn:hover {
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-        }
-        .btn-green {
-            background-color: #0a6b2e;
-            border-color: #085a26;
-        }
-        .btn-green:hover {
-            background-color: #0d8038;
-            border-color: #0a6b2e;
-        }
-        .btn-blue {
-            background-color: #1565c0;
-            border-color: #0d47a1;
-        }
-        .btn-blue:hover {
-            background-color: #1976d2;
-            border-color: #1565c0;
-        }
-        .btn-orange {
-            background-color: #e65100;
-            border-color: #bf360c;
-        }
-        .btn-orange:hover {
-            background-color: #f57c00;
-            border-color: #e65100;
-        }
-        .btn-red {
-            background-color: #c62828;
-            border-color: #b71c1c;
-        }
-        .btn-red:hover {
-            background-color: #d32f2f;
-            border-color: #c62828;
-        }
-        .btn-gray {
-            background-color: #5f6368;
-            border-color: #494c50;
-        }
-        .btn-gray:hover {
-            background-color: #6f7378;
-            border-color: #5f6368;
-        }
-        .btn-sm {
-            padding: 5px 12px;
-            font-size: 0.85rem;
-        }
-        form input[type="submit"]:not(.btn),
-        form button[type="submit"]:not(.btn) {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 8px;
-            border: 1px solid #085a26;
-            background: #0a6b2e;
-            color: #fff;
-            cursor: pointer;
-            font-family: inherit;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-            transition: background 0.2s ease, box-shadow 0.2s ease;
-        }
-        form input[type="submit"]:not(.btn):hover,
-        form button[type="submit"]:not(.btn):hover {
-            background: #0d8038;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-        }
-        .quicklinks-card {
-            background: #f1f8f4;
-            border: 1px solid #b8dfc4;
-            border-radius: 10px;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-        }
-        .quicklinks-card h3 {
-            margin-top: 0;
-            color: #064420;
-        }
-        .quicklinks-card p {
-            margin-bottom: 12px;
-            color: #2c4a34;
-        }
-        /* Dropdown container */
-        .dropdown {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            vertical-align: middle;
-        }
-
-        .dropbtn-chevron {
-            font-size: 10px;
-            opacity: 0.85;
-            margin-left: 2px;
-            transition: transform 0.2s ease;
-        }
-        .dropdown.show .dropbtn-chevron {
-            transform: rotate(180deg);
-        }
-
-        /* Dropdown content (hidden by default) – vertical list */
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 0;
-            margin: 0;
-            background-color: #fff;
-            min-width: 240px;
-            box-sizing: border-box;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-            border-radius: 8px;
-            z-index: 1000;
-            border: 1px solid #d4e8d9;
-            overflow: hidden;
-            padding: 4px;
-        }
-
-        /* Links inside the dropdown */
-        nav .dropdown-content a {
-            display: flex !important;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px 12px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a3d24;
-            background-color: transparent;
-            border-radius: 6px;
-            border-bottom: none;
-            white-space: nowrap;
-            float: none !important;
-            text-align: left;
-            transition: background 0.15s ease, color 0.15s ease;
-        }
-        nav .dropdown-content a:hover {
-            background-color: #e8f5e9;
-            color: #064420;
-        }
-        .dropdown-content .dropdown-ico {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-            background: #e8f5e9;
-            color: #064420;
-            flex-shrink: 0;
-        }
-        .dropdown-content .dropdown-ico svg {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
-            display: block;
-        }
-        .dropdown-content .dropdown-label {
-            flex: 1;
-            line-height: 1.3;
-        }
-
-        /* Dropdown btn-* legacy inside menus */
-        .dropdown-content .btn-blue { background-color: #1565c0; }
-        .dropdown-content .btn-green { background-color: #0a6b2e; }
-        .dropdown-content .btn-orange { background-color: #e65100; }
-        .dropdown-content .btn-red { background-color: #c62828; }
-        .dropdown-content .btn-blue:hover { background-color: #1976d2; }
-        .dropdown-content .btn-green:hover { background-color: #0d8038; }
-        .dropdown-content .btn-orange:hover { background-color: #f57c00; }
-        .dropdown-content .btn-red:hover { background-color: #d32f2f; }
-
-        /* Show dropdown on hover */
-        .dropdown:hover .dropdown-content,
-        .dropdown.show .dropdown-content {
-            display: block;
-        }
-    </style>
 </head>
 <body>
-    <header>
-        <h1 style="color: white;">AI-powered Credit Intelligence</h1>
-        {% if user.is_authenticated %}
-            <p>Welcome, {{ user.username }}
-            | <a href="{% url 'loan_notifications_list' %}" style="color: white;">Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}</a>
-            | <a href="{% url 'logout' %}" style="color: white;">Logout</a></p>
-        {% else %}
-            <p><a href="{% url 'login' %}" style="color: white;">Login</a></p>
-        {% endif %}
+    <header class="hub-top">
+        <div class="hub-top-inner">
+            <a class="hub-brand" href="{% url 'home' %}">
+                <span class="hub-brand-text">
+                    <span class="hub-brand-product">AI-powered Credit Intelligence</span>
+                    <span class="hub-brand-line">Staff hub</span>
+                </span>
+                <img class="hub-brand-logo" src="{% static 'logo_green.png' %}" alt="Seqela">
+            </a>
+            <div class="hub-user">
+                {% if user.is_authenticated %}
+                    <span class="hub-user-label">Welcome, <strong>{{ user.get_full_name|default:user.username }}</strong></span>
+                    {% if user.role %}
+                    <span class="hub-user-role">{{ user.get_role_display|default:user.role }}</span>
+                    {% endif %}
+                    <a href="{% url 'loan_notifications_list' %}">
+                        Notifications
+                        {% if unread_notification_count %}<span class="hub-badge">{{ unread_notification_count }}</span>{% endif %}
+                    </a>
+                    <a href="{% url 'logout' %}">Logout</a>
+                {% else %}
+                    <a href="{% url 'login' %}">Login</a>
+                {% endif %}
+            </div>
+        </div>
     </header>
 
     <nav>
@@ -680,6 +318,10 @@
                         {% include "includes/dropdown_link.html" with href=collateral_types_url icon="book" label="Collateral types" only %}
                         {% url 'manage_loan_application_document_types' as doc_types_url %}
                         {% include "includes/dropdown_link.html" with href=doc_types_url icon="loan" label="Document types" only %}
+                        {% url 'manage_applicant_portal_settings' as apply_settings_url %}
+                        {% include "includes/dropdown_link.html" with href=apply_settings_url icon="settings" label="Digital apply" only %}
+                        {% url 'online_loan_intake' as online_intake_url %}
+                        {% include "includes/dropdown_link.html" with href=online_intake_url icon="loan" label="Online loan intake" only %}
                         {% url 'manage_approval_committees' as committees_url %}
                         {% include "includes/dropdown_link.html" with href=committees_url icon="users" label="Approval committees" only %}
                         {% url 'collateral:collateral_policy_config' as policy_url %}
@@ -710,8 +352,13 @@
         {% endblock %}
     </div>
 
-    <footer>
-        <p>&copy; <a href="https://seqela.com">Seqela Technologies</a>. All rights reserved.</p>
+    <footer class="hub-footer">
+        <div class="hub-footer-inner">
+            <a href="https://seqela.com" target="_blank" rel="noopener noreferrer">
+                <img class="hub-footer-logo" src="{% static 'logo_green.png' %}" alt="Seqela">
+            </a>
+            <span>&copy; <a href="https://seqela.com" target="_blank" rel="noopener noreferrer">Seqela Technologies</a>. All rights reserved.</span>
+        </div>
     </footer>
 
     {% block extra_scripts %}

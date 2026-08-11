@@ -520,15 +520,21 @@ def _tool_document_checklist(user, args: Dict[str, Any], conversation) -> Dict[s
     )
     if err:
         return {'ok': False, 'error': err}
+    from loans.document_checklist import checklist_for_loan, required_items
     from loans.models import LoanApplicationDocumentType, LoanRequestDocument
 
-    types = list(LoanApplicationDocumentType.objects.filter(is_required=True).order_by('order', 'id'))
+    checklist = checklist_for_loan(loan)
+    types = list(required_items(checklist))
     audit = LoanApplicationDocumentType.objects.filter(name__icontains='audit').first()
-    if audit and audit not in types:
-        types.append(audit)
+    if audit and all(i.id != audit.id for i in types):
+        for item in checklist:
+            if item.id == audit.id:
+                types.append(item)
+                break
     items = []
     missing_real = []
-    for dt in types:
+    for item in types:
+        dt = item.document_type
         doc = loan.application_documents.filter(document_type=dt).order_by('-id').first()
         status = 'missing'
         note = ''
@@ -541,7 +547,7 @@ def _tool_document_checklist(user, args: Dict[str, Any], conversation) -> Dict[s
             missing_real.append(dt.name)
         items.append({
             'document_type': dt.name,
-            'required': bool(dt.is_required),
+            'required': bool(item.is_required),
             'status': status,
             'filename': doc.get_display_filename() if doc else '',
             'notes': note,

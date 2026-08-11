@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ actor.name }} — market actor{% endblock %}
+{% block content %}
+<h2>{{ actor.name }}</h2>
+<p>
+  <a href="{% url 'partners:actor_list' %}">← Actors</a>
+  {% if can_write %}
+  · <a href="{% url 'partners:actor_edit' actor.pk %}">Edit</a>
+  · <a href="{% url 'partners:observation_log' %}?actor={{ actor.pk }}">Log price quote</a>
+  {% endif %}
+</p>
+
+<table style="max-width:36rem; margin-bottom:1.5rem;">
+  <tr><th>Kind</th><td>{{ actor.get_actor_kind_display }}</td></tr>
+  <tr><th>Focus</th><td>{{ actor.get_product_focus_display }}</td></tr>
+  <tr><th>Product lines</th><td>{{ actor.product_lines|default:"—" }}</td></tr>
+  <tr><th>Phone</th><td>{{ actor.phone_number|default:"—" }}</td></tr>
+  <tr><th>Contact</th><td>{{ actor.contact_person|default:"—" }}</td></tr>
+  <tr><th>Address</th><td>{{ actor.address|default:"—" }}</td></tr>
+  <tr><th>City</th><td>{% if actor.primary_city %}{{ actor.primary_city }}{% else %}—{% endif %}</td></tr>
+  <tr><th>Trust</th><td>{{ actor.get_trust_status_display }}</td></tr>
+  <tr><th>Branch</th><td>{{ actor.branch.name }}</td></tr>
+  <tr><th>Active</th><td>{% if actor.is_active %}Yes{% else %}No{% endif %}</td></tr>
+  <tr><th>Dealer portal</th>
+    <td>
+      {% if actor.portal_enabled and actor.portal_username %}
+        Enabled · login <code>{{ actor.portal_username }}</code>
+        · open <a href="{% url 'market_portal:login' %}" target="_blank" rel="noopener">/market-portal/</a>
+      {% else %}
+        Off (edit actor to enable separate portal login)
+      {% endif %}
+    </td>
+  </tr>
+  {% if actor.notes %}<tr><th>Notes</th><td>{{ actor.notes }}</td></tr>{% endif %}
+</table>
+
+<h3>Recent price quotes</h3>
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Item</th>
+      <th>Unit</th>
+      <th>Price ETB</th>
+      <th>City</th>
+      <th>By</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in observations %}
+    <tr>
+      <td>{{ o.observed_at }}</td>
+      <td>{{ o.item_label }}</td>
+      <td>{{ o.unit|default:"—" }}</td>
+      <td>{{ o.unit_price_etb|floatformat:0 }}</td>
+      <td>{{ o.city.name }}</td>
+      <td>{% if o.recorded_by %}{{ o.recorded_by.username }}{% else %}—{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No quotes yet for this actor.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

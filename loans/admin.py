@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from .models import (
     Zone, Branch, Department, LoanCategory, CollateralType,
-    LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
+    LoanApplicationDocumentType, LoanCategoryDocumentRequirement,
+    LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
     AppraisalAmortizationEntry, LoanCommitteeVote,
@@ -102,10 +103,28 @@ class BranchCommitteeOverrideAdmin(admin.ModelAdmin):
         return obj.member_rules.filter(is_active=True).count()
 
 
+class LoanCategoryDocumentRequirementInline(admin.TabularInline):
+    model = LoanCategoryDocumentRequirement
+    extra = 0
+    fields = ('document_type', 'is_required', 'order')
+
+
 @admin.register(LoanCategory)
 class LoanCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'appraisal_mode')
     list_filter = ('appraisal_mode',)
+    inlines = [LoanCategoryDocumentRequirementInline]
+
+
+@admin.register(LoanCategoryDocumentRequirement)
+class LoanCategoryDocumentRequirementAdmin(admin.ModelAdmin):
+    list_display = ('category', 'document_type', 'is_required', 'order')
+    list_filter = ('category', 'is_required')
+    search_fields = ('category__name', 'document_type__name')
+    list_editable = ('is_required', 'order')
+    ordering = ('category__name', 'order', 'document_type__name')
+
+
 admin.site.register(CollateralType)
 
 

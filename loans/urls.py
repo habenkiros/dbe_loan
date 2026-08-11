@@ -4,6 +4,7 @@ from django.urls import path
 from . import views
 from . import views_credit_intelligence as ci_views
 from . import views_agent
+from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -168,6 +169,11 @@ urlpatterns = [
     path('edit_branch/<int:branch_id>/', views.edit_branch, name='edit_branch'),
     path('manage_loan_categories/', views.manage_loan_categories, name='manage_loan_categories'),
     path('edit_loan_category/<int:category_id>/', views.edit_loan_category, name='edit_loan_category'),
+    path(
+        'manage_loan_category/<int:category_id>/documents/',
+        views.manage_loan_category_documents,
+        name='manage_loan_category_documents',
+    ),
     path('manage_collateral_types/', views.manage_collateral_types, name='manage_collateral_types'),
     path('edit_collateral_type/<int:collateral_type_id>/', views.edit_collateral_type, name='edit_collateral_type'),
     path('manage_approval_committees/', views.manage_approval_committees, name='manage_approval_committees'),
@@ -183,6 +189,16 @@ urlpatterns = [
         name='delete_approval_committee_level',
     ),
     path('manage_loan_application_document_types/', views.manage_loan_application_document_types, name='manage_loan_application_document_types'),
+    path(
+        'manage_applicant_portal/',
+        applicant_hub_views.manage_applicant_portal_settings,
+        name='manage_applicant_portal_settings',
+    ),
+    path(
+        'online_loan_intake/',
+        applicant_hub_views.online_loan_intake,
+        name='online_loan_intake',
+    ),
     path('edit_loan_application_document_type/<int:document_type_id>/', views.edit_loan_application_document_type, name='edit_loan_application_document_type'),
     path(
         'document_type/<int:document_type_id>/reference_sample/file/',

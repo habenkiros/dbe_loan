@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Market prices{% endblock %}
+{% block content %}
+<style>
+  .mkt-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+  .mkt-kpi { background: #f7f8fa; border: 1px solid #e4e7ec; border-radius: 8px; padding: 0.85rem 1rem; }
+  .mkt-kpi strong { display: block; font-size: 1.35rem; color: #1a3a5c; }
+  .mkt-kpi span { font-size: 0.85rem; color: #5a6570; }
+  .mkt-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 1.25rem; }
+  .mkt-actions a { display: inline-block; padding: 0.45rem 0.85rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+  .mkt-a-green { background: #0d7a4f; color: #fff; }
+  .mkt-a-blue { background: #1a5fb4; color: #fff; }
+  .mkt-a-gray { background: #eef1f4; color: #222; }
+  .mkt-hint { color: #5a6570; max-width: 40rem; line-height: 1.45; }
+</style>
+
+<h2>Market actors &amp; prices</h2>
+<p class="mkt-hint">
+  Day-to-day prices from dealers, brokers, and sales people of collateral-related goods.
+  Staff record street quotes here; engineering unit prices stay authoritative — market data will auto-suggest later.
+</p>
+
+<div class="mkt-actions">
+  {% if can_write %}
+  <a class="mkt-a-green" href="{% url 'partners:observation_log' %}">Log price quote</a>
+  <a class="mkt-a-blue" href="{% url 'partners:actor_create' %}">Register actor</a>
+  {% endif %}
+  <a class="mkt-a-gray" href="{% url 'partners:actor_list' %}">Actors</a>
+  <a class="mkt-a-gray" href="{% url 'partners:observation_list' %}">All observations</a>
+  <a class="mkt-a-gray" href="{% url 'partners:band_list' %}">Price bands</a>
+</div>
+
+<div class="mkt-kpis">
+  <div class="mkt-kpi"><strong>{{ stats.actors_active }}</strong><span>Active actors</span></div>
+  <div class="mkt-kpi"><strong>{{ stats.actors_trusted }}</strong><span>Trusted</span></div>
+  <div class="mkt-kpi"><strong>{{ stats.obs_today }}</strong><span>Quotes today</span></div>
+  <div class="mkt-kpi"><strong>{{ stats.obs_week }}</strong><span>Quotes this week</span></div>
+  <div class="mkt-kpi"><strong>{{ stats.obs_total }}</strong><span>All active quotes</span></div>
+</div>
+
+{% if by_class %}
+<h3>This week by asset class</h3>
+<ul>
+  {% for row in by_class %}
+  <li>{{ row.asset_class }} — {{ row.n }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<h3>Recent quotes</h3>
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Actor</th>
+      <th>Item</th>
+      <th>Price (ETB)</th>
+      <th>City</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in recent %}
+    <tr>
+      <td>{{ o.observed_at }}</td>
+      <td><a href="{% url 'partners:actor_detail' o.market_actor_id %}">{{ o.market_actor.name }}</a></td>
+      <td>{{ o.item_label }}{% if o.unit %} / {{ o.unit }}{% endif %}</td>
+      <td>{{ o.unit_price_etb|floatformat:0 }}</td>
+      <td>{{ o.city.name }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No quotes yet.
+      {% if can_write %}<a href="{% url 'partners:observation_log' %}">Log the first one</a>.{% endif %}
+    </td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

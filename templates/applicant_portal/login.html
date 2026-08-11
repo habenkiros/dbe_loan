@@ -1,0 +1,25 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block wrap_class %}ap-narrow{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Sign in</h1>
+  <p class="ap-sub">Digital Apply for customers — not the staff hub.</p>
+  <form method="post" autocomplete="on">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    {% endfor %}
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-primary" type="submit">Sign in</button>
+      <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:register' %}">Register</a>
+    </div>
+  </form>
+  <p class="ap-help" style="margin-top:1rem;">
+    <a href="{% url 'applicant_portal:password_reset_request' %}">Forgot password?</a>
+  </p>
+</div>
+{% endblock %}

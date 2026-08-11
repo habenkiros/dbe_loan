@@ -1,0 +1,43 @@
+<script>
+(function () {
+  var zonesUrl = "{% url 'market_portal:ajax_zones' %}";
+  var citiesUrl = "{% url 'market_portal:ajax_cities' %}";
+  var regionSelect = document.getElementById('id_region');
+  var zoneSelect = document.getElementById('id_zone');
+  var citySelect = document.getElementById('id_city');
+
+  function fillSelect(sel, items, placeholder) {
+    if (!sel) return;
+    var html = '<option value="">' + placeholder + '</option>';
+    (items || []).forEach(function (it) {
+      html += '<option value="' + it.id + '">' + (it.name || '') + '</option>';
+    });
+    sel.innerHTML = html;
+  }
+  function fetchJson(url, cb) {
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(cb)
+      .catch(function () { cb([]); });
+  }
+  if (regionSelect && zoneSelect) {
+    regionSelect.addEventListener('change', function () {
+      fillSelect(zoneSelect, [], '—— Select Zone ——');
+      fillSelect(citySelect, [], '—— Select City ——');
+      if (!regionSelect.value) return;
+      fetchJson(zonesUrl + '?region_id=' + encodeURIComponent(regionSelect.value), function (rows) {
+        fillSelect(zoneSelect, rows, '—— Select Zone ——');
+      });
+    });
+  }
+  if (zoneSelect && citySelect) {
+    zoneSelect.addEventListener('change', function () {
+      fillSelect(citySelect, [], '—— Select City ——');
+      if (!zoneSelect.value) return;
+      fetchJson(citiesUrl + '?zone_id=' + encodeURIComponent(zoneSelect.value), function (rows) {
+        fillSelect(citySelect, rows, '—— Select City / Woreda ——');
+      });
+    });
+  }
+})();
+</script>

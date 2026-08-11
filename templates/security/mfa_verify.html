@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify authenticator — AI-powered Credit Intelligence</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <style>
+        body { display:flex; justify-content:center; align-items:center; min-height:100vh; margin:0; background:#f4f4f4; font-family:Arial,sans-serif; }
+        .login-container { background:#fff; padding:25px; border-radius:8px; box-shadow:0 0 12px rgba(0,128,0,.15); width:340px; }
+        h1 { text-align:center; margin-bottom:8px; color:#064420; font-size:1.35rem; }
+        .sub { text-align:center; color:#666; font-size:13px; margin-bottom:18px; }
+        .form-control { margin-bottom:15px; }
+        .form-control label { font-weight:bold; display:block; margin-bottom:5px; }
+        .form-control input { padding:10px; border:1px solid #ddd; border-radius:5px; width:100%; box-sizing:border-box; letter-spacing:.2em; text-align:center; font-size:1.2rem; }
+        .submit-button { background:#07ae18; color:#fff; padding:10px; border:0; border-radius:5px; cursor:pointer; width:100%; font-size:16px; }
+        .error-message { color:#c00; text-align:center; margin-bottom:12px; }
+        .extra { text-align:center; margin-top:12px; }
+        .extra a { color:#064420; }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <h1>Two-factor verification</h1>
+    <p class="sub">Enter the 6-digit code for <strong>{{ username }}</strong></p>
+    {% if error %}<div class="error-message">{{ error }}</div>{% endif %}
+    <form method="post" action="{% url 'mfa_verify' %}">
+        {% csrf_token %}
+        <div class="form-control">
+            <label for="otp_code">Authenticator code</label>
+            <input type="text" id="otp_code" name="otp_code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required autofocus>
+        </div>
+        <button type="submit" class="submit-button">Verify</button>
+    </form>
+    <p class="extra"><a href="{% url 'logout' %}">Cancel and return to login</a></p>
+</div>
+</body>
+</html>

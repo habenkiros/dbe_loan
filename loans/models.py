@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -100,6 +101,45 @@ class LoanCategory(models.Model):
     def __str__(self):
         return self.name
 
+
+class LoanCategoryDocumentRequirement(models.Model):
+    """Which application document types apply to a given loan category (loan type)."""
+
+    category = models.ForeignKey(
+        LoanCategory,
+        on_delete=models.CASCADE,
+        related_name='document_requirements',
+    )
+    document_type = models.ForeignKey(
+        'LoanApplicationDocumentType',
+        on_delete=models.CASCADE,
+        related_name='category_requirements',
+    )
+    is_required = models.BooleanField(
+        default=True,
+        help_text='If True, this document is required before collateral for this loan type.',
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text='Display order within this loan type (lower first).',
+    )
+
+    class Meta:
+        ordering = ['order', 'document_type__order', 'document_type__name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['category', 'document_type'],
+                name='loans_unique_category_document_type',
+            ),
+        ]
+        verbose_name = 'Loan type document requirement'
+        verbose_name_plural = 'Loan type document requirements'
+
+    def __str__(self):
+        req = 'required' if self.is_required else 'optional'
+        return f'{self.category.name}: {self.document_type.name} ({req})'
+
+
 class CollateralType(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -113,7 +153,10 @@ class LoanApplicationDocumentType(models.Model):
     order = models.PositiveIntegerField(default=0, help_text='Display order (lower first).')
     is_required = models.BooleanField(
         default=True,
-        help_text='If True, this document type is required for loan application.',
+        help_text=(
+            'Fallback required flag when a loan type has no document pack configured. '
+            'When a pack exists for a loan category, that pack controls required/optional.'
+        ),
     )
     allowed_extensions = models.CharField(
         max_length=255,
@@ -374,6 +417,23 @@ class CustomUser(AbstractUser):
         related_name='users',
         help_text='Head-office department (Cooperative, Finance, Credit, Management, Board).',
     )
+    failed_login_attempts = models.PositiveSmallIntegerField(default=0)
+    lockout_until = models.DateTimeField(blank=True, null=True, db_index=True)
+    mfa_enabled = models.BooleanField(
+        default=False,
+        help_text='When True, staff must enter a TOTP code after password login.',
+    )
+    mfa_secret_encrypted = models.TextField(
+        blank=True,
+        default='',
+        help_text='Encrypted TOTP shared secret (not plaintext).',
+    )
+
+    def is_login_locked(self) -> bool:
+        if self.lockout_until is None:
+            return False
+        from django.utils import timezone
+        return self.lockout_until > timezone.now()
 
     def is_cooperative_manager(self) -> bool:
         return self.role in ('cooperative_manager', 'operation_manager')
@@ -386,6 +446,88 @@ class CustomUser(AbstractUser):
 
     def is_management_vp(self) -> bool:
         return self.role in self.MANAGEMENT_VP_ROLES
+
+
+class IpLoginThrottle(models.Model):
+    """Per-IP login failure throttle used by staff auth hardening."""
+
+    ip_address = models.GenericIPAddressField(unique=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    lockout_until = models.DateTimeField(blank=True, null=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def is_locked(self) -> bool:
+        if self.lockout_until is None:
+            return False
+        from django.utils import timezone
+        return self.lockout_until > timezone.now()
+
+    def __str__(self):
+        return f'{self.ip_address} ({self.failed_attempts})'
+
+
+class SecurityAuditLog(models.Model):
+    """Append-only security and auth events for staff portal hardening."""
+
+    EVT_LOGIN_SUCCESS = 'login_success'
+    EVT_LOGIN_FAILED = 'login_failed'
+    EVT_LOGIN_LOCKED = 'login_locked'
+    EVT_LOGOUT = 'logout'
+    EVT_MFA_CHALLENGE = 'mfa_challenge'
+    EVT_MFA_SUCCESS = 'mfa_success'
+    EVT_MFA_FAILED = 'mfa_failed'
+    EVT_MFA_ENROLLED = 'mfa_enrolled'
+    EVT_MFA_DISABLED = 'mfa_disabled'
+    EVT_USER_CREATED = 'user_created'
+    EVT_USER_UPDATED = 'user_updated'
+    EVT_USER_UNLOCKED = 'user_unlocked'
+    EVT_PASSWORD_RESET_REQUESTED = 'password_reset_requested'
+    EVT_PASSWORD_RESET_COMPLETED = 'password_reset_completed'
+    EVT_PASSWORD_CHANGED = 'password_changed'
+    EVT_AUDIT_EXPORTED = 'audit_exported'
+    EVT_SESSION_TIMEOUT = 'session_timeout'
+    EVT_CHOICES = [
+        (EVT_LOGIN_SUCCESS, 'Login success'),
+        (EVT_LOGIN_FAILED, 'Login failed'),
+        (EVT_LOGIN_LOCKED, 'Account locked'),
+        (EVT_LOGOUT, 'Logout'),
+        (EVT_MFA_CHALLENGE, 'MFA challenge issued'),
+        (EVT_MFA_SUCCESS, 'MFA success'),
+        (EVT_MFA_FAILED, 'MFA failed'),
+        (EVT_MFA_ENROLLED, 'MFA enrolled'),
+        (EVT_MFA_DISABLED, 'MFA disabled'),
+        (EVT_USER_CREATED, 'User created'),
+        (EVT_USER_UPDATED, 'User updated'),
+        (EVT_USER_UNLOCKED, 'User unlocked'),
+        (EVT_PASSWORD_RESET_REQUESTED, 'Password reset requested'),
+        (EVT_PASSWORD_RESET_COMPLETED, 'Password reset completed'),
+        (EVT_PASSWORD_CHANGED, 'Password changed'),
+        (EVT_AUDIT_EXPORTED, 'Security audit exported'),
+        (EVT_SESSION_TIMEOUT, 'Session idle timeout'),
+    ]
+
+    event_type = models.CharField(max_length=32, choices=EVT_CHOICES, db_index=True)
+    username = models.CharField(max_length=150, blank=True, default='', db_index=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.CharField(max_length=512, blank=True, default='')
+    detail = models.JSONField(blank=True, default=dict)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_events',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event_type', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.event_type} · {self.username or "—"}'
 
 # loans/models.py
 class LatestLoanRequestID(models.Model):
@@ -437,6 +579,19 @@ class LoanRequest(models.Model):
         default=ORIGIN_BRANCH,
         db_index=True,
         help_text='Where the loan was originated: branch (default) or head-office Credit.',
+    )
+    SOURCE_STAFF = 'staff'
+    SOURCE_ONLINE = 'online'
+    SOURCE_CHANNEL_CHOICES = [
+        (SOURCE_STAFF, 'Staff / branch entry'),
+        (SOURCE_ONLINE, 'Applicant digital apply'),
+    ]
+    source_channel = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHANNEL_CHOICES,
+        default=SOURCE_STAFF,
+        db_index=True,
+        help_text='How the application entered the system (staff desk vs applicant portal).',
     )
     # date_requested = models.DateTimeField(auto_now_add=True)
     date_requested = models.DateTimeField(default=timezone.now)

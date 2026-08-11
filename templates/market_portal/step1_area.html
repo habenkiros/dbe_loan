@@ -1,0 +1,96 @@
+{% extends "market_portal/base.html" %}
+{% block title %}Where · step 1 of 2{% endblock %}
+{% block wrap_class %}mp-wide{% endblock %}
+{% block content %}
+<div class="mp-top">
+  <div>
+    <p class="mp-brand">Seqela Market</p>
+    <h1 class="mp-title">{% if is_guest %}Share a local price{% else %}Hello, {{ actor.name }}{% endif %}</h1>
+    <div class="mp-hero-line" aria-hidden="true"></div>
+    <p class="mp-sub">{% if is_guest %}Two quick steps. No staff login needed.{% elif changing_location %}Update the area saved on your account.{% else %}Choose your trading area once — later quotes use it automatically.{% endif %}</p>
+  </div>
+  <div class="mp-actions">
+    {% if is_guest %}
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:register' %}">Register</a>
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:login' %}">Sign in</a>
+    {% else %}
+    {% if changing_location %}
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:submit_product' %}">Cancel</a>
+    {% endif %}
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:profile' %}">Profile</a>
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:logout' %}">Sign out</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_guest %}
+<nav class="mp-steps" aria-label="Progress">
+  <span class="mp-step is-on"><span class="mp-step-num">1</span> Area</span>
+  <span class="mp-step-line" aria-hidden="true"></span>
+  <span class="mp-step"><span class="mp-step-num">2</span> Product</span>
+</nav>
+{% endif %}
+
+<div class="mp-workspace">
+  <div class="mp-card">
+    <form method="post" id="mp-area-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+
+      {% if is_guest %}
+      <p class="mp-section-label">About you</p>
+      <div class="mp-grid-2">
+        <div class="mp-field">
+          <label for="id_guest_name">{{ form.guest_name.label }}</label>
+          {{ form.guest_name }}
+        </div>
+        <div class="mp-field">
+          <label for="id_guest_phone">{{ form.guest_phone.label }}</label>
+          {{ form.guest_phone }}
+        </div>
+      </div>
+      <hr class="mp-divider">
+      {% endif %}
+
+      <p class="mp-section-label">{% if is_guest %}Where is this price from?{% else %}Your trading area{% endif %}</p>
+      <div class="mp-grid-3">
+        <div class="mp-field">
+          <label for="id_region">Region</label>
+          {{ form.region }}
+        </div>
+        <div class="mp-field">
+          <label for="id_zone">Zone</label>
+          {{ form.zone }}
+        </div>
+        <div class="mp-field">
+          <label for="id_city">City / Woreda</label>
+          {{ form.city }}
+          {% if form.city.errors %}<div class="error">{{ form.city.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <button type="submit" class="mp-btn mp-btn-primary">{% if is_guest %}Continue to product &amp; price{% elif changing_location %}Save location{% else %}Save location &amp; continue{% endif %}</button>
+    </form>
+  </div>
+
+  {% if not is_guest and recent %}
+  <div class="mp-card mp-card--soft">
+    <p class="mp-section-label">Your recent quotes</p>
+    <div class="mp-quote-list">
+      {% for o in recent %}
+      <div class="mp-quote-item">
+        <strong>{{ o.item_label }}</strong>
+        <span class="mp-q-price">{{ o.unit_price_etb|floatformat:0 }} ETB</span>
+        <span class="mp-q-meta">{{ o.observed_at }} · {{ o.city.name }}{% if o.unit %} · per {{ o.unit }}{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if is_guest %}
+<p class="mp-note">Want a history of your quotes? <a href="{% url 'market_portal:register' %}">Create a free account</a></p>
+{% endif %}
+{% include "market_portal/_cascade_area_js.html" %}
+{% endblock %}

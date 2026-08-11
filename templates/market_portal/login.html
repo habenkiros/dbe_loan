@@ -1,0 +1,25 @@
+{% extends "market_portal/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block wrap_class %}mp-auth{% endblock %}
+{% block content %}
+<p class="mp-brand">Seqela Market</p>
+<h1 class="mp-title">Welcome back</h1>
+<div class="mp-hero-line" aria-hidden="true"></div>
+<p class="mp-sub">Sign in with the account you created here. Staff loan logins are separate.</p>
+<div class="mp-card">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="mp-field">
+      <label for="id_username">Username</label>
+      {{ form.username }}
+    </div>
+    <div class="mp-field">
+      <label for="id_password">Password</label>
+      {{ form.password }}
+    </div>
+    <button type="submit" class="mp-btn mp-btn-primary">Sign in</button>
+  </form>
+</div>
+<p class="mp-note"><a href="{% url 'market_portal:register' %}">Create free account</a> · <a href="{% url 'market_portal:landing' %}">Submit without signing in</a></p>
+{% endblock %}

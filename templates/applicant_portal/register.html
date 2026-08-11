@@ -1,0 +1,136 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Register{% endblock %}
+{% block wrap_class %}ap-narrow{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Create your account</h1>
+  <p class="ap-sub">
+    Start with your <strong>DECSI customer number</strong>. When core banking is connected,
+    we load your official name, mobile, and related details automatically.
+  </p>
+  <form method="post" autocomplete="off" id="ap-register-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% if password_hints %}<p class="ap-help">{{ password_hints }}</p>{% endif %}
+
+    <label for="{{ form.customer_number.id_for_label }}">{{ form.customer_number.label }}</label>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:stretch;">
+      {{ form.customer_number }}
+      <button type="button" class="ap-btn ap-btn-ghost" id="ap-lookup-btn" style="white-space:nowrap;">
+        Look up
+      </button>
+    </div>
+    {% if form.customer_number.help_text %}<p class="ap-help">{{ form.customer_number.help_text }}</p>{% endif %}
+    {{ form.customer_number.errors }}
+    <p class="ap-help" id="ap-lookup-status" style="min-height:1.2em;"></p>
+
+    <div id="ap-profile-card" class="ap-card" style="display:none;margin:0.75rem 0;padding:0.85rem 1rem;background:var(--soft);box-shadow:none;">
+      <strong style="display:block;margin-bottom:0.35rem;color:var(--accent-deep);">Customer record</strong>
+      <ul class="ap-facts" style="margin:0;">
+        <li><span class="k">Name</span><span class="v" id="ap-prof-name">—</span></li>
+        <li><span class="k">Phone on file</span><span class="v" id="ap-prof-phone">—</span></li>
+        <li><span class="k">Status</span><span class="v" id="ap-prof-status">—</span></li>
+        <li><span class="k">Address</span><span class="v" id="ap-prof-address">—</span></li>
+      </ul>
+    </div>
+
+    <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+    {{ form.full_name }}
+    {% if form.full_name.help_text %}<p class="ap-help">{{ form.full_name.help_text }}</p>{% endif %}
+    {{ form.full_name.errors }}
+
+    <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+    {{ form.phone_number }}
+    {% if form.phone_number.help_text %}<p class="ap-help">{{ form.phone_number.help_text }}</p>{% endif %}
+    {{ form.phone_number.errors }}
+
+    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+    {{ form.password }}
+    {% if form.password.help_text %}<p class="ap-help">{{ form.password.help_text }}</p>{% endif %}
+    {{ form.password.errors }}
+
+    <label for="{{ form.password_confirm.id_for_label }}">{{ form.password_confirm.label }}</label>
+    {{ form.password_confirm }}
+    {{ form.password_confirm.errors }}
+
+    <div style="margin-top:0.85rem;">
+      <label style="display:flex;gap:0.5rem;align-items:flex-start;font-weight:600;">
+        {{ form.accept_terms }}
+        <span>{{ form.accept_terms.label }}</span>
+      </label>
+      {{ form.accept_terms.errors }}
+    </div>
+    {{ form.website }}
+
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-primary" type="submit">Register</button>
+      <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">Sign in</a>
+    </div>
+  </form>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('ap-lookup-btn');
+  var cn = document.getElementById('id_customer_number');
+  var statusEl = document.getElementById('ap-lookup-status');
+  var card = document.getElementById('ap-profile-card');
+  if (!btn || !cn) return;
+
+  function setStatus(msg, ok) {
+    statusEl.textContent = msg || '';
+    statusEl.style.color = ok ? 'var(--ok)' : 'var(--warn)';
+  }
+
+  function fill(profile) {
+    if (!profile) return;
+    var name = document.getElementById('id_full_name');
+    var phone = document.getElementById('id_phone_number');
+    if (name && profile.name) name.value = profile.name;
+    if (phone && profile.phone_number) phone.value = profile.phone_number;
+    document.getElementById('ap-prof-name').textContent = profile.name || '—';
+    document.getElementById('ap-prof-phone').textContent = profile.phone_number || '—';
+    document.getElementById('ap-prof-status').textContent = profile.status || '—';
+    document.getElementById('ap-prof-address').textContent = profile.home_address || '—';
+    card.style.display = 'block';
+  }
+
+  function lookup() {
+    var val = (cn.value || '').trim();
+    if (!val) {
+      setStatus('Enter your customer number first.', false);
+      return;
+    }
+    setStatus('Looking up customer…', true);
+    btn.disabled = true;
+    fetch('{% url "applicant_portal:ajax_lookup_customer" %}?customer_number=' + encodeURIComponent(val), {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        if (!res.ok || !res.body.ok) {
+          card.style.display = 'none';
+          setStatus((res.body && res.body.error) || 'Customer not found.', false);
+          return;
+        }
+        fill(res.body.profile);
+        var live = res.body.live ? 'DECSI core banking' : 'demo profile';
+        setStatus('Loaded from ' + live + '. Confirm details, then set a password.', true);
+      })
+      .catch(function () {
+        btn.disabled = false;
+        setStatus('Lookup failed. Try again.', false);
+      });
+  }
+
+  btn.addEventListener('click', lookup);
+  cn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      lookup();
+    }
+  });
+})();
+</script>
+{% endblock %}

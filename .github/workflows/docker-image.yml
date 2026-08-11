@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: CI
 
 on:
   push:
@@ -7,12 +7,59 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: decsiloandb
+          POSTGRES_USER: decsiloandbuser
+          POSTGRES_PASSWORD: ci-test-password-not-for-prod
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U decsiloandbuser -d decsiloandb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      DEBUG: "True"
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DB_NAME: decsiloandb
+      DB_USER: decsiloandbuser
+      DB_PASSWORD: ci-test-password-not-for-prod
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DECSI_CBS_USE_MOCK_LEDGER: "True"
+      DECSI_CUSTOMER_FALLBACK_MOCK: "True"
+      AGENT_LLM_PROVIDER: stub
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: pip
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-eng \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+            shared-mime-info
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests
+        run: python manage.py test --verbosity=1
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag decsi-loan-hub:ci

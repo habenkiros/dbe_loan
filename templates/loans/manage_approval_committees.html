@@ -1,71 +1,99 @@
 {% extends "base.html" %}
 {% block title %}Approval committees{% endblock %}
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+{% endblock %}
 {% block content %}
-<style>
-.committee-settings .badge-on { background:#d4edda; color:#155724; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
-.committee-settings .badge-off { background:#eee; color:#666; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; }
-.committee-settings .rules { margin:0.25rem 0 0; padding-left:1.1rem; font-size:0.9rem; }
-.committee-settings .header-row { display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-</style>
-
-<div class="committee-settings">
-  <div class="header-row">
-    <div>
-      <h1 style="margin:0 0 0.35rem;">Approval committees</h1>
-      <p style="margin:0;" class="help">
-        Loans pass through <strong>active</strong> levels in order.
-        Voter scope: branch / district / organization-wide.
+<div class="da-settings">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Approval committees</h1>
+      <p>
+        Configure credit-approval levels in sequence. Loans pass through
+        active levels; voters are scoped by branch, district, or organization.
       </p>
     </div>
-    <a href="{% url 'add_approval_committee_level' %}" class="btn btn-green">Add approval level</a>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Levels</span>
+        <span class="value">{{ level_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Active</span>
+        <span class="value">{{ active_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Inactive</span>
+        <span class="value">{{ inactive_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Workflow</span>
+        <span class="value" style="font-size:0.95rem;">Sequential</span>
+      </div>
+    </div>
   </div>
 
-  {% if levels %}
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Order</th>
-          <th>Level</th>
-          <th>Scope</th>
-          <th>Status</th>
-          <th>Votes needed</th>
-          <th>Amount filter</th>
-          <th>Who may vote</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for level in levels %}
-        <tr>
-          <td>{{ level.sequence_order }}</td>
-          <td>
-            <strong>{{ level.name }}</strong><br>
-            <small><code>{{ level.key }}</code></small>
-          </td>
-          <td><small>{{ level.get_voter_scope_display }}</small></td>
-          <td>{% if level.is_active %}<span class="badge-on">Active</span>{% else %}<span class="badge-off">Inactive</span>{% endif %}</td>
-          <td>
-            {{ level.min_approvals_required }} approve / {{ level.min_declines_required }} decline
+  <p class="da-note">
+    Order is controlled by each level’s sequence number. Use amount filters to skip levels for small or large loans.
+    <a href="{% url 'add_approval_committee_level' %}">Add a level</a> to extend the chain.
+  </p>
+
+  <section class="da-panel">
+    <div class="da-panel-head">
+      <h2><span>1</span> Committee levels</h2>
+      <a class="da-btn-primary" href="{% url 'add_approval_committee_level' %}">Add approval level</a>
+    </div>
+
+    {% if levels %}
+      {% for level in levels %}
+      <article class="da-level-card">
+        <div class="da-level-card-head">
+          <div>
+            <strong style="font-size:1.05rem;color:#123a5c;">{{ level.name }}</strong>
+            <div style="margin-top:0.25rem;">
+              <span class="da-pill da-pill-off">Order {{ level.sequence_order }}</span>
+              <code style="margin-left:0.35rem;font-size:0.8rem;">{{ level.key }}</code>
+              {% if level.is_active %}
+              <span class="da-pill da-pill-on" style="margin-left:0.35rem;">Active</span>
+              {% else %}
+              <span class="da-pill da-pill-off" style="margin-left:0.35rem;">Inactive</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="list-actions">
+            {% url 'edit_approval_committee_level' level.id as edit_url %}
+            {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit approval level" tone="blue" only %}
+          </div>
+        </div>
+        <div class="da-level-meta">
+          <div>
+            <strong>Voter scope</strong><br>
+            {{ level.get_voter_scope_display }}
+          </div>
+          <div>
+            <strong>Votes needed</strong><br>
+            {{ level.min_approvals_required }} approve · {{ level.min_declines_required }} decline
             {% if level.tiebreaker_role %}
-            <br><small>Tie → {{ level.get_tiebreaker_role_display }}</small>
+            <br><span class="help" style="margin:0;">Tie → {{ level.get_tiebreaker_role_display }}</span>
             {% endif %}
-          </td>
-          <td>
+          </div>
+          <div>
+            <strong>Amount filter</strong><br>
             {% if level.min_loan_amount or level.max_loan_amount %}
               {% if level.min_loan_amount %}≥ {{ level.min_loan_amount|floatformat:0 }}{% endif %}
               {% if level.min_loan_amount and level.max_loan_amount %} · {% endif %}
               {% if level.max_loan_amount %}≤ {{ level.max_loan_amount|floatformat:0 }}{% endif %}
             {% else %}
-              Always
+              Always applies
             {% endif %}
-          </td>
-          <td>
+          </div>
+          <div>
+            <strong>Who may vote</strong>
             {% with rules=level.member_rules.all %}
               {% if rules %}
-              <ul class="rules">
+              <ul class="da-rules">
                 {% for r in rules %}
-                <li {% if not r.is_active %}style="opacity:0.55;"{% endif %}>
+                <li {% if not r.is_active %}style="opacity:0.5;"{% endif %}>
                   {% if r.participant_type == 'user' and r.user %}
                     User: {{ r.user.get_full_name|default:r.user.username }}
                   {% else %}
@@ -77,23 +105,18 @@
                 {% endfor %}
               </ul>
               {% else %}
-              <em>No voters configured</em>
+              <br><em>No voters configured</em>
               {% endif %}
             {% endwith %}
-          </td>
-          <td>
-            <div class="list-actions">
-            {% url 'edit_approval_committee_level' level.id as edit_url %}
-            {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit approval level" tone="blue" only %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p><em>No committee levels yet.</em> <a href="{% url 'add_approval_committee_level' %}">Add the first level</a>.</p>
-  {% endif %}
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}
+      <p class="da-note" style="margin:0;">No committee levels yet.
+        <a href="{% url 'add_approval_committee_level' %}">Add the first level</a>.
+      </p>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

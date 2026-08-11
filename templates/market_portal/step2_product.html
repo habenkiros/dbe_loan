@@ -1,0 +1,140 @@
+{% extends "market_portal/base.html" %}
+{% block title %}{% if is_guest %}Product & price · step 2 of 2{% else %}New price{% endif %}{% endblock %}
+{% block wrap_class %}mp-wide{% endblock %}
+{% block content %}
+<div class="mp-top">
+  <div>
+    <p class="mp-brand">Seqela Market</p>
+    <h1 class="mp-title">{% if is_guest %}Product &amp; price{% else %}Hello{% if actor %}, {{ actor.name }}{% endif %}{% endif %}</h1>
+    <div class="mp-hero-line" aria-hidden="true"></div>
+    <p class="mp-sub">{% if is_guest %}Almost done — describe the item and amount.{% else %}Your area is saved. Just add product and price.{% endif %}</p>
+  </div>
+  <div class="mp-actions">
+    {% if is_guest %}
+    <a class="mp-btn mp-btn-ghost" href="{% url back_url %}">← Back</a>
+    {% else %}
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:profile' %}">Profile</a>
+    <a class="mp-btn mp-btn-ghost" href="{% url 'market_portal:logout' %}">Sign out</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_guest %}
+<nav class="mp-steps" aria-label="Progress">
+  <span class="mp-step is-done"><span class="mp-step-num">✓</span> Area</span>
+  <span class="mp-step-line" aria-hidden="true"></span>
+  <span class="mp-step is-on"><span class="mp-step-num">2</span> Product</span>
+</nav>
+{% endif %}
+
+<div class="mp-loc-chip" title="{{ draft.city_label }}">
+  <span aria-hidden="true">📍</span>
+  <span>{{ draft.city_label }}</span>
+  {% if change_location_url %}
+  <a class="mp-loc-change" href="{{ change_location_url }}">Change</a>
+  {% endif %}
+</div>
+
+<div class="mp-workspace">
+  <div class="mp-card">
+    <form method="post" id="mp-product-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+
+      <p class="mp-section-label">How is this item listed?</p>
+      <div class="mp-mode-grid">
+        {% for value, label in form.fields.product_mode.choices %}
+        <label class="mp-mode-card {% if form.product_mode.value == value or not form.product_mode.value and value == 'catalog' %}is-selected{% endif %}">
+          <input type="radio" name="product_mode" value="{{ value }}"
+            {% if form.product_mode.value == value or not form.product_mode.value and value == 'catalog' %}checked{% endif %}>
+          <span class="mp-mode-ico" aria-hidden="true">{% if value == 'catalog' %}☰{% else %}✎{% endif %}</span>
+          <span class="mp-mode-title">
+            {% if value == 'catalog' %}Construction catalog{% else %}Other product{% endif %}
+          </span>
+          <span class="mp-mode-hint">
+            {% if value == 'catalog' %}
+              Pick main → sub → sub-sub work
+            {% else %}
+              Type any product name
+            {% endif %}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      {% if form.product_mode.errors %}<div class="error">{{ form.product_mode.errors }}</div>{% endif %}
+
+      <div id="mp-panel-catalog" class="mp-mode-panel">
+        <p class="mp-section-label">Catalog path</p>
+        <div class="mp-grid-3">
+          <div class="mp-field">
+            <label for="id_main_work">Main work</label>
+            {{ form.main_work }}
+          </div>
+          <div class="mp-field">
+            <label for="id_sub_work">Sub work</label>
+            {{ form.sub_work }}
+          </div>
+          <div class="mp-field">
+            <label for="id_sub_sub_work">Sub-sub work <span style="font-weight:500;color:var(--muted)">(optional)</span></label>
+            {{ form.sub_sub_work }}
+          </div>
+        </div>
+      </div>
+
+      <div id="mp-panel-free" class="mp-mode-panel" hidden>
+        <p class="mp-section-label">Your product</p>
+        <div class="mp-field">
+          <label for="id_item_label">Product name</label>
+          {{ form.item_label }}
+          {% if form.item_label.errors %}<div class="error">{{ form.item_label.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <hr class="mp-divider">
+      <p class="mp-section-label">Price detail</p>
+      <div class="mp-price-row">
+        <div class="mp-field">
+          <label for="id_unit">Unit</label>
+          {{ form.unit }}
+        </div>
+        <div class="mp-field">
+          <label for="id_unit_price_etb">Price (ETB)</label>
+          {{ form.unit_price_etb }}
+          {% if form.unit_price_etb.errors %}<div class="error">{{ form.unit_price_etb.errors }}</div>{% endif %}
+        </div>
+        <div class="mp-field">
+          <label for="id_condition">Condition</label>
+          {{ form.condition }}
+        </div>
+        <div class="mp-field">
+          <label for="id_observed_at">Date</label>
+          {{ form.observed_at }}
+        </div>
+      </div>
+      <div class="mp-field">
+        <label for="id_notes">Notes <span style="font-weight:500;color:var(--muted)">(optional)</span></label>
+        {{ form.notes }}
+      </div>
+
+      <button type="submit" class="mp-btn mp-btn-primary">Submit this price</button>
+    </form>
+  </div>
+
+  {% if not is_guest and recent %}
+  <div class="mp-card mp-card--soft">
+    <p class="mp-section-label">Your recent quotes</p>
+    <div class="mp-quote-list">
+      {% for o in recent %}
+      <div class="mp-quote-item">
+        <strong>{{ o.item_label }}</strong>
+        <span class="mp-q-price">{{ o.unit_price_etb|floatformat:0 }} ETB</span>
+        <span class="mp-q-meta">{{ o.observed_at }} · {{ o.city.name }}{% if o.unit %} · per {{ o.unit }}{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% include "market_portal/_product_mode_js.html" %}
+{% endblock %}

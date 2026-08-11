@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Security audit log — AI-powered Credit Intelligence{% endblock %}
+{% block content %}
+<h2>Security audit log</h2>
+<p class="muted">Authentication and privileged account events. Exports are themselves audited.</p>
+
+<form method="get" action="{% url 'security_audit_list' %}" style="margin:1rem 0;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:end;">
+  <div>
+    <label for="event_type">Event</label><br>
+    <select name="event_type" id="event_type">
+      <option value="">All</option>
+      {% for val, label in event_choices %}
+      <option value="{{ val }}" {% if filters.event_type == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="username">Username</label><br>
+    <input type="text" name="username" id="username" value="{{ filters.username }}">
+  </div>
+  <div>
+    <label for="ip_address">IP</label><br>
+    <input type="text" name="ip_address" id="ip_address" value="{{ filters.ip_address }}">
+  </div>
+  <div>
+    <label for="date_from">From</label><br>
+    <input type="date" name="date_from" id="date_from" value="{{ filters.date_from }}">
+  </div>
+  <div>
+    <label for="date_to">To</label><br>
+    <input type="date" name="date_to" id="date_to" value="{{ filters.date_to }}">
+  </div>
+  <button type="submit">Filter</button>
+  <a href="{% url 'security_audit_export' %}?{{ export_query }}&amp;format=csv">Export CSV</a>
+  <a href="{% url 'security_audit_export' %}?{{ export_query }}&amp;format=xlsx">Export Excel</a>
+</form>
+
+<p style="font-size:0.9rem;color:#555;">Showing {{ result_count }} row(s).</p>
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Event</th>
+        <th>Username</th>
+        <th>IP</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in events %}
+      <tr>
+        <td>{{ e.created_at }}</td>
+        <td>{{ e.get_event_type_display }}</td>
+        <td>{{ e.username }}</td>
+        <td>{{ e.ip_address|default:"—" }}</td>
+        <td><code style="font-size:12px;">{{ e.detail }}</code></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No security events match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

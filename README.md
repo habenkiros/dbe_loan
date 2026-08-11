@@ -532,6 +532,10 @@ docker compose exec web python manage.py test
 
 | Path | Description |
 |------|-------------|
+| `docs/user_manual/README.md` | User manuals index (admin, staff, customers) |
+| `docs/user_manual/01_admin.md` | Admin / superuser configuration guide |
+| `docs/user_manual/02_staff.md` | Staff hub operations by role |
+| `docs/user_manual/03_customers.md` | Digital Apply customer guide |
 | `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md` | Excel sheets ↔ appraisal feature map |
 | `presentation/LOAN_APPRAISAL_EXCEL_DATA.md` | Field-level Excel reference |
 | `presentation/SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md` | Qualitative + cashflow plan |

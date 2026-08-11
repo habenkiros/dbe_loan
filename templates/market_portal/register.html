@@ -1,0 +1,79 @@
+{% extends "market_portal/base.html" %}
+{% block title %}Register{% endblock %}
+{% block wrap_class %}mp-wide{% endblock %}
+{% block content %}
+<p class="mp-brand">Seqela Market</p>
+<h1 class="mp-title">Create free account</h1>
+<div class="mp-hero-line" aria-hidden="true"></div>
+<p class="mp-sub">Your trading area is saved once — later you only enter product and price.</p>
+<div class="mp-card">
+  <form method="post" id="mp-area-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+
+    <p class="mp-section-label">About you</p>
+    <div class="mp-grid-2">
+      <div class="mp-field">
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="error">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <div class="mp-field">
+        <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number }}
+      </div>
+      <div class="mp-field">
+        <label for="{{ form.actor_kind.id_for_label }}">{{ form.actor_kind.label }}</label>
+        {{ form.actor_kind }}
+      </div>
+      <div class="mp-field">
+        <label for="{{ form.product_focus.id_for_label }}">{{ form.product_focus.label }}</label>
+        {{ form.product_focus }}
+      </div>
+    </div>
+
+    <hr class="mp-divider">
+    <p class="mp-section-label">Where you trade</p>
+    <div class="mp-grid-3">
+      <div class="mp-field">
+        <label for="id_region">Region</label>
+        {{ form.region }}
+      </div>
+      <div class="mp-field">
+        <label for="id_zone">Zone</label>
+        {{ form.zone }}
+      </div>
+      <div class="mp-field">
+        <label for="id_city">City / Woreda</label>
+        {{ form.city }}
+        {% if form.city.help_text %}<p class="mp-hint">{{ form.city.help_text }}</p>{% endif %}
+        {% if form.city.errors %}<div class="error">{{ form.city.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <hr class="mp-divider">
+    <p class="mp-section-label">Login</p>
+    <div class="mp-grid-3">
+      <div class="mp-field">
+        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}<div class="error">{{ form.username.errors }}</div>{% endif %}
+      </div>
+      <div class="mp-field">
+        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {{ form.password }}
+        {% if form.password.errors %}<div class="error">{{ form.password.errors }}</div>{% endif %}
+      </div>
+      <div class="mp-field">
+        <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}<div class="error">{{ form.password2.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <button type="submit" class="mp-btn mp-btn-primary">Register &amp; continue</button>
+  </form>
+</div>
+<p class="mp-note"><a href="{% url 'market_portal:landing' %}">← Submit without account</a> · <a href="{% url 'market_portal:login' %}">Already registered?</a></p>
+{% include "market_portal/_cascade_area_js.html" %}
+{% endblock %}

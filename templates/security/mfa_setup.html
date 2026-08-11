@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Set up authenticator — AI-powered Credit Intelligence</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <style>
+        body { display:flex; justify-content:center; align-items:center; min-height:100vh; margin:0; background:#f4f4f4; font-family:Arial,sans-serif; padding:20px; box-sizing:border-box; }
+        .login-container { background:#fff; padding:25px; border-radius:8px; box-shadow:0 0 12px rgba(0,128,0,.15); width:380px; max-width:100%; }
+        h1 { text-align:center; margin-bottom:8px; color:#064420; font-size:1.35rem; }
+        .sub { text-align:center; color:#666; font-size:13px; margin-bottom:16px; }
+        .qr { text-align:center; margin:12px 0; }
+        .qr img { width:180px; height:180px; }
+        .secret { word-break:break-all; font-family:monospace; font-size:12px; background:#f6f6f6; padding:8px; border-radius:4px; }
+        .form-control { margin-bottom:15px; }
+        .form-control label { font-weight:bold; display:block; margin-bottom:5px; }
+        .form-control input { padding:10px; border:1px solid #ddd; border-radius:5px; width:100%; box-sizing:border-box; letter-spacing:.2em; text-align:center; font-size:1.2rem; }
+        .submit-button { background:#07ae18; color:#fff; padding:10px; border:0; border-radius:5px; cursor:pointer; width:100%; font-size:16px; }
+        .error-message { color:#c00; text-align:center; margin-bottom:12px; }
+        .ok { color:#155724; text-align:center; margin-bottom:12px; }
+        .extra { text-align:center; margin-top:12px; }
+        .extra a { color:#064420; }
+        .danger { background:#c0392b; margin-top:10px; }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <h1>Set up two-factor authentication</h1>
+    <p class="sub">Account: <strong>{{ username }}</strong></p>
+    {% if mfa_enabled and not pending_flow %}
+      <p class="ok">MFA is enabled on this account.</p>
+    {% endif %}
+    {% if error %}<div class="error-message">{{ error }}</div>{% endif %}
+
+    <ol style="font-size:13px;color:#333;padding-left:18px;">
+      <li>Install an authenticator app (Google Authenticator, Microsoft Authenticator, or FreeOTP).</li>
+      <li>Scan the QR code (or enter the secret manually).</li>
+      <li>Enter the 6-digit code to confirm.</li>
+    </ol>
+
+    {% if qr_data_uri %}
+    <div class="qr"><img src="{{ qr_data_uri }}" alt="MFA QR code"></div>
+    {% endif %}
+    <p style="font-size:12px;margin:0 0 4px;">Manual secret:</p>
+    <div class="secret">{{ secret }}</div>
+
+    <form method="post" action="{% url 'mfa_setup' %}" style="margin-top:16px;">
+        {% csrf_token %}
+        <div class="form-control">
+            <label for="otp_code">Confirmation code</label>
+            <input type="text" id="otp_code" name="otp_code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required autofocus>
+        </div>
+        <button type="submit" class="submit-button">{% if mfa_enabled %}Re-enroll MFA{% else %}Enable MFA{% endif %}</button>
+    </form>
+
+    {% if mfa_enabled and not pending_flow %}
+    <form method="post" action="{% url 'mfa_disable' %}" style="margin-top:8px;" onsubmit="return confirm('Disable two-factor authentication?');">
+        {% csrf_token %}
+        <div class="form-control">
+            <label for="disable_otp">Code to disable</label>
+            <input type="text" id="disable_otp" name="otp_code" inputmode="numeric" maxlength="8" required>
+        </div>
+        <button type="submit" class="submit-button danger">Disable MFA</button>
+    </form>
+    {% endif %}
+
+    <p class="extra">
+      {% if pending_flow %}
+        <a href="{% url 'logout' %}">Cancel</a>
+      {% else %}
+        <a href="{% url 'password_change' %}">Change password</a>
+        · <a href="{% url 'home' %}">Back to home</a>
+      {% endif %}
+    </p>
+</div>
+</body>
+</html>

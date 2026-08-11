@@ -1,0 +1,70 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Loan status{% endblock %}
+{% block content %}
+{% if not status.is_submitted %}
+{% include "applicant_portal/_steps.html" with step=step %}
+{% endif %}
+
+<div class="ap-card">
+  <div class="ap-status-head">
+    <div>
+      <h1 class="ap-hero-title" style="margin-bottom:0.35rem;">{{ status.headline }}</h1>
+      <p class="ap-sub" style="margin-bottom:0;">{{ status.summary }}</p>
+    </div>
+    <span class="ap-status-chip tone-{{ status.tone }}">{{ status.pipeline_label }}</span>
+  </div>
+
+  {% if status.queue_id %}
+  <p style="margin:1rem 0 0;">
+    <span class="ap-help" style="display:block;margin-bottom:0.2rem;">Your queue ID</span>
+    <span class="ap-queue">{{ status.queue_id }}</span>
+  </p>
+  {% endif %}
+
+  {% if status.stages %}
+  <h2 style="margin:1.35rem 0 0.35rem;font-size:1rem;">Progress</h2>
+  <ol class="ap-timeline">
+    {% for stage in status.stages %}
+    <li class="is-{{ stage.state }}">
+      <div class="ap-tl-label">{{ stage.label }}</div>
+      {% if stage.detail %}<div class="ap-tl-detail">{{ stage.detail }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  {% if status.facts %}
+  <h2 style="margin:1.35rem 0 0.35rem;font-size:1rem;">Details</h2>
+  <ul class="ap-facts">
+    {% for fact in status.facts %}
+    <li>
+      <span class="k">{{ fact.label }}</span>
+      <span class="v">{{ fact.value }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <div class="ap-btn-row">
+    {% if status.can_continue_draft and continue_url %}
+    <a class="ap-btn ap-btn-primary" href="{{ continue_url }}">Continue application</a>
+    {% endif %}
+    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:home' %}">All applications</a>
+    {% if status.is_submitted %}
+    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:apply_status' application.public_id %}">Refresh</a>
+    {% endif %}
+  </div>
+  {% if can_withdraw and application.status != 'cancelled' %}
+  <form method="post" action="{% url 'applicant_portal:apply_withdraw' application.public_id %}"
+        style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--line);"
+        onsubmit="return confirm('Withdraw this application? You cannot undo this online.');">
+    {% csrf_token %}
+    <label for="id_withdraw_reason">Withdraw application (optional note)</label>
+    <input class="ap-input" type="text" name="reason" id="id_withdraw_reason" maxlength="255" placeholder="e.g. Applying at branch instead">
+    <div class="ap-btn-row">
+      <button type="submit" class="ap-btn ap-btn-ghost" style="color:var(--warn);border-color:#f0c4c4;">Withdraw</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

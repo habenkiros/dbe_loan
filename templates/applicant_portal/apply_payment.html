@@ -1,0 +1,41 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Processing fee{% endblock %}
+{% block content %}
+{% include "applicant_portal/_steps.html" with step=3 %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Processing fee</h1>
+  <p class="ap-sub">
+    Pay the application fee via <strong>Chapa</strong> to continue.
+    {% if not chapa_live %}
+    <span class="ap-badge ap-badge-warn">Dev / mock mode</span> — Chapa secret key not set; checkout is simulated.
+    {% endif %}
+  </p>
+  <p style="font-size:1.25rem;font-weight:700;color:var(--accent-deep);">
+    {{ fee }} ETB
+  </p>
+  {% if paid %}
+  <p><span class="ap-badge ap-badge-ok">Fee paid</span>
+    {% if application.payment_reference %} · Ref {{ application.payment_reference }}{% endif %}
+  </p>
+  <div class="ap-btn-row">
+    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:apply_submit' application.public_id %}">Continue to submit</a>
+  </div>
+  {% else %}
+  {% if pending %}
+  <p class="ap-help">Payment started{% if application.chapa_tx_ref %} ({{ application.chapa_tx_ref }}){% endif %}. Finish on Chapa, then verify.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-primary" type="submit" name="action" value="pay">
+        {% if chapa_live %}Pay with Chapa{% else %}Pay now (Chapa mock){% endif %}
+      </button>
+      {% if pending %}
+      <button class="ap-btn ap-btn-ghost" type="submit" name="action" value="verify">Verify payment</button>
+      {% endif %}
+      <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:apply_documents' application.public_id %}">Back to documents</a>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

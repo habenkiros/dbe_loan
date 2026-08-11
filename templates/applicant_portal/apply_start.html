@@ -1,0 +1,28 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}New application{% endblock %}
+{% block content %}
+{% include "applicant_portal/_steps.html" with step=1 %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Start a loan application</h1>
+  <p class="ap-sub">
+    You will enter details, upload documents for your loan type, then pay the processing fee
+    of <strong>{{ fee }} ETB</strong> via Chapa.
+  </p>
+  {% if profile.name or profile.customer_number %}
+  <div class="ap-card" style="margin:0 0 1rem;padding:0.85rem 1rem;background:var(--soft);box-shadow:none;">
+    <strong style="color:var(--accent-deep);">Your customer account</strong>
+    <ul class="ap-facts" style="margin:0.65rem 0 0;">
+      <li><span class="k">Name</span><span class="v">{{ profile.name|default:"—" }}</span></li>
+      <li><span class="k">Customer no.</span><span class="v">{{ profile.customer_number|default:"—" }}</span></li>
+      <li><span class="k">Phone</span><span class="v">{{ profile.phone_number|default:"—" }}</span></li>
+      <li><span class="k">Address</span><span class="v">{{ profile.home_address|default:"—" }}</span></li>
+    </ul>
+    <p class="ap-help" style="margin-top:0.55rem;">Source: {{ profile.provider|default:"customer account" }} (refreshed when you continue).</p>
+  </div>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <button class="ap-btn ap-btn-primary" type="submit">Continue</button>
+  </form>
+</div>
+{% endblock %}

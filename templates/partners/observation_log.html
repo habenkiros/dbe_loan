@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Log market price{% endblock %}
+{% block content %}
+<style>
+  .mkt-log-form table th { width: 10rem; vertical-align: top; padding-top: 0.6rem; }
+  .mkt-log-form input, .mkt-log-form select, .mkt-log-form textarea { max-width: 100%; width: min(100%, 22rem); }
+  .mkt-log-hint { color: #5a6570; margin-bottom: 1rem; max-width: 36rem; }
+  .mkt-log-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+  .mkt-log-actions button { padding: 0.55rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; }
+  .mkt-log-primary { background: #0d7a4f; color: #fff; }
+  .mkt-log-secondary { background: #eef1f4; color: #222; }
+</style>
+
+<h2>Log price quote</h2>
+<p class="mkt-log-hint">
+  Staff quote proxy: enter what a dealer/broker is charging in the market today.
+  This does <strong>not</strong> change engineering unit prices — it builds the market book.
+</p>
+<p><a href="{% url 'partners:dashboard' %}">← Dashboard</a> · <a href="{% url 'partners:observation_list' %}">All observations</a></p>
+
+<form method="post" class="mkt-log-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="error" style="color:#b00020;">{{ form.non_field_errors }}</div>{% endif %}
+  <table>
+    {% for field in form %}
+    <tr>
+      <th>{{ field.label_tag }}</th>
+      <td>
+        {{ field }}
+        {% if field.errors %}<div class="error" style="color:#b00020;">{{ field.errors }}</div>{% endif %}
+        {% if field.help_text %}<div><small style="color:#666;">{{ field.help_text }}</small></div>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class="mkt-log-actions">
+    <button type="submit" class="mkt-log-primary">Save quote</button>
+    <button type="submit" name="save_and_another" value="1" class="mkt-log-secondary">Save &amp; log another</button>
+  </div>
+</form>
+{% endblock %}

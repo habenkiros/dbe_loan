@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Market observations{% endblock %}
+{% block content %}
+<h2>Market observations</h2>
+<p>Structured price points collected for collateral market intelligence.</p>
+<p style="margin:0.75rem 0; display:flex; flex-wrap:wrap; gap:0.5rem;">
+  {% if can_write %}
+  <a href="{% url 'partners:observation_log' %}" style="background:#0d7a4f;color:#fff;padding:0.4rem 0.8rem;border-radius:6px;text-decoration:none;">Log quote</a>
+  {% endif %}
+  <a href="{% url 'partners:dashboard' %}" style="padding:0.4rem 0.8rem;">Dashboard</a>
+  <a href="?export=xlsx{% if q %}&q={{ q }}{% endif %}{% if asset %}&asset={{ asset }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if date_from %}&from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}" style="padding:0.4rem 0.8rem;">Export Excel</a>
+</p>
+
+<form method="get" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;align-items:end;">
+  <label>Search <input type="text" name="q" value="{{ q }}" class="form-control"></label>
+  <label>Asset
+    <select name="asset" class="form-control">
+      <option value="">All</option>
+      {% for k,v in asset_choices %}<option value="{{ k }}" {% if asset == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Status
+    <select name="status" class="form-control">
+      <option value="">All</option>
+      {% for k,v in status_choices %}<option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>From <input type="date" name="from" value="{{ date_from }}" class="form-control"></label>
+  <label>To <input type="date" name="to" value="{{ date_to }}" class="form-control"></label>
+  <button type="submit">Filter</button>
+</form>
+
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Actor</th>
+      <th>Item</th>
+      <th>Unit</th>
+      <th>Price ETB</th>
+      <th>City</th>
+      <th>Class</th>
+      <th>Channel</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in page_obj %}
+    <tr>
+      <td>{{ o.observed_at }}</td>
+      <td><a href="{% url 'partners:actor_detail' o.market_actor_id %}">{{ o.market_actor.name }}</a></td>
+      <td>{{ o.item_label }}</td>
+      <td>{{ o.unit|default:"—" }}</td>
+      <td>{{ o.unit_price_etb|floatformat:0 }}</td>
+      <td>{{ o.city.name }}</td>
+      <td>{{ o.get_asset_class_display }}</td>
+      <td>{{ o.get_channel_display }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">No observations match.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination" style="margin-top:1rem;">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&asset={{ asset }}&status={{ status }}&from={{ date_from }}&to={{ date_to }}">Previous</a>{% endif %}
+  Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}&asset={{ asset }}&status={{ status }}&from={{ date_from }}&to={{ date_to }}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

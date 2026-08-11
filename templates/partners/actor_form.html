@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit{% else %}Register{% endif %} market actor{% endblock %}
+{% block content %}
+<h2>{% if is_edit %}Edit market actor{% else %}Register market actor{% endif %}</h2>
+<p><a href="{% url 'partners:actor_list' %}">← Actors</a></p>
+{% if branch %}<p>Branch: <strong>{{ branch.name }}</strong></p>{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+  <table>
+    {% for field in form %}
+    <tr>
+      <th>{{ field.label_tag }}</th>
+      <td>
+        {{ field }}
+        {% if field.errors %}<div class="error">{{ field.errors }}</div>{% endif %}
+        {% if field.help_text %}<small style="color:#666;">{{ field.help_text }}</small>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p style="margin-top:1rem;">
+    <button type="submit">{% if is_edit %}Save{% else %}Register{% endif %}</button>
+  </p>
+</form>
+{% endblock %}

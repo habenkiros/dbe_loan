@@ -1,132 +1,246 @@
 {% extends "base.html" %}
-
 {% block title %}Application document types{% endblock %}
-
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+{% endblock %}
 {% block content %}
-<h1>Application document types &amp; authentication</h1>
-<p>Configure each document required at loan registration — upload rules and automated checks per document type.</p>
-<p class="help"><strong>Path B:</strong> On <em>Edit</em>, upload an official reference PDF/image per type. The system learns validation phrases via OCR and compares customer uploads to that sample.</p>
+<div class="da-settings">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Document types &amp; authentication</h1>
+      <p>
+        Configure the bank catalog of application documents, upload rules, and auth checks.
+        Assign packs per product under
+        <a href="{% url 'manage_loan_categories' %}">Loan categories → Documents for loan type</a>.
+      </p>
+    </div>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Types</span>
+        <span class="value">{{ total_types }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Required by default</span>
+        <span class="value">{{ required_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">With reference sample</span>
+        <span class="value">{{ ref_sample_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Catalog page</span>
+        <span class="value">{{ page_obj.number }}/{{ page_obj.paginator.num_pages|default:1 }}</span>
+      </div>
+    </div>
+  </div>
 
-<section style="margin:1.5rem 0; padding:1rem 1.25rem; background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px;">
-  <h2 style="margin-top:0; font-size:1.1rem;">Bank-wide defaults</h2>
-  <p class="help">Used when a document type leaves <em>allowed extensions</em> or <em>max size</em> blank.</p>
+  <p class="da-note">
+    <strong>Path B:</strong> On Edit, upload an official reference PDF/image per type.
+    OCR learns validation phrases and compares customer uploads to that sample.
+  </p>
+
+  {# ── Bank-wide defaults ── #}
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="form_kind" value="defaults">
-    <table>
-      <tr>
-        <th>{{ defaults_form.allowed_extensions.label }}</th>
-        <td>{{ defaults_form.allowed_extensions }}<br><small>{{ defaults_form.allowed_extensions.help_text }}</small></td>
-      </tr>
-      <tr>
-        <th>{{ defaults_form.max_file_size_mb.label }}</th>
-        <td>{{ defaults_form.max_file_size_mb }} MB<br><small>{{ defaults_form.max_file_size_mb.help_text }}</small></td>
-      </tr>
-      <tr>
-        <th>Collateral gate</th>
-        <td>
-          <label>{{ defaults_form.require_verified_documents_for_collateral }} {{ defaults_form.require_verified_documents_for_collateral.help_text }}</label>
-        </td>
-      </tr>
-    </table>
-    <p style="margin-top:0.75rem;"><button type="submit">Save bank-wide defaults</button></p>
+    <section class="da-panel">
+      <h2><span>1</span> Bank-wide defaults</h2>
+      <p class="da-note" style="margin-top:0;">Used when a document type leaves allowed extensions or max size blank.</p>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ defaults_form.allowed_extensions.id_for_label }}">{{ defaults_form.allowed_extensions.label }}</label>
+          {{ defaults_form.allowed_extensions }}
+          <span class="help">{{ defaults_form.allowed_extensions.help_text }}</span>
+        </div>
+        <div class="da-field">
+          <label for="{{ defaults_form.max_file_size_mb.id_for_label }}">{{ defaults_form.max_file_size_mb.label }}</label>
+          {{ defaults_form.max_file_size_mb }}
+          <span class="help">{{ defaults_form.max_file_size_mb.help_text }}</span>
+        </div>
+      </div>
+      <div class="da-checks" style="margin-top:0.85rem;">
+        <div class="da-check">
+          {{ defaults_form.require_verified_documents_for_collateral }}
+          <div>
+            <label for="{{ defaults_form.require_verified_documents_for_collateral.id_for_label }}">
+              Collateral gate
+            </label>
+            <span class="help">{{ defaults_form.require_verified_documents_for_collateral.help_text }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="da-actions" style="margin-top:1rem;">
+        <button type="submit" class="btn-primary">Save bank-wide defaults</button>
+      </div>
+    </section>
   </form>
-</section>
 
-<section style="margin:1.5rem 0;">
-  <h2 style="font-size:1.1rem;">Add document type</h2>
+  {# ── Add type ── #}
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="form_kind" value="add_type">
-    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px;">
-      <legend>Basic</legend>
-      <p>{{ form.name.label_tag }} {{ form.name }}</p>
-      <p>{{ form.order.label_tag }} {{ form.order }} {{ form.is_required }} {{ form.is_required.label_tag }}</p>
-      <p>{{ form.auth_notes.label_tag }} {{ form.auth_notes }}</p>
-    </fieldset>
-    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
-      <legend>Upload rules (optional — blank uses bank defaults)</legend>
-      <p>{{ form.allowed_extensions.label_tag }} {{ form.allowed_extensions }}</p>
-      <p>{{ form.max_file_size_mb.label_tag }} {{ form.max_file_size_mb }} MB</p>
-    </fieldset>
-    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
-      <legend>Appraisal auto-fill (optional)</legend>
-      <p>{{ form.content_extraction_mappings.label_tag }}<br>{{ form.content_extraction_mappings }}</p>
-    </fieldset>
-    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
-      <legend>Content validation (optional)</legend>
-      <p>{{ form.content_validation_sample.label_tag }}<br>{{ form.content_validation_sample }}</p>
-      <p>{{ form.content_validation_min_matches.label_tag }} {{ form.content_validation_min_matches }}
-        <label style="margin-left:1rem;">{{ form.content_validation_strict }} {{ form.content_validation_strict.label }}</label></p>
-    </fieldset>
-    <fieldset style="border:1px solid #ddd; padding:1rem; border-radius:6px; margin-top:0.75rem;">
-      <legend>Authentication checks</legend>
-      <p><label>{{ form.require_officer_verification }} {{ form.require_officer_verification.label }}</label></p>
-      <p><label>{{ form.enable_ocr_match }} {{ form.enable_ocr_match.label }}</label></p>
-      <p>{{ form.identity_match_fields.label_tag }} {{ form.identity_match_fields }}</p>
-      <p><label>{{ form.identity_match_strict }} {{ form.identity_match_strict.label }}</label></p>
-      <p><label>{{ form.enable_llm_check }} {{ form.enable_llm_check.label }}</label></p>
-      <p><label>{{ form.enable_external_id }} {{ form.enable_external_id.label }}</label></p>
-    </fieldset>
-    <p style="margin-top:0.75rem;"><button type="submit">Add document type</button></p>
-  </form>
-</section>
+    <section class="da-panel">
+      <h2><span>2</span> Add document type</h2>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          {{ form.name }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.order.id_for_label }}">{{ form.order.label }}</label>
+          {{ form.order }}
+        </div>
+      </div>
+      <div class="da-checks" style="margin:0.75rem 0;">
+        <div class="da-check">
+          {{ form.is_required }}
+          <label for="{{ form.is_required.id_for_label }}">{{ form.is_required.label }}</label>
+        </div>
+      </div>
+      <div class="da-field">
+        <label for="{{ form.auth_notes.id_for_label }}">{{ form.auth_notes.label }}</label>
+        {{ form.auth_notes }}
+      </div>
 
-<div class="table-container">
-  <h2 style="font-size:1.1rem;">Configured document types</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Order</th>
-        <th>Name</th>
-        <th>Required</th>
-        <th>Upload / auth rules</th>
-        <th>Reference</th>
-        <th>Checks</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for dt in page_obj %}
-      <tr>
-        <td>{{ dt.order }}</td>
-        <td>{{ dt.name }}{% if dt.auth_notes %}<br><small>{{ dt.auth_notes }}</small>{% endif %}</td>
-        <td>{% if dt.is_required %}Yes{% else %}Optional{% endif %}</td>
-        <td><small>{{ dt.auth_checks_summary }}</small></td>
-        <td>{% if dt.reference_sample %}✓ Sample{% else %}—{% endif %}</td>
-        <td>
-          {% if dt.require_officer_verification %}<span title="Officer verify">👤</span>{% endif %}
-          {% if dt.enable_ocr_match %}<span title="OCR">OCR</span>{% endif %}
-          {% if dt.enable_llm_check %}<span title="LLM">LLM</span>{% endif %}
-          {% if dt.enable_external_id %}<span title="External ID">ID</span>{% endif %}
-        </td>
-        <td>
-          <div class="list-actions">
-          {% url 'edit_loan_application_document_type' dt.id as edit_url %}
-          {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit document type" tone="blue" only %}
+      <h3 style="margin:1.15rem 0 0.55rem;font-size:0.95rem;color:#123a5c;">Upload rules (optional)</h3>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ form.allowed_extensions.id_for_label }}">{{ form.allowed_extensions.label }}</label>
+          {{ form.allowed_extensions }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.max_file_size_mb.id_for_label }}">{{ form.max_file_size_mb.label }}</label>
+          {{ form.max_file_size_mb }}
+        </div>
+      </div>
+
+      <h3 style="margin:1.15rem 0 0.55rem;font-size:0.95rem;color:#123a5c;">Appraisal auto-fill &amp; content validation</h3>
+      <div class="da-field">
+        <label for="{{ form.content_extraction_mappings.id_for_label }}">{{ form.content_extraction_mappings.label }}</label>
+        {{ form.content_extraction_mappings }}
+      </div>
+      <div class="da-field" style="margin-top:0.65rem;">
+        <label for="{{ form.content_validation_sample.id_for_label }}">{{ form.content_validation_sample.label }}</label>
+        {{ form.content_validation_sample }}
+      </div>
+      <div class="da-grid-2" style="margin-top:0.65rem;">
+        <div class="da-field">
+          <label for="{{ form.content_validation_min_matches.id_for_label }}">{{ form.content_validation_min_matches.label }}</label>
+          {{ form.content_validation_min_matches }}
+        </div>
+        <div class="da-field">
+          <div class="da-check" style="margin-top:1.4rem;">
+            {{ form.content_validation_strict }}
+            <label for="{{ form.content_validation_strict.id_for_label }}">{{ form.content_validation_strict.label }}</label>
           </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="7">No document types yet. Add one above.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+        </div>
+      </div>
 
-<div class="pagination">
-  <span class="step-links">
-    {% if page_obj.has_previous %}
-      <a href="?page=1">&laquo; First</a>
-      <a href="?page={{ page_obj.previous_page_number }}">&lsaquo; Previous</a>
+      <h3 style="margin:1.15rem 0 0.55rem;font-size:0.95rem;color:#123a5c;">Authentication checks</h3>
+      <div class="da-checks">
+        <div class="da-check">
+          {{ form.require_officer_verification }}
+          <label for="{{ form.require_officer_verification.id_for_label }}">{{ form.require_officer_verification.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.enable_ocr_match }}
+          <label for="{{ form.enable_ocr_match.id_for_label }}">{{ form.enable_ocr_match.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.identity_match_strict }}
+          <label for="{{ form.identity_match_strict.id_for_label }}">{{ form.identity_match_strict.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.enable_llm_check }}
+          <label for="{{ form.enable_llm_check.id_for_label }}">{{ form.enable_llm_check.label }}</label>
+        </div>
+        <div class="da-check">
+          {{ form.enable_external_id }}
+          <label for="{{ form.enable_external_id.id_for_label }}">{{ form.enable_external_id.label }}</label>
+        </div>
+      </div>
+      <div class="da-field" style="margin-top:0.75rem;">
+        <label for="{{ form.identity_match_fields.id_for_label }}">{{ form.identity_match_fields.label }}</label>
+        {{ form.identity_match_fields }}
+      </div>
+
+      <div class="da-actions" style="margin-top:1rem;">
+        <button type="submit" class="btn-primary">Add document type</button>
+      </div>
+    </section>
+  </form>
+
+  {# ── Catalog list ── #}
+  <section class="da-panel">
+    <h2><span>3</span> Configured document types</h2>
+    <div class="da-table-wrap">
+      <table class="da-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Name</th>
+            <th>Required</th>
+            <th>Rules</th>
+            <th>Reference</th>
+            <th>Checks</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dt in page_obj %}
+          <tr>
+            <td>{{ dt.order }}</td>
+            <td>
+              <strong>{{ dt.name }}</strong>
+              {% if dt.auth_notes %}<br><span class="help" style="margin:0;">{{ dt.auth_notes }}</span>{% endif %}
+            </td>
+            <td>
+              {% if dt.is_required %}
+              <span class="da-pill da-pill-warn">Required</span>
+              {% else %}
+              <span class="da-pill da-pill-off">Optional</span>
+              {% endif %}
+            </td>
+            <td><small>{{ dt.auth_checks_summary }}</small></td>
+            <td>
+              {% if dt.reference_sample %}
+              <span class="da-pill da-pill-on">Sample</span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if dt.require_officer_verification %}<span class="da-pill da-pill-off">Officer</span> {% endif %}
+              {% if dt.enable_ocr_match %}<span class="da-pill da-pill-off">OCR</span> {% endif %}
+              {% if dt.enable_llm_check %}<span class="da-pill da-pill-off">LLM</span> {% endif %}
+              {% if dt.enable_external_id %}<span class="da-pill da-pill-off">Ext ID</span>{% endif %}
+            </td>
+            <td>
+              <div class="list-actions">
+              {% url 'edit_loan_application_document_type' dt.id as edit_url %}
+              {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit document type" tone="blue" only %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7">No document types yet. Add one above.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="da-pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page=1">&laquo; First</a>
+        <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+      {% endif %}
+    </div>
     {% endif %}
-    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</span>
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}">Next &rsaquo;</a>
-      <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-    {% endif %}
-  </span>
+  </section>
 </div>
 {% endblock %}

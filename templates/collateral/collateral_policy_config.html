@@ -1,21 +1,173 @@
 {% extends "base.html" %}
 {% block title %}Collateral policy{% endblock %}
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+{% endblock %}
 {% block content %}
-<h2>Collateral field-work policy</h2>
-<p class="help">Bank-wide thresholds for photos, GPS, coverage ratio, and submit rules. One configuration applies to all branches.</p>
-<form method="post">
-  {% csrf_token %}
-  <table>
-    {% for field in form %}
-    <tr>
-      <th>{{ field.label_tag }}</th>
-      <td>{{ field }}{% if field.help_text %}<br><small>{{ field.help_text }}</small>{% endif %}
-        {% for e in field.errors %}<div class="error">{{ e }}</div>{% endfor %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  <p style="margin-top:1rem;"><button type="submit" class="btn btn-green">Save policy</button>
-  <a href="{% url 'collateral:dashboard' %}" class="btn btn-gray">Cancel</a></p>
-</form>
-<p class="help">Coverage ratio 1.0 = 100% of loan amount. Use 1.2 for 120% minimum collateral coverage.</p>
+<div class="da-settings">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Collateral field-work policy</h1>
+      <p>
+        Bank-wide thresholds for photos, GPS, coverage ratio, and submit rules.
+        One configuration applies to all branches.
+      </p>
+    </div>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Min photos (building)</span>
+        <span class="value">{{ config.min_images_per_building }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Coverage floor</span>
+        <span class="value">{{ config.min_coverage_ratio }}×</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">GPS weak (m)</span>
+        <span class="value">{{ config.gps_accuracy_weak_threshold_m }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Hard submit blocks</span>
+        <span class="value">
+          {% if block_rules_on %}
+          <span class="da-pill da-pill-warn">{{ block_rules_on }} on</span>
+          {% else %}
+          <span class="da-pill da-pill-off">Advisory only</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <p class="da-note">
+    Coverage ratio <code>1.0</code> = 100% of loan amount. Use <code>1.2</code> for 120% minimum collateral coverage.
+    Toggle “block submit” flags only when field ops are ready for hard gates.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <section class="da-panel">
+      <h2><span>1</span> Photo minimums</h2>
+      <div class="da-grid-3">
+        <div class="da-field">
+          <label for="{{ form.min_images_per_building.id_for_label }}">{{ form.min_images_per_building.label }}</label>
+          {{ form.min_images_per_building }}
+          {% if form.min_images_per_building.help_text %}<span class="help">{{ form.min_images_per_building.help_text }}</span>{% endif %}
+          {{ form.min_images_per_building.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.min_images_per_land.id_for_label }}">{{ form.min_images_per_land.label }}</label>
+          {{ form.min_images_per_land }}
+          {% if form.min_images_per_land.help_text %}<span class="help">{{ form.min_images_per_land.help_text }}</span>{% endif %}
+          {{ form.min_images_per_land.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.min_images_per_other_item.id_for_label }}">{{ form.min_images_per_other_item.label }}</label>
+          {{ form.min_images_per_other_item }}
+          {% if form.min_images_per_other_item.help_text %}<span class="help">{{ form.min_images_per_other_item.help_text }}</span>{% endif %}
+          {{ form.min_images_per_other_item.errors }}
+        </div>
+      </div>
+      <div class="da-checks" style="margin-top:0.85rem;">
+        <div class="da-check">
+          {{ form.require_movable_photo_types }}
+          <div>
+            <label for="{{ form.require_movable_photo_types.id_for_label }}">{{ form.require_movable_photo_types.label }}</label>
+            {% if form.require_movable_photo_types.help_text %}<span class="help">{{ form.require_movable_photo_types.help_text }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>2</span> GPS &amp; site distance</h2>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ form.gps_accuracy_weak_threshold_m.id_for_label }}">{{ form.gps_accuracy_weak_threshold_m.label }}</label>
+          {{ form.gps_accuracy_weak_threshold_m }}
+          {% if form.gps_accuracy_weak_threshold_m.help_text %}<span class="help">{{ form.gps_accuracy_weak_threshold_m.help_text }}</span>{% endif %}
+          {{ form.gps_accuracy_weak_threshold_m.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.photo_max_distance_from_site_m.id_for_label }}">{{ form.photo_max_distance_from_site_m.label }}</label>
+          {{ form.photo_max_distance_from_site_m }}
+          {% if form.photo_max_distance_from_site_m.help_text %}<span class="help">{{ form.photo_max_distance_from_site_m.help_text }}</span>{% endif %}
+          {{ form.photo_max_distance_from_site_m.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.declared_address_max_distance_from_site_m.id_for_label }}">{{ form.declared_address_max_distance_from_site_m.label }}</label>
+          {{ form.declared_address_max_distance_from_site_m }}
+          {% if form.declared_address_max_distance_from_site_m.help_text %}<span class="help">{{ form.declared_address_max_distance_from_site_m.help_text }}</span>{% endif %}
+          {{ form.declared_address_max_distance_from_site_m.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.exif_gps_mismatch_warn_m.id_for_label }}">{{ form.exif_gps_mismatch_warn_m.label }}</label>
+          {{ form.exif_gps_mismatch_warn_m }}
+          {% if form.exif_gps_mismatch_warn_m.help_text %}<span class="help">{{ form.exif_gps_mismatch_warn_m.help_text }}</span>{% endif %}
+          {{ form.exif_gps_mismatch_warn_m.errors }}
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>3</span> Coverage ratios</h2>
+      <div class="da-grid-2">
+        <div class="da-field">
+          <label for="{{ form.min_coverage_ratio.id_for_label }}">{{ form.min_coverage_ratio.label }}</label>
+          {{ form.min_coverage_ratio }}
+          {% if form.min_coverage_ratio.help_text %}<span class="help">{{ form.min_coverage_ratio.help_text }}</span>{% endif %}
+          {{ form.min_coverage_ratio.errors }}
+        </div>
+        <div class="da-field">
+          <label for="{{ form.flag_coverage_below_ratio.id_for_label }}">{{ form.flag_coverage_below_ratio.label }}</label>
+          {{ form.flag_coverage_below_ratio }}
+          {% if form.flag_coverage_below_ratio.help_text %}<span class="help">{{ form.flag_coverage_below_ratio.help_text }}</span>{% endif %}
+          {{ form.flag_coverage_below_ratio.errors }}
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>4</span> Hard submit blocks</h2>
+      <p class="da-note" style="margin-top:0;">When on, officers cannot submit collateral until the issue is fixed. Keep off for advisory-only mode.</p>
+      <div class="da-checks">
+        <div class="da-check">
+          {{ form.block_submit_on_far_photos }}
+          <div>
+            <label for="{{ form.block_submit_on_far_photos.id_for_label }}">{{ form.block_submit_on_far_photos.label }}</label>
+            {% if form.block_submit_on_far_photos.help_text %}<span class="help">{{ form.block_submit_on_far_photos.help_text }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="da-check">
+          {{ form.block_submit_on_missing_photo_gps }}
+          <div>
+            <label for="{{ form.block_submit_on_missing_photo_gps.id_for_label }}">{{ form.block_submit_on_missing_photo_gps.label }}</label>
+            {% if form.block_submit_on_missing_photo_gps.help_text %}<span class="help">{{ form.block_submit_on_missing_photo_gps.help_text }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="da-check">
+          {{ form.block_submit_on_declared_address_mismatch }}
+          <div>
+            <label for="{{ form.block_submit_on_declared_address_mismatch.id_for_label }}">{{ form.block_submit_on_declared_address_mismatch.label }}</label>
+            {% if form.block_submit_on_declared_address_mismatch.help_text %}<span class="help">{{ form.block_submit_on_declared_address_mismatch.help_text }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="da-check">
+          {{ form.block_submit_on_exif_gps_mismatch }}
+          <div>
+            <label for="{{ form.block_submit_on_exif_gps_mismatch.id_for_label }}">{{ form.block_submit_on_exif_gps_mismatch.label }}</label>
+            {% if form.block_submit_on_exif_gps_mismatch.help_text %}<span class="help">{{ form.block_submit_on_exif_gps_mismatch.help_text }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="da-actions">
+      <button type="submit" class="btn-primary">Save collateral policy</button>
+      <a href="{% url 'collateral:dashboard' %}">Back to collateral</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

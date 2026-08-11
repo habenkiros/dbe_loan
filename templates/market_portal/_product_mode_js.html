@@ -1,0 +1,59 @@
+<script>
+(function () {
+  var subWorksUrl = "{% url 'market_portal:ajax_sub_works' %}";
+  var subSubWorksUrl = "{% url 'market_portal:ajax_sub_sub_works' %}";
+  var mainWorkSelect = document.getElementById('id_main_work');
+  var subWorkSelect = document.getElementById('id_sub_work');
+  var subSubWorkSelect = document.getElementById('id_sub_sub_work');
+  var panelCatalog = document.getElementById('mp-panel-catalog');
+  var panelFree = document.getElementById('mp-panel-free');
+  var radios = document.querySelectorAll('input[name="product_mode"]');
+
+  function fillSelect(sel, items, placeholder) {
+    if (!sel) return;
+    var html = '<option value="">' + placeholder + '</option>';
+    (items || []).forEach(function (it) {
+      html += '<option value="' + it.id + '">' + (it.name || '') + '</option>';
+    });
+    sel.innerHTML = html;
+  }
+  function fetchJson(url, cb) {
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(cb)
+      .catch(function () { cb([]); });
+  }
+  function syncMode() {
+    var mode = 'catalog';
+    radios.forEach(function (r) { if (r.checked) mode = r.value; });
+    if (panelCatalog) panelCatalog.hidden = mode !== 'catalog';
+    if (panelFree) panelFree.hidden = mode !== 'free';
+    document.querySelectorAll('.mp-mode-card').forEach(function (card) {
+      var input = card.querySelector('input[type=radio]');
+      card.classList.toggle('is-selected', !!(input && input.checked));
+    });
+  }
+  radios.forEach(function (r) { r.addEventListener('change', syncMode); });
+  syncMode();
+
+  if (mainWorkSelect && subWorkSelect) {
+    mainWorkSelect.addEventListener('change', function () {
+      fillSelect(subWorkSelect, [], '—— Select Sub work ——');
+      fillSelect(subSubWorkSelect, [], '—— Sub-sub (optional) ——');
+      if (!mainWorkSelect.value) return;
+      fetchJson(subWorksUrl + '?main_work_id=' + encodeURIComponent(mainWorkSelect.value), function (rows) {
+        fillSelect(subWorkSelect, rows, '—— Select Sub work ——');
+      });
+    });
+  }
+  if (subWorkSelect && subSubWorkSelect) {
+    subWorkSelect.addEventListener('change', function () {
+      fillSelect(subSubWorkSelect, [], '—— Sub-sub (optional) ——');
+      if (!subWorkSelect.value) return;
+      fetchJson(subSubWorksUrl + '?sub_work_id=' + encodeURIComponent(subWorkSelect.value), function (rows) {
+        fillSelect(subSubWorkSelect, rows, '—— Sub-sub (optional) ——');
+      });
+    });
+  }
+})();
+</script>

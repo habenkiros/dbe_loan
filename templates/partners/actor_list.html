@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Market actors{% endblock %}
+{% block content %}
+<h2>Market actors</h2>
+<p>Dealers, brokers, and sales people who feed collateral market prices.</p>
+<p style="margin:0.75rem 0; display:flex; flex-wrap:wrap; gap:0.5rem;">
+  {% if can_write %}
+  <a href="{% url 'partners:actor_create' %}" class="btn" style="background:#0d7a4f;color:#fff;padding:0.4rem 0.8rem;border-radius:6px;text-decoration:none;">Register actor</a>
+  <a href="{% url 'partners:observation_log' %}" class="btn" style="background:#1a5fb4;color:#fff;padding:0.4rem 0.8rem;border-radius:6px;text-decoration:none;">Log quote</a>
+  {% endif %}
+  <a href="{% url 'partners:dashboard' %}" style="padding:0.4rem 0.8rem;">Dashboard</a>
+  <a href="?export=xlsx{% if q %}&q={{ q }}{% endif %}{% if kind %}&kind={{ kind }}{% endif %}{% if trust %}&trust={{ trust }}{% endif %}&active={{ active }}" style="padding:0.4rem 0.8rem;">Export Excel</a>
+</p>
+
+<form method="get" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;align-items:end;">
+  <label>Search <input type="text" name="q" value="{{ q }}" class="form-control" style="min-width:10rem;"></label>
+  <label>Kind
+    <select name="kind" class="form-control">
+      <option value="">All</option>
+      {% for k,v in kind_choices %}<option value="{{ k }}" {% if kind == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Trust
+    <select name="trust" class="form-control">
+      <option value="">All</option>
+      {% for k,v in trust_choices %}<option value="{{ k }}" {% if trust == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Active
+    <select name="active" class="form-control">
+      <option value="1" {% if active == '1' %}selected{% endif %}>Active only</option>
+      <option value="0" {% if active == '0' %}selected{% endif %}>Inactive</option>
+      <option value="all" {% if active == 'all' %}selected{% endif %}>All</option>
+    </select>
+  </label>
+  <button type="submit">Filter</button>
+</form>
+
+<div class="table-container">
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Kind</th>
+      <th>Focus</th>
+      <th>Phone</th>
+      <th>Trust</th>
+      <th>Branch</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in page_obj %}
+    <tr>
+      <td><a href="{% url 'partners:actor_detail' a.pk %}">{{ a.name }}</a></td>
+      <td>{{ a.get_actor_kind_display }}</td>
+      <td>{{ a.get_product_focus_display }}</td>
+      <td>{{ a.phone_number|default:"—" }}</td>
+      <td>{{ a.get_trust_status_display }}</td>
+      <td>{{ a.branch.name }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No actors found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pagination" style="margin-top:1rem;">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&kind={{ kind }}&trust={{ trust }}&active={{ active }}">Previous</a>{% endif %}
+  Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ q }}&kind={{ kind }}&trust={{ trust }}&active={{ active }}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

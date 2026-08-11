@@ -1,4 +1,3 @@
-<!-- templates/loans/edit_loan_category.html -->
 {% extends "base.html" %}
 
 {% block title %}Edit Loan Category{% endblock %}
@@ -10,4 +9,8 @@
     {{ form.as_p }}
     <button type="submit">Save Changes</button>
 </form>
+<p style="margin-top:1.25rem;">
+  <a href="{% url 'manage_loan_category_documents' category.id %}">Configure documents for this loan type →</a>
+  · <a href="{% url 'manage_loan_categories' %}">← Back to categories</a>
+</p>
 {% endblock %}

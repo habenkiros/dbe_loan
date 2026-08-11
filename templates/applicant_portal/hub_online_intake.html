@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Online loan intake{% endblock %}
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+{% endblock %}
+{% block content %}
+<div class="da-settings" style="max-width:72rem;">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Digital apply intake</h1>
+      <p>Loans that arrived from the public Digital Apply portal. Assign officers from the loan detail when needed.</p>
+    </div>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Submitted</span>
+        <span class="value">{{ submitted_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Open drafts</span>
+        <span class="value">{{ draft_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Portal accounts</span>
+        <span class="value">{{ accounts_count }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Channel</span>
+        <span class="value" style="font-size:0.95rem;">Online</span>
+      </div>
+    </div>
+  </div>
+
+  <form method="get" class="da-panel" style="margin-bottom:1rem;">
+    <div class="da-field">
+      <label for="id_q">Search</label>
+      <input type="text" name="q" id="id_q" value="{{ q }}" placeholder="Queue ID, name, phone, customer number" class="form-control">
+    </div>
+    <div class="da-actions" style="margin-top:0.75rem;">
+      <button type="submit" class="btn-primary">Search</button>
+      {% if q %}<a href="{% url 'online_loan_intake' %}">Clear</a>{% endif %}
+    </div>
+  </form>
+
+  <section class="da-panel">
+    <h2><span>1</span> Submitted online loans</h2>
+    <div class="da-table-wrap">
+      <table class="da-table">
+        <thead>
+          <tr>
+            <th>Queue ID</th>
+            <th>Applicant</th>
+            <th>Branch</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Officer</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for loan in loan_page %}
+          <tr>
+            <td><code>{{ loan.loan_request_id }}</code></td>
+            <td>
+              <strong>{{ loan.applicant_name }}</strong><br>
+              <span class="help" style="margin:0;">{{ loan.phone_number }}{% if loan.customer_number %} · {{ loan.customer_number }}{% endif %}</span>
+            </td>
+            <td>{{ loan.branch.name }}</td>
+            <td>{{ loan.amount_requested|floatformat:0 }}</td>
+            <td>{{ loan.status }}</td>
+            <td>
+              {% if loan.assigned_loan_officer %}
+                {{ loan.assigned_loan_officer.get_full_name|default:loan.assigned_loan_officer.username }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'loan_request_detail' loan.pk %}">Open</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">No online loan submissions yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if loan_page.has_other_pages %}
+    <div class="da-pagination">
+      {% if loan_page.has_previous %}<a href="?page={{ loan_page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">Previous</a>{% endif %}
+      Page {{ loan_page.number }} / {{ loan_page.paginator.num_pages }}
+      {% if loan_page.has_next %}<a href="?page={{ loan_page.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="da-panel">
+    <h2><span>2</span> Incomplete applicant drafts</h2>
+    <p class="da-note" style="margin-top:0;">Applicants who started Digital Apply but have not submitted. Read-only for ops awareness.</p>
+    <div class="da-table-wrap">
+      <table class="da-table">
+        <thead>
+          <tr>
+            <th>Updated</th>
+            <th>Applicant</th>
+            <th>Step</th>
+            <th>Product</th>
+            <th>Branch</th>
+            <th>Fee</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for app in draft_page %}
+          <tr>
+            <td>{{ app.updated_at|date:"M j, H:i" }}</td>
+            <td>
+              {{ app.applicant_name|default:app.applicant.full_name }}<br>
+              <span class="help" style="margin:0;">{{ app.phone_number|default:app.applicant.phone_number }}</span>
+            </td>
+            <td>{{ app.get_status_display }}</td>
+            <td>{{ app.category.name|default:"—" }}</td>
+            <td>{{ app.branch.name|default:"—" }}</td>
+            <td>{{ app.payment_status }} · {{ app.processing_fee_amount }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">No open drafts.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

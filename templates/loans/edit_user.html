@@ -11,4 +11,17 @@
     <button type="submit">Save Changes</button>
 </form>
 
+{% if user.lockout_until %}
+<p style="margin-top:1rem;color:#721c24;">
+  Account locked until {{ user.lockout_until }}.
+</p>
+<form method="post" action="{% url 'unlock_user' user.id %}" style="margin-top:0.5rem;">
+  {% csrf_token %}
+  <button type="submit">Unlock account</button>
+</form>
+{% endif %}
+
+<p style="margin-top:1rem;font-size:0.9rem;color:#555;">
+  MFA: {% if user.mfa_enabled %}<strong>enabled</strong>{% else %}not enrolled{% endif %}
+</p>
 {% endblock %}

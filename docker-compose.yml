@@ -1,53 +1,46 @@
-# version: '3.8'
+# DECSI Loan Hub — local / pilot stack
+# Copy .env.example → .env and set SECRET_KEY, DEBUG, ALLOWED_HOSTS, DB_PASSWORD.
+#
+# HTTPS field tablets:
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up --build
 
-# services:
-#   db:
-#     image: postgres:13
-#     env_file: .env
-#     environment:
-#       POSTGRES_DB: ${POSTGRES_DB}
-#       POSTGRES_USER: ${POSTGRES_USER}
-#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-#     volumes:
-#       - postgres_data:/var/lib/postgresql/data
-#     ports:
-#       - "5432:5432"
-
-#   web:
-#     build:
-#       context: .
-#     env_file: .env
-#     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-#     volumes:
-#       - .:/app
-#     ports:
-#       - "8000:8000"
-#     depends_on:
-#       - db
-
-# volumes:
-#   postgres_data:
-
-#pro
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-decsiloandb}
+      DB_USER: ${DB_USER:-decsiloandbuser}
+      DB_PASSWORD: ${DB_PASSWORD:-decsiloandbpassword}
     volumes:
+      # Live code so UI / partners changes match the host workspace
       - .:/app
+      - media_data:/app/media
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: decsiloandb
-      POSTGRES_USER: decsiloandbuser
-      POSTGRES_PASSWORD: decsiloandbpassword
+      POSTGRES_DB: ${DB_NAME:-decsiloandb}
+      POSTGRES_USER: ${DB_USER:-decsiloandbuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-decsiloandbpassword}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-decsiloandbuser} -d ${DB_NAME:-decsiloandb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  media_data:

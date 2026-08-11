@@ -175,8 +175,8 @@ def create_loan_request(request):
                 if request.user.role == 'credit_loan_officer':
                     loan_request.assigned_loan_officer = request.user
             else:
-            loan_request.district = request.user.district
-            loan_request.branch = request.user.branch
+                loan_request.district = request.user.district
+                loan_request.branch = request.user.branch
                 loan_request.origin_level = LoanRequest.ORIGIN_BRANCH
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
@@ -200,7 +200,6 @@ def upload_loan_request_documents(request, loan_request_id):
     if _user_is_credit_staff(request.user) and loan_request.origin_level != LoanRequest.ORIGIN_HEAD_OFFICE:
         messages.warning(request, 'Credit staff can only manage head-office Credit loans.')
         return redirect('view_loan_requests')
-    document_types = LoanApplicationDocumentType.objects.all()
     existing = loan_request.application_documents.select_related(
         'document_type', 'uploaded_by',
     ).order_by('-uploaded_at')
@@ -208,6 +207,9 @@ def upload_loan_request_documents(request, loan_request_id):
     for doc in existing:
         if doc.document_type_id not in existing_by_type:
             existing_by_type[doc.document_type_id] = doc
+    from .document_checklist import checklist_for_loan, checklist_type_ids
+    document_checklist = checklist_for_loan(loan_request)
+    allowed_type_ids = checklist_type_ids(document_checklist)
     if request.method == 'POST':
         from .services.document_auth import (
             replace_documents_for_type,
@@ -224,6 +226,13 @@ def upload_loan_request_documents(request, loan_request_id):
             if key.startswith('doc_type_') and f:
                 try:
                     doc_type_id = int(key.replace('doc_type_', ''))
+                    if doc_type_id not in allowed_type_ids:
+                        rejected += 1
+                        messages.error(
+                            request,
+                            'That document type is not part of this loan type’s checklist.',
+                        )
+                        continue
                     doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
                 except (ValueError, LoanApplicationDocumentType.DoesNotExist):
                     continue
@@ -275,10 +284,19 @@ def upload_loan_request_documents(request, loan_request_id):
             )
         return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
     document_requests = loan_request.document_requests.select_related('document_type', 'requested_by').all()
+    required_by_id = {i.id: i.is_required for i in document_checklist}
+    existing_list = list(existing_by_type.values())
+    for doc in existing_list:
+        doc.checklist_required = required_by_id.get(doc.document_type_id, doc.document_type.is_required)
     return render(request, 'loans/upload_loan_request_documents.html', {
         'loan_request': loan_request,
-        'document_types': document_types,
-        'existing_documents': list(existing_by_type.values()),
+        'document_types': document_checklist,
+        'loan_category_name': getattr(loan_request.category, 'name', ''),
+        'using_category_pack': bool(
+            loan_request.category_id
+            and loan_request.category.document_requirements.exists()
+        ),
+        'existing_documents': existing_list,
         'existing_by_type': existing_by_type,
         'document_requests': document_requests,
     })
@@ -298,7 +316,7 @@ def generate_incremental_loan_request_id():
 def update_loan_request_status(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
-            loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
+        loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
         loan_request.save()
         if loan_request.managers_queue_approved():
             messages.success(
@@ -460,9 +478,10 @@ def loan_request_detail(request, loan_request_id):
     elif user.role == 'engineer':
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=user)
     else:
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     collateral_mode = get_collateral_estimation_mode()
-    document_types = LoanApplicationDocumentType.objects.all()
+    from .document_checklist import checklist_for_loan
+    document_types = checklist_for_loan(loan_request)
     _docs_qs = loan_request.application_documents.select_related(
         'document_type', 'uploaded_by', 'authenticated_by',
     ).order_by('-uploaded_at')
@@ -553,10 +572,19 @@ def request_loan_document(request, loan_request_id):
     if not doc_type_id:
         messages.warning(request, 'Please select a document type.')
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    from .document_checklist import checklist_for_loan, checklist_type_ids
+
     try:
         doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
     except LoanApplicationDocumentType.DoesNotExist:
         messages.warning(request, 'Invalid document type.')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    allowed = checklist_type_ids(checklist_for_loan(loan_request))
+    if doc_type.id not in allowed:
+        messages.warning(
+            request,
+            'That document type is not on this loan type’s checklist.',
+        )
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     LoanDocumentRequest.objects.update_or_create(
         loan_request=loan_request,
@@ -2553,6 +2581,78 @@ def manage_loan_categories(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
+def manage_loan_category_documents(request, category_id):
+    """Configure which document types apply to a loan category (loan type)."""
+    category = get_object_or_404(LoanCategory, pk=category_id)
+    from .models import LoanCategoryDocumentRequirement
+    from .document_checklist import ensure_default_requirements_for_category
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or 'save').strip()
+        if action == 'seed_defaults':
+            n = ensure_default_requirements_for_category(category)
+            messages.success(
+                request,
+                f'Added {n} document type(s) from the global catalog (or pack was already set).',
+            )
+            return redirect('manage_loan_category_documents', category_id=category.id)
+
+        # Full replace of pack from posted type ids
+        selected = request.POST.getlist('document_type_id')
+        required_ids = set(request.POST.getlist('is_required'))
+        order_map = {}
+        for key, val in request.POST.items():
+            if key.startswith('order_'):
+                try:
+                    tid = int(key.replace('order_', '', 1))
+                    order_map[tid] = int(val or 0)
+                except (ValueError, TypeError):
+                    continue
+
+        LoanCategoryDocumentRequirement.objects.filter(category=category).delete()
+        created = 0
+        for raw_id in selected:
+            try:
+                tid = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if not LoanApplicationDocumentType.objects.filter(pk=tid).exists():
+                continue
+            LoanCategoryDocumentRequirement.objects.create(
+                category=category,
+                document_type_id=tid,
+                is_required=str(tid) in required_ids,
+                order=order_map.get(tid, 0),
+            )
+            created += 1
+
+        messages.success(request, f'Saved document pack for “{category.name}” ({created} type(s)).')
+        return redirect('manage_loan_category_documents', category_id=category.id)
+
+    all_types = list(LoanApplicationDocumentType.objects.order_by('order', 'name'))
+    existing = {
+        r.document_type_id: r
+        for r in category.document_requirements.select_related('document_type')
+    }
+    rows = []
+    for dt in all_types:
+        req = existing.get(dt.id)
+        rows.append({
+            'document_type': dt,
+            'selected': req is not None,
+            'is_required': req.is_required if req else dt.is_required,
+            'order': req.order if req else dt.order,
+        })
+    # Selected-only types that may have been deleted from catalog won't appear — ok
+    return render(request, 'loans/manage_loan_category_documents.html', {
+        'category': category,
+        'rows': rows,
+        'pack_count': len(existing),
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def edit_loan_category(request, category_id):
     category = get_object_or_404(LoanCategory, pk=category_id)
     if request.method == 'POST':
@@ -2605,12 +2705,17 @@ def edit_collateral_type(request, collateral_type_id):
 @user_passes_test(_user_can_configure_committees)
 def manage_approval_committees(request):
     """Settings: list approval committee levels and who may vote at each."""
-    levels = (
+    levels = list(
         ApprovalCommitteeLevel.objects.prefetch_related('member_rules')
         .order_by('sequence_order', 'id')
     )
+    active_count = sum(1 for lv in levels if lv.is_active)
+    level_count = len(levels)
     return render(request, 'loans/manage_approval_committees.html', {
         'levels': levels,
+        'level_count': level_count,
+        'active_count': active_count,
+        'inactive_count': level_count - active_count,
     })
 
 
@@ -2738,10 +2843,18 @@ def manage_loan_application_document_types(request):
                 form.save()
                 messages.success(request, 'Document type added.')
                 return redirect('manage_loan_application_document_types')
+    total_types = LoanApplicationDocumentType.objects.count()
+    required_count = LoanApplicationDocumentType.objects.filter(is_required=True).count()
+    ref_sample_count = LoanApplicationDocumentType.objects.exclude(
+        reference_sample='',
+    ).exclude(reference_sample=None).count()
     return render(request, 'loans/manage_loan_application_document_types.html', {
         'form': form,
         'defaults_form': defaults_form,
         'page_obj': page_obj,
+        'total_types': total_types,
+        'required_count': required_count,
+        'ref_sample_count': ref_sample_count,
     })
 
 
@@ -2870,7 +2983,7 @@ def generate_report(request):
                 lr.date_requested,
                 lr.date_reviewed,
             ])
-    return response
+        return response
 
     bio = build_pipeline_workbook(qs)
     return excel_response(bio, pipeline_export_filename(params))
@@ -2966,7 +3079,7 @@ def classic_home(request):
         scope_label = 'Organization-wide'
 
     loans = loans.select_related('branch', 'category')
-        total_loans = loans.count()
+    total_loans = loans.count()
     approved_loans = loans.filter(status='Approved').count()
     pending_loans = loans.filter(status='Pending').count()
     rejected_loans = loans.filter(status='Rejected').count()

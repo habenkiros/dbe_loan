@@ -16,6 +16,7 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Appraisal mode</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -24,10 +25,13 @@
             <tr>
                 <td>{{ category.id }}</td>
                 <td>{{ category.name }}</td>
+                <td>{{ category.get_appraisal_mode_display }}</td>
                 <td>
                     <div class="list-actions">
                     {% url 'edit_loan_category' category.id as edit_url %}
                     {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit loan category" tone="blue" only %}
+                    {% url 'manage_loan_category_documents' category.id as docs_url %}
+                    {% include "includes/list_action.html" with href=docs_url icon="list" label="Documents for loan type" tone="green" only %}
                     </div>
                 </td>
             </tr>

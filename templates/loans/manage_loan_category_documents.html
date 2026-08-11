@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Documents for {{ category.name }}{% endblock %}
+{% block content %}
+<h1>Document pack — {{ category.name }}</h1>
+<p>
+  Select which application documents apply to this <strong>loan type</strong>.
+  Checklist order and required/optional here drive staff upload and (later) applicant portal for this product.
+</p>
+<p class="help">
+  Appraisal mode: <strong>{{ category.get_appraisal_mode_display }}</strong>.
+  {% if pack_count %}
+  Pack configured: <strong>{{ pack_count }}</strong> type(s).
+  {% else %}
+  <strong>No pack yet</strong> — loans of this type currently use the global document list until you save a pack.
+  {% endif %}
+</p>
+<p>
+  <a href="{% url 'manage_loan_categories' %}">← Loan categories</a>
+  · <a href="{% url 'manage_loan_application_document_types' %}">Global document catalog</a>
+</p>
+
+<form method="post" style="margin:1rem 0;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="seed_defaults">
+  <button type="submit">Copy all global types into this pack (if empty)</button>
+</form>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save">
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Include</th>
+          <th>Order</th>
+          <th>Document type</th>
+          <th>Required for this loan type</th>
+          <th>Catalog default</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>
+            <input type="checkbox" name="document_type_id" value="{{ row.document_type.id }}"
+              {% if row.selected %}checked{% endif %}>
+          </td>
+          <td>
+            <input type="number" name="order_{{ row.document_type.id }}" value="{{ row.order }}"
+              min="0" style="width:4.5rem;">
+          </td>
+          <td>
+            <strong>{{ row.document_type.name }}</strong>
+            {% if row.document_type.for_appraisal_mode %}
+            <br><small>Mode limit: {{ row.document_type.get_for_appraisal_mode_display }}</small>
+            {% endif %}
+          </td>
+          <td>
+            <label>
+              <input type="checkbox" name="is_required" value="{{ row.document_type.id }}"
+                {% if row.is_required %}checked{% endif %}>
+              Required
+            </label>
+          </td>
+          <td>{% if row.document_type.is_required %}Required{% else %}Optional{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            No document types in catalog.
+            <a href="{% url 'manage_loan_application_document_types' %}">Add types first</a>.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:1rem;">
+    <button type="submit">Save document pack</button>
+  </p>
+</form>
+{% endblock %}

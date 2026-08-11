@@ -29,7 +29,25 @@ def collateral_policy_config(request):
             return redirect('collateral:collateral_policy_config')
     else:
         form = CollateralPolicyConfigForm(instance=config)
-    return render(request, 'collateral/collateral_policy_config.html', {'form': form, 'config': config})
+    blocks = sum(
+        1
+        for flag in (
+            config.block_submit_on_far_photos,
+            config.block_submit_on_missing_photo_gps,
+            config.block_submit_on_declared_address_mismatch,
+            config.block_submit_on_exif_gps_mismatch,
+        )
+        if flag
+    )
+    return render(
+        request,
+        'collateral/collateral_policy_config.html',
+        {
+            'form': form,
+            'config': config,
+            'block_rules_on': blocks,
+        },
+    )
 
 
 @login_required

@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 
-DEBUG = os.getenv('DEBUG', 'False') == 'False'
+DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
 
 ALLOWED_HOSTS = ['*']
 
@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'loans',
     'collateral',
+    'partners',
+    'applicant_portal',
 ]
 
 MIDDLEWARE = [
@@ -41,6 +43,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # After apps URLs: bare staff paths (/manage_users/ …) → /hub/…
+    'loans.legacy_hub_redirect.StaffHubLegacyRedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'decsi_loan.urls'
@@ -142,9 +146,21 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/hub/login/'
+LOGIN_REDIRECT_URL = '/hub/'
+LOGOUT_REDIRECT_URL = '/hub/login/'
+
+# Chapa payments (digital apply processing fee)
+# Get test keys from https://dashboard.chapa.co — leave blank to use mock checkout in dev.
+CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', '').strip()
+CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', '').strip()
+CHAPA_CURRENCY = os.getenv('CHAPA_CURRENCY', 'ETB').strip() or 'ETB'
+# Force mock checkout even if secret key is set (tests / local demos)
+CHAPA_FORCE_MOCK = os.getenv('CHAPA_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
+
+# Optional SMS gateway for applicant OTP / status (POST JSON: to, message)
+APPLICANT_SMS_URL = os.getenv('APPLICANT_SMS_URL', '').strip()
+APPLICANT_SMS_API_KEY = os.getenv('APPLICANT_SMS_API_KEY', '').strip()
 
 # Committee notifications (optional email; in-app always created)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
@@ -164,6 +180,10 @@ DECSI_BASE_URL = os.getenv('DECSI_BASE_URL', '').rstrip('/')
 DECSI_CUSTOMER_TIMEOUT = int(os.getenv('DECSI_CUSTOMER_TIMEOUT', '8'))
 DECSI_CUSTOMER_FORCE_MOCK = os.getenv('DECSI_CUSTOMER_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
 DECSI_CUSTOMER_FALLBACK_MOCK = os.getenv('DECSI_CUSTOMER_FALLBACK_MOCK', 'True').lower() in ('1', 'true', 'yes')
+DECSI_CUSTOMER_DETAIL_PATH = os.getenv(
+    'DECSI_CUSTOMER_DETAIL_PATH',
+    '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets',
+)
 DECSI_TRANSACTIONS_PATH = os.getenv(
     'DECSI_TRANSACTIONS_PATH',
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/transactions',

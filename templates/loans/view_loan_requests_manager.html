@@ -72,6 +72,7 @@
                         <th>Loan ID</th>
                         <th>Applicant</th>
                         <th>Requested</th>
+                        <th>Approved</th>
                         <th>Recommended</th>
                         <th>Committee</th>
                         <th>Current level</th>
@@ -86,8 +87,12 @@
                               {{ loan_request.loan_request_id }}
                               {% if queue_my_votes %}<span class="vote-pill">Vote</span>{% endif %}
                             </td>
-                            <td>{{ loan_request.applicant_name }}<br><small>{{ loan_request.branch.name }}</small></td>
+                            <td>
+                              {{ loan_request.applicant_name }}<br><small>{{ loan_request.branch.name }}</small>
+                              {% include "loans/_loan_cbs_highlights.html" %}
+                            </td>
                             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
+                            <td>{% if loan_request.amount_approved_display != None %}<strong>{{ loan_request.amount_approved_display|floatformat:2 }}</strong>{% else %}—{% endif %}</td>
                             <td>{% if loan_request.appraisal.amount_approved %}{{ loan_request.appraisal.amount_approved|floatformat:2 }}{% else %}—{% endif %}</td>
                             <td>
                               {% if loan_request.committee_status == 'pending_committee' %}

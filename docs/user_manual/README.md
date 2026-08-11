@@ -1,24 +1,33 @@
 # DECSI Loan Hub — User Manuals
 
-Practical guides for people who use **DECSI Loan Hub** (staff brand: *AI-powered Credit Intelligence*) and the public **Digital Apply** portal.
+Practical guides for **DECSI Loan Hub** (*AI-powered Credit Intelligence*), **Digital Apply**, and **Seqela Market**.
 
-| Manual | Who it is for | Start here |
-|--------|---------------|------------|
-| [Admin](01_admin.md) | System administrators & superusers who configure the platform | Hub **Settings**, users, security, Digital Apply |
-| [Staff](02_staff.md) | Branch, district, head-office, engineering, finance, and committee users | Hub login at `/hub/login/` |
-| [Customers](03_customers.md) | Borrowers applying online | Digital Apply at `/` |
+| Manual | Who it is for | In-app Help |
+|--------|---------------|-------------|
+| [Admin](01_admin.md) · [አማርኛ](01_admin_am.md) | System administrators | Hub → **Help** (`/hub/help/`) |
+| [Staff](02_staff.md) · [አማርኛ](02_staff_am.md) | Branch / HO / eng / finance / committee | Hub → **Help** |
+| [Customers](03_customers.md) · [አማርኛ](03_customers_am.md) | Borrowers applying online | Digital Apply → **Help** (`/help/`) |
+| [Market partners](04_market_partners.md) | Dealers & price reporters | Market → **Help** (`/market-portal/help/`) |
+| [Screenshot captions](05_screenshot_captions.md) | Trainers / doc authors | Hub Help (staff) |
+| [IT installation](06_installation_it.md) | DECSI IT — install & minimum requirements | Hub → **Help** |
+
+**Printable pack:** [DECSI_Loan_Hub_User_Manuals.html](DECSI_Loan_Hub_User_Manuals.html) → browser **Print → Save as PDF**.
+
+```bash
+python3 docs/user_manual/build_html.py
+```
 
 ---
 
 ## Which portal am I on?
 
-| Audience | URL (typical) | Sign-in with |
-|----------|---------------|--------------|
-| Staff & admin | `/hub/login/` | Staff username & password (+ MFA if required) |
-| Customers | `/` (Digital Apply) | Mobile number or customer number & password |
-| Market price reporters *(optional)* | `/market-portal/` | Dealer / actor portal account |
+| Audience | URL | Sign-in |
+|----------|-----|---------|
+| Staff & admin | `/hub/login/` | Staff username & password (+ MFA) |
+| Customers | `/` | Mobile or customer number & password |
+| Market reporters | `/market-portal/` | Portal account or guest quote |
 
-Legacy bookmarks: `/staff/` redirects to the hub; `/applicant-portal/` redirects to Digital Apply.
+Legacy: `/staff/` → hub; `/applicant-portal/` → Digital Apply.
 
 ---
 
@@ -26,15 +35,12 @@ Legacy bookmarks: `/staff/` redirects to the hub; `/applicant-portal/` redirects
 
 ```text
 Customer (Digital Apply)          Staff hub                     Admin
-─────────────────────────         ──────────────────────        ─────────────────
 Register → Apply → Fee            Intake → Docs → Appraisal     Users & geography
-→ Submit → Track status           → Collateral → Committee      Loan categories
-                                  → Post-approval → Disburse    Document packs
-                                                                Digital Apply settings
-                                                                Committees & policies
-```
+→ Submit → Track Queue ID         → Collateral → Committee      Document packs
+                                  → Post-approval → Disburse    Digital Apply settings
 
-Every submitted loan gets a **Queue ID** (for example `HK-000000001`). Customers and staff should use that ID for branch follow-up.
+Market (Seqela Market): Area → Product & price → price bands
+```
 
 ---
 
@@ -42,22 +48,19 @@ Every submitted loan gets a **Queue ID** (for example `HK-000000001`). Customers
 
 | Term | Meaning |
 |------|---------|
-| **Queue ID** | Unique loan reference shown to customers and staff |
-| **Loan category / product** | Loan type (drives documents and appraisal style) |
-| **Document pack** | Required and optional documents for a product |
-| **Digital Apply** | Public online application portal |
-| **Online loan intake** | Staff list of applications that came from Digital Apply |
-| **Processing fee** | Application fee paid online (ETB) before submit |
-| **Cooperative queue** | Branch intake gate before officer work |
-| **Approval queue** | Credit committee voting worklist |
-| **Post-approval** | Conditions, schedule, and readiness after committee approval |
-| **Disbursement queue** | Finance steps before funds are released |
-| **Appraisal** | Structured credit analysis (usually 7 steps) |
-| **Collateral** | Security valuation (building, land, or other) |
-| **Agentic Assist** | Staff AI helper — cannot approve or disburse |
+| **Queue ID** | Unique loan reference (`HK-…`) |
+| **Loan category / product** | Loan type (docs + appraisal mode) |
+| **Document pack** | Required/optional docs for a product |
+| **Digital Apply** | Public online application |
+| **Processing fee** | Application fee (ETB) |
+| **Cooperative queue** | Branch intake gate |
+| **Approval queue** | Committee voting |
+| **Post-approval** | Conditions → schedule → ready |
+| **Agentic Assist** | Staff AI helper (cannot approve/disburse) |
+| **Seqela Market** | External price quotes |
 
 ---
 
 ## Support
 
-For account lockouts, MFA, or portal outages, contact your DECSI IT / hub administrator. Customers should visit or call their branch with their Queue ID.
+Lockouts / MFA / outages → DECSI IT. Customers → branch with Queue ID. Market actors → DECSI liaison if suspended.

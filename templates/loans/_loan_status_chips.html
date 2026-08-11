@@ -1,24 +1,30 @@
 {# Shared status / committee / disbursement chips. Expects `loan_request`. #}
+<span class="lw-badge lw-request" title="Amount the customer requested">
+  Requested {{ loan_request.amount_requested|floatformat:0 }}
+</span>
+
+{% if loan_request.committee_status == 'committee_approved' %}
+<span class="lw-badge lw-approved" title="Credit committee final amount">
+  APPROVED {% if loan_request.committee_final_amount %}{{ loan_request.committee_final_amount|floatformat:0 }}{% else %}{{ loan_request.amount_requested|floatformat:0 }}{% endif %}
+</span>
+{% elif loan_request.committee_status == 'committee_declined' %}
+<span class="lw-badge lw-bad" title="Credit decision">Not approved</span>
+{% elif loan_request.committee_status == 'pending_committee' %}
+<span class="lw-badge lw-warn">Committee pending</span>
+{% elif loan_request.committee_status == 'returned_to_officer' %}
+<span class="lw-badge lw-info">Returned</span>
+{% endif %}
+
 {% if loan_request.status == 'Approved' or loan_request.status == 'approved' %}
-<span class="lw-badge lw-ok" title="Queue status">{{ loan_request.status }}</span>
+<span class="lw-badge lw-ok" title="Queue / cooperative intake">Intake OK</span>
 {% elif loan_request.status == 'Rejected' or loan_request.status == 'rejected' %}
-<span class="lw-badge lw-bad" title="Queue status">{{ loan_request.status }}</span>
+<span class="lw-badge lw-bad" title="Queue status">Rejected</span>
 {% elif loan_request.status == 'Pending' or loan_request.status == 'pending' %}
-<span class="lw-badge lw-warn" title="Queue status">{{ loan_request.status|default:"Pending" }}</span>
+<span class="lw-badge lw-warn" title="Queue status">Pending intake</span>
 {% elif loan_request.status %}
 <span class="lw-badge lw-muted" title="Queue status">{{ loan_request.status }}</span>
 {% else %}
 <span class="lw-badge lw-muted" title="Queue status">No status</span>
-{% endif %}
-
-{% if loan_request.committee_status == 'pending_committee' %}
-<span class="lw-badge lw-warn">Committee pending</span>
-{% elif loan_request.committee_status == 'committee_approved' %}
-<span class="lw-badge lw-ok">Committee approved</span>
-{% elif loan_request.committee_status == 'committee_declined' %}
-<span class="lw-badge lw-bad">Committee declined</span>
-{% elif loan_request.committee_status == 'returned_to_officer' %}
-<span class="lw-badge lw-info">Returned</span>
 {% endif %}
 
 {% if loan_request.committee_status == 'committee_approved' and loan_request.disbursement_status %}

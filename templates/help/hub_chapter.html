@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Help{% endblock %}
+{% block extra_head %}
+<style>
+  .manual-body { max-width: 48rem; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+  .manual-body h1 { font-size: 1.45rem; color: #064420; border-bottom: 2px solid #0a6b2e; padding-bottom: 0.35rem; }
+  .manual-body h2 { font-size: 1.15rem; color: #064420; margin-top: 1.4rem; border-bottom: 1px solid #c9dbd1; padding-bottom: 0.25rem; }
+  .manual-body h3 { font-size: 1.02rem; color: #0a6b2e; margin-top: 1.1rem; }
+  .manual-body table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0; }
+  .manual-body th, .manual-body td { border: 1px solid #c9dbd1; padding: 0.4rem 0.55rem; vertical-align: top; text-align: left; }
+  .manual-body th { background: #eef8f2; }
+  .manual-body pre { background: #f3f8f5; border: 1px solid #c9dbd1; padding: 0.75rem; overflow: auto; font-size: 0.85rem; }
+  .manual-body code { background: #eef8f2; padding: 0.05rem 0.3rem; font-size: 0.88em; }
+  .manual-body blockquote.manual-shot {
+    margin: 0.85rem 0; padding: 0.75rem 0.9rem; border-left: 4px solid #0a6b2e;
+    background: #f3f8f5; color: #1a3326; font-size: 0.95rem;
+  }
+  .manual-nav { display: flex; flex-wrap: wrap; gap: 0.65rem 1rem; margin-bottom: 1rem; font-size: 0.92rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="manual-body">
+  <nav class="manual-nav">
+    <a href="{% url 'help_index' %}">← All manuals</a>
+    <a href="{% url 'help_manual_html' %}">Printable pack</a>
+  </nav>
+  <div class="manual-content">
+    {{ body_html|safe }}
+  </div>
+</div>
+{% endblock %}

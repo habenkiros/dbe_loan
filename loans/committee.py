@@ -791,26 +791,59 @@ def _notify_committee_workflow(loan_request, *, event: str, level=None, next_lev
     if event == 'approved':
         from django.urls import reverse
 
+        amt = loan_request.committee_final_amount or loan_request.amount_requested
         notify_assigned_officer(
             loan_request,
             kind=LoanNotification.KIND_COMMITTEE_APPROVED,
-            title=f'Committee approved loan {lr_id}',
+            title=f'LOAN APPROVED · {lr_id}',
             message=(
-                f'All committee levels approved this loan.'
-                f'{" Final amount: " + str(loan_request.committee_final_amount) if loan_request.committee_final_amount else ""}'
-                ' Complete conditions precedent and confirm the repayment schedule before disbursement.'
+                f'CRITICAL: credit committee APPROVED this loan. '
+                f'Approved amount: {amt} ETB '
+                f'(requested {loan_request.amount_requested} ETB). '
+                'Complete conditions and confirm the repayment schedule before disbursement.'
             ),
             url=reverse('post_approval_detail', args=[loan_request.pk]),
         )
+        # Also alert branch managers / superusers so approval is highly visible
+        try:
+            from loans.models import CustomUser
+            from applicant_portal.notify import branch_staff_qs
+
+            staff = list(branch_staff_qs(loan_request.branch))
+            supers = list(CustomUser.objects.filter(is_active=True, is_superuser=True)[:15])
+            notify_users(
+                staff + supers,
+                loan_request=loan_request,
+                kind=LoanNotification.KIND_COMMITTEE_APPROVED,
+                title=f'LOAN APPROVED · {lr_id}',
+                message=(
+                    f'{loan_request.applicant_name}: credit approved · '
+                    f'{amt} ETB approved (requested {loan_request.amount_requested}).'
+                ),
+                url=reverse('loan_request_detail', args=[loan_request.pk]),
+                email_subject=f'LOAN APPROVED · {lr_id}',
+            )
+        except Exception:
+            pass
+        try:
+            from applicant_portal.notify import notify_applicant_loan_event
+            notify_applicant_loan_event(loan_request, event='approved')
+        except Exception:
+            pass
         return
 
     if event == 'declined' and level:
         notify_assigned_officer(
             loan_request,
             kind=LoanNotification.KIND_COMMITTEE_DECLINED,
-            title=f'Committee declined loan {lr_id}',
-            message=f'The loan was declined at {level.name}.',
+            title=f'Loan not approved · {lr_id}',
+            message=f'The loan was declined at {level.name}. Requested amount: {loan_request.amount_requested} ETB.',
         )
+        try:
+            from applicant_portal.notify import notify_applicant_loan_event
+            notify_applicant_loan_event(loan_request, event='declined')
+        except Exception:
+            pass
 
 
 def start_approval_workflow(loan_request) -> None:

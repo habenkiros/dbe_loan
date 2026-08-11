@@ -22,8 +22,8 @@
             <td>{{ loan_request.phone_number }}</td>
         </tr>
         <tr>
-            <th>Email</th>
-            <td>{{ loan_request.email }}</td>
+            <th>Customer number</th>
+            <td>{{ loan_request.customer_number|default:"—" }}</td>
         </tr>
         <tr>
             <th>Category</th>
@@ -36,6 +36,10 @@
         <tr>
             <th>Amount Requested</th>
             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
+        </tr>
+        <tr>
+            <th>Amount Approved</th>
+            <td>{% if loan_request.amount_approved_display != None %}{{ loan_request.amount_approved_display|floatformat:2 }}{% else %}—{% endif %}</td>
         </tr>
         <tr>
             <th>Reason</th>

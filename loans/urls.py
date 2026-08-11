@@ -46,6 +46,7 @@ urlpatterns = [
     path('create_user/', views.create_user, name='create_user'),
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('create_loan_request/', views.create_loan_request, name='create_loan_request'),
+    path('ajax/customer_lookup/', views.ajax_staff_lookup_customer, name='ajax_staff_lookup_customer'),
     path('loan_request/<int:loan_request_id>/documents/', views.upload_loan_request_documents, name='upload_loan_request_documents'),
     path('loan_request/<int:loan_request_id>/request_document/', views.request_loan_document, name='request_loan_document'),
     path(

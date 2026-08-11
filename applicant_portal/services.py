@@ -95,7 +95,7 @@ def submit_online_application(application) -> object:
     from loans.views import generate_incremental_loan_request_id
     from applicant_portal.notify import (
         assign_default_officer,
-        notify_applicant,
+        notify_applicant_loan_event,
         notify_staff_online_intake,
     )
 
@@ -141,10 +141,10 @@ def submit_online_application(application) -> object:
     if profile.get('home_address'):
         loan.declared_address_text = str(profile['home_address'])[:2000]
         loan.declared_address_source = 'home'
-    if profile.get('email') and not loan.email:
-        loan.email = str(profile['email'])[:254]
     if profile.get('name') and not (application.applicant_name or '').strip():
         loan.applicant_name = str(profile['name'])[:255]
+    from loans.services.customer import attach_profile_snapshot_to_loan
+    attach_profile_snapshot_to_loan(loan, profile)
     loan.save()
     assign_default_officer(loan)
 
@@ -184,17 +184,7 @@ def submit_online_application(application) -> object:
     except Exception:
         pass
     try:
-        notify_applicant(
-            application.applicant,
-            title='Application submitted',
-            message=(
-                f'Your application is in the branch queue. Queue ID: {loan.loan_request_id}. '
-                f'Keep this ID for branch visits.'
-            ),
-            kind='success',
-            application=application,
-            also_sms=True,
-        )
+        notify_applicant_loan_event(loan, event='requested')
     except Exception:
         pass
     return loan

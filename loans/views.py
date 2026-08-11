@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_http_methods
 from .services import fetch_customer_by_number
 from django.utils import timezone
 from .forms import (
@@ -161,12 +162,37 @@ def create_loan_request(request):
         form = LoanRequestForm(request.POST, credit_origin=is_credit)
         if form.is_valid():
             loan_request = form.save(commit=False)
+            cn = (form.cleaned_data.get('customer_number') or '').strip()
+            profile = getattr(form, '_lookup_profile', None)
+            if profile is None and cn:
+                profile = fetch_customer_by_number(cn)
+            from loans.services.customer import attach_profile_snapshot_to_loan, customer_api_is_live
+            if profile:
+                attach_profile_snapshot_to_loan(loan_request, profile)
+                # Form cleaned data already has name/phone from clean(); keep declared address.
+                addr = (profile.get('home_address') or '').strip()
+                if addr and not loan_request.declared_address_text:
+                    loan_request.declared_address_text = addr[:2000]
+                    loan_request.declared_address_source = 'home'
+            elif customer_api_is_live():
+                form.add_error(
+                    'customer_number',
+                    'Customer number not found in DECSI core banking. Check the number or register at branch CBS first.',
+                )
+                return render(request, 'loans/create_loan_request.html', {
+                    'form': form,
+                    'is_credit_origin': is_credit,
+                    'customer_api_live': customer_api_is_live(),
+                })
+
             if is_credit:
                 branch = form.cleaned_data.get('branch') or request.user.branch
                 if not branch:
                     messages.error(request, 'Select a branch for this head-office loan.')
                     return render(request, 'loans/create_loan_request.html', {
-                        'form': form, 'is_credit_origin': True,
+                        'form': form,
+                        'is_credit_origin': True,
+                        'customer_api_live': customer_api_is_live(),
                     })
                 loan_request.branch = branch
                 loan_request.district = branch.district
@@ -180,12 +206,76 @@ def create_loan_request(request):
                 loan_request.origin_level = LoanRequest.ORIGIN_BRANCH
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
-            messages.success(request, 'Loan request created. You can now add application documents.')
+            if profile:
+                msg = (
+                    f'Loan request created for customer {cn} '
+                    f'({profile.get("name") or loan_request.applicant_name}). '
+                    'You can now add application documents.'
+                )
+            else:
+                msg = 'Loan request created. You can now add application documents.'
+            messages.success(request, msg)
             return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
     else:
         form = LoanRequestForm(credit_origin=is_credit)
+    from loans.services.customer import customer_api_is_live
     return render(request, 'loans/create_loan_request.html', {
-        'form': form, 'is_credit_origin': is_credit,
+        'form': form,
+        'is_credit_origin': is_credit,
+        'customer_api_live': customer_api_is_live(),
+    })
+
+
+@login_required
+@user_passes_test(_user_can_create_loan)
+@require_http_methods(['GET'])
+def ajax_staff_lookup_customer(request):
+    """Staff hub customer-number lookup for loan registration (branch manager / credit)."""
+    from django.http import JsonResponse
+    from loans.services.customer import (
+        compact_customer_profile,
+        customer_api_is_live,
+        fetch_customer_by_number,
+    )
+
+    raw = (request.GET.get('customer_number') or request.GET.get('cn') or '').strip()
+    cn = ''.join(ch for ch in raw if ch.isalnum())
+    if len(cn) < 4:
+        return JsonResponse({'ok': False, 'error': 'Enter a valid customer number.'}, status=400)
+
+    profile = fetch_customer_by_number(cn)
+    if not profile:
+        return JsonResponse({
+            'ok': False,
+            'error': (
+                'Customer not found in DECSI core banking.'
+                if customer_api_is_live()
+                else 'Customer not found (mock: try a sample ID such as 2000050041).'
+            ),
+            'live': customer_api_is_live(),
+        }, status=404)
+
+    compact = compact_customer_profile(profile)
+    return JsonResponse({
+        'ok': True,
+        'live': customer_api_is_live(),
+        'message': 'Customer loaded from core banking.' if customer_api_is_live() else 'Customer loaded (demo / mock).',
+        'profile': {
+            'customer_number': profile.get('customer_number') or cn,
+            'name': profile.get('name') or '',
+            'phone_number': profile.get('phone_number') or '',
+            'home_address': profile.get('home_address') or '',
+            'status': profile.get('status') or '',
+            'customer_status': profile.get('customer_status') or '',
+            'gender': profile.get('gender') or '',
+            'date_of_birth': profile.get('date_of_birth') or '',
+            'age': profile.get('age') or '',
+            'marital_status': profile.get('marital_status') or '',
+            'city': profile.get('city') or '',
+            'branch_code': profile.get('branch_code') or '',
+            'provider': profile.get('provider') or '',
+            'highlights': compact,
+        },
     })
 
 
@@ -316,6 +406,7 @@ def generate_incremental_loan_request_id():
 def update_loan_request_status(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if request.method == 'POST':
+        was_approved = loan_request.managers_queue_approved()
         loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
         loan_request.save()
         if loan_request.managers_queue_approved():
@@ -323,6 +414,12 @@ def update_loan_request_status(request, loan_request_id):
                 request,
                 'Loan approved by Branch Cooperative. Branch can assign loan officer and proceed.',
             )
+            if not was_approved:
+                try:
+                    from applicant_portal.notify import notify_applicant_loan_event
+                    notify_applicant_loan_event(loan_request, event='intake')
+                except Exception:
+                    pass
         return redirect('view_loan_requests_operation_manager')
     return render(request, 'loans/update_loan_request_status.html', {'loan_request': loan_request})
 
@@ -335,6 +432,7 @@ def update_operation_manager_approval(request, loan_request_id):
         messages.info(request, 'Head-office Credit loans skip the Cooperative intake queue.')
         return redirect('view_loan_requests_operation_manager')
     if request.method == 'POST':
+        was_approved = loan_request.managers_queue_approved()
         loan_request.operation_manager_approval = request.POST.get('operation_manager_approval') == 'True'
         loan_request.save()
         if loan_request.managers_queue_approved():
@@ -342,6 +440,12 @@ def update_operation_manager_approval(request, loan_request_id):
                 request,
                 'Loan approved by Branch Cooperative. Status is Approved — branch can assign loan officer.',
             )
+            if not was_approved:
+                try:
+                    from applicant_portal.notify import notify_applicant_loan_event
+                    notify_applicant_loan_event(loan_request, event='intake')
+                except Exception:
+                    pass
         else:
             messages.success(request, 'Branch Cooperative approval saved.')
         return redirect('view_loan_requests_operation_manager')

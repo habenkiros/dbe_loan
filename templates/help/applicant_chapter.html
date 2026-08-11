@@ -1,0 +1,23 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block extra_head %}
+<style>
+  .manual-content h1 { font-size: 1.35rem; color: var(--accent-deep); }
+  .manual-content h2 { font-size: 1.1rem; color: var(--accent-deep); margin-top: 1.25rem; }
+  .manual-content h3 { font-size: 1rem; color: var(--accent); margin-top: 1rem; }
+  .manual-content table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0; }
+  .manual-content th, .manual-content td { border: 1px solid var(--line); padding: 0.4rem 0.5rem; vertical-align: top; text-align: left; }
+  .manual-content th { background: var(--soft); }
+  .manual-content pre { background: var(--soft); border: 1px solid var(--line); padding: 0.75rem; overflow: auto; font-size: 0.85rem; }
+  .manual-content blockquote.manual-shot {
+    margin: 0.85rem 0; padding: 0.75rem 0.9rem; border-left: 4px solid var(--accent);
+    background: var(--soft); font-size: 0.95rem;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<p style="margin:0 0 0.75rem;"><a href="{% url 'applicant_portal:help_index' %}">← Help home</a></p>
+<div class="ap-card manual-content"{% if lang_am %} lang="am"{% endif %}>
+  {{ body_html|safe }}
+</div>
+{% endblock %}

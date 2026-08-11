@@ -381,8 +381,13 @@ def apply_banking_profile(
             applied.append(f'{field} ← banking')
             bi_dirty = True
 
-    if lr_dirty:
-        loan_request.save(update_fields=['applicant_name', 'phone_number', 'customer_number'])
+    from loans.services.customer import attach_profile_snapshot_to_loan
+
+    snap_ok = attach_profile_snapshot_to_loan(loan_request, profile)
+    if lr_dirty or snap_ok:
+        loan_request.save(update_fields=[
+            'applicant_name', 'phone_number', 'customer_number', 'customer_profile_snapshot',
+        ])
     if bi_dirty or applied:
         basic_info.save()
 

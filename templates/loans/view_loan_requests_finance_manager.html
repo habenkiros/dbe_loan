@@ -69,6 +69,7 @@
                         <th>Applicant Name</th>
                         <th>Category</th>
                         <th>Amount Requested</th>
+                        <th>Amount Approved</th>
                         <th>Status</th>
                         <th>Date Requested</th>
                         <th>Actions</th>
@@ -78,9 +79,13 @@
                     {% for loan_request in page_obj.object_list %}
                         <tr>
                             <td>{{ loan_request.loan_request_id }}</td>
-                            <td>{{ loan_request.applicant_name }}</td>
+                            <td>
+                              <strong>{{ loan_request.applicant_name }}</strong>
+                              {% include "loans/_loan_cbs_highlights.html" %}
+                            </td>
                             <td>{{ loan_request.category.name }}</td>
                             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
+                            <td>{% if loan_request.amount_approved_display != None %}{{ loan_request.amount_approved_display|floatformat:2 }}{% else %}—{% endif %}</td>
                             <td>{{ loan_request.status }}</td>
                             <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
                             <td>

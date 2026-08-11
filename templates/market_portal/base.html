@@ -453,7 +453,10 @@
       {% endif %}
       {% block content %}{% endblock %}
     </div>
-    <p class="mp-foot"><a href="https://seqela.com" rel="noopener">Seqela</a> Market · prices from local dealers &amp; brokers</p>
+    <p class="mp-foot">
+      <a href="{% url 'market_portal:help_index' %}">Help</a>
+      · <a href="https://seqela.com" rel="noopener">Seqela</a> Market · prices from local dealers &amp; brokers
+    </p>
   </div>
 </body>
 </html>

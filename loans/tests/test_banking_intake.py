@@ -61,6 +61,44 @@ class BankingIntakeTests(TestCase):
         self.assertIsNone(mock_fetch_customer_by_number('MISSING'))
 
     @override_settings(DECSI_BASE_URL='', DECSI_CUSTOMER_FORCE_MOCK=True)
+    def test_decsi_sample_customer_shape(self):
+        """Maps docs/customer API.txt sample customer 2000050041."""
+        from loans.services.customer import SAMPLE_CUSTOMER_ID, normalize_customer_profile
+
+        profile = fetch_customer_by_number(SAMPLE_CUSTOMER_ID)
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile['customer_number'], SAMPLE_CUSTOMER_ID)
+        self.assertEqual(profile['name'], 'Tekeste Jigar Meles')
+        self.assertEqual(profile['phone_number'], '0945517351')  # 945517351 → local 09
+        self.assertIn('MEKELE', profile['home_address'])
+        self.assertEqual(profile['status'], 'ACTIVE')
+        self.assertIn('Private Client', profile.get('customer_status') or '')
+        self.assertEqual(profile['gender'], 'MALE')
+        self.assertEqual(profile['date_of_birth'], '19900920')
+
+        # Live JSON shape → same normalizer
+        live_like = {
+            'header': {'status': 'success'},
+            'body': [{
+                'customerId': SAMPLE_CUSTOMER_ID,
+                'code': SAMPLE_CUSTOMER_ID,
+                'name': 'Tekeste Jigar Meles',
+                'phoneNumber': '945517351',
+                'sms': '945517351',
+                'street': 'MEKELE Debubu ADIHKI',
+                'suburbTown': 'Tigray',
+                'customerType': 'ACTIVE',
+                'customerStatus': 'Standard Rated - Private Client',
+                'gender': 'MALE',
+                'dateOfBirth': '19900920',
+            }],
+        }
+        row = live_like['body'][0]
+        norm = normalize_customer_profile(row, customer_number=SAMPLE_CUSTOMER_ID)
+        self.assertEqual(norm['phone_number'], '0945517351')
+        self.assertEqual(norm['customer_number'], SAMPLE_CUSTOMER_ID)
+
+    @override_settings(DECSI_BASE_URL='', DECSI_CUSTOMER_FORCE_MOCK=True)
     def test_banking_fills_empty_basic_fields(self):
         self.basic.business_name = ''
         self.basic.tin_number = ''

@@ -50,7 +50,7 @@
             <th>Queue ID</th>
             <th>Applicant</th>
             <th>Branch</th>
-            <th>Amount</th>
+            <th>Requested / Approved</th>
             <th>Status</th>
             <th>Officer</th>
             <th></th>
@@ -58,15 +58,29 @@
         </thead>
         <tbody>
           {% for loan in loan_page %}
-          <tr>
+          <tr {% if loan.committee_status == 'committee_approved' %}style="background:#f0faf4;"{% elif loan.status == 'Pending' or not loan.queue_approved %}style="background:#fffbeb;"{% endif %}>
             <td><code>{{ loan.loan_request_id }}</code></td>
             <td>
               <strong>{{ loan.applicant_name }}</strong><br>
               <span class="help" style="margin:0;">{{ loan.phone_number }}{% if loan.customer_number %} · {{ loan.customer_number }}{% endif %}</span>
             </td>
             <td>{{ loan.branch.name }}</td>
-            <td>{{ loan.amount_requested|floatformat:0 }}</td>
-            <td>{{ loan.status }}</td>
+              <td>
+              <div style="font-size:0.8rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#7a5a00;">Requested</div>
+              <strong>{{ loan.amount_requested|floatformat:0 }}</strong> ETB
+              {% if loan.amount_approved_display != None %}
+              <div style="margin-top:0.35rem;font-size:0.8rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#064420;">Approved</div>
+              <strong style="color:#0a6b2e;">{{ loan.amount_approved_display|floatformat:0 }}</strong> ETB
+              {% else %}
+              <div class="help" style="margin:0.25rem 0 0;">Approved: pending credit</div>
+              {% endif %}
+              {% include "loans/_loan_cbs_highlights.html" with loan_request=loan %}
+            </td>
+            <td>
+              <div class="lw-chip-row" style="display:flex;flex-wrap:wrap;gap:0.25rem;">
+                {% include "loans/_loan_status_chips.html" with loan_request=loan %}
+              </div>
+            </td>
             <td>
               {% if loan.assigned_loan_officer %}
                 {{ loan.assigned_loan_officer.get_full_name|default:loan.assigned_loan_officer.username }}

@@ -1,0 +1,20 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Help{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <h1 class="ap-hero-title">Help · Digital Apply</h1>
+  <p class="ap-sub">
+    How to register, apply online, pay the fee, and track your Queue ID.
+    የአማርኛ መመሪያ ከዚህ በታች።
+  </p>
+  <ul style="list-style:none;padding:0;margin:1rem 0 0;">
+    {% for filename, label, label_am, slug in chapters %}
+    <li style="border:1px solid var(--line);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.55rem;background:var(--soft);">
+      <a href="{% url 'applicant_portal:help_chapter' slug=slug %}" style="font-weight:700;color:var(--accent-deep);text-decoration:none;">
+        {{ label }}{% if label_am and label_am != label %} · {{ label_am }}{% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

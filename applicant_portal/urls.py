@@ -1,11 +1,14 @@
 from django.urls import path
 
+from applicant_portal import help_views as applicant_help
 from applicant_portal import views
 
 app_name = 'applicant_portal'
 
 urlpatterns = [
     path('', views.landing, name='landing'),
+    path('help/', applicant_help.help_index, name='help_index'),
+    path('help/<slug:slug>/', applicant_help.help_chapter, name='help_chapter'),
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
@@ -16,6 +19,7 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('apply/new/', views.apply_start, name='apply_start'),
     path('apply/<uuid:public_id>/', views.apply_status, name='apply_status'),
+    path('apply/<uuid:public_id>/schedule/', views.apply_schedule, name='apply_schedule'),
     path('apply/<uuid:public_id>/details/', views.apply_details, name='apply_details'),
     path('apply/<uuid:public_id>/documents/', views.apply_documents, name='apply_documents'),
     path('apply/<uuid:public_id>/payment/', views.apply_payment, name='apply_payment'),

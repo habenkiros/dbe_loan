@@ -1,25 +1,125 @@
 {% extends "applicant_portal/base.html" %}
 {% block title %}Welcome{% endblock %}
+{% block wrap_class %}ap-wide{% endblock %}
 {% block content %}
-<div class="ap-card">
-  <h1 class="ap-hero-title">Apply for a loan online</h1>
-  <p class="ap-sub">
-    Digital Apply on AI-powered Credit Intelligence — register once, choose your loan product,
-    upload the documents for that product, pay the processing fee, and receive a queue ID for branch follow-up.
-    Powered by Seqela.
-  </p>
-  <div class="ap-btn-row">
-    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:register' %}">Create account</a>
-    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">I already have an account</a>
-  </div>
-</div>
-<div class="ap-card">
-  <h2 style="margin:0 0 0.5rem;font-size:1.05rem;">How it works</h2>
-  <ol style="margin:0;padding-left:1.2rem;color:var(--muted);line-height:1.55;">
-    <li>Register with your mobile number</li>
-    <li>Select loan type, branch, and amount</li>
-    <li>Upload required documents for that loan type</li>
-    <li>Pay processing fee and submit — keep your queue ID</li>
-  </ol>
+<div class="ap-lp">
+
+  {# First viewport: brand, headline, lead, CTAs, atmospheric plane #}
+  <section class="ap-lp-hero" aria-labelledby="ap-hero-title">
+    <p class="ap-lp-hero-kicker">Digital Apply</p>
+    <h1 class="ap-lp-hero-brand" id="ap-hero-title">
+      AI-powered
+      <em>Credit Intelligence</em>
+    </h1>
+    <p class="ap-lp-hero-lead">
+      Start your loan from your phone or computer — match documents to your product,
+      pay the processing fee online, and keep a queue ID for branch follow-up.
+    </p>
+    <div class="ap-btn-row">
+      <a class="ap-btn ap-btn-light" href="{% url 'applicant_portal:register' %}">Create account</a>
+      <a class="ap-btn ap-btn-outline-light" href="{% url 'applicant_portal:login' %}">I already have an account</a>
+    </div>
+    <p class="ap-lp-scroll">Scroll for how it works</p>
+  </section>
+
+  <section class="ap-lp-section" id="how-it-works" aria-labelledby="how-title">
+    <h2 class="ap-section-title" id="how-title">Four clear steps</h2>
+    <p class="ap-section-lead">
+      No branch visit just to start. Finish at your pace; pick up with staff using your queue ID.
+    </p>
+    <ol class="ap-journey">
+      <li>
+        <strong>Register once</strong>
+        <p>Use your mobile number and DECSI customer number so we can match your core-banking profile when available.</p>
+      </li>
+      <li>
+        <strong>Choose your loan</strong>
+        <p>Select product, preferred branch, amount, and purpose — then upload only the documents for that loan type.</p>
+      </li>
+      <li>
+        <strong>Pay the fee</strong>
+        <p>Complete the processing fee online through a secure payment partner. You will get confirmation before submit.</p>
+      </li>
+      <li>
+        <strong>Track status</strong>
+        <p>Submit to receive a queue ID. Check progress any time from My applications on phone or desktop.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="ap-lp-section ap-lp-section--alt" aria-labelledby="need-title">
+    <h2 class="ap-section-title" id="need-title">What you will need</h2>
+    <p class="ap-section-lead">
+      Have these ready before you begin so your application moves smoothly.
+    </p>
+    <ul class="ap-need-grid">
+      <li>
+        <span class="ap-need-icon" aria-hidden="true">1</span>
+        <div>
+          <h3>Customer number</h3>
+          <p>Your DECSI customer number from the branch or passbook — used to look up your registered name and phone.</p>
+        </div>
+      </li>
+      <li>
+        <span class="ap-need-icon" aria-hidden="true">2</span>
+        <div>
+          <h3>Active mobile</h3>
+          <p>A working phone number you can access for sign-in, password recovery, and status updates.</p>
+        </div>
+      </li>
+      <li>
+        <span class="ap-need-icon" aria-hidden="true">3</span>
+        <div>
+          <h3>Required documents</h3>
+          <p>ID and product-specific files (clear photos or PDFs). The form lists exactly what each loan type needs.</p>
+        </div>
+      </li>
+      <li>
+        <span class="ap-need-icon" aria-hidden="true">4</span>
+        <div>
+          <h3>Payment method</h3>
+          <p>Ability to pay the listed processing fee online when you reach the fee step.</p>
+        </div>
+      </li>
+    </ul>
+    <div class="ap-trust-row" role="list">
+      <span role="listitem">Works on phone &amp; PC</span>
+      <span role="listitem">Drafts you can resume</span>
+      <span role="listitem">Secure status tracking</span>
+    </div>
+  </section>
+
+  <section class="ap-lp-section ap-lp-section--dark" aria-labelledby="after-title">
+    <h2 class="ap-section-title" id="after-title">After you submit</h2>
+    <p class="ap-section-lead">
+      Online apply starts intake — credit decisions and disbursement still follow branch and policy checks.
+    </p>
+    <div class="ap-promise">
+      <div class="ap-promise-item">
+        <h3>Queue ID</h3>
+        <p>Keep the queue ID you receive at submit. Branch staff use it to find your file quickly.</p>
+      </div>
+      <div class="ap-promise-item">
+        <h3>Loan officer review</h3>
+        <p>Your application is routed for review. You can open My applications any time to see stage updates.</p>
+      </div>
+      <div class="ap-promise-item">
+        <h3>Branch when needed</h3>
+        <p>You may be asked to visit for identity, collateral, or signatures. Bring your queue ID and ID.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="ap-lp-section ap-lp-cta" aria-labelledby="start-title">
+    <h2 class="ap-section-title" id="start-title">Ready when you are</h2>
+    <p class="ap-section-lead">
+      Create a free applicant account, or sign in if you already started. For staff systems, use the hub — not this portal.
+    </p>
+    <div class="ap-btn-row" style="justify-content:center;">
+      <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:register' %}">Start digital apply</a>
+      <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:help_index' %}">Help &amp; guidance</a>
+    </div>
+  </section>
+
 </div>
 {% endblock %}

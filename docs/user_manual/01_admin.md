@@ -26,6 +26,10 @@ Menus are role-scoped. If you do not see **Settings**, ask for a superuser accou
 2. Enter your **username** and **password**.
 3. If MFA is enabled for your account (or required by policy), open your authenticator app and enter the one-time code at `/hub/mfa/verify/`.
 
+> **Screenshot (H-01):** Staff login — enter username and password for AI-powered Credit Intelligence.
+>
+> **Screenshot (H-02):** MFA verify — enter the one-time code from your authenticator app.
+
 ### 2.2 First-time MFA enrollment
 
 1. After password login (or from security settings), open **MFA setup** (`/hub/mfa/setup/`).
@@ -58,6 +62,10 @@ Use this for investigations (failed logins, MFA events, unlocks).
 ## 3. Hub Settings (configuration checklist)
 
 Open the **Settings** dropdown in the hub navigation (superuser). Configure in roughly this order for a new branch or institution go-live:
+
+> **Screenshot (H-19):** Digital Apply settings — open/close portal, fee, and security controls.
+>
+> **Screenshot (H-20):** Document pack — required and optional docs for one loan category.
 
 ```text
 1. Districts → Branches → Departments (if HO)
@@ -246,6 +254,10 @@ Coordinate with DevOps before changing production secrets.
 
 ## 8. Related manuals
 
-- [Staff user manual](02_staff.md) — lending lifecycle by role  
-- [Customer user manual](03_customers.md) — Digital Apply journey  
-- [Manual index](README.md)
+- [Staff user manual](02_staff.md) · [አማርኛ](02_staff_am.md)  
+- [Customer user manual](03_customers.md) · [አማርኛ](03_customers_am.md)  
+- [Market partners](04_market_partners.md)  
+- [Screenshot captions](05_screenshot_captions.md)  
+- [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)  
+- In-app: `/hub/help/`
+

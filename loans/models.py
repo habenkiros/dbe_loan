@@ -550,6 +550,11 @@ class LoanRequest(models.Model):
         help_text='Core banking / Temenos-style customer id for party lookup.',
     )
     email = models.EmailField(null=True, blank=True)
+    customer_profile_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='Important core-banking / party API fields (subset) for staff display.',
+    )
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
@@ -857,6 +862,24 @@ class LoanRequest(models.Model):
     @cooperative_approval.setter
     def cooperative_approval(self, value: bool) -> None:
         self.operation_manager_approval = bool(value)
+
+    @property
+    def amount_approved_display(self):
+        """Credit-approved amount when committee has approved; else None."""
+        if self.committee_status == self.COMMITTEE_APPROVED:
+            if self.committee_final_amount is not None:
+                return self.committee_final_amount
+            appr = getattr(self, 'appraisal', None)
+            if appr is not None and getattr(appr, 'amount_approved', None) is not None:
+                return appr.amount_approved
+            return self.amount_requested
+        return None
+
+    @property
+    def cbs_highlights(self) -> dict:
+        """Important party/API fields for list/detail (excludes email)."""
+        from loans.services.customer import loan_cbs_highlights
+        return loan_cbs_highlights(self)
 
     def managers_queue_approved(self) -> bool:
         """Initial queue gate: Branch Cooperative only (before loan officer / engineering)."""

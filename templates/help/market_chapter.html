@@ -1,0 +1,22 @@
+{% extends "market_portal/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block wrap_class %}mp-wide{% endblock %}
+{% block extra_head %}
+<style>
+  .manual-content h1 { font-size: 1.35rem; color: var(--accent-deep); }
+  .manual-content h2 { font-size: 1.1rem; color: var(--accent-deep); margin-top: 1.25rem; }
+  .manual-content table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0; }
+  .manual-content th, .manual-content td { border: 1px solid var(--line); padding: 0.4rem 0.5rem; vertical-align: top; }
+  .manual-content th { background: var(--soft); }
+  .manual-content blockquote.manual-shot {
+    margin: 0.85rem 0; padding: 0.75rem 0.9rem; border-left: 4px solid var(--accent);
+    background: var(--soft);
+  }
+</style>
+{% endblock %}
+{% block content %}
+<p style="margin:0 0 0.75rem;"><a href="{% url 'market_portal:help_index' %}">← Help home</a></p>
+<div class="mp-card manual-content">
+  {{ body_html|safe }}
+</div>
+{% endblock %}

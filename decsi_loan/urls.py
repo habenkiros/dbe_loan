@@ -7,6 +7,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 
 from loans import auth_views as staff_auth
+from loans import help_views as hub_help
 
 
 # Staff (branch / credit / ops) hub — not on the public root
@@ -47,6 +48,9 @@ _staff_auth_urlpatterns = [
         name='password_change_done',
     ),
     path('session/keepalive/', staff_auth.session_keepalive, name='session_keepalive'),
+    path('help/', hub_help.help_index, name='help_index'),
+    path('help/manual/', hub_help.help_combined_html, name='help_manual_html'),
+    path('help/<slug:slug>/', hub_help.help_chapter, name='help_chapter'),
     path('security/audit/', staff_auth.security_audit_list, name='security_audit_list'),
     path(
         'security/audit/export/',

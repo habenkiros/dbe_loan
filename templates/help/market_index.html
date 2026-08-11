@@ -1,0 +1,18 @@
+{% extends "market_portal/base.html" %}
+{% block title %}Help{% endblock %}
+{% block wrap_class %}mp-wide{% endblock %}
+{% block content %}
+<p class="mp-brand">Seqela Market</p>
+<h1 class="mp-title">Help · Market portal</h1>
+<div class="mp-hero-line" aria-hidden="true"></div>
+<p class="mp-sub">How to share local prices as a guest or registered dealer.</p>
+<div class="mp-card">
+  <ul style="list-style:none;padding:0;margin:0;">
+    {% for filename, label, label_am, slug in chapters %}
+    <li style="padding:0.55rem 0;border-bottom:1px solid var(--line);">
+      <a href="{% url 'market_portal:help_chapter' slug=slug %}" style="font-weight:700;color:var(--accent-deep);text-decoration:none;">{{ label }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

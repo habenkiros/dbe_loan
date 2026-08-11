@@ -163,11 +163,13 @@ def notify_staff_online_intake(loan) -> int:
     from loans.models import CustomUser
     supers = list(CustomUser.objects.filter(is_active=True, is_superuser=True)[:20])
     people = users + supers
-    title = f'New digital apply · {loan.loan_request_id}'
+    amt = loan.amount_requested
+    title = f'LOAN REQUESTED · {loan.loan_request_id}'
     message = (
-        f'{loan.applicant_name} applied online for '
-        f'{loan.category.name if loan.category_id else "a loan"} · '
-        f'{loan.amount_requested} ETB · branch {loan.branch.name}.'
+        f'CRITICAL: new online loan request from {loan.applicant_name}. '
+        f'Requested amount: {amt} ETB · '
+        f'{loan.category.name if loan.category_id else "loan"} · '
+        f'branch {loan.branch.name}. Queue ID {loan.loan_request_id}.'
     )
     try:
         url = reverse('loan_request_detail', args=[loan.pk])
@@ -182,6 +184,86 @@ def notify_staff_online_intake(loan) -> int:
         url=url,
         email_subject=title,
     )
+
+
+def linked_online_application(loan):
+    """Return OnlineApplication for a LoanRequest when originating from Digital Apply."""
+    if not loan:
+        return None
+    try:
+        return loan.online_application
+    except Exception:
+        return None
+
+
+def notify_applicant_loan_event(loan, *, event: str) -> None:
+    """
+    Critical customer notices for loan requested / approved.
+    event: requested | approved | declined | intake
+    """
+    app = linked_online_application(loan)
+    if not app or not app.applicant_id:
+        return
+    account = app.applicant
+    qid = loan.loan_request_id
+    requested = loan.amount_requested
+
+    if event == 'requested':
+        notify_applicant(
+            account,
+            title='LOAN REQUESTED',
+            message=(
+                f'Your loan request is recorded. Amount requested: {requested} ETB. '
+                f'Queue ID: {qid}. Keep this ID for all branch enquiries.'
+            ),
+            kind='success',
+            application=app,
+            also_sms=True,
+        )
+        return
+
+    if event == 'intake':
+        notify_applicant(
+            account,
+            title='Loan request accepted for processing',
+            message=(
+                f'Branch intake accepted your loan request {qid} '
+                f'(requested {requested} ETB). Processing continues toward credit decision.'
+            ),
+            kind='info',
+            application=app,
+            also_sms=True,
+        )
+        return
+
+    if event == 'approved':
+        final = loan.committee_final_amount or requested
+        notify_applicant(
+            account,
+            title='LOAN APPROVED',
+            message=(
+                f'Credit decision: LOAN APPROVED. Approved amount: {final} ETB '
+                f'(you requested {requested} ETB). Queue ID: {qid}. '
+                f'Sign in to Digital Apply to view your repayment schedule when ready.'
+            ),
+            kind='success',
+            application=app,
+            also_sms=True,
+        )
+        return
+
+    if event == 'declined':
+        notify_applicant(
+            account,
+            title='Loan not approved',
+            message=(
+                f'Credit decision: not approved for queue {qid} '
+                f'(requested {requested} ETB). Contact your branch for details.'
+            ),
+            kind='warn',
+            application=app,
+            also_sms=True,
+        )
 
 
 def cancel_submitted_application(application, *, reason: str = '') -> None:

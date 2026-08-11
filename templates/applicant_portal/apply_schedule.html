@@ -1,0 +1,90 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Repayment schedule{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <p class="ap-help" style="margin:0 0 0.5rem;">
+    <a href="{% url 'applicant_portal:apply_status' application.public_id %}">← Loan status</a>
+  </p>
+  <h1 class="ap-hero-title">Repayment schedule</h1>
+  <p class="ap-sub">{{ schedule.message }}</p>
+
+  {% if status.amount_requested or status.amount_approved %}
+  <div class="ap-milestones" style="margin-bottom:1.15rem;">
+    <div class="ap-milestone ap-milestone-request is-active">
+      <span class="ap-milestone-kicker">Loan requested</span>
+      <span class="ap-milestone-amt">{{ status.amount_requested|default:"—" }}</span>
+    </div>
+    <div class="ap-milestone ap-milestone-approved {% if status.is_loan_approved %}is-active{% endif %}">
+      <span class="ap-milestone-kicker">Loan approved</span>
+      <span class="ap-milestone-amt">{{ status.amount_approved|default:"—" }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if schedule.amount_approved or schedule.term_months %}
+  <ul class="ap-facts" style="margin-top:0;">
+    {% if schedule.amount_approved %}
+    <li class="ap-fact-approved"><span class="k">Approved amount</span><span class="v">{{ schedule.amount_approved }}</span></li>
+    {% endif %}
+    {% if schedule.term_months %}
+    <li><span class="k">Term</span><span class="v">{{ schedule.term_months }}</span></li>
+    {% endif %}
+    {% if schedule.annual_rate %}
+    <li><span class="k">Interest rate</span><span class="v">{{ schedule.annual_rate }}</span></li>
+    {% endif %}
+    {% if status.queue_id %}
+    <li><span class="k">Queue ID</span><span class="v">{{ status.queue_id }}</span></li>
+    {% endif %}
+  </ul>
+  {% endif %}
+</div>
+
+{% if schedule.available and schedule.rows %}
+<div class="ap-card">
+  <h2 class="ap-section-title" style="font-size:1.1rem;margin:0 0 0.75rem;">Installments</h2>
+  <div class="ap-schedule-wrap">
+    <table class="ap-schedule-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Due date</th>
+          <th>Payment</th>
+          <th>Principal</th>
+          <th>Interest</th>
+          <th>Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in schedule.rows %}
+        <tr>
+          <td data-label="#">{{ row.period }}</td>
+          <td data-label="Due">{{ row.date }}</td>
+          <td data-label="Payment">{{ row.payment }}</td>
+          <td data-label="Principal">{{ row.principal }}</td>
+          <td data-label="Interest">{{ row.interest }}</td>
+          <td data-label="Balance">{{ row.balance }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="2">Totals</th>
+          <th>{{ schedule.total_payment }}</th>
+          <th>{{ schedule.total_principal }}</th>
+          <th>{{ schedule.total_interest }}</th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="ap-help" style="margin-top:0.85rem;">
+    This schedule is prepared by branch staff for your approved loan. Final booking may use core banking dates — ask your officer if numbers change at disbursement.
+  </p>
+</div>
+{% endif %}
+
+<div class="ap-btn-row">
+  <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:apply_status' application.public_id %}">Back to status</a>
+  <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:home' %}">All applications</a>
+</div>
+{% endblock %}

@@ -1,58 +1,84 @@
 {% extends "applicant_portal/base.html" %}
 {% block title %}My applications{% endblock %}
 {% block content %}
-<div class="ap-card">
+<div class="ap-card ap-home-hero">
   <h1 class="ap-hero-title">Hello, {{ applicant.full_name }}</h1>
-  <p class="ap-sub">Track every application — drafts, queue ID, and branch processing status.</p>
+  <p class="ap-sub">
+    Manage drafts, track submitted files, and open any application for a full status timeline — on phone or desktop.
+  </p>
   <div class="ap-btn-row" style="margin-top:0;">
-    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:apply_start' %}">Start new application</a>
+    <a class="ap-btn ap-btn-light" href="{% url 'applicant_portal:apply_start' %}">Start new application</a>
+    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:help_index' %}">Help</a>
   </div>
 </div>
+
 {% if notices %}
 <div class="ap-card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-    <h2 style="margin:0;font-size:1.05rem;">Notices</h2>
+    <h2 class="ap-section-title" style="font-size:1.15rem;margin:0;">Notices</h2>
     <form method="post" action="{% url 'applicant_portal:mark_notices_read' %}">
       {% csrf_token %}
-      <button type="submit" class="ap-btn ap-btn-ghost" style="padding:0.35rem 0.7rem;font-size:0.85rem;">Mark all read</button>
+      <button type="submit" class="ap-btn ap-btn-ghost" style="padding:0.4rem 0.75rem;min-height:2.4rem;font-size:0.85rem;">Mark all read</button>
     </form>
   </div>
-  <ul style="margin:0.75rem 0 0;padding-left:1.1rem;">
+  <ul style="margin:0.9rem 0 0;padding:0;list-style:none;">
     {% for n in notices %}
-    <li style="margin-bottom:0.45rem;">
+    <li style="margin-bottom:0.65rem;padding:0.75rem 0.85rem;background:var(--soft);border:1px solid var(--line);border-radius:10px;">
       <strong>{{ n.title }}</strong>
-      <div class="ap-app-meta">{{ n.message }} · {{ n.created_at|date:"M j, H:i" }}</div>
+      <div class="ap-app-meta" style="margin-top:0.25rem;">{{ n.message }} · {{ n.created_at|date:"M j, H:i" }}</div>
     </li>
+    {% empty %}
     {% endfor %}
   </ul>
 </div>
 {% endif %}
+
 <div class="ap-card">
-  <h2 style="margin:0 0 0.35rem;font-size:1.05rem;">Your applications</h2>
-  <p class="ap-help" style="margin-bottom:0.75rem;">Open an item to see the full status timeline.</p>
+  <h2 class="ap-section-title" style="font-size:1.15rem;margin:0 0 0.25rem;">Your applications</h2>
+  <p class="ap-help" style="margin-bottom:0.85rem;">Tap an item to see steps completed, queue ID, and what happens next.</p>
   {% if rows %}
     {% for row in rows %}
     <div class="ap-app-card">
       <div>
-        <strong>{{ row.application.category.name|default:"Draft application" }}</strong>
+        <strong style="font-size:1.02rem;">{{ row.application.category.name|default:"Draft application" }}</strong>
         <div class="ap-app-meta">
           Updated {{ row.application.updated_at|date:"M j, Y H:i" }}
           {% if row.status.queue_id %} · Queue <span class="ap-queue" style="font-size:0.9rem;">{{ row.status.queue_id }}</span>{% endif %}
         </div>
-        <div style="margin-top:0.35rem;">
-          <span class="ap-status-chip tone-{{ row.status.tone }}">{{ row.status.pipeline_label }}</span>
+        <div style="margin-top:0.45rem;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;">
+          <span class="ap-status-chip tone-{{ row.status.tone }} {% if row.status.is_loan_approved %}ap-chip-approved{% endif %}">{{ row.status.pipeline_label }}</span>
+          {% if row.status.amount_requested %}
+          <span class="ap-mini-req">Req {{ row.status.amount_requested }}</span>
+          {% endif %}
+          {% if row.status.is_loan_approved and row.status.amount_approved %}
+          <span class="ap-mini-ok">OK {{ row.status.amount_approved }}</span>
+          {% endif %}
         </div>
       </div>
-      <div>
-        <a class="ap-btn ap-btn-primary" style="padding:0.45rem 0.85rem;font-size:0.9rem;"
+      <div style="display:flex;flex-direction:column;gap:0.4rem;align-items:stretch;">
+        <a class="ap-btn ap-btn-primary" style="padding:0.5rem 0.95rem;font-size:0.9rem;"
            href="{% url 'applicant_portal:apply_status' row.application.public_id %}">
           View status
         </a>
+        {% if row.status.has_repayment_schedule %}
+        <a class="ap-btn ap-btn-ghost" style="padding:0.5rem 0.95rem;font-size:0.9rem;"
+           href="{% url 'applicant_portal:apply_schedule' row.application.public_id %}">
+          Schedule
+        </a>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
   {% else %}
-  <p class="ap-help">No applications yet. Start one when you are ready.</p>
+  <div class="ap-empty">
+    <strong>No applications yet</strong>
+    <p class="ap-help" style="margin:0 auto;max-width:22rem;">
+      Start when you have your customer number and documents ready. You can save a draft and finish later.
+    </p>
+    <div class="ap-btn-row" style="justify-content:center;">
+      <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:apply_start' %}">Start application</a>
+    </div>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

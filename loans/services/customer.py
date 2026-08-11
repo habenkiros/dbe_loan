@@ -1,4 +1,11 @@
-"""Core banking / party customer lookup for loan intake and Sheet 1 prefill."""
+"""Core banking / party customer lookup for loan intake and digital apply.
+
+Sample DECSI Temenos party API (see docs/customer API.txt):
+
+  GET {DECSI_BASE_URL}/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets
+
+  Customer example: 2000050041
+"""
 
 from __future__ import annotations
 
@@ -10,9 +17,88 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Sample from docs/customer API.txt — used for offline mock of that customer.
+SAMPLE_CUSTOMER_ID = '2000050041'
+
 
 def _digits_only(value: str) -> str:
     return ''.join(ch for ch in str(value or '') if ch.isdigit())
+
+
+def compact_customer_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    """Keep only staff-important party fields (no email)."""
+    if not profile:
+        return {}
+    out: Dict[str, str] = {}
+    key_order = (
+        ('customer_number', 'Customer no.'),
+        ('phone_number', 'Phone'),
+        ('phone_raw', 'Phone (raw)'),
+        ('gender', 'Gender'),
+        ('date_of_birth', 'Date of birth'),
+        ('age', 'Age'),
+        ('marital_status', 'Marital status'),
+        ('status', 'Customer type'),
+        ('customer_status', 'Customer rating'),
+        ('home_address', 'Address'),
+        ('city', 'Region / town'),
+        ('street', 'Street'),
+        ('branch_code', 'Account officer'),
+        ('mnemonic', 'Mnemonic'),
+        ('title', 'Title'),
+        ('country', 'Country'),
+        ('provider', 'Source'),
+    )
+    # Prefer normalized phone over raw
+    for key, _label in key_order:
+        if key == 'phone_raw' and profile.get('phone_number'):
+            continue
+        val = profile.get(key)
+        if val is None or val == '':
+            continue
+        s = str(val).strip()
+        if not s or s.upper() in ('NULL', 'NONE', 'N/A'):
+            continue
+        out[key] = s[:500]
+    return out
+
+
+def loan_cbs_highlights(loan) -> Dict[str, str]:
+    """
+    Resolve important CBS fields for a LoanRequest:
+    stored snapshot → digital-apply account snapshot → empty.
+    """
+    snap = getattr(loan, 'customer_profile_snapshot', None) or {}
+    if isinstance(snap, dict) and snap:
+        c = compact_customer_profile(snap)
+        if c:
+            return c
+        c = compact_customer_profile(normalize_customer_profile(snap))
+        if c:
+            return c
+
+    try:
+        app = loan.online_application
+    except Exception:
+        app = None
+    if app is not None:
+        account = getattr(app, 'applicant', None)
+        full = getattr(account, 'customer_profile_snapshot', None) or {}
+        if isinstance(full, dict) and full:
+            c = compact_customer_profile(full)
+            if c:
+                return c
+            return compact_customer_profile(normalize_customer_profile(full))
+    return {}
+
+
+def attach_profile_snapshot_to_loan(loan, profile: Optional[Dict[str, Any]]) -> bool:
+    """Persist important API fields on the loan (no email)."""
+    compact = compact_customer_profile(profile)
+    if not compact:
+        return False
+    loan.customer_profile_snapshot = compact
+    return True
 
 
 def customer_api_is_live() -> bool:
@@ -22,94 +108,229 @@ def customer_api_is_live() -> bool:
     return bool(base) and not force_mock
 
 
+def _build_address(raw: Dict[str, Any]) -> str:
+    parts = []
+    for key in (
+        'street', 'suburbTown', 'cityMunicipal', 'countryCode',
+        'home_address', 'address', 'residentialAddress', 'HOME_ADDR',
+    ):
+        val = str(raw.get(key) or '').strip()
+        if val and val.upper() not in ('NULL', 'NONE', 'N/A') and val not in parts:
+            parts.append(val)
+    return ', '.join(parts)
+
+
+def _normalize_et_mobile(raw_phone: str) -> str:
+    """Turn DECSI phone (e.g. 945517351) into portal local 09… / 07… when possible."""
+    digits = _digits_only(raw_phone)
+    if not digits:
+        return ''
+    if digits.startswith('251') and len(digits) >= 12:
+        digits = digits[3:]
+    if len(digits) == 9 and digits[0] in ('9', '7'):
+        return '0' + digits
+    if len(digits) == 10 and digits[0] == '0' and digits[1] in ('9', '7'):
+        return digits
+    return digits
+
+
 def normalize_customer_profile(raw: Dict[str, Any], *, customer_number: str = '') -> Dict[str, Any]:
-    """Normalize party/API payloads into a stable profile for Sheet 1 + portal."""
+    """Normalize DECSI / Temenos party payloads into a stable profile.
+
+    Maps the real DECSI fields from docs/customer API.txt, e.g.:
+      customerId, code, name, firstName, familyName, phoneNumber, sms,
+      street, suburbTown, cityMunicipal, customerType, customerStatus,
+      gender, dateOfBirth, age, maritalStatus, mnemonic, accountOfficer
+    """
     if not raw:
         return {}
-    customer_number = (
-        raw.get('customer_number')
-        or raw.get('customerId')
+
+    customer_number = str(
+        raw.get('customerId')
+        or raw.get('code')
+        or raw.get('customer_number')
         or raw.get('custId')
         or raw.get('customerNo')
         or raw.get('CUSTOMER_ID')
         or customer_number
         or ''
-    )
-    name = (
+    ).strip()
+
+    name = str(
         raw.get('name')
+        or raw.get('shortName')
+        or raw.get('givenName')
+        or raw.get('firstName')
         or raw.get('customerName')
         or raw.get('fullName')
         or raw.get('FULL_NAME')
-        or raw.get('customer_name')
         or ''
-    )
+    ).strip()
     if not name:
-        first = str(raw.get('firstName') or raw.get('FIRST_NAME') or '').strip()
-        last = str(raw.get('lastName') or raw.get('LAST_NAME') or '').strip()
-        name = f'{first} {last}'.strip()
-    phone = (
-        raw.get('phone_number')
-        or raw.get('phoneNumber')
+        first = str(raw.get('firstName') or raw.get('givenName') or '').strip()
+        family = str(raw.get('familyName') or raw.get('lastName') or '').strip()
+        name = f'{first} {family}'.strip() if first or family else ''
+
+    phone_raw = (
+        raw.get('phoneNumber')
+        or raw.get('sms')
+        or raw.get('phone_number')
         or raw.get('mobile')
         or raw.get('MOBILE_NO')
         or raw.get('mobileNumber')
         or raw.get('tel')
         or ''
     )
-    tin = raw.get('tin_number') or raw.get('tin') or raw.get('taxId') or raw.get('TIN_NO') or ''
-    address = (
-        raw.get('home_address')
-        or raw.get('address')
-        or raw.get('residentialAddress')
-        or raw.get('HOME_ADDR')
-        or raw.get('residenceAddress')
+    phone = _normalize_et_mobile(str(phone_raw))
+
+    tin = str(
+        raw.get('tin_number') or raw.get('tin') or raw.get('taxId') or raw.get('TIN_NO') or ''
+    ).strip()
+    address = _build_address(raw)
+    gender = str(raw.get('gender') or raw.get('GENDER') or '').strip()
+    # DECSI uses customerType = ACTIVE and customerStatus = rating text
+    status = str(
+        raw.get('customerType')
+        or raw.get('status')
+        or raw.get('CUSTOMER_STATUS')
         or ''
-    )
-    gender = raw.get('gender') or raw.get('GENDER') or ''
-    status = raw.get('status') or raw.get('customerType') or raw.get('CUSTOMER_STATUS') or ''
-    email = raw.get('email') or raw.get('emailAddress') or raw.get('EMAIL') or ''
-    city = raw.get('city') or raw.get('CITY') or raw.get('town') or ''
-    branch_code = raw.get('branch_code') or raw.get('branchCode') or raw.get('BOOKING_BRANCH') or ''
+    ).strip()
+    customer_status = str(raw.get('customerStatus') or '').strip()
+    email = str(raw.get('email') or raw.get('emailAddress') or raw.get('EMAIL') or '').strip()
+    city = str(
+        raw.get('suburbTown')
+        or raw.get('cityMunicipal')
+        or raw.get('city')
+        or raw.get('CITY')
+        or raw.get('town')
+        or ''
+    ).strip()
+    branch_code = str(
+        raw.get('accountOfficer')
+        or raw.get('branch_code')
+        or raw.get('branchCode')
+        or raw.get('BOOKING_BRANCH')
+        or ''
+    ).strip()
+
+    date_of_birth = str(raw.get('dateOfBirth') or raw.get('birthIncorpDate') or '').strip()
+    age = str(raw.get('age') or '').strip()
+    marital_status = str(raw.get('maritalStatus') or '').strip()
+    title = str(raw.get('title') or '').strip()
+    sector = str(raw.get('sector') or '').strip()
+    industry = str(raw.get('industry') or '').strip()
+    mnemonic = str(raw.get('mnemonic') or '').strip()
+    country = str(raw.get('countryCode') or raw.get('residence') or '').strip()
+
     return {
-        'customer_number': str(customer_number).strip(),
-        'name': str(name).strip(),
-        'phone_number': str(phone).strip(),
-        'tin_number': str(tin).strip(),
-        'home_address': str(address).strip(),
-        'gender': str(gender).strip(),
-        'status': str(status).strip(),
-        'email': str(email).strip(),
-        'city': str(city).strip(),
-        'branch_code': str(branch_code).strip(),
+        'customer_number': customer_number,
+        'name': name,
+        'phone_number': phone,
+        'phone_raw': str(phone_raw).strip(),
+        'tin_number': tin,
+        'home_address': address,
+        'gender': gender,
+        'status': status,
+        'customer_status': customer_status,
+        'email': email,
+        'city': city,
+        'branch_code': branch_code,
+        'date_of_birth': date_of_birth,
+        'age': age,
+        'marital_status': marital_status,
+        'title': title,
+        'sector': sector,
+        'industry': industry,
+        'mnemonic': mnemonic,
+        'country': country,
+        'street': str(raw.get('street') or '').strip(),
         'provider': raw.get('provider') or 'core_banking',
-        'raw_keys': sorted(str(k) for k in raw.keys())[:40] if isinstance(raw, dict) else [],
+        'raw_keys': sorted(str(k) for k in raw.keys())[:50] if isinstance(raw, dict) else [],
+    }
+
+
+def _sample_decsi_body(customer_number: str) -> Dict[str, Any]:
+    """Sample body from docs/customer API.txt (customer 2000050041)."""
+    # Keep real sample shape for the documented id; generic mock for others.
+    if customer_number == SAMPLE_CUSTOMER_ID:
+        return {
+            'code': SAMPLE_CUSTOMER_ID,
+            'gender': 'MALE',
+            'industry': '5003',
+            'title': 'MR',
+            'resideYN': 'Y',
+            'customerStatus': 'Standard Rated - Private Client',
+            'suburbTown': 'Tigray',
+            'customerType': 'ACTIVE',
+            'taxInvoice': 'Y',
+            'countryCode': 'ET',
+            'street': 'MEKELE Debubu ADIHKI',
+            'familyName': 'Tekeste Jigar Meles',
+            'loansWof': 'N',
+            'customerId': SAMPLE_CUSTOMER_ID,
+            'sms': '945517351',
+            'mnemonic': 'TJMT900901',
+            'cityMunicipal': 'Ethiopa',
+            'residence': 'ET',
+            'sector': '5000',
+            'isMobileBankingService': 'NULL',
+            'givenName': 'Tekeste Jigar Meles',
+            'dateOfBirth': '19900920',
+            'firstName': 'Tekeste Jigar Meles',
+            'accountOfficer': '117',
+            'phoneNumber': '945517351',
+            'currAddress': 'Y',
+            'idTypes': '1',
+            'birthIncorpDate': '19900920',
+            'name': 'Tekeste Jigar Meles',
+            'internetBankingService': 'NULL',
+            'middleName': 'Tekeste Jigar Meles',
+            'shortName': 'Tekeste Jigar Meles',
+            'maritalStatus': 'SINGLE',
+            'age': '35',
+            'provider': 'mock',
+        }
+    digits = _digits_only(customer_number) or '0'
+    return {
+        'customerId': customer_number,
+        'code': customer_number,
+        'name': f'DEMO Customer {customer_number}',
+        'firstName': f'DEMO Customer {customer_number}',
+        'phoneNumber': '911000' + digits[-3:].zfill(3),
+        'sms': '911000' + digits[-3:].zfill(3),
+        'tin': f'00{digits.zfill(8)[-8:]}',
+        'street': 'Mekelle, Tigray (mock core banking)',
+        'suburbTown': 'Tigray',
+        'cityMunicipal': 'Ethiopia',
+        'countryCode': 'ET',
+        'customerType': 'ACTIVE',
+        'customerStatus': 'Standard Rated - Private Client',
+        'gender': 'MALE',
+        'provider': 'mock',
     }
 
 
 def mock_fetch_customer_by_number(customer_number: str) -> Optional[Dict[str, Any]]:
     """
     Deterministic mock for local/dev when DECSI_BASE_URL is unset.
-    Use customer number DEMO / 1001 / any non-empty id.
+    Uses docs/customer API.txt sample for 2000050041.
     """
     cid = (customer_number or '').strip()
     if not cid:
         return None
     if cid.upper() in ('MISSING', 'NONE', '0'):
         return None
-    return normalize_customer_profile({
-        'customer_number': cid,
-        'name': f'DEMO Customer {cid}',
-        'phone_number': '0911000' + _digits_only(cid)[-4:].zfill(4),
-        'tin_number': _digits_only(cid).zfill(10)[:10] or '0000000001',
-        'home_address': 'Mekelle, Tigray (mock core banking)',
-        'gender': 'Male',
-        'status': 'ACTIVE',
-        'email': f'customer{_digits_only(cid)[-4:] or "0000"}@demo.local',
-        'provider': 'mock',
-    })
+    profile = normalize_customer_profile(_sample_decsi_body(cid), customer_number=cid)
+    profile['provider'] = 'mock'
+    return profile
 
 
 def live_fetch_customer_by_number(customer_number: str) -> Optional[Dict[str, Any]]:
+    """
+    Live GET:
+      {DECSI_BASE_URL}/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets
+    Optional shorter path: base_url/getCusByCusNo/api  (set DECSI_CUSTOMER_DETAIL_PATH).
+    """
     base = (getattr(settings, 'DECSI_BASE_URL', None) or '').rstrip('/')
     if not base:
         return None
@@ -144,7 +365,7 @@ def live_fetch_customer_by_number(customer_number: str) -> Optional[Dict[str, An
     if body is None and isinstance(data, dict):
         if data.get('data'):
             body = data['data']
-        elif data.get('customer') or data.get('customerName') or data.get('name'):
+        elif data.get('customer') or data.get('customerName') or data.get('name') or data.get('customerId'):
             body = data
     header_status = ''
     if isinstance(data, dict):

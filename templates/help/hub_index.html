@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Help · User manuals{% endblock %}
+{% block content %}
+<div class="loan-page" style="max-width:52rem;margin:0 auto;padding:1.25rem 1rem 2rem;">
+  <h1 style="margin:0 0 0.35rem;">Help · User manuals</h1>
+  <p style="color:#4a5c54;margin:0 0 1.25rem;">
+    Guides for configuring and operating AI-powered Credit Intelligence.
+    Open a chapter below, or open the printable pack.
+  </p>
+  <p style="margin:0 0 1.5rem;">
+    <a class="btn" href="{% url 'help_manual_html' %}">Open printable HTML (Save as PDF)</a>
+  </p>
+  <ul style="list-style:none;padding:0;margin:0;">
+    {% for filename, label, label_am, slug in chapters %}
+    <li style="border:1px solid #c9dbd1;border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.55rem;background:#fff;">
+      <a href="{% url 'help_chapter' slug=slug %}" style="font-weight:700;text-decoration:none;">
+        {{ label }}
+      </a>
+      {% if label_am and label_am != label %}
+      <div style="color:#5a6f68;font-size:0.88rem;margin-top:0.2rem;">{{ label_am }}</div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

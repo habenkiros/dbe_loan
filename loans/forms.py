@@ -273,9 +273,9 @@ class LoanRequestForm(forms.ModelForm):
     class Meta:
         model = LoanRequest
         fields = [
+            'customer_number',
             'applicant_name',
             'phone_number',
-            'customer_number',
             'category',
             'collateral',
             'amount_requested',
@@ -284,10 +284,42 @@ class LoanRequestForm(forms.ModelForm):
         ]
         widgets = {
             'date_requested': forms.DateInput(attrs={'type': 'date'}),
+            'customer_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. 2000050041',
+                'autocomplete': 'off',
+                'inputmode': 'numeric',
+            }),
+            'applicant_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09…'}),
+            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'collateral': forms.Select(attrs={'class': 'form-control'}),
+            'customer_history': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'customer_number': 'Customer number',
+            'applicant_name': 'Applicant name',
+            'phone_number': 'Phone number',
+            'amount_requested': 'Amount requested (ETB)',
+            'customer_history': 'New or existing customer',
+        }
+        help_texts = {
+            'customer_number': 'Look up DECSI core banking first — name and phone fill in when found.',
+            'applicant_name': 'Filled from party API when available; correct if needed.',
+            'phone_number': 'Filled from party API when available; must be reachable.',
         }
 
     def __init__(self, *args, credit_origin=False, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
+        self.fields['customer_number'].required = True
+        self.fields['customer_number'].error_messages = {
+            'required': 'Enter the DECSI customer number.',
+        }
+        # Filled from Look up / clean(); required only after party resolve.
+        self.fields['applicant_name'].required = False
+        self.fields['phone_number'].required = False
         if credit_origin:
             self.fields['branch'] = forms.ModelChoiceField(
                 queryset=Branch.objects.select_related('district').order_by('district__name', 'name'),
@@ -295,6 +327,42 @@ class LoanRequestForm(forms.ModelForm):
                 widget=forms.Select(attrs={'class': 'form-control'}),
                 help_text='Servicing branch for this head-office Credit loan.',
             )
+
+    def clean_customer_number(self):
+        raw = (self.cleaned_data.get('customer_number') or '').strip()
+        if not raw:
+            raise forms.ValidationError('Customer number is required.')
+        # Digits preferred; allow alphanumeric codes used by bank
+        cn = ''.join(ch for ch in raw if ch.isalnum())
+        if len(cn) < 4:
+            raise forms.ValidationError('Customer number looks too short.')
+        return cn
+
+    def clean(self):
+        cleaned = super().clean()
+        cn = cleaned.get('customer_number')
+        self._lookup_profile = None
+        if not cn:
+            return cleaned
+        from loans.services.customer import fetch_customer_by_number
+        profile = fetch_customer_by_number(cn)
+        self._lookup_profile = profile
+        if profile:
+            if not (cleaned.get('applicant_name') or '').strip() and profile.get('name'):
+                cleaned['applicant_name'] = str(profile['name'])[:255]
+            if not (cleaned.get('phone_number') or '').strip() and profile.get('phone_number'):
+                cleaned['phone_number'] = str(profile['phone_number'])[:15]
+        if not (cleaned.get('applicant_name') or '').strip():
+            self.add_error(
+                'applicant_name',
+                'Name is required. Look up the customer number or type the name.',
+            )
+        if not (cleaned.get('phone_number') or '').strip():
+            self.add_error(
+                'phone_number',
+                'Phone is required. Look up the customer number or enter a phone.',
+            )
+        return cleaned
 
 
 class LoanRequestBasicInfoForm(forms.ModelForm):

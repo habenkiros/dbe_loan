@@ -1,16 +1,194 @@
-<!-- templates/loans/create_loan_request.html -->
 {% extends "base.html" %}
 
-{% block title %}Create Loan Request{% endblock %}
+{% block title %}{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Create Loan Request{% endif %}{% endblock %}
 
 {% block content %}
-<h1>{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Create Loan Request{% endif %}</h1>
-{% if is_credit_origin %}
-<p class="help">Head-office Credit loans skip Branch Cooperative intake and are handled by the Credit department.</p>
-{% endif %}
-<form method="post">
+<div class="lw-wrap" style="max-width:42rem;">
+  <h1 class="lw-identity" style="font-size:1.45rem;">{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Register loan request{% endif %}</h1>
+  <p class="lw-identity-sub" style="margin-bottom:1rem;">
+    {% if is_credit_origin %}
+    Head-office Credit loans skip Branch Cooperative intake.
+    {% else %}
+    Branch registration starts with the <strong>DECSI customer number</strong>. Look up the customer, then confirm amount and product.
+    {% endif %}
+    {% if customer_api_live %}
+    <br><span class="lw-badge lw-ok" style="margin-top:0.4rem;">Core banking API live</span>
+    {% else %}
+    <br><span class="lw-badge lw-muted" style="margin-top:0.4rem;">Demo lookup (set DECSI_BASE_URL for live party API)</span>
+    {% endif %}
+  </p>
+
+  {% if form.non_field_errors %}
+  <ul class="errorlist">{{ form.non_field_errors }}</ul>
+  {% endif %}
+
+  <form method="post" id="staff-loan-create-form" class="lw-panel" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Create Loan Request</button>
-</form>
+
+    <h3 style="margin-top:0;">1 · Customer number</h3>
+    <div class="form-group">
+      <label for="{{ form.customer_number.id_for_label }}"><strong>{{ form.customer_number.label }}</strong></label>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:stretch;margin-top:0.25rem;">
+        {{ form.customer_number }}
+        <button type="button" class="btn btn-blue" id="staff-customer-lookup-btn" style="white-space:nowrap;">
+          Look up customer
+        </button>
+      </div>
+      {% if form.customer_number.help_text %}<p class="help">{{ form.customer_number.help_text }}</p>{% endif %}
+      {{ form.customer_number.errors }}
+      <p class="help" id="staff-lookup-status" style="min-height:1.2em;margin-top:0.35rem;"></p>
+    </div>
+
+    <div id="staff-profile-card" class="lw-panel" style="display:none;margin:0.75rem 0;background:#f3f8f5;border:1px solid #c9dbd1;box-shadow:none;">
+      <strong style="color:#064420;">Customer record (core banking)</strong>
+      <div class="lw-facts" style="margin-top:0.5rem;">
+        <span class="lbl">Name</span><span id="sp-name">—</span>
+        <span class="lbl">Phone</span><span id="sp-phone">—</span>
+        <span class="lbl">Type / rating</span><span id="sp-status">—</span>
+        <span class="lbl">Address</span><span id="sp-addr">—</span>
+        <span class="lbl">Gender / age</span><span id="sp-demo">—</span>
+        <span class="lbl">Town / AO</span><span id="sp-geo">—</span>
+      </div>
+    </div>
+
+    <h3>2 · Confirm identity</h3>
+    <div class="form-group">
+      <label for="{{ form.applicant_name.id_for_label }}">{{ form.applicant_name.label }}</label>
+      {{ form.applicant_name }}
+      {% if form.applicant_name.help_text %}<p class="help">{{ form.applicant_name.help_text }}</p>{% endif %}
+      {{ form.applicant_name.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+      {{ form.phone_number }}
+      {% if form.phone_number.help_text %}<p class="help">{{ form.phone_number.help_text }}</p>{% endif %}
+      {{ form.phone_number.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.customer_history.id_for_label }}">{{ form.customer_history.label }}</label>
+      {{ form.customer_history }}
+      {{ form.customer_history.errors }}
+    </div>
+
+    <h3>3 · Loan details</h3>
+    {% if form.branch %}
+    <div class="form-group">
+      <label for="{{ form.branch.id_for_label }}">{{ form.branch.label }}</label>
+      {{ form.branch }}
+      {% if form.branch.help_text %}<p class="help">{{ form.branch.help_text }}</p>{% endif %}
+      {{ form.branch.errors }}
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+      {{ form.category }}
+      {{ form.category.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.collateral.id_for_label }}">{{ form.collateral.label }}</label>
+      {{ form.collateral }}
+      {{ form.collateral.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.amount_requested.id_for_label }}">{{ form.amount_requested.label }}</label>
+      {{ form.amount_requested }}
+      {{ form.amount_requested.errors }}
+    </div>
+    <div class="form-group">
+      <label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+      {{ form.reason }}
+      {{ form.reason.errors }}
+    </div>
+
+    <div class="list-actions" style="margin-top:1.25rem;">
+      <button type="submit" class="btn btn-green">Create loan request</button>
+      <a class="btn btn-gray" href="{% url 'view_loan_requests' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('staff-customer-lookup-btn');
+  var cn = document.getElementById('id_customer_number');
+  var statusEl = document.getElementById('staff-lookup-status');
+  var card = document.getElementById('staff-profile-card');
+  if (!btn || !cn) return;
+
+  function setStatus(msg, ok) {
+    statusEl.textContent = msg || '';
+    statusEl.style.color = ok ? '#0a6b2e' : '#9b2c2c';
+  }
+
+  function showProfile(p) {
+    document.getElementById('sp-name').textContent = p.name || '—';
+    document.getElementById('sp-phone').textContent = p.phone_number || '—';
+    document.getElementById('sp-status').textContent =
+      [p.status, p.customer_status].filter(Boolean).join(' · ') || '—';
+    document.getElementById('sp-addr').textContent = p.home_address || '—';
+    document.getElementById('sp-demo').textContent =
+      [p.gender, p.age ? ('age ' + p.age) : '', p.date_of_birth].filter(Boolean).join(' · ') || '—';
+    document.getElementById('sp-geo').textContent =
+      [p.city, p.branch_code ? ('AO ' + p.branch_code) : ''].filter(Boolean).join(' · ') || '—';
+    card.style.display = 'block';
+  }
+
+  function fillForm(p) {
+    var nameEl = document.getElementById('id_applicant_name');
+    var phoneEl = document.getElementById('id_phone_number');
+    var histEl = document.getElementById('id_customer_history');
+    if (nameEl && p.name) nameEl.value = p.name;
+    if (phoneEl && p.phone_number) phoneEl.value = p.phone_number;
+    if (cn && p.customer_number) cn.value = p.customer_number;
+    if (histEl && !histEl.value) {
+      // Prefer existing when party profile is found
+      for (var i = 0; i < histEl.options.length; i++) {
+        if (histEl.options[i].value === 'existing') {
+          histEl.selectedIndex = i;
+          break;
+        }
+      }
+    }
+  }
+
+  function lookup() {
+    var val = (cn.value || '').trim();
+    if (val.length < 4) {
+      setStatus('Enter a customer number first.', false);
+      card.style.display = 'none';
+      return;
+    }
+    setStatus('Looking up…', true);
+    btn.disabled = true;
+    fetch('{% url "ajax_staff_lookup_customer" %}?customer_number=' + encodeURIComponent(val), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        if (!res.ok || !res.j.ok) {
+          setStatus((res.j && res.j.error) || 'Customer not found.', false);
+          card.style.display = 'none';
+          return;
+        }
+        setStatus(res.j.message || 'Customer found.', true);
+        showProfile(res.j.profile || {});
+        fillForm(res.j.profile || {});
+      })
+      .catch(function () {
+        btn.disabled = false;
+        setStatus('Lookup failed. Try again.', false);
+      });
+  }
+
+  btn.addEventListener('click', lookup);
+  cn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      lookup();
+    }
+  });
+})();
+</script>
 {% endblock %}

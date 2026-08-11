@@ -358,6 +358,91 @@ class ApplicantPortalFlowTests(TestCase):
         self.assertContains(resp, 'HK-STATUS01')
         self.assertContains(resp, 'Progress')
         self.assertContains(resp, 'Branch intake')
+        self.assertContains(resp, 'Loan requested')
+        self.assertContains(resp, '10,000.00 ETB')
+
+    def test_applicant_sees_loan_approved_and_schedule(self):
+        self._register()
+        from applicant_portal.status import build_applicant_status
+        from loans.models import AppraisalAmortizationEntry, LoanAppraisal
+        import datetime as dt
+
+        account = ApplicantAccount.objects.get(phone_number='0911222333')
+        app = OnlineApplication.objects.create(
+            applicant=account,
+            applicant_name='Amanuel Applicant',
+            phone_number='0911222333',
+            customer_number='1001001',
+            category=self.category,
+            branch=self.branch,
+            amount_requested=Decimal('10000'),
+            reason='test',
+            status=OnlineApplication.STATUS_SUBMITTED,
+            queue_id='HK-APPR01',
+            processing_fee_amount=Decimal('25'),
+            payment_status=OnlineApplication.PAY_PAID,
+        )
+        loan = LoanRequest.objects.create(
+            loan_request_id='HK-APPR01',
+            applicant_name='Amanuel Applicant',
+            phone_number='0911222333',
+            category=self.category,
+            collateral=self.collateral,
+            amount_requested=Decimal('10000'),
+            reason='test',
+            branch=self.branch,
+            district=self.district,
+            status='Approved',
+            queue_approved=True,
+            source_channel=LoanRequest.SOURCE_ONLINE,
+            committee_status=LoanRequest.COMMITTEE_APPROVED,
+            committee_final_amount=Decimal('9000'),
+            operation_manager_approval=True,
+        )
+        app.loan_request = loan
+        app.save(update_fields=['loan_request', 'updated_at'])
+
+        status = build_applicant_status(app)
+        self.assertTrue(status.is_loan_requested)
+        self.assertTrue(status.is_loan_approved)
+        self.assertEqual(status.pipeline_label, 'Loan approved')
+        self.assertIn('9,000', status.amount_approved)
+
+        resp = self.client.get(reverse('applicant_portal:apply_status', args=[app.public_id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Loan approved')
+        self.assertContains(resp, '9,000.00 ETB')
+        self.assertContains(resp, 'Repayment schedule')
+
+        # Empty schedule until staff generates rows
+        s1 = self.client.get(reverse('applicant_portal:apply_schedule', args=[app.public_id]))
+        self.assertEqual(s1.status_code, 200)
+        self.assertContains(s1, 'not ready')
+
+        appraisal = LoanAppraisal.objects.create(loan_request=loan, amount_approved=Decimal('9000'))
+        AppraisalAmortizationEntry.objects.create(
+            appraisal=appraisal,
+            period_number=1,
+            payment_date=dt.date(2026, 9, 1),
+            payment_amount=Decimal('800'),
+            principal=Decimal('700'),
+            interest=Decimal('100'),
+            balance_after=Decimal('8300'),
+        )
+        AppraisalAmortizationEntry.objects.create(
+            appraisal=appraisal,
+            period_number=2,
+            payment_date=dt.date(2026, 10, 1),
+            payment_amount=Decimal('800'),
+            principal=Decimal('710'),
+            interest=Decimal('90'),
+            balance_after=Decimal('7590'),
+        )
+        s2 = self.client.get(reverse('applicant_portal:apply_schedule', args=[app.public_id]))
+        self.assertEqual(s2.status_code, 200)
+        self.assertContains(s2, 'Installments')
+        self.assertContains(s2, '800.00 ETB')
+        self.assertContains(s2, '01 Sep 2026')
 
     def test_portal_disabled(self):
         ApplicantPortalSettings.objects.filter(pk=1).update(enabled=False)

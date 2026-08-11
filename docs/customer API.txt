@@ -1,0 +1,57 @@
+customer id=2000050041
+
+base_url/getCusByCusNo/api or full url base_url/getCusByCusNo/api/v1.0.0/party/custid/2000050041/custdets
+
+response(JSON):
+{
+    "header": {
+        "audit": {
+            "T24_time": 204,
+            "responseParse_time": 1,
+            "requestParse_time": 1
+        },
+        "page_start": 1,
+        "page_token": "2408229556.00,99",
+        "total_size": 1,
+        "page_size": 99,
+        "status": "success"
+    },
+    "body": [
+        {
+            "code": "2000050041",
+            "gender": "MALE",
+            "industry": "5003",
+            "title": "MR",
+            "resideYN": "Y",
+            "customerStatus": "Standard Rated - Private Client",
+            "suburbTown": "Tigray",
+            "customerType": "ACTIVE",
+            "taxInvoice": "Y",
+            "countryCode": "ET",
+            "street": "MEKELE Debubu ADIHKI",
+            "familyName": "Tekeste Jigar Meles",
+            "loansWof": "N",
+            "customerId": "2000050041",
+            "sms": "945517351",
+            "mnemonic": "TJMT900901",
+            "cityMunicipal": "Ethiopa",
+            "residence": "ET",
+            "sector": "5000",
+            "isMobileBankingService": "NULL",
+            "givenName": "Tekeste Jigar Meles",
+            "dateOfBirth": "19900920",
+            "firstName": "Tekeste Jigar Meles",
+            "accountOfficer": "117",
+            "phoneNumber": "945517351",
+            "currAddress": "Y",
+            "idTypes": "1",
+            "birthIncorpDate": "19900920",
+            "name": "Tekeste Jigar Meles",
+            "internetBankingService": "NULL",
+            "middleName": "Tekeste Jigar Meles",
+            "shortName": "Tekeste Jigar Meles",
+            "maritalStatus": "SINGLE",
+            "age": "35"
+        }
+    ]
+}

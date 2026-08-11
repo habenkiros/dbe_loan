@@ -1,8 +1,18 @@
 {% extends "applicant_portal/base.html" %}
 {% block title %}Portal closed{% endblock %}
+{% block wrap_class %}ap-narrow{% endblock %}
 {% block content %}
-<div class="ap-card">
+<div class="ap-card" style="text-align:center;">
+  <div class="ap-closed-icon" aria-hidden="true">◆</div>
   <h1 class="ap-hero-title">Digital apply is temporarily closed</h1>
-  <p class="ap-sub">Please visit your nearest branch, or try again later.</p>
+  <p class="ap-sub" style="margin-bottom:0.5rem;">
+    Online intake is not accepting new applications right now. Please visit your nearest branch,
+    or check back later.
+  </p>
+  <p class="ap-help">Existing accounts may still sign in if the branch has reopened access for status checks.</p>
+  <div class="ap-btn-row" style="justify-content:center;">
+    <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">Sign in</a>
+    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:help_index' %}">Help</a>
+  </div>
 </div>
 {% endblock %}

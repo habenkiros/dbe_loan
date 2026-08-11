@@ -1,0 +1,18 @@
+{# Compact core-banking / party API facts. Expects loan_request. #}
+{% with h=loan_request.cbs_highlights %}
+{% if h %}
+<div class="lw-cbs" title="From core banking / customer party API">
+  {% if h.customer_number %}<span><em>Cust.</em> {{ h.customer_number }}</span>{% endif %}
+  {% if h.status %}<span><em>Type</em> {{ h.status }}</span>{% endif %}
+  {% if h.customer_status %}<span><em>Rating</em> {{ h.customer_status }}</span>{% endif %}
+  {% if h.gender %}<span><em>Gender</em> {{ h.gender }}</span>{% endif %}
+  {% if h.age %}<span><em>Age</em> {{ h.age }}</span>{% elif h.date_of_birth %}<span><em>DOB</em> {{ h.date_of_birth }}</span>{% endif %}
+  {% if h.marital_status %}<span><em>Marital</em> {{ h.marital_status }}</span>{% endif %}
+  {% if h.city %}<span><em>Town</em> {{ h.city }}</span>{% endif %}
+  {% if h.branch_code %}<span><em>AO</em> {{ h.branch_code }}</span>{% endif %}
+  {% if h.home_address %}<span class="lw-cbs-addr"><em>Addr</em> {{ h.home_address }}</span>{% endif %}
+</div>
+{% elif loan_request.customer_number %}
+<div class="lw-cbs"><span><em>Cust.</em> {{ loan_request.customer_number }}</span></div>
+{% endif %}
+{% endwith %}

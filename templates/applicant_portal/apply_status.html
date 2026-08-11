@@ -5,13 +5,41 @@
 {% include "applicant_portal/_steps.html" with step=step %}
 {% endif %}
 
+{% if status.is_loan_requested or status.amount_requested %}
+<div class="ap-milestones" role="group" aria-label="Loan request and approval">
+  <div class="ap-milestone ap-milestone-request {% if status.is_loan_requested %}is-active{% endif %}">
+    <span class="ap-milestone-kicker">Loan requested</span>
+    <span class="ap-milestone-amt">{{ status.amount_requested|default:"—" }}</span>
+    {% if status.is_loan_requested %}
+    <span class="ap-milestone-state">Recorded · queue {{ status.queue_id|default:"—" }}</span>
+    {% else %}
+    <span class="ap-milestone-state">Not submitted yet</span>
+    {% endif %}
+  </div>
+  <div class="ap-milestone {% if status.is_loan_approved %}ap-milestone-approved is-active{% elif status.is_credit_declined %}ap-milestone-declined{% else %}ap-milestone-wait{% endif %}">
+    <span class="ap-milestone-kicker">Loan approved</span>
+    <span class="ap-milestone-amt">
+      {% if status.is_loan_approved %}{{ status.amount_approved|default:status.amount_requested }}
+      {% elif status.is_credit_declined %}Not approved
+      {% else %}Pending{% endif %}
+    </span>
+    <span class="ap-milestone-state">
+      {% if status.is_loan_approved and status.approval_date %}Credit decision · {{ status.approval_date }}
+      {% elif status.is_loan_approved %}Credit decision · approved
+      {% elif status.is_credit_declined %}Credit declined
+      {% else %}Awaiting credit decision{% endif %}
+    </span>
+  </div>
+</div>
+{% endif %}
+
 <div class="ap-card">
   <div class="ap-status-head">
     <div>
       <h1 class="ap-hero-title" style="margin-bottom:0.35rem;">{{ status.headline }}</h1>
       <p class="ap-sub" style="margin-bottom:0;">{{ status.summary }}</p>
     </div>
-    <span class="ap-status-chip tone-{{ status.tone }}">{{ status.pipeline_label }}</span>
+    <span class="ap-status-chip tone-{{ status.tone }} {% if status.is_loan_approved %}ap-chip-approved{% endif %}">{{ status.pipeline_label }}</span>
   </div>
 
   {% if status.queue_id %}
@@ -25,7 +53,7 @@
   <h2 style="margin:1.35rem 0 0.35rem;font-size:1rem;">Progress</h2>
   <ol class="ap-timeline">
     {% for stage in status.stages %}
-    <li class="is-{{ stage.state }}">
+    <li class="is-{{ stage.state }} {% if stage.key == 'decision' and status.is_loan_approved %}is-approved-marker{% endif %}">
       <div class="ap-tl-label">{{ stage.label }}</div>
       {% if stage.detail %}<div class="ap-tl-detail">{{ stage.detail }}</div>{% endif %}
     </li>
@@ -37,7 +65,7 @@
   <h2 style="margin:1.35rem 0 0.35rem;font-size:1rem;">Details</h2>
   <ul class="ap-facts">
     {% for fact in status.facts %}
-    <li>
+    <li {% if fact.label == 'Loan requested' %}class="ap-fact-request"{% elif fact.label == 'Loan approved' %}class="ap-fact-approved"{% endif %}>
       <span class="k">{{ fact.label }}</span>
       <span class="v">{{ fact.value }}</span>
     </li>
@@ -48,6 +76,12 @@
   <div class="ap-btn-row">
     {% if status.can_continue_draft and continue_url %}
     <a class="ap-btn ap-btn-primary" href="{{ continue_url }}">Continue application</a>
+    {% endif %}
+    {% if status.has_repayment_schedule %}
+    <a class="ap-btn {% if status.schedule_ready %}ap-btn-primary{% else %}ap-btn-ghost{% endif %}"
+       href="{% url 'applicant_portal:apply_schedule' application.public_id %}">
+      {% if status.schedule_ready %}Repayment schedule{% else %}Repayment schedule{% endif %}
+    </a>
     {% endif %}
     <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:home' %}">All applications</a>
     {% if status.is_submitted %}

@@ -16,6 +16,12 @@ Borrower self-service is covered in the [Customer manual](03_customers.md). Plat
 3. Complete MFA if prompted (`/hub/mfa/verify/`).
 4. You land on the Credit Intelligence / hub home for your role.
 
+> **Screenshot (H-01):** Staff login — enter username and password for AI-powered Credit Intelligence.
+>
+> **Screenshot (H-04):** Hub home — role-scoped KPIs and shortcuts after sign-in.
+>
+> **Screenshot (H-05):** Header — Notifications, Help, and Logout sit beside your name and role.
+
 **Forgot password:** `/hub/password-reset/` (email link).  
 **Change password while logged in:** `/hub/password-change/`.  
 **MFA setup:** `/hub/mfa/setup/`.
@@ -159,6 +165,10 @@ Typical path: loan sent for collateral → assign engineer → field work → su
 4. Save — note the **Queue ID**.
 5. Assign a loan officer if you are a manager.
 
+> **Screenshot (H-08):** Create loan request — capture customer number, product, amount, and branch.
+>
+> **Screenshot (H-07):** Loan requests — open a Queue ID to continue documents, appraisal, or collateral.
+
 ### 4.2 Online loan intake
 
 1. Open **Online loan intake** (also under Settings for admins).
@@ -247,5 +257,6 @@ Floating chat and `/hub/agent/` help staff draft and look up information.
 ## 9. Related manuals
 
 - [Admin user manual](01_admin.md)  
-- [Customer user manual](03_customers.md)  
-- [Manual index](README.md)
+- [Customer user manual](03_customers.md) · [Amharic](03_customers_am.md)  
+- [Market partners](04_market_partners.md)  
+- [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)

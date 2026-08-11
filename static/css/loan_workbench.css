@@ -15,6 +15,122 @@
 .lw-info { background: #e7f1ff; color: #004085; }
 .lw-muted { background: #eceff1; color: #455a64; }
 .lw-strong { background: #e8f4ec; color: #064420; }
+.lw-request {
+  background: #fff8e6;
+  color: #7a5a00;
+  border: 1px solid #e6cf7a;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+.lw-approved {
+  background: #0a6b2e;
+  color: #fff;
+  border: 1px solid #064420;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  box-shadow: 0 0 0 2px rgba(10, 107, 46, 0.2);
+}
+
+/* Requested vs approved amount cards — critical staff signals */
+.lw-milestones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin: 0.75rem 0 0.25rem;
+}
+@media (max-width: 560px) {
+  .lw-milestones { grid-template-columns: 1fr; }
+}
+.lw-milestone {
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #c9dbd1;
+  background: #f7faf8;
+}
+.lw-milestone-request {
+  border-color: #e6cf7a;
+  background: linear-gradient(135deg, #fffbeb, #fff8e6);
+}
+.lw-milestone-approved {
+  border-color: #0a6b2e;
+  background: linear-gradient(135deg, #e8f8ee, #d4edda);
+  box-shadow: 0 0 0 2px rgba(10, 107, 46, 0.12);
+}
+.lw-milestone-pending {
+  border-style: dashed;
+  opacity: 0.92;
+}
+.lw-milestone-declined {
+  border-color: #e0a0a0;
+  background: #fdf0f0;
+}
+.lw-milestone-kicker {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 0.2rem;
+}
+.lw-milestone-approved .lw-milestone-kicker { color: #064420; }
+.lw-milestone-request .lw-milestone-kicker { color: #7a5a00; }
+.lw-milestone-amt {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0e2418;
+  line-height: 1.2;
+}
+.lw-milestone-amt small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.lw-milestone-meta {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.lw-cbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: #455a64;
+  max-width: 22rem;
+}
+.lw-cbs span {
+  background: #f0f4f2;
+  border: 1px solid #d5e0da;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  line-height: 1.35;
+}
+.lw-cbs em {
+  font-style: normal;
+  font-weight: 700;
+  color: #5a6b62;
+  margin-right: 0.2rem;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+}
+.lw-cbs-addr {
+  flex: 1 1 100%;
+  max-width: 100%;
+  white-space: normal;
+}
+.lw-amt-req { font-weight: 700; color: #7a5a00; }
+.lw-amt-ok { font-weight: 800; color: #0a6b2e; }
+.lw-amt-pending { color: #90a0a8; }
 
 .lw-strip {
   position: sticky;

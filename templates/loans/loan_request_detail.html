@@ -16,8 +16,8 @@
   <p class="lw-identity-sub">
     <strong>{{ loan_request.applicant_name }}</strong>
     · {{ loan_request.branch.name }}
-    · Requested <strong>{{ loan_request.amount_requested|floatformat:2 }}</strong>
   </p>
+  {% include "loans/_loan_amount_milestones.html" %}
 
   <div class="lw-strip">
     <div class="lw-row">
@@ -35,7 +35,7 @@
             No loan officer assigned
           {% endif %}
           {% if appraisal and appraisal.amount_approved %}
-            · Recommended {{ appraisal.amount_approved|floatformat:2 }}
+            · Appraisal recommended {{ appraisal.amount_approved|floatformat:2 }}
           {% endif %}
         </small>
       </div>
@@ -66,7 +66,7 @@
     <h3>Applicant &amp; request</h3>
     <div class="lw-facts">
       <span class="lbl">Phone</span><span>{{ loan_request.phone_number|default:"—" }}</span>
-      <span class="lbl">Email</span><span>{{ loan_request.email|default:"—" }}</span>
+      <span class="lbl">Customer no.</span><span>{{ loan_request.customer_number|default:"—" }}</span>
       <span class="lbl">Category</span><span>{{ loan_request.category.name }}</span>
       <span class="lbl">Collateral type</span><span>{{ loan_request.collateral.name }}</span>
       <span class="lbl">Reason</span><span>{{ loan_request.reason|default:"—" }}</span>
@@ -82,6 +82,26 @@
       <span class="lbl">Reviewed</span><span>{{ loan_request.date_reviewed|date:"Y-m-d H:i"|default:"—" }}</span>
       <span class="lbl">Customer history</span><span>{{ loan_request.customer_history|default:"—" }}</span>
     </div>
+    {% with h=loan_request.cbs_highlights %}
+    {% if h %}
+    <h3 style="margin-top:1.15rem;">Core banking (party API)</h3>
+    <div class="lw-facts">
+      {% if h.customer_number %}<span class="lbl">Customer no.</span><span>{{ h.customer_number }}</span>{% endif %}
+      {% if h.phone_number %}<span class="lbl">Phone on file</span><span>{{ h.phone_number }}</span>{% endif %}
+      {% if h.status %}<span class="lbl">Customer type</span><span>{{ h.status }}</span>{% endif %}
+      {% if h.customer_status %}<span class="lbl">Rating</span><span>{{ h.customer_status }}</span>{% endif %}
+      {% if h.gender %}<span class="lbl">Gender</span><span>{{ h.gender }}</span>{% endif %}
+      {% if h.date_of_birth %}<span class="lbl">Date of birth</span><span>{{ h.date_of_birth }}</span>{% endif %}
+      {% if h.age %}<span class="lbl">Age</span><span>{{ h.age }}</span>{% endif %}
+      {% if h.marital_status %}<span class="lbl">Marital status</span><span>{{ h.marital_status }}</span>{% endif %}
+      {% if h.city %}<span class="lbl">Region / town</span><span>{{ h.city }}</span>{% endif %}
+      {% if h.home_address %}<span class="lbl">Address</span><span>{{ h.home_address }}</span>{% endif %}
+      {% if h.branch_code %}<span class="lbl">Account officer</span><span>{{ h.branch_code }}</span>{% endif %}
+      {% if h.mnemonic %}<span class="lbl">Mnemonic</span><span>{{ h.mnemonic }}</span>{% endif %}
+      {% if h.title %}<span class="lbl">Title</span><span>{{ h.title }}</span>{% endif %}
+    </div>
+    {% endif %}
+    {% endwith %}
   </div>
 
   <div class="lw-panel">

@@ -348,6 +348,9 @@ decsi_loan/
 
 ## Getting started
 
+> **DECSI IT staff:** for minimum server requirements, Docker install, smoke tests, backup, and security baseline, use  
+> [`docs/user_manual/06_installation_it.md`](docs/user_manual/06_installation_it.md) (also under Hub → **Help**).
+
 ### Prerequisites
 
 - Docker Compose, **or** Python 3.9+, PostgreSQL 16  
@@ -532,10 +535,17 @@ docker compose exec web python manage.py test
 
 | Path | Description |
 |------|-------------|
-| `docs/user_manual/README.md` | User manuals index (admin, staff, customers) |
-| `docs/user_manual/01_admin.md` | Admin / superuser configuration guide |
-| `docs/user_manual/02_staff.md` | Staff hub operations by role |
-| `docs/user_manual/03_customers.md` | Digital Apply customer guide |
+| `docs/user_manual/README.md` | User manuals index (admin, staff, customers, market) |
+| `docs/user_manual/01_admin.md` | Admin guide (English) |
+| `docs/user_manual/01_admin_am.md` | Admin guide (Amharic) |
+| `docs/user_manual/02_staff.md` | Staff hub guide (English) |
+| `docs/user_manual/02_staff_am.md` | Staff hub guide (Amharic) |
+| `docs/user_manual/03_customers.md` | Digital Apply (English) |
+| `docs/user_manual/03_customers_am.md` | Digital Apply (Amharic) |
+| `docs/user_manual/04_market_partners.md` | Seqela Market guide |
+| `docs/user_manual/05_screenshot_captions.md` | Screenshot ID + caption catalog |
+| `docs/user_manual/06_installation_it.md` | IT installation & minimum requirements |
+| `docs/user_manual/DECSI_Loan_Hub_User_Manuals.html` | Printable combined manuals |
 | `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md` | Excel sheets ↔ appraisal feature map |
 | `presentation/LOAN_APPRAISAL_EXCEL_DATA.md` | Field-level Excel reference |
 | `presentation/SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md` | Qualitative + cashflow plan |

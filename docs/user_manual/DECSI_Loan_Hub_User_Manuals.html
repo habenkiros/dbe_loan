@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DECSI Loan Hub — User Manuals</title>
+<style>
+
+  @page { size: A4; margin: 16mm 14mm; }
+  :root {
+    --ink: #1a1a1a;
+    --brand: #0b3d5c;
+    --brand-soft: #1f4e6e;
+    --line: #c5d4de;
+    --wash: #e8eef3;
+    --zebra: #f7fafc;
+    --code-bg: #f0f3f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Noto Sans Ethiopic", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+    color: var(--ink);
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+  .cover {
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, #f3f7fa 0%, #fff 55%);
+    padding: 28px 24px;
+    margin-bottom: 1.5rem;
+  }
+  .cover .eyebrow {
+    color: var(--brand-soft);
+    font-size: 9pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 0.4rem;
+  }
+  .cover h1 { border: none; margin: 0 0 0.4rem; font-size: 20pt; }
+  .cover p { margin: 0.35rem 0; color: #334; }
+  .toc { margin: 1rem 0 2rem; }
+  .toc a { display: block; padding: 0.2rem 0; }
+  .chapter { page-break-before: always; margin-top: 1.5rem; }
+  .chapter:first-of-type { page-break-before: auto; }
+  h1 {
+    font-size: 16pt; border-bottom: 2px solid var(--brand); padding-bottom: 6px;
+    color: var(--brand); page-break-after: avoid;
+  }
+  h2 {
+    font-size: 12.5pt; color: var(--brand); margin-top: 1.2em;
+    border-bottom: 1px solid var(--line); padding-bottom: 3px; page-break-after: avoid;
+  }
+  h3 { font-size: 11pt; color: var(--brand-soft); margin-top: 1em; page-break-after: avoid; }
+  p { margin: 0.4em 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 0.6em 0 0.9em;
+    font-size: 9pt; page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #b8c7d1; padding: 4px 6px; vertical-align: top; text-align: left;
+  }
+  th { background: var(--wash); color: var(--brand); font-weight: 600; }
+  tr:nth-child(even) td { background: var(--zebra); }
+  code {
+    font-family: Consolas, Menlo, monospace; font-size: 8.5pt;
+    background: var(--code-bg); padding: 1px 3px;
+  }
+  pre {
+    background: #f4f6f8; border: 1px solid #d5dde3; padding: 8px 10px;
+    font-size: 8pt; line-height: 1.35; page-break-inside: avoid; white-space: pre-wrap;
+  }
+  pre code { background: none; padding: 0; }
+  ul, ol { margin: 0.35em 0 0.6em 1.15em; padding: 0; }
+  li { margin: 0.15em 0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 1em 0; }
+  a { color: var(--brand); text-decoration: none; }
+  blockquote.manual-shot {
+    margin: 0.7em 0; padding: 7px 10px; border-left: 3px solid var(--brand); background: #f3f7fa;
+  }
+  .nav-print {
+    position: sticky; top: 0; background: rgba(255,255,255,0.96);
+    border-bottom: 1px solid var(--line); padding: 8px 0; margin: -8px 0 16px; z-index: 2; font-size: 9pt;
+  }
+  .nav-print a { margin-right: 0.85rem; }
+  @media print {
+    body { padding: 0; max-width: none; }
+    .nav-print { display: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+</style>
+</head>
+<body>
+<nav class="nav-print" aria-label="Chapters">
+  <a href="#ch-0">Overview</a> <a href="#ch-1">Admin</a> <a href="#ch-2">Admin (Amharic)</a> <a href="#ch-3">Staff</a> <a href="#ch-4">Staff (Amharic)</a> <a href="#ch-5">Customers</a> <a href="#ch-6">Customers (Amharic)</a> <a href="#ch-7">Market partners</a> <a href="#ch-8">Screenshot captions</a> <a href="#ch-9">IT installation</a>
+</nav>
+<header class="cover">
+  <p class="eyebrow">DECSI · Seqela Technologies</p>
+  <h1>Loan Hub User Manuals</h1>
+  <p>Admin · Staff · Customers · Market · Screenshot captions (EN &amp; AM where available)</p>
+  <p>Print this page (Ctrl/Cmd+P) to PDF. Screen navigation links are hidden when printing.</p>
+</header>
+<nav class="toc" aria-label="Table of contents">
+  <h2>Contents</h2>
+  <div><a href="#ch-0">Overview</a></div><div><a href="#ch-1">Admin</a></div><div><a href="#ch-2">Admin (Amharic)</a></div><div><a href="#ch-3">Staff</a></div><div><a href="#ch-4">Staff (Amharic)</a></div><div><a href="#ch-5">Customers</a></div><div><a href="#ch-6">Customers (Amharic)</a></div><div><a href="#ch-7">Market partners</a></div><div><a href="#ch-8">Screenshot captions</a></div><div><a href="#ch-9">IT installation</a></div>
+</nav>
+<section class="chapter" id="ch-0">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 1 · Overview</p>
+<h1>DECSI Loan Hub — User Manuals</h1>
+<p>Practical guides for <strong>DECSI Loan Hub</strong> (<em>AI-powered Credit Intelligence</em>), <strong>Digital Apply</strong>, and <strong>Seqela Market</strong>.</p>
+<table>
+<thead><tr><th>Manual</th><th>Who it is for</th><th>In-app Help</th></tr></thead>
+<tbody>
+<tr><td><a href="01_admin.md">Admin</a> · <a href="01_admin_am.md">አማርኛ</a></td><td>System administrators</td><td>Hub → <strong>Help</strong> (<code>/hub/help/</code>)</td></tr>
+<tr><td><a href="02_staff.md">Staff</a> · <a href="02_staff_am.md">አማርኛ</a></td><td>Branch / HO / eng / finance / committee</td><td>Hub → <strong>Help</strong></td></tr>
+<tr><td><a href="03_customers.md">Customers</a> · <a href="03_customers_am.md">አማርኛ</a></td><td>Borrowers applying online</td><td>Digital Apply → <strong>Help</strong> (<code>/help/</code>)</td></tr>
+<tr><td><a href="04_market_partners.md">Market partners</a></td><td>Dealers &amp; price reporters</td><td>Market → <strong>Help</strong> (<code>/market-portal/help/</code>)</td></tr>
+<tr><td><a href="05_screenshot_captions.md">Screenshot captions</a></td><td>Trainers / doc authors</td><td>Hub Help (staff)</td></tr>
+<tr><td><a href="06_installation_it.md">IT installation</a></td><td>DECSI IT — install &amp; minimum requirements</td><td>Hub → <strong>Help</strong></td></tr>
+</tbody>
+</table>
+<p><strong>Printable pack:</strong> <a href="DECSI_Loan_Hub_User_Manuals.html">DECSI_Loan_Hub_User_Manuals.html</a> → browser <strong>Print → Save as PDF</strong>.</p>
+<pre class="lang-bash"><code>python3 docs/user_manual/build_html.py</code></pre>
+<hr>
+<h2>Which portal am I on?</h2>
+<table>
+<thead><tr><th>Audience</th><th>URL</th><th>Sign-in</th></tr></thead>
+<tbody>
+<tr><td>Staff &amp; admin</td><td><code>/hub/login/</code></td><td>Staff username &amp; password (+ MFA)</td></tr>
+<tr><td>Customers</td><td><code>/</code></td><td>Mobile or customer number &amp; password</td></tr>
+<tr><td>Market reporters</td><td><code>/market-portal/</code></td><td>Portal account or guest quote</td></tr>
+</tbody>
+</table>
+<p>Legacy: <code>/staff/</code> → hub; <code>/applicant-portal/</code> → Digital Apply.</p>
+<hr>
+<h2>Product at a glance</h2>
+<pre class="lang-text"><code>Customer (Digital Apply)          Staff hub                     Admin
+Register → Apply → Fee            Intake → Docs → Appraisal     Users &amp; geography
+→ Submit → Track Queue ID         → Collateral → Committee      Document packs
+                                  → Post-approval → Disburse    Digital Apply settings
+
+Market (Seqela Market): Area → Product &amp; price → price bands</code></pre>
+<hr>
+<h2>Glossary (shared)</h2>
+<table>
+<thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Queue ID</strong></td><td>Unique loan reference (<code>HK-…</code>)</td></tr>
+<tr><td><strong>Loan category / product</strong></td><td>Loan type (docs + appraisal mode)</td></tr>
+<tr><td><strong>Document pack</strong></td><td>Required/optional docs for a product</td></tr>
+<tr><td><strong>Digital Apply</strong></td><td>Public online application</td></tr>
+<tr><td><strong>Processing fee</strong></td><td>Application fee (ETB)</td></tr>
+<tr><td><strong>Cooperative queue</strong></td><td>Branch intake gate</td></tr>
+<tr><td><strong>Approval queue</strong></td><td>Committee voting</td></tr>
+<tr><td><strong>Post-approval</strong></td><td>Conditions → schedule → ready</td></tr>
+<tr><td><strong>Agentic Assist</strong></td><td>Staff AI helper (cannot approve/disburse)</td></tr>
+<tr><td><strong>Seqela Market</strong></td><td>External price quotes</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>Support</h2>
+<p>Lockouts / MFA / outages → DECSI IT. Customers → branch with Queue ID. Market actors → DECSI liaison if suspended.</p>
+</section><section class="chapter" id="ch-1">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 2 · Admin</p>
+<h1>Admin User Manual</h1>
+<p><strong>Audience:</strong> Super Administrators and System Administrators who configure DECSI Loan Hub.  </p>
+<p><strong>Entry:</strong> Staff hub → <code>/hub/login/</code> (Django Admin also available at <code>/admin/</code> for data maintenance).</p>
+<p>This guide covers day-to-day <strong>configuration</strong> and <strong>oversight</strong>. Operational lending steps are in the <a href="02_staff.md">Staff manual</a>. Customer-facing steps are in the <a href="03_customers.md">Customer manual</a>.</p>
+<hr>
+<h2>1. Your role</h2>
+<table>
+<thead><tr><th>Role</th><th>What you typically do</th></tr></thead>
+<tbody>
+<tr><td><strong>Super Administrator</strong> (<code>superadmin</code>) / Django <strong>superuser</strong></td><td>Full <strong>Settings</strong> menu: geography, users, loan products, document packs, Digital Apply, committees, collateral policy, estimation mode</td></tr>
+<tr><td><strong>System Administrator</strong> (<code>admin</code>)</td><td>Oversight, checkup views, unlock users (with IT), security audit when permitted</td></tr>
+</tbody>
+</table>
+<p>Menus are role-scoped. If you do not see <strong>Settings</strong>, ask for a superuser account or elevated role.</p>
+<hr>
+<h2>2. Sign in and security</h2>
+<h3>2.1 Sign in</h3>
+<ol>
+<li>Open <code>/hub/login/</code>.</li>
+<li>Enter your <strong>username</strong> and <strong>password</strong>.</li>
+<li>If MFA is enabled for your account (or required by policy), open your authenticator app and enter the one-time code at <code>/hub/mfa/verify/</code>.</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><strong>Screenshot (H-02):</strong> MFA verify — enter the one-time code from your authenticator app.</blockquote>
+<h3>2.2 First-time MFA enrollment</h3>
+<ol>
+<li>After password login (or from security settings), open <strong>MFA setup</strong> (<code>/hub/mfa/setup/</code>).</li>
+<li>Scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, etc.).</li>
+<li>Confirm with a code from the app.</li>
+<li>Store recovery practices per DECSI IT policy.</li>
+</ol>
+<h3>2.3 Password</h3>
+<table>
+<thead><tr><th>Need</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>Forgot password</td><td><code>/hub/password-reset/</code> (email token — SMTP must be configured)</td></tr>
+<tr><td>Change while logged in</td><td><code>/hub/password-change/</code></td></tr>
+</tbody>
+</table>
+<h3>2.4 Lockouts</h3>
+<p>Repeated failed logins can lock an account. Unlock from the user edit screen or the unlock action (allowed for admin / VP IT / superuser). Review related events in the <strong>security audit</strong> log.</p>
+<h3>2.5 Security audit</h3>
+<p>Roles such as admin, auditor, risk &amp; compliance, VP IT, and superuser can open:</p>
+<ul>
+<li><strong>Audit log:</strong> <code>/hub/security/audit/</code></li>
+<li><strong>Export:</strong> <code>/hub/security/audit/export/</code> (CSV / Excel)</li>
+</ul>
+<p>Use this for investigations (failed logins, MFA events, unlocks).</p>
+<hr>
+<h2>3. Hub Settings (configuration checklist)</h2>
+<p>Open the <strong>Settings</strong> dropdown in the hub navigation (superuser). Configure in roughly this order for a new branch or institution go-live:</p>
+<blockquote class="manual-shot"><strong>Screenshot (H-19):</strong> Digital Apply settings — open/close portal, fee, and security controls.<br><br><strong>Screenshot (H-20):</strong> Document pack — required and optional docs for one loan category.</blockquote>
+<pre class="lang-text"><code>1. Districts → Branches → Departments (if HO)
+2. Area: Regions → Zones → Cities (Woredas)
+3. Users (assign role, branch/district, optional department)
+4. Loan categories (products)
+5. Document types (global catalog)
+6. Document pack per category
+7. Approval committees
+8. Collateral types, policy, estimation config
+9. Digital Apply (open/close, fee, security)
+10. Spot-check Online loan intake</code></pre>
+<h3>3.1 Geography and organisation</h3>
+<table>
+<thead><tr><th>Setting</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><strong>Districts / Branches</strong></td><td>Scope who sees which loans and reports</td></tr>
+<tr><td><strong>Departments</strong></td><td>Head-office Cooperative, Finance, Credit, Management, Board</td></tr>
+<tr><td><strong>Regions / Zones / Cities (Woredas)</strong></td><td>Location hierarchy used for collateral pricing and market area</td></tr>
+</tbody>
+</table>
+<p>Bulk CSV upload options exist for zones, branches, categories, users, and related data where enabled in the UI.</p>
+<h3>3.2 Users</h3>
+<ol>
+<li>Open <strong>Users</strong> from Settings (or manage-users screens).</li>
+<li>Create or edit a staff user.</li>
+<li>Set:</li>
+</ol>
+<p>   - <strong>Role</strong> (branch manager, loan officer, finance manager, etc.)</p>
+<p>   - <strong>Branch</strong> and/or <strong>district</strong></p>
+<p>   - <strong>Department</strong> for HO users when needed</p>
+<ol>
+<li>Communicate temporary password and require change on first login if that is your policy.</li>
+<li>Encourage or enforce MFA enrollment.</li>
+</ol>
+<p>Do <strong>not</strong> create borrower accounts here — customers register in Digital Apply as applicant accounts.</p>
+<h3>3.3 Loan categories (products)</h3>
+<p><strong>Settings → Loan categories</strong></p>
+<ul>
+<li>Create/edit products customers and staff select at intake.</li>
+<li>Each category drives <strong>document pack</strong> and <strong>appraisal mode</strong> (MSME vs corporate, as configured).</li>
+<li>Keep names clear for both staff and Digital Apply applicants.</li>
+</ul>
+<h3>3.4 Document types and packs</h3>
+<p><strong>Two layers:</strong></p>
+<ol>
+<li><strong>Document types &amp; authentication</strong> — global catalog of document kinds, OCR/auth rules, reference samples.</li>
+<li><strong>Document pack per category</strong> — Settings → open a category → <strong>Document pack</strong>  </li>
+</ol>
+<p>   Mark each type <strong>required</strong> or <strong>optional</strong> and set display order.</p>
+<p>Digital Apply and staff document screens both use the pack for the selected product. After changing packs, test one online draft and one staff loan.</p>
+<h3>3.5 Approval committees</h3>
+<p><strong>Settings → Approval committees</strong></p>
+<ul>
+<li>Define who votes at each level.</li>
+<li>Align members with amount thresholds and tie-breaker rules used by your credit policy.</li>
+<li>Credit Department Head and admins typically maintain this.</li>
+</ul>
+<h3>3.6 Collateral configuration</h3>
+<table>
+<thead><tr><th>Screen</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><strong>Collateral types</strong></td><td>Types available on requests</td></tr>
+<tr><td><strong>Collateral field-work policy</strong></td><td>Field visit / evidence rules</td></tr>
+<tr><td><strong>Estimation config</strong> <em>(superadmin)</em></td><td>Whether loan officers, engineering, or both value collateral</td></tr>
+<tr><td><strong>Unlock queue</strong></td><td>Approve unlocks when a locked valuation must be corrected</td></tr>
+<tr><td><strong>Catalog / unit prices</strong></td><td>Maintained mainly by engineering roles; admins oversee consistency</td></tr>
+</tbody>
+</table>
+<h3>3.7 Digital Apply</h3>
+<p><strong>Settings → Digital apply</strong> (superuser)</p>
+<p>Typical controls:</p>
+<table>
+<thead><tr><th>Control</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>Portal open / closed</td><td>When closed, applicants see “Digital apply is temporarily closed”</td></tr>
+<tr><td>Processing fee (ETB)</td><td>Amount charged before submit</td></tr>
+<tr><td>Password / lockout / rate limits</td><td>Applicant account security</td></tr>
+<tr><td>Idle session minutes</td><td>Applicant session timeout</td></tr>
+<tr><td>Terms text</td><td>Shown at registration / apply</td></tr>
+<tr><td>Require CBS customer lookup</td><td>When enabled, registration validates customer number against core banking</td></tr>
+<tr><td>Chapa status</td><td>Live vs mock/demo payment mode (environment-driven; shown for operators)</td></tr>
+</tbody>
+</table>
+<p>After go-live, use <strong>Online loan intake</strong> to confirm applications appear for branch staff.</p>
+<hr>
+<h2>4. Day-to-day admin tasks</h2>
+<h3>4.1 Open or close Digital Apply</h3>
+<ol>
+<li>Settings → <strong>Digital apply</strong>.</li>
+<li>Toggle portal availability.</li>
+<li>Notify branches before closing (applicants cannot finish new submissions).</li>
+</ol>
+<h3>4.2 Adjust processing fee</h3>
+<ol>
+<li>Settings → <strong>Digital apply</strong>.</li>
+<li>Update fee in ETB.</li>
+<li>Confirm a test payment in mock mode (if available) before relying on live Chapa.</li>
+</ol>
+<h3>4.3 Add a new loan product</h3>
+<ol>
+<li>Create <strong>Loan category</strong>.</li>
+<li>Attach <strong>Document pack</strong> (required/optional docs).</li>
+<li>Ensure committees and appraisal expectations cover the product.</li>
+<li>If Digital Apply should offer it, confirm the category is active/selectable online.</li>
+</ol>
+<h3>4.4 Onboard a branch</h3>
+<ol>
+<li>Create district (if new) → branch.</li>
+<li>Create users (BM, cooperative manager, LOs, accountant as needed).</li>
+<li>Assign committee membership if the branch participates.</li>
+<li>Verify unit prices / woredas for that geography if collateral is used.</li>
+</ol>
+<h3>4.5 Investigate a locked user</h3>
+<ol>
+<li>Open the user record.</li>
+<li>Confirm lockout reason via <strong>Security audit</strong>.</li>
+<li>Unlock if policy allows.</li>
+<li>Advise password reset and MFA check.</li>
+</ol>
+<h3>4.6 Monitor online applications</h3>
+<p><strong>Settings → Online loan intake</strong> (or hub online intake screen)</p>
+<ul>
+<li>See drafts and submitted Digital Apply loans.</li>
+<li>Coordinate with branch managers if intake is stuck.</li>
+</ul>
+<hr>
+<h2>5. Django Admin (<code>/admin/</code>)</h2>
+<p>Use Django Admin for advanced data maintenance (models, flags, one-off corrections). Prefer hub <strong>Settings</strong> UIs for routine configuration so audits and validation stay consistent.</p>
+<p>Common admin areas:</p>
+<ul>
+<li>Loan requests, categories, document requirements  </li>
+<li>Committees and votes  </li>
+<li>Applicant portal settings, accounts, online applications  </li>
+<li>Security / auth-related records as registered  </li>
+</ul>
+<p>Treat Admin changes as privileged: log why you changed a record.</p>
+<hr>
+<h2>6. Environment and payment notes (for IT admins)</h2>
+<p>These are usually set in deployment (<code>.env</code>), not only in the UI:</p>
+<table>
+<thead><tr><th>Topic</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>MFA required</td><td>Forces staff MFA when policy demands it</td></tr>
+<tr><td>Login lockout</td><td>Max failed attempts and lock duration</td></tr>
+<tr><td>Session idle</td><td>Staff idle timeout (if middleware enabled in deployment)</td></tr>
+<tr><td>Email (SMTP)</td><td>Required for staff password reset</td></tr>
+<tr><td>Chapa keys</td><td>Live vs mock Digital Apply payments</td></tr>
+<tr><td>Applicant SMS</td><td>OTP for customer password reset</td></tr>
+</tbody>
+</table>
+<p>Coordinate with DevOps before changing production secrets.</p>
+<hr>
+<h2>7. Admin quick reference</h2>
+<table>
+<thead><tr><th>Task</th><th>Navigation</th></tr></thead>
+<tbody>
+<tr><td>Manage products</td><td>Settings → Loan categories</td></tr>
+<tr><td>Document catalog</td><td>Settings → Document types</td></tr>
+<tr><td>Product checklist</td><td>Category → Document pack</td></tr>
+<tr><td>Committees</td><td>Settings → Approval committees</td></tr>
+<tr><td>Portal fee / open</td><td>Settings → Digital apply</td></tr>
+<tr><td>Online apps</td><td>Settings → Online loan intake</td></tr>
+<tr><td>Collateral rules</td><td>Settings → Collateral policy / Estimation config</td></tr>
+<tr><td>Audit</td><td><code>/hub/security/audit/</code></td></tr>
+<tr><td>Unlock user</td><td>Edit user → unlock</td></tr>
+<tr><td>Low-level data</td><td><code>/admin/</code></td></tr>
+</tbody>
+</table>
+<hr>
+<h2>8. Related manuals</h2>
+<ul>
+<li><a href="02_staff.md">Staff user manual</a> · <a href="02_staff_am.md">አማርኛ</a>  </li>
+<li><a href="03_customers.md">Customer user manual</a> · <a href="03_customers_am.md">አማርኛ</a>  </li>
+<li><a href="04_market_partners.md">Market partners</a>  </li>
+<li><a href="05_screenshot_captions.md">Screenshot captions</a>  </li>
+<li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a>  </li>
+<li>In-app: <code>/hub/help/</code></li>
+</ul>
+</section><section class="chapter" id="ch-2">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 3 · Admin (Amharic)</p>
+<h1>የአስተዳዳሪ መመሪያ</h1>
+<p><strong>ለማን ነው:</strong> የDECSI Loan Hubን የሚያዋቅሩ ሱፐር አስተዳዳሪዎች እና የስርዓት አስተዳዳሪዎች።  </p>
+<p><strong>መግቢያ:</strong> የሰራተኛ ሃብ <code>/hub/login/</code> (Django Admin በ <code>/admin/</code>)።  </p>
+<p><strong>እንግሊዘኛ:</strong> <a href="01_admin.md">01_admin.md</a></p>
+<p>ይህ መመሪያ <strong>ውቅረት</strong> እና <strong>ክትትል</strong> ላይ ያተኩራል። የዕለት ተዕለት የብድር ስራ በ<a href="02_staff_am.md">የሰራተኛ መመሪያ</a> ነው።</p>
+<hr>
+<h2>1. ሚናዎ</h2>
+<table>
+<thead><tr><th>ሚና</th><th>የተለመደ ስራ</th></tr></thead>
+<tbody>
+<tr><td><strong>ሱፐር አስተዳዳሪ</strong> / Django <strong>superuser</strong></td><td>ሙሉ <strong>Settings</strong>: ጂኦግራፊ፣ ተጠቃሚዎች፣ የብድር ምርቶች፣ የሰነድ ጥቅል፣ ዲጂታል ማመልከቻ፣ ኮሚቴዎች፣ የዋስትና ፖሊሲ</td></tr>
+<tr><td><strong>የስርዓት አስተዳዳሪ</strong> (<code>admin</code>)</td><td>ክትትል፣ ተጠቃሚ መክፈት፣ የደህንነት ኦዲት (በፍቃድ)</td></tr>
+</tbody>
+</table>
+<p><strong>Settings</strong> ካላዩ ከIT ከፍ ያለ መብት ይጠይቁ።</p>
+<hr>
+<h2>2. መግባት እና ደህንነት</h2>
+<h3>2.1 መግባት</h3>
+<ol>
+<li><code>/hub/login/</code> ይክፈቱ።  </li>
+<li>የተጠቃሚ ስምና የይለፍ ቃል ያስገቡ።  </li>
+<li>MFA ካለ በ <code>/hub/mfa/verify/</code> የአንድ ጊዜ ኮድ ያስገቡ።</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> የሰራተኛ መግቢያ — የተጠቃሚ ስም እና የይለፍ ቃል።  <br><strong>Screenshot (H-02):</strong> MFA ማረጋገጫ — ከአፕሊኬሽኑ የሚመጣ ኮድ።</blockquote>
+<h3>2.2 MFA ማስጀመር</h3>
+<ol>
+<li><code>/hub/mfa/setup/</code> ይክፈቱ።  </li>
+<li>QR ኮዱን በauthenticator ያንብቡ።  </li>
+<li>በኮድ ያረጋግጡ።</li>
+</ol>
+<h3>2.3 የይለፍ ቃል</h3>
+<table>
+<thead><tr><th>ፍላጎት</th><th>ቦታ</th></tr></thead>
+<tbody>
+<tr><td>ረሳሁ</td><td><code>/hub/password-reset/</code> (ኢሜይል — SMTP ያስፈልጋል)</td></tr>
+<tr><td>መቀየር</td><td><code>/hub/password-change/</code></td></tr>
+</tbody>
+</table>
+<h3>2.4 መቆለፍ እና ኦዲት</h3>
+<p>ተደጋጋሚ ስህተት መግቢያ መለያውን ሊቆልፍ ይችላል — ከተጠቃሚ ማረሚያ ገጽ ይክፈቱ።  </p>
+<p><strong>የደህንነት ኦዲት:</strong> <code>/hub/security/audit/</code> (+ export)።</p>
+<hr>
+<h2>3. Hub Settings (የውቅረት ቅደም ተከተል)</h2>
+<pre class="lang-text"><code>1. ወረዳዎች → ቅርንጫፎች → ዲፓርትመንቶች (HO)
+2. ክልል → ዞን → ከተማ/ወረዳ
+3. ተጠቃሚዎች (ሚና፣ ቅርንጫፍ/ወረዳ)
+4. የብድር ምድቦች (ምርቶች)
+5. የሰነድ አይነቶች
+6. በምድብ የሰነድ ጥቅል
+7. የፈቃድ ኮሚቴዎች
+8. የዋስትና አይነቶች፣ ፖሊሲ፣ ግምት ውቅረት
+9. ዲጂታል ማመልከቻ (መክፈት/መዝጋት፣ ክፍያ)
+10. የኦንላይን ማመልከቻ ክትትል</code></pre>
+<blockquote class="manual-shot"><strong>Screenshot (H-19):</strong> የዲጂታል ማመልከቻ ቅንብሮች።  <br><strong>Screenshot (H-20):</strong> የሰነድ ጥቅል በምድብ።</blockquote>
+<h3>3.1 ጂኦግራፊ እና ድርጅት</h3>
+<p>ወረዳ/ቅርንጫፍ የሪፖርት እና የብድር እይታን ይገድባል። HO ተጠቃሚዎች ዲፓርትመንት ሊኖራቸው ይችላል።</p>
+<h3>3.2 ተጠቃሚዎች</h3>
+<p>የሰራተኛ መለያዎችን ይፍጠሩ — <strong>ሚና</strong>፣ <strong>ቅርንጫፍ/ወረዳ</strong>፣ አስፈላጊ ከሆነ <strong>ዲፓርትመንት</strong>።  </p>
+<p>የደንበኛ መለያዎች እዚህ አይፈጠሩም — በዲጂታል ማመልከቻ ይመዘገባሉ።</p>
+<h3>3.3 የብድር ምድቦች እና ሰነዶች</h3>
+<ol>
+<li><strong>Loan categories</strong> — ምርቶች።  </li>
+<li><strong>Document types</strong> — አጠቃላይ ካታሎግ።  </li>
+<li><strong>Document pack</strong> በእያንዳንዱ ምድብ — የግዴታ/አማራጭ እና ቅደም ተከተል።</li>
+</ol>
+<h3>3.4 ኮሚቴዎች እና ዋስትና</h3>
+<p><strong>Approval committees</strong> — የድምጽ አባላት እና ደረጃዎች።  </p>
+<p><strong>Collateral policy / Estimation config</strong> — ማን ዋስትና እንደሚገመግም (LO / ኢንጂነሪንግ / ሁለቱም)።  </p>
+<p><strong>Unlock queue</strong> — ከተቆለፈ በኋላ ማረም።</p>
+<h3>3.5 ዲጂታል ማመልከቻ</h3>
+<table>
+<thead><tr><th>ቁጥጥር</th><th>ውጤት</th></tr></thead>
+<tbody>
+<tr><td>መክፈት/መዝጋት</td><td>ሲዘጋ ደንበኞች “temporarily closed” ያያሉ</td></tr>
+<tr><td>የማቀናበሪያ ክፍያ (ብር)</td><td>ከማስገባት በፊት</td></tr>
+<tr><td>የይለፍ ቃል / lockout</td><td>የደንበኛ ደህንነት</td></tr>
+<tr><td>የCBS ማረጋገጫ</td><td>አማራጭ የደንበኛ ቁጥር ማረጋገጥ</td></tr>
+<tr><td>Chapa</td><td>ህያው ወይም mock</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>4. የዕለት ተዕለት ተግባራት</h2>
+<ul>
+<li>ዲጂታል ማመልከቻን መክፈት/መዝጋት  </li>
+<li>ክፍያ ማስተካከል  </li>
+<li>አዲስ ምርት + የሰነድ ጥቅል  </li>
+<li>አዲስ ቅርንጫፍ እና ተጠቃሚዎች ማስጀመር  </li>
+<li>የተቆለፈ ተጠቃሚ መክፈት  </li>
+<li><strong>Online loan intake</strong> መከታተል  </li>
+</ul>
+<hr>
+<h2>5. Django Admin</h2>
+<p>ለላቀ የውሂብ ጥገና <code>/admin/</code> ይጠቀሙ። ለመደበኛ ውቅረት የhub <strong>Settings</strong> ይመረጡ።</p>
+<hr>
+<h2>6. ፈጣን ማጣቀሻ</h2>
+<table>
+<thead><tr><th>ተግባር</th><th>መንገድ</th></tr></thead>
+<tbody>
+<tr><td>ምርቶች</td><td>Settings → Loan categories</td></tr>
+<tr><td>ሰነድ ካታሎግ</td><td>Document types</td></tr>
+<tr><td>የሰነድ ጥቅል</td><td>Category → Document pack</td></tr>
+<tr><td>ኮሚቴ</td><td>Approval committees</td></tr>
+<tr><td>ፖርታል ክፍያ</td><td>Digital apply</td></tr>
+<tr><td>ኦዲት</td><td><code>/hub/security/audit/</code></td></tr>
+<tr><td>እገዛ በመተግበሪያ</td><td><code>/hub/help/</code></td></tr>
+</tbody>
+</table>
+<hr>
+<h2>7. ተዛማጅ</h2>
+<ul>
+<li><a href="01_admin.md">English admin</a>  </li>
+<li><a href="02_staff_am.md">Staff Amharic</a>  </li>
+<li><a href="03_customers_am.md">Customers Amharic</a>  </li>
+<li><a href="05_screenshot_captions.md">Screenshot captions</a></li>
+</ul>
+</section><section class="chapter" id="ch-3">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 4 · Staff</p>
+<h1>Staff User Manual</h1>
+<p><strong>Audience:</strong> Branch, district, head-office, engineering, finance, risk, and committee users.  </p>
+<p><strong>Entry:</strong> <code>/hub/login/</code> — product brand in the hub: <em>AI-powered Credit Intelligence</em>.</p>
+<p>Borrower self-service is covered in the <a href="03_customers.md">Customer manual</a>. Platform configuration is in the <a href="01_admin.md">Admin manual</a>.</p>
+<hr>
+<h2>1. Getting started</h2>
+<h3>1.1 Sign in</h3>
+<ol>
+<li>Go to <code>/hub/login/</code>.</li>
+<li>Enter username and password.</li>
+<li>Complete MFA if prompted (<code>/hub/mfa/verify/</code>).</li>
+<li>You land on the Credit Intelligence / hub home for your role.</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><strong>Screenshot (H-04):</strong> Hub home — role-scoped KPIs and shortcuts after sign-in.<br><br><strong>Screenshot (H-05):</strong> Header — Notifications, Help, and Logout sit beside your name and role.</blockquote>
+<p><strong>Forgot password:</strong> <code>/hub/password-reset/</code> (email link).  </p>
+<p><strong>Change password while logged in:</strong> <code>/hub/password-change/</code>.  </p>
+<p><strong>MFA setup:</strong> <code>/hub/mfa/setup/</code>.</p>
+<p>If your account is locked after failed attempts, contact an administrator or IT.</p>
+<h3>1.2 What you see depends on your role</h3>
+<p>Menus are role-scoped. Examples:</p>
+<table>
+<thead><tr><th>Role</th><th>Typical menus</th></tr></thead>
+<tbody>
+<tr><td>Branch Manager</td><td>Loan requests, Collateral, Approval queue, Post-approval, Notifications, Reports, Unlock</td></tr>
+<tr><td>Loan Officer</td><td>Loan requests, documents, appraisal, collateral (when allowed)</td></tr>
+<tr><td>Cooperative Manager</td><td>Cooperative queue, Approval / Post-approval, Collateral, Reports</td></tr>
+<tr><td>Credit Loan Officer / Credit Head</td><td>HO loans, committees (head), oversight</td></tr>
+<tr><td>Finance Manager</td><td>Disbursement queue, Approval / Post-approval, Reports</td></tr>
+<tr><td>Accountant / District Manager / Exec / Board</td><td>Approval queue, Committee loans, Reports</td></tr>
+<tr><td>Engineer / Engineering Head</td><td>Catalog, Unit prices, Collateral, Engineering QA, Unlock (head)</td></tr>
+<tr><td>Risk / Auditor</td><td>Reports, review, security audit (when permitted)</td></tr>
+</tbody>
+</table>
+<p>Always work only on loans in <strong>your branch / district / department</strong> scope.</p>
+<hr>
+<h2>2. Loan lifecycle (happy path)</h2>
+<pre class="lang-text"><code>Create / receive request
+    → Assign loan officer (if needed)
+    → Cooperative intake (branch)
+    → Documents (+ authentication)
+    → Appraisal (steps 1–7)
+    → Collateral (+ optional engineering QA)
+    → Submit to committee → Vote
+    → Post-approval (conditions → schedule → ready)
+    → Finance disbursement → Disbursed</code></pre>
+<p>Keep the <strong>Queue ID</strong> (for example <code>HK-000000001</code>) in emails, calls, and notes.</p>
+<h3>Sources of loans</h3>
+<table>
+<thead><tr><th>Source</th><th>How it enters the hub</th></tr></thead>
+<tbody>
+<tr><td>Branch / HO staff</td><td><strong>Add loan request</strong> (or Agentic Assist draft for eligible roles)</td></tr>
+<tr><td>Digital Apply</td><td>Appears under <strong>Online loan intake</strong>; continues as a normal <code>LoanRequest</code> after customer submit</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>3. Role playbooks</h2>
+<h3>3.1 Branch Manager</h3>
+<ol>
+<li><strong>Create</strong> a loan request (customer number lookup when available).</li>
+<li><strong>Assign</strong> a loan officer.</li>
+<li>Ensure <strong>Cooperative</strong> intake is completed for branch loans.</li>
+<li>Monitor officer progress (documents, appraisal, collateral).</li>
+<li>If engineering mode applies: send to engineering / follow unlock needs.</li>
+<li><strong>Submit to committee</strong> when the file is ready.</li>
+<li>Track <strong>Post-approval</strong> until finance can disburse.</li>
+</ol>
+<p>Also: respond to unlock requests when collateral is locked incorrectly.</p>
+<h3>3.2 Loan Officer</h3>
+<ol>
+<li>Open the assigned loan from <strong>Loan requests</strong>.</li>
+<li><strong>Upload / review documents</strong> against the product checklist.</li>
+<li>Complete <strong>appraisal</strong> steps (MSME cashflow or corporate mode).</li>
+<li>Capture <strong>collateral</strong> evidence when your estimation mode allows it.</li>
+<li>Respond if committee <strong>returns</strong> the file for corrections.</li>
+<li>Support post-approval document or condition follow-ups as asked.</li>
+</ol>
+<p>Document authentication may show statuses such as pending, needs review, verified, or rejected — clear exceptions before committee.</p>
+<h3>3.3 Cooperative Manager</h3>
+<ol>
+<li>Open <strong>Cooperative queue</strong>.</li>
+<li>Review new branch requests (including online intake).</li>
+<li><strong>Approve into queue</strong> when the request is acceptable for officer work.</li>
+<li>Escalate incomplete or suspicious files per branch procedure.</li>
+</ol>
+<p>Until intake approval, officers may be blocked from progressing branch loans.</p>
+<h3>3.4 Credit Loan Officer / Credit Department Head</h3>
+<ul>
+<li><strong>Credit LO:</strong> Create and process <strong>HO Credit</strong> loans (“Add HO loan”), appraisal, and related queues.</li>
+<li><strong>Credit Head:</strong> Oversight of HO credit work and <strong>approval committee</strong> configuration (with admin).</li>
+</ul>
+<h3>3.5 Committee voters</h3>
+<p>(CEO, VPs, board members, accountants, district managers, and other configured members)</p>
+<ol>
+<li>Open <strong>Approval queue</strong> or <strong>Committee loans</strong>.</li>
+<li>Review appraisal pack / evidence (Excel or PDF packs when available).</li>
+<li><strong>Cast vote</strong> (approve / decline / follow return workflow as offered).</li>
+<li>Do not rely on Agentic Assist for a binding decision — the assistant cannot approve.</li>
+</ol>
+<p>Committee statuses you will see: Not submitted → Pending → Approved / Declined / Returned to loan officer.</p>
+<h3>3.6 Post-approval workers</h3>
+<p>After committee <strong>Approved</strong>:</p>
+<ol>
+<li>Open <strong>Post-approval</strong> queue / detail.</li>
+<li>Clear <strong>conditions</strong>.</li>
+<li>Confirm <strong>repayment schedule</strong>.</li>
+<li>Mark <strong>ready</strong> for disbursement when complete.</li>
+</ol>
+<p>Disbursement track statuses include: Not started → Awaiting conditions → Schedule confirmed → Ready → Disbursed.</p>
+<h3>3.7 Finance Manager</h3>
+<ol>
+<li>Open <strong>Disbursement queue</strong>.</li>
+<li>Verify readiness and any CBS / ledger checks your site uses.</li>
+<li>Approve disbursement steps and ensure the loan is marked <strong>Disbursed</strong> when funds are released.</li>
+</ol>
+<h3>3.8 Engineering Head / Engineer</h3>
+<table>
+<thead><tr><th>Role</th><th>Tasks</th></tr></thead>
+<tbody>
+<tr><td><strong>Engineering Head</strong></td><td>Catalog &amp; unit prices oversight, assign engineers, Engineering QA, unlock queue</td></tr>
+<tr><td><strong>Engineer / Valuer</strong></td><td>Field valuation, GPS photos, building/land/other estimates, submit for QA</td></tr>
+</tbody>
+</table>
+<p>Typical path: loan sent for collateral → assign engineer → field work → submit/lock → <strong>Engineering QA</strong> approve or return.</p>
+<h3>3.9 Risk, Auditor, Management</h3>
+<ul>
+<li>Use <strong>Reports</strong>, dashboards, and (where allowed) <strong>Security audit</strong>.</li>
+<li>Review portfolio health via <strong>Credit Intelligence</strong> (Overview, Insights, Officer/Manager, Portfolio, Collateral).</li>
+</ul>
+<hr>
+<h2>4. Core screens (how-to)</h2>
+<h3>4.1 Create a loan request</h3>
+<ol>
+<li>Choose <strong>Add loan request</strong> (or HO equivalent).</li>
+<li>Enter customer / party details (customer number lookup when enabled).</li>
+<li>Select <strong>loan category</strong>, amount, branch, collateral type as required.</li>
+<li>Save — note the <strong>Queue ID</strong>.</li>
+<li>Assign a loan officer if you are a manager.</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (H-08):</strong> Create loan request — capture customer number, product, amount, and branch.<br><br><strong>Screenshot (H-07):</strong> Loan requests — open a Queue ID to continue documents, appraisal, or collateral.</blockquote>
+<h3>4.2 Online loan intake</h3>
+<ol>
+<li>Open <strong>Online loan intake</strong> (also under Settings for admins).</li>
+<li>Find applications submitted via Digital Apply.</li>
+<li>Continue the same lifecycle as branch-created loans (cooperative → LO → …).</li>
+</ol>
+<h3>4.3 Documents</h3>
+<ol>
+<li>Open the loan → document upload / checklist screen.</li>
+<li>Upload each required type for the <strong>document pack</strong>.</li>
+<li>Review automated authentication results; fix or re-upload rejects.</li>
+<li>Keep files readable (scan quality matters for OCR English/Amharic).</li>
+</ol>
+<h3>4.4 Appraisal</h3>
+<ol>
+<li>Open appraisal for the loan.</li>
+<li>Complete <strong>steps 1–7</strong> for MSME or corporate mode.</li>
+<li>Address scorecard / policy gate warnings before committee.</li>
+<li>Export appraisal pack (Excel/PDF) when preparing committee materials.</li>
+</ol>
+<h3>4.5 Collateral</h3>
+<ol>
+<li>Open collateral for the loan.</li>
+<li>Capture buildings, land, or other items per catalog and <strong>unit prices</strong> for the woreda.</li>
+<li>Record field visit evidence (GPS / photos) per policy.</li>
+<li>Submit estimation (locks when configured).</li>
+<li>If locked in error, request unlock via the unlock workflow; managers / eng head process the <strong>Unlock queue</strong>.</li>
+</ol>
+<h3>4.6 Committee</h3>
+<ol>
+<li>Eligible role submits the loan to committee.</li>
+<li>Members vote from the approval worklist.</li>
+<li>On <strong>Returned to loan officer</strong>, LO corrects and resubmits.</li>
+<li>On <strong>Approved</strong>, move to post-approval; on <strong>Declined</strong>, close per policy and communicate via branch.</li>
+</ol>
+<h3>4.7 Notifications and reports</h3>
+<ul>
+<li><strong>Notifications</strong> — assignments, returns, queue events.</li>
+<li><strong>Reports / Dashboard</strong> — scoped to your branch or district.</li>
+<li><strong>Credit Intelligence</strong> — KPIs and risk views for managers.</li>
+</ul>
+<hr>
+<h2>5. Agentic Assist</h2>
+<p>Floating chat and <code>/hub/agent/</code> help staff draft and look up information.</p>
+<p><strong>Can help with:</strong> drafting a loan story, creating a request (when role allows), listing document needs, reading appraisal summaries.</p>
+<p><strong>Cannot:</strong> approve loans, value collateral, or disburse funds. All policy gates remain with human roles.</p>
+<hr>
+<h2>6. Security good practice</h2>
+<ul>
+<li>Never share passwords or MFA codes.</li>
+<li>Lock your workstation; the hub may idle-timeout sessions.</li>
+<li>Use official email for password reset only.</li>
+<li>Report suspicious unlock or vote activity to IT / risk.</li>
+</ul>
+<hr>
+<h2>7. Status cheat sheet</h2>
+<table>
+<thead><tr><th>Area</th><th>Values you will see</th></tr></thead>
+<tbody>
+<tr><td>Committee</td><td>Not submitted, Pending, Approved, Declined, Returned to loan officer</td></tr>
+<tr><td>Disbursement</td><td>Not started, Awaiting conditions, Schedule confirmed, Ready, Disbursed</td></tr>
+<tr><td>Customer-visible pipeline</td><td>Submitted → Branch intake → Loan processing → Credit decision → Disbursement prep → Disbursed</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>8. Troubleshooting</h2>
+<table>
+<thead><tr><th>Problem</th><th>What to try</th></tr></thead>
+<tbody>
+<tr><td>Missing menu</td><td>Confirm your <strong>role</strong> and <strong>branch/district</strong> with admin</td></tr>
+<tr><td>Cannot edit collateral</td><td>Estimation may be <strong>locked</strong> — use unlock queue</td></tr>
+<tr><td>Cannot progress branch loan</td><td>Check <strong>Cooperative queue</strong> approval</td></tr>
+<tr><td>Documents incomplete</td><td>Open category <strong>document pack</strong>; upload missing required types</td></tr>
+<tr><td>MFA / lockout</td><td>Contact admin; use password reset if email works</td></tr>
+<tr><td>Online application missing</td><td>Confirm customer <strong>submitted</strong> (not draft); check Online loan intake</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Related manuals</h2>
+<ul>
+<li><a href="01_admin.md">Admin user manual</a>  </li>
+<li><a href="03_customers.md">Customer user manual</a> · <a href="03_customers_am.md">Amharic</a>  </li>
+<li><a href="04_market_partners.md">Market partners</a>  </li>
+<li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
+</ul>
+</section><section class="chapter" id="ch-4">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 5 · Staff (Amharic)</p>
+<h1>የሰራተኛ መመሪያ</h1>
+<p><strong>ለማን ነው:</strong> ቅርንጫፍ፣ ወረዳ፣ ሆድ ኦፊስ፣ ኢንጂነሪንግ፣ ፋይናንስ፣ ሪስክ እና የኮሚቴ አባላት።  </p>
+<p><strong>መግቢያ:</strong> <code>/hub/login/</code> — <em>AI-powered Credit Intelligence</em>።  </p>
+<p><strong>እንግሊዘኛ:</strong> <a href="02_staff.md">02_staff.md</a></p>
+<p>የደንበኛ ኦንላይን ማመልከቻ በ<a href="03_customers_am.md">ደንበኛ መመሪያ</a> ነው።</p>
+<hr>
+<h2>1. መጀመር</h2>
+<h3>1.1 መግባት</h3>
+<ol>
+<li><code>/hub/login/</code> ይሂዱ።  </li>
+<li>የተጠቃሚ ስምና የይለፍ ቃል።  </li>
+<li>MFA ካለ ያጠናቅቁ።  </li>
+<li>ወደ Credit Intelligence / መነሻ ይገባሉ።</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> የሰራተኛ መግቢያ።  <br><strong>Screenshot (H-04):</strong> የሃብ መነሻ — በሚና የተገደቡ KPIs።  <br><strong>Screenshot (H-05):</strong> ራስጌ — Notifications፣ <strong>Help</strong>፣ Logout።</blockquote>
+<p><strong>የይለፍ ቃል ረሳሁ:</strong> <code>/hub/password-reset/</code>።  </p>
+<p><strong>Help በመተግበሪያ:</strong> <code>/hub/help/</code>።</p>
+<p>ሜኑዎ በሚናዎ ይለያያል። በቅርንጫፍ/ወረዳዎ ስፓን ውስጥ ብቻ ይስሩ።</p>
+<hr>
+<h2>2. የብድር የህይወት ኡደት</h2>
+<pre class="lang-text"><code>መፍጠር / መቀበል
+  → የብድር ባለሙያ መመደብ
+  → የኮኦፕሬቲቭ መቀበያ (ቅርንጫፍ)
+  → ሰነዶች
+  → ትንተና (ደረጃ 1–7)
+  → ዋስትና (+ አማራጭ የኢንጂነሪንግ QA)
+  → ወደ ኮሚቴ → ድምጽ
+  → ከፈቃድ በኋላ (ሁኔታዎች → መርሃ ግብር → ዝግጁ)
+  → የፋይናንስ ክፍያ → ተከፍሏል</code></pre>
+<p><strong>Queue ID</strong> (ለምሳሌ <code>HK-000000001</code>) ሁልጊዜ ይያዙ።</p>
+<table>
+<thead><tr><th>ምንጭ</th><th>እንዴት ይገባል</th></tr></thead>
+<tbody>
+<tr><td>ቅርንጫፍ / HO</td><td>Add loan request</td></tr>
+<tr><td>ዲጂታል ማመልከቻ</td><td>Online loan intake</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>3. በሚና የሚሰሩ ስራዎች</h2>
+<h3>3.1 የቅርንጫፍ ሥራ አስኪያጅ (Branch Manager)</h3>
+<p>ብድር ይፍጠሩ፣ ባለሙያ ይመድቡ፣ የኮኦፕሬቲቭ መቀበያን ያረጋግጡ፣ ወደ ኮሚቴ ያስገቡ፣ ከፈቃድ በኋላ ይከታተሉ። Unlock ካስፈለገ ይፍቀዱ።</p>
+<h3>3.2 የብድር ባለሙያ (Loan Officer)</h3>
+<p>ሰነድ ይስቀሉ/ይገምግሙ፣ ትንተና 1–7 ያጠናቅቁ፣ ዋስትና (እንደውቅረት)፣ ከኮሚቴ ተመላሽ ከሆነ ያርሙ።</p>
+<h3>3.3 የኮኦፕሬቲቭ ሥራ አስኪያጅ</h3>
+<p><strong>Cooperative queue</strong> — ወደ ባለሙያ ስራ ከመግባቱ በፊት መቀበያ።</p>
+<h3>3.4 Credit LO / Credit Head</h3>
+<p>የHO ብድር መፍጠር እና ቁጥጥር፣ የኮሚቴ ውቅረት (ከአስተዳዳሪ ጋር)።</p>
+<h3>3.5 የኮሚቴ አባላት</h3>
+<p><strong>Approval queue</strong> — ጥቅል ይገምግሙ፣ ድምጽ ይስጡ። Agentic Assist ውሳኔ አይተካም።</p>
+<p>ሁኔታዎች፦ Not submitted → Pending → Approved / Declined / Returned to loan officer።</p>
+<h3>3.6 ከፈቃድ በኋላ</h3>
+<p>ሁኔታዎች → መርሃ ግብር → Ready።</p>
+<h3>3.7 የፋይናንስ ሥራ አስኪያጅ</h3>
+<p><strong>Disbursement queue</strong> — ዝግጁ ከሆነ ክፍያ / Disbursed።</p>
+<h3>3.8 ኢንጂነሪንግ</h3>
+<p>ካታሎግ፣ የአሃድ ዋጋ፣ የመስክ ግምት፣ Engineering QA፣ Unlock (እንደሚና)።</p>
+<h3>3.9 ሪስክ / ኦዲተር</h3>
+<p>ሪፖርቶች፣ Credit Intelligence፣ የደህንነት ኦዲት (በፍቃድ)።</p>
+<hr>
+<h2>4. ዋና ማያዎች</h2>
+<h3>4.1 ብድር መፍጠር</h3>
+<blockquote class="manual-shot"><strong>Screenshot (H-08):</strong> ብድር መፍጠር — ደንበኛ ቁጥር፣ ምርት፣ መጠን፣ ቅርንጫፍ።  <br><strong>Screenshot (H-07):</strong> የብድር ዝርዝር — በQueue ID ይቀጥሉ።</blockquote>
+<h3>4.2 ሰነዶች፣ ትንተና፣ ዋስትና</h3>
+<ul>
+<li>የሰነድ ጥቅሉን ይሙሉ፣ የauth ውጤቶችን ያጽዱ።  </li>
+<li>ትንተና 1–7 እና የፖሊሲ ማስጠንቀቂያዎች።  </li>
+<li>ዋስትና + GPS/ፎቶ፤ ከተቆለፈ Unlock queue።</li>
+</ul>
+<h3>4.3 ኮሚቴ እና ክፍያ</h3>
+<p>ወደ ኮሚቴ ያስገቡ → ድምጽ → ከፈቃድ በኋላ → የፋይናንስ ክፍያ።</p>
+<h3>4.4 Online loan intake</h3>
+<p>ከዲጂታል ማመልከቻ የመጡ ማመልከቻዎችን ይቀጥሉ።</p>
+<hr>
+<h2>5. Agentic Assist</h2>
+<p>መረጃ ማግኘት እና ረቂቅ መርዳት ይችላል። <strong>ማፅደቅ፣ ዋስትና መገመት ወይም ክፍያ ማድረግ አይችልም።</strong></p>
+<hr>
+<h2>6. የሁኔታ ማጣቀሻ</h2>
+<table>
+<thead><tr><th>አካባቢ</th><th>እሴቶች</th></tr></thead>
+<tbody>
+<tr><td>ኮሚቴ</td><td>Not submitted, Pending, Approved, Declined, Returned</td></tr>
+<tr><td>ክፍያ</td><td>Not started → … → Ready → Disbursed</td></tr>
+<tr><td>ለደንበኛ</td><td>Submitted → Branch intake → Processing → Decision → Disbursement prep → Disbursed</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>7. ችግር መፍታት</h2>
+<table>
+<thead><tr><th>ችግር</th><th>መፍትሔ</th></tr></thead>
+<tbody>
+<tr><td>ሜኑ የለም</td><td>ሚና/ቅርንጫፍ ከአስተዳዳሪ ያረጋግጡ</td></tr>
+<tr><td>ዋስትና አይታረም</td><td>Locked — Unlock queue</td></tr>
+<tr><td>ቅርንጫፍ ብድር አይራመድም</td><td>Cooperative queue</td></tr>
+<tr><td>ሰነድ ጎድሏል</td><td>Document pack ያረጋግጡ</td></tr>
+<tr><td>MFA / lockout</td><td>አስተዳዳሪ / password reset</td></tr>
+<tr><td>ኦንላይን ማመልከቻ የለም</td><td>ደንበኛ Submit አድርጓል? Online intake</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>8. ተዛማጅ</h2>
+<ul>
+<li><a href="02_staff.md">English staff</a>  </li>
+<li><a href="01_admin_am.md">Admin Amharic</a>  </li>
+<li><a href="03_customers_am.md">Customers Amharic</a>  </li>
+<li><a href="05_screenshot_captions.md">Screenshot captions</a>  </li>
+<li>በመተግበሪያ፡ <code>/hub/help/</code></li>
+</ul>
+</section><section class="chapter" id="ch-5">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 6 · Customers</p>
+<h1>Customer User Manual — Digital Apply</h1>
+<p><strong>Audience:</strong> DECSI customers applying for a loan online.  </p>
+<p><strong>Entry:</strong> Digital Apply home at <code>/</code> (public portal).  </p>
+<p><strong>Brand:</strong> <em>Digital Apply</em> on <em>AI-powered Credit Intelligence</em>.</p>
+<p>Staff processing after you submit is described for employees in the <a href="02_staff.md">Staff manual</a>. You do not need a staff hub account.</p>
+<hr>
+<h2>1. What Digital Apply does</h2>
+<p>You can:</p>
+<ol>
+<li>Create an applicant account with your <strong>DECSI customer number</strong> and mobile phone.</li>
+<li>Start a loan application: product, branch, amount, purpose.</li>
+<li>Upload the <strong>documents required for that product</strong>.</li>
+<li>Pay the <strong>processing fee</strong> online.</li>
+<li>Submit and receive a <strong>Queue ID</strong> (for example <code>HK-000000001</code>).</li>
+<li>Track progress until disbursement (or a decision).</li>
+</ol>
+<p>If you see <strong>“Digital apply is temporarily closed”</strong>, the portal is offline for maintenance — visit your branch or try again later.</p>
+<hr>
+<h2>2. Create an account</h2>
+<ol>
+<li>Open the Digital Apply home page.</li>
+<li>Choose <strong>Create account</strong>.</li>
+<li>Enter:</li>
+</ol>
+<p>   - <strong>DECSI customer number</strong></p>
+<p>   - Full name</p>
+<p>   - Mobile number</p>
+<p>   - Password (follow the on-screen rules)</p>
+<p>   - Accept terms if shown</p>
+<ol>
+<li>Submit registration.</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (C-01):</strong> Digital Apply landing — Create account or sign in to apply online.<br><br><strong>Screenshot (C-02):</strong> Register — DECSI customer number, name, mobile, and password.</blockquote>
+<p>Some deployments validate your customer number against DECSI records. If validation fails, confirm the number with your branch before retrying.</p>
+<h3>Already registered?</h3>
+<p>Choose <strong>I already have an account</strong> and sign in with:</p>
+<ul>
+<li><strong>Mobile number</strong> or <strong>customer number</strong>, and  </li>
+<li>Your <strong>password</strong>.</li>
+</ul>
+<hr>
+<h2>3. Sign in, password help, and security</h2>
+<table>
+<thead><tr><th>Task</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>Sign in</td><td><code>/login/</code> — phone or customer number + password</td></tr>
+<tr><td>Sign out</td><td>Use logout from the portal menu</td></tr>
+<tr><td>Forgot password</td><td><strong>Forgot password</strong> → OTP sent to your registered phone → set a new password</td></tr>
+<tr><td>Change password (signed in)</td><td>Account → change password</td></tr>
+</tbody>
+</table>
+<p>Tips:</p>
+<ul>
+<li>Use a strong unique password.</li>
+<li>Keep your phone available for OTP reset.</li>
+<li>Too many failed logins may temporarily lock the account — wait or contact your branch / support channel.</li>
+</ul>
+<hr>
+<h2>4. Apply for a loan (step by step)</h2>
+<p>From <strong>My applications</strong> / home, start a new application. The wizard shows four steps:</p>
+<p><strong>1 · Details → 2 · Documents → 3 · Fee → 4 · Submit</strong></p>
+<blockquote class="manual-shot"><strong>Screenshot (C-05):</strong> Step 1 · Details — choose product, branch, amount, and purpose.<br><br><strong>Screenshot (C-06):</strong> Step 2 · Documents — upload every required file for the product.<br><br><strong>Screenshot (C-07):</strong> Step 3 · Fee — pay the processing fee (ETB) before submit.<br><br><strong>Screenshot (C-08):</strong> Step 4 · Submit — review and submit to receive a Queue ID.<br><br><strong>Screenshot (C-09):</strong> Status — keep your Queue ID for branch follow-up.</blockquote>
+<h3>Step 1 — Details</h3>
+<ol>
+<li>Select the <strong>loan product</strong> (loan category).</li>
+<li>Choose your <strong>branch</strong>.</li>
+<li>Enter <strong>amount</strong>, <strong>purpose</strong>, and collateral type if asked.</li>
+<li>Save and continue.</li>
+</ol>
+<p>You can leave a draft and return later until you submit.</p>
+<h3>Step 2 — Documents</h3>
+<ol>
+<li>Upload each document listed for your product.</li>
+<li>Required items must be complete before you continue.</li>
+<li>Prefer clear scans or photos (all pages, readable text).</li>
+</ol>
+<p>If a file is rejected, replace it with a clearer copy.</p>
+<h3>Step 3 — Processing fee</h3>
+<ol>
+<li>Review the fee amount (ETB).</li>
+<li>Start payment (Chapa or the payment screen shown).</li>
+<li>Complete payment and wait for confirmation.</li>
+<li>Do not close the browser until the portal confirms success.</li>
+</ol>
+<p>If payment fails, retry from the Fee step or contact support with the time of the attempt. Do not submit until the fee is paid when the portal requires it.</p>
+<h3>Step 4 — Submit</h3>
+<ol>
+<li>Review your details and documents.</li>
+<li>Confirm submit.</li>
+<li>Save your <strong>Queue ID</strong> immediately.</li>
+</ol>
+<p>After submit, the application enters the DECSI branch queue. Staff will continue documents review, appraisal, collateral, credit decision, and disbursement preparation.</p>
+<h3>Withdraw a draft</h3>
+<p>Unsubmitted drafts can be cancelled/withdrawn from the application actions if shown. Submitted applications are handled by the branch — visit the branch for withdrawal or cancellation requests.</p>
+<hr>
+<h2>5. Track your application</h2>
+<p>Open the application from <strong>My applications</strong> or the status page.</p>
+<h3>While drafting</h3>
+<p>You may see stages such as:</p>
+<ul>
+<li>Details  </li>
+<li>Documents  </li>
+<li>Fee  </li>
+<li>Submit  </li>
+</ul>
+<p>Finish remaining steps to obtain a Queue ID.</p>
+<h3>After submit</h3>
+<p>Typical pipeline:</p>
+<table>
+<thead><tr><th>Stage</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Submitted</strong></td><td>Received online; waiting in the branch queue</td></tr>
+<tr><td><strong>Branch intake</strong></td><td>Branch cooperative reviews your application</td></tr>
+<tr><td><strong>Loan processing</strong></td><td>Officer reviews documents, collateral, and analysis</td></tr>
+<tr><td><strong>Credit decision</strong></td><td>Credit approval process underway</td></tr>
+<tr><td><strong>Disbursement prep</strong></td><td>Approved loan prepared for payment</td></tr>
+<tr><td><strong>Disbursed</strong></td><td>Funds released per DECSI records</td></tr>
+</tbody>
+</table>
+<p>Other outcomes you may see:</p>
+<table>
+<thead><tr><th>Outcome</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td><strong>Not approved / Declined</strong></td><td>Credit review did not approve — visit your branch for details</td></tr>
+<tr><td><strong>Closed / Rejected</strong></td><td>Request closed without approval — branch can explain</td></tr>
+<tr><td><strong>Cancelled</strong></td><td>Draft cancelled before submit</td></tr>
+</tbody>
+</table>
+<p>Always quote your <strong>Queue ID</strong> when calling or visiting the branch.</p>
+<p>Status facts often include: product, branch, amount requested, submitted date, and assigned loan officer (when assigned).</p>
+<hr>
+<h2>6. What happens after you submit?</h2>
+<p>You do <strong>not</strong> complete appraisal or collateral online. DECSI staff:</p>
+<ol>
+<li>Accept the request into the branch queue.  </li>
+<li>Verify documents and run internal checks.  </li>
+<li>Complete credit appraisal and collateral valuation as required.  </li>
+<li>Send the file through credit committee.  </li>
+<li>Complete post-approval conditions and disburse if approved.  </li>
+</ol>
+<p>Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page updates as the loan moves forward.</p>
+<hr>
+<h2>7. Tips for a smooth application</h2>
+<ul>
+<li>Use the correct <strong>customer number</strong> linked to your DECSI profile.  </li>
+<li>Choose the branch that normally serves you.  </li>
+<li>Upload <strong>all required</strong> documents before paying the fee.  </li>
+<li>Keep payment confirmation and <strong>Queue ID</strong> screenshots.  </li>
+<li>Respond quickly if the branch asks for clearer documents or a site visit.  </li>
+<li>Do not share your password or OTP with anyone claiming to be DECSI support in unofficial channels.</li>
+</ul>
+<hr>
+<h2>8. Troubleshooting</h2>
+<table>
+<thead><tr><th>Problem</th><th>What to try</th></tr></thead>
+<tbody>
+<tr><td>Portal closed</td><td>Wait or visit the branch; Digital Apply may be temporarily disabled</td></tr>
+<tr><td>Cannot register</td><td>Check customer number and phone; ask branch if CBS validation is required</td></tr>
+<tr><td>OTP not received</td><td>Confirm phone number; wait and retry; contact branch if SMS is down</td></tr>
+<tr><td>Payment stuck</td><td>Do not create duplicate applications immediately; retry Fee step or ask branch with timestamp</td></tr>
+<tr><td>No Queue ID</td><td>Application is still a draft — complete Fee and Submit</td></tr>
+<tr><td>Status not moving</td><td>Normal for several days; contact branch with Queue ID if urgently delayed</td></tr>
+<tr><td>Forgot which product</td><td>Open My applications — product and amount are listed on each card / status</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Privacy and support</h2>
+<ul>
+<li>Your application data is processed by DECSI for credit assessment.  </li>
+<li>For account or status help, contact your <strong>branch</strong> with full name, customer number, and Queue ID.  </li>
+<li>Staff use a separate internal system; they will not ask for your Digital Apply password.</li>
+</ul>
+<hr>
+<h2>10. Related manuals</h2>
+<ul>
+<li><a href="03_customers_am.md">Amharic version</a> — የአማርኛ የደንበኛ መመሪያ  </li>
+<li><a href="02_staff.md">Staff user manual</a> — how DECSI processes your file after submit  </li>
+<li><a href="01_admin.md">Admin user manual</a> — for DECSI administrators only  </li>
+<li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
+</ul>
+</section><section class="chapter" id="ch-6">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 7 · Customers (Amharic)</p>
+<h1>የደንበኛ መመሪያ — ዲጂታል ማመልከቻ (Digital Apply)</h1>
+<p><strong>ለማን ነው:</strong> በኦንላይን ብድር ማመልከት የሚፈልጉ የDECSI ደንበኞች።  </p>
+<p><strong>መግቢያ:</strong> ዲጂታል ማመልከቻ በ <code>/</code>  </p>
+<p><strong>እንግሊዘኛው መመሪያ:</strong> <a href="03_customers.md">03_customers.md</a></p>
+<hr>
+<h2>1. ዲጂታል ማመልከቻ ምን ያደርጋል?</h2>
+<p>በዚህ ፖርታል፦</p>
+<ol>
+<li>በ<strong>የDECSI ደንበኛ ቁጥር</strong> እና በሞባይል ስልክ መለያ ይፈጥራሉ።  </li>
+<li>የብድር ማመልከቻ ይጀምራሉ (ምርት፣ ቅርንጫፍ፣ መጠን፣ ዓላማ)።  </li>
+<li>ለዚያ ምርት የሚያስፈልጉ <strong>ሰነዶችን</strong> ይሰቀላሉ።  </li>
+<li>የ<strong>ማቀናበሪያ ክፍያ</strong> (processing fee) በኦንላይን ይከፍላሉ።  </li>
+<li>ካስገቡ በኋላ <strong>የተራ ቁጥር / Queue ID</strong> (ለምሳሌ <code>HK-000000001</code>) ያገኛሉ።  </li>
+<li>እስከ ክፍያ/ውሳኔ ድረስ ሁኔታውን ይከታተላሉ።</li>
+</ol>
+<p><strong>“Digital apply is temporarily closed”</strong> ካዩ፣ ፖርታሉ ለጊዜው ዝግ ነው — ቅርንጫፍዎን ይጎብኙ ወይም በኋላ ይሞክሩ።</p>
+<hr>
+<h2>2. መለያ መፍጠር</h2>
+<ol>
+<li>የዲጂታል ማመልከቻ መነሻ ገጽ ይክፈቱ።  </li>
+<li><strong>Create account</strong> ይምረጡ።  </li>
+<li>ያስገቡ፦  </li>
+</ol>
+<p>   - የDECSI <strong>ደንበኛ ቁጥር</strong>  </p>
+<p>   - ሙሉ ስም  </p>
+<p>   - የሞባይል ቁጥር  </p>
+<p>   - የይለፍ ቃል (በገጹ ላይ ያሉትን ህጎች ይከተሉ)  </p>
+<p>   - የውል ሁኔታ ካለ ይቀበሉ  </p>
+<ol>
+<li>ምዝገባውን ያስገቡ።</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (C-01):</strong> የዲጂታል ማመልከቻ መነሻ — መለያ መፍጠር ወይም መግባት።  <br><strong>Screenshot (C-02):</strong> ምዝገባ — የደንበኛ ቁጥር፣ ስም፣ ሞባይል፣ የይለፍ ቃል።</blockquote>
+<p>አንዳንድ ጊዜ የደንበኛ ቁጥር ከDECSI መዝገብ ጋር ይረጋገጣል። ካልተሳካ ከቅርንጫፍዎ ጋር ቁጥሩን ያረጋግጡ።</p>
+<h3>አስቀድመው ተመዝግበዋል?</h3>
+<p><strong>I already have an account</strong> ይምረጡ፤ በ<strong>ሞባይል</strong> ወይም በ<strong>ደንበኛ ቁጥር</strong> እና በይለፍ ቃል ይግቡ።</p>
+<hr>
+<h2>3. መግባት፣ የይለፍ ቃል እርዳታ እና ደህንነት</h2>
+<table>
+<thead><tr><th>ተግባር</th><th>እንዴት</th></tr></thead>
+<tbody>
+<tr><td>መግባት</td><td><code>/login/</code> — ስልክ ወይም ደንበኛ ቁጥር + የይለፍ ቃል</td></tr>
+<tr><td>መውጣት</td><td>ከሜኑ Logout</td></tr>
+<tr><td>የይለፍ ቃል ረሱ</td><td>Forgot password → ወደ ስልክዎ OTP → አዲስ የይለፍ ቃል</td></tr>
+<tr><td>የይለፍ ቃል መቀየር</td><td>ከመለያ ገጽ — change password</td></tr>
+</tbody>
+</table>
+<ul>
+<li>ጠንካራ የይለፍ ቃል ይጠቀሙ።  </li>
+<li>ለOTP ስልክዎን ዝግጁ ያድርጉ።  </li>
+<li>ብዙ ጊዜ ስህተት ከገቡ መለያ ለጊዜው ሊቆልፍ ይችላል።</li>
+</ul>
+<hr>
+<h2>4. ብድር ማመልከት (ደረጃ በደረጃ)</h2>
+<p>ከ<strong>My applications</strong> / መነሻ አዲስ ማመልከቻ ይጀምሩ። አራት ደረጃዎች አሉ፦</p>
+<p><strong>1 · ዝርዝር → 2 · ሰነዶች → 3 · ክፍያ → 4 · ማስገባት</strong></p>
+<h3>ደረጃ 1 — ዝርዝር (Details)</h3>
+<ol>
+<li>የብድር <strong>ምርት</strong> ይምረጡ።  </li>
+<li><strong>ቅርንጫፍ</strong> ይምረጡ።  </li>
+<li><strong>መጠን</strong>፣ <strong>ዓላማ</strong> እና ካለ የዋስትና አይነት ያስገቡ።  </li>
+<li>ያስቀምጡና ይቀጥሉ።</li>
+</ol>
+<p>እስከማስገባት ድረስ ረቂቁን (draft) ትተው በኋላ መመለስ ይችላሉ።</p>
+<h3>ደረጃ 2 — ሰነዶች (Documents)</h3>
+<ol>
+<li>ለምርቱ የተዘረዘሩ ሰነዶችን ይሰቀሉ።  </li>
+<li>የግዴታ ሰነዶች ሳይሟሉ ማለፍ አይቻልም።  </li>
+<li>ግልጽ ስካን/ፎቶ ይጠቀሙ።</li>
+</ol>
+<h3>ደረጃ 3 — የማቀናበሪያ ክፍያ (Fee)</h3>
+<ol>
+<li>የክፍያ መጠኑን (ብር) ያረጋግጡ።  </li>
+<li>ክፍያውን ይጀምሩ (Chapa ወይም በገጹ የሚታየው)።  </li>
+<li>እስከማረጋገጫ ድረስ አሳሹን አይዝጉ።</li>
+</ol>
+<p>ክፍያ ካልተሳካ ከFee ደረጃ እንደገና ይሞክሩ፤ ጊዜውን ከቅርንጫፍ ጋር ይጋሩ።</p>
+<h3>ደረጃ 4 — ማስገባት (Submit)</h3>
+<ol>
+<li>ዝርዝርና ሰነዶችን ይገምግሙ።  </li>
+<li>Submit ያረጋግጡ።  </li>
+<li><strong>Queue ID</strong> ወዲያውኑ ያስቀምጡ / ይቅረጹ።</li>
+</ol>
+<p>ረቂቅ (ያልገባ) ማመልከቻን ማቋረጥ ከተፈቀደ በገጹ ላይ ይታያል። የገባ ማመልከቻ ለቅርንጫፍ ነው — ለመሰረዝ ቅርንጫፍዎን ያነጋግሩ።</p>
+<hr>
+<h2>5. ሁኔታ መከታተል</h2>
+<p>ከ<strong>My applications</strong> ማመልከቻዎን ይክፈቱ።</p>
+<h3>ረቂቅ ሳለ</h3>
+<p>ደረጃዎች፦ ዝርዝር → ሰነዶች → ክፍያ → ማስገባት። Queue ID ለማግኘት እስከ ማስገባት ይድረሱ።</p>
+<h3>ካስገቡ በኋላ</h3>
+<table>
+<thead><tr><th>ደረጃ</th><th>ትርጉም</th></tr></thead>
+<tbody>
+<tr><td><strong>Submitted</strong></td><td>በኦንላይን ተቀብሏል፤ በቅርንጫፍ ተራ ላይ ነው</td></tr>
+<tr><td><strong>Branch intake</strong></td><td>የቅርንጫፍ ኮኦፕሬቲቭ እየገመገመ ነው</td></tr>
+<tr><td><strong>Loan processing</strong></td><td>ባለሙያ ሰነድ፣ ዋስትና እና ትንተና እያደረገ ነው</td></tr>
+<tr><td><strong>Credit decision</strong></td><td>የብድር ውሳኔ ሂደት ላይ ነው</td></tr>
+<tr><td><strong>Disbursement prep</strong></td><td>የተፈቀደ ብድር ለክፍያ እየተዘጋጀ ነው</td></tr>
+<tr><td><strong>Disbursed</strong></td><td>ገንዘቡ ተከፍሏል</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>ውጤት</th><th>ትርጉም</th></tr></thead>
+<tbody>
+<tr><td><strong>Not approved / Declined</strong></td><td>አልፈቀዱም — ዝርዝር ለቅርንጫፍ</td></tr>
+<tr><td><strong>Closed / Rejected</strong></td><td>ያለ ፈቃድ ተዘግቷል</td></tr>
+<tr><td><strong>Cancelled</strong></td><td>ረቂቁ ከማስገባት በፊት ተሰርዟል</td></tr>
+</tbody>
+</table>
+<p>ስልክ ሲደውሉ ወይም ቅርንጫፍ ሲሄዱ <strong>Queue ID</strong> ይጠቀሙ።</p>
+<hr>
+<h2>6. ካስገቡ በኋላ ምን ይሆናል?</h2>
+<p>የብድር ትንተናና የዋስትና ግምገማ በኦንላይን አያጠናቅቁም። የDECSI ሰራተኞች ሰነድ ማረጋገጥ፣ ትንተና፣ ኮሚቴ እና ክፍያን ይቀጥላሉ። ጊዜው በምርት፣ በሰነድ ሙሉነት እና በኮሚቴ መርሃ ግብር ይለያያል።</p>
+<hr>
+<h2>7. ለስኬታማ ማመልከቻ</h2>
+<ul>
+<li>ትክክለኛ <strong>ደንበኛ ቁጥር</strong> ይጠቀሙ።  </li>
+<li>የሚያገለግልዎትን <strong>ቅርንጫፍ</strong> ይምረጡ።  </li>
+<li>ከክፍያ በፊት <strong>ሁሉንም የግዴታ ሰነዶች</strong> ይስቀሉ።  </li>
+<li>የክፍያ ማረጋገጫ እና <strong>Queue ID</strong> ይያዙ።  </li>
+<li>ቅርንጫፍ ተጨማሪ ሰነድ ወይም ጉብኝት ካለፈለገ በፍጥነት ምላሽ ይስጡ።  </li>
+<li>የይለፍ ቃልዎን ወይም OTPን ለማንም አይስጡ።</li>
+</ul>
+<hr>
+<h2>8. ችግር መፍታት</h2>
+<table>
+<thead><tr><th>ችግር</th><th>መፍትሔ</th></tr></thead>
+<tbody>
+<tr><td>ፖርታሉ ዝግ ነው</td><td>ቅርንጫፍ ይጎብኙ ወይም በኋላ ይሞክሩ</td></tr>
+<tr><td>መመዝገብ አልተቻለም</td><td>ደንበኛ ቁጥርና ስልክ ያረጋግጡ</td></tr>
+<tr><td>OTP አልመጣም</td><td>ስልክ ያረጋግጡ፤ እንደገና ይሞክሩ፤ ካልሆነ ቅርንጫፍ</td></tr>
+<tr><td>ክፍያ ተቋርጧል</td><td>ወዲያው ተመሳሳይ ማመልከቻ አይፍጠሩ፤ Feeን እንደገና ይሞክሩ</td></tr>
+<tr><td>Queue ID የለም</td><td>አሁንም ረቂቅ ነው — Fee እና Submit ያጠናቅቁ</td></tr>
+<tr><td>ሁኔታ አይንቀሳቀስም</td><td>ብዙ ጊዜ ብዙ ቀናት ሊፈጅ ይችላል፤ አስቸኳይ ከሆነ በQueue ID ቅርንጫፍ ያነጋግሩ</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>9. ግላዊነት እና ድጋፍ</h2>
+<ul>
+<li>መረጃዎ ለብድር ግምገማ በDECSI ይሰራበታል።  </li>
+<li>ለእርዳታ፡ ሙሉ ስም፣ ደንበኛ ቁጥር እና <strong>Queue ID</strong> ይዘው <strong>ቅርንጫፍዎን</strong> ያነጋግሩ።  </li>
+<li>ሰራተኞች የዲጂታል ማመልከቻ የይለፍ ቃልዎን አይጠይቁም።</li>
+</ul>
+<hr>
+<h2>10. ተዛማጅ መመሪያዎች</h2>
+<ul>
+<li><a href="03_customers.md">English customer manual</a>  </li>
+<li><a href="02_staff.md">Staff manual</a>  </li>
+<li><a href="README.md">Manual index</a></li>
+</ul>
+</section><section class="chapter" id="ch-7">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 8 · Market partners</p>
+<h1>Market Partners User Manual — Seqela Market</h1>
+<p><strong>Audience:</strong> Dealers, brokers, sales persons, suppliers, cooperatives/SACCOs, and other market actors who report local prices.  </p>
+<p><strong>Entry:</strong> <code>/market-portal/</code>  </p>
+<p><strong>Brand in UI:</strong> <em>Seqela Market</em></p>
+<p>This portal is separate from staff hub login and from Digital Apply. You do <strong>not</strong> use a DECSI staff username here.</p>
+<hr>
+<h2>1. Why this portal exists</h2>
+<p>DECSI uses local market prices (building materials, land, vehicles, machinery, and related items) to support collateral and credit work. Your quotes help keep <strong>price bands</strong> current for your area (Region → Zone → City/Woreda).</p>
+<p>You can:</p>
+<ul>
+<li>Share a price as a <strong>guest</strong> (two steps, no account), or  </li>
+<li><strong>Register</strong> once so your trading area is saved and later quotes are faster.</li>
+</ul>
+<hr>
+<h2>2. Actor types</h2>
+<p>When you register, choose the type that best matches you:</p>
+<table>
+<thead><tr><th>Type</th><th>Examples</th></tr></thead>
+<tbody>
+<tr><td>Dealer / shop</td><td>Retail or wholesale shop</td></tr>
+<tr><td>Broker</td><td>Intermediary quoting market rates</td></tr>
+<tr><td>Sales person</td><td>Field sales reporting prices</td></tr>
+<tr><td>Supplier</td><td>Manufacturer or distributor</td></tr>
+<tr><td>Cooperative / SACCO</td><td>Member cooperative price reporting</td></tr>
+<tr><td>Other</td><td>Not listed above</td></tr>
+</tbody>
+</table>
+<p>Trust status (managed by DECSI staff) may show as <strong>Pending</strong>, <strong>Trusted</strong>, or <strong>Suspended</strong>. Suspended or disabled accounts cannot use the portal.</p>
+<hr>
+<h2>3. Guest: share a local price (no login)</h2>
+<ol>
+<li>Open <code>/market-portal/</code>.</li>
+<li>You see <strong>Share a local price</strong> — Step <strong>1 · Area</strong> then <strong>2 · Product</strong>.</li>
+<li><strong>About you:</strong> enter name and phone.</li>
+<li><strong>Where is this price from?</strong> select Region → Zone → City / Woreda.</li>
+<li>Continue to <strong>Product &amp; price</strong>.</li>
+<li>Choose product mode and enter the item + price (ETB) as prompted.</li>
+<li>Submit. You should see confirmation that the quote was saved.</li>
+</ol>
+<blockquote class="manual-shot"><strong>Screenshot (M-01):</strong> Share a local price — Step 1 Area (who you are + Region/Zone/City).<br><br><strong>Screenshot (M-02):</strong> Step 2 Product — enter item and price (ETB) for that area.</blockquote>
+<p>Guest quotes are useful for one-off reporting. For frequent updates, register an account.</p>
+<hr>
+<h2>4. Register a free account</h2>
+<ol>
+<li>From the portal, open <strong>Register</strong> (<code>/market-portal/register/</code>).</li>
+<li>Fill <strong>About you:</strong> name, phone, actor kind, product focus.</li>
+<li>Set <strong>Where you trade:</strong> Region → Zone → City / Woreda.</li>
+<li>Choose a username and password for the portal.</li>
+<li>Submit <strong>Create free account</strong>.</li>
+<li>Sign in at <code>/market-portal/login/</code>.</li>
+</ol>
+<p>After registration, your trading area is stored on your profile so you mainly enter product and price next time.</p>
+<hr>
+<h2>5. Sign in and profile</h2>
+<table>
+<thead><tr><th>Task</th><th>Path</th></tr></thead>
+<tbody>
+<tr><td>Sign in</td><td><code>/market-portal/login/</code></td></tr>
+<tr><td>Home / start quote</td><td><code>/market-portal/home/</code></td></tr>
+<tr><td>Profile</td><td><code>/market-portal/profile/</code></td></tr>
+<tr><td>Sign out</td><td>Sign out from the top actions</td></tr>
+</tbody>
+</table>
+<h3>Update your trading area</h3>
+<ol>
+<li>Sign in.</li>
+<li>On Step 1 (area), change Region / Zone / City when offered, or use the location change flow.</li>
+<li>Save location — later quotes use the saved area automatically.</li>
+</ol>
+<h3>Profile</h3>
+<p>Use <strong>Profile</strong> to review or update contact details and preferences your deployment allows.</p>
+<hr>
+<h2>6. Submit product &amp; price (registered)</h2>
+<ol>
+<li>Sign in → you land on area (Step 1) or go straight to product if location is already set.</li>
+<li>Open <strong>Product</strong> step (<code>/market-portal/submit/product/</code>).</li>
+<li>Select the <strong>product mode</strong> shown in the UI (for example building materials from catalog, or free-text for land / vehicle / machinery — follow on-screen options).</li>
+<li>Enter unit and <strong>price</strong> carefully (ETB).</li>
+<li>Submit the quote.</li>
+<li>Check <strong>Your recent quotes</strong> on the home/area screen to confirm it appears.</li>
+</ol>
+<p>Submit honest, current local prices. Wrong quotes can distort collateral reference bands.</p>
+<hr>
+<h2>7. Tips for good quotes</h2>
+<ul>
+<li>Match the <strong>City / Woreda</strong> to where the price actually applies.  </li>
+<li>Prefer catalog items when the building-materials path is available (consistent naming).  </li>
+<li>Report the unit the form asks for (piece, m², quintal, etc.).  </li>
+<li>Re-submit when prices move — do not leave stale figures for weeks if you trade daily.  </li>
+<li>Keep your phone number up to date so DECSI can reach you about trust or data quality.</li>
+</ul>
+<hr>
+<h2>8. Troubleshooting</h2>
+<table>
+<thead><tr><th>Problem</th><th>What to try</th></tr></thead>
+<tbody>
+<tr><td>Cannot sign in</td><td>Confirm username/password; ask DECSI contact if account is suspended or portal disabled</td></tr>
+<tr><td>Zone / city list empty</td><td>Select Region first, then Zone, then City</td></tr>
+<tr><td>Guest vs account confusion</td><td>Guest is fine for one quote; register if you submit often</td></tr>
+<tr><td>Quote not listed</td><td>Refresh home; confirm you completed Step 2 submit</td></tr>
+<tr><td>Wrong area saved</td><td>Use change-location / save location, then submit a new quote</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Privacy and integrity</h2>
+<ul>
+<li>Prices you submit may be aggregated into market <strong>price bands</strong> for institutional use.  </li>
+<li>Do not share your portal password.  </li>
+<li>DECSI may set trust status (Pending / Trusted / Suspended) based on data quality.</li>
+</ul>
+<hr>
+<h2>10. Related manuals</h2>
+<ul>
+<li><a href="03_customers.md">Customer (Digital Apply)</a> — loan applications (different portal)  </li>
+<li><a href="02_staff.md">Staff</a> — internal processing (staff hub)  </li>
+<li><a href="01_admin.md">Admin</a> — platform configuration  </li>
+<li><a href="README.md">Manual index</a></li>
+</ul>
+</section><section class="chapter" id="ch-8">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 9 · Screenshot captions</p>
+<h1>Screenshot captions catalog</h1>
+<p>Use this catalog when capturing UI screenshots for training decks, PDFs, or LMS content.  </p>
+<p>Each entry gives a <strong>shot ID</strong>, <strong>where to capture</strong>, and a <strong>caption</strong> to place under the image.</p>
+<p>Inline callouts in the manuals use the same wording after <code>&gt; <strong>Screenshot:</strong></code>.</p>
+<hr>
+<h2>A. Staff hub</h2>
+<table>
+<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
+<tbody>
+<tr><td>H-01</td><td><code>/hub/login/</code></td><td>Staff login — enter username and password for AI-powered Credit Intelligence.</td></tr>
+<tr><td>H-02</td><td><code>/hub/mfa/verify/</code></td><td>MFA verify — enter the one-time code from your authenticator app.</td></tr>
+<tr><td>H-03</td><td><code>/hub/mfa/setup/</code></td><td>MFA setup — scan the QR code, then confirm with a code from the app.</td></tr>
+<tr><td>H-04</td><td>Hub home / Credit Intelligence</td><td>Hub home — role-scoped KPIs and shortcuts after sign-in.</td></tr>
+<tr><td>H-05</td><td>Header user menu</td><td>Header — Notifications, Help, and Logout sit beside your name and role.</td></tr>
+<tr><td>H-06</td><td><code>/hub/help/</code></td><td>Help index — open any manual chapter or the printable HTML pack.</td></tr>
+<tr><td>H-07</td><td>Loan requests list</td><td>Loan requests — open a Queue ID to continue documents, appraisal, or collateral.</td></tr>
+<tr><td>H-08</td><td>Create loan request</td><td>Create loan request — capture customer number, product, amount, and branch.</td></tr>
+<tr><td>H-09</td><td>Assign loan officer</td><td>Assign loan officer — branch/district managers route the file to an officer.</td></tr>
+<tr><td>H-10</td><td>Cooperative queue</td><td>Cooperative queue — approve branch intake before officer work continues.</td></tr>
+<tr><td>H-11</td><td>Document upload</td><td>Documents — upload each required type from the product document pack.</td></tr>
+<tr><td>H-12</td><td>Appraisal steps</td><td>Appraisal — complete steps 1–7 (MSME or corporate mode).</td></tr>
+<tr><td>H-13</td><td>Collateral dashboard</td><td>Collateral — buildings, land, or other items with field evidence.</td></tr>
+<tr><td>H-14</td><td>Engineering QA</td><td>Engineering QA — approve or return submitted valuations.</td></tr>
+<tr><td>H-15</td><td>Approval queue</td><td>Approval queue — committee members cast votes on pending loans.</td></tr>
+<tr><td>H-16</td><td>Post-approval detail</td><td>Post-approval — clear conditions, confirm schedule, mark ready.</td></tr>
+<tr><td>H-17</td><td>Disbursement queue</td><td>Disbursement queue — finance releases funds when the loan is ready.</td></tr>
+<tr><td>H-18</td><td>Online loan intake</td><td>Online loan intake — Digital Apply submissions waiting for branch processing.</td></tr>
+<tr><td>H-19</td><td>Settings → Digital apply</td><td>Digital Apply settings — open/close portal, fee, and security controls.</td></tr>
+<tr><td>H-20</td><td>Settings → Document pack</td><td>Document pack — required and optional docs for one loan category.</td></tr>
+<tr><td>H-21</td><td>Security audit</td><td>Security audit — review login, MFA, and unlock events.</td></tr>
+<tr><td>H-22</td><td>Agentic Assist widget</td><td>Agentic Assist — asks questions and drafts; cannot approve or disburse.</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>B. Digital Apply (customers)</h2>
+<table>
+<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
+<tbody>
+<tr><td>C-01</td><td><code>/</code> landing</td><td>Digital Apply landing — Create account or sign in to apply online.</td></tr>
+<tr><td>C-02</td><td><code>/register/</code></td><td>Register — DECSI customer number, name, mobile, and password.</td></tr>
+<tr><td>C-03</td><td><code>/login/</code></td><td>Customer sign-in — use mobile number or customer number.</td></tr>
+<tr><td>C-04</td><td><code>/home/</code></td><td>My applications — drafts and submitted loans with status chips.</td></tr>
+<tr><td>C-05</td><td>Apply step 1 Details</td><td>Step 1 · Details — choose product, branch, amount, and purpose.</td></tr>
+<tr><td>C-06</td><td>Apply step 2 Documents</td><td>Step 2 · Documents — upload every required file for the product.</td></tr>
+<tr><td>C-07</td><td>Apply step 3 Fee</td><td>Step 3 · Fee — pay the processing fee (ETB) before submit.</td></tr>
+<tr><td>C-08</td><td>Apply step 4 Submit</td><td>Step 4 · Submit — review and submit to receive a Queue ID.</td></tr>
+<tr><td>C-09</td><td>Status / Queue ID</td><td>Status — keep your Queue ID for branch follow-up.</td></tr>
+<tr><td>C-10</td><td>Pipeline tracker</td><td>Pipeline — Submitted → intake → processing → decision → disbursement.</td></tr>
+<tr><td>C-11</td><td><code>/help/</code></td><td>Help — English and Amharic customer manuals inside Digital Apply.</td></tr>
+<tr><td>C-12</td><td>Password forgot / OTP</td><td>Password reset — request an OTP on your registered phone.</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>C. Seqela Market</h2>
+<table>
+<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
+<tbody>
+<tr><td>M-01</td><td><code>/market-portal/</code> guest step 1</td><td>Share a local price — Step 1 Area (who you are + Region/Zone/City).</td></tr>
+<tr><td>M-02</td><td>Guest step 2 product</td><td>Step 2 Product — enter item and price (ETB) for that area.</td></tr>
+<tr><td>M-03</td><td>Register</td><td>Create free account — actor type, product focus, and trading area.</td></tr>
+<tr><td>M-04</td><td>Login</td><td>Market sign-in — portal username and password (not staff hub).</td></tr>
+<tr><td>M-05</td><td>Recent quotes</td><td>Recent quotes — confirm your last submissions on the home/area screen.</td></tr>
+<tr><td>M-06</td><td><code>/market-portal/help/</code></td><td>Market Help — open the Seqela Market user manual.</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>Capture tips</h2>
+<ol>
+<li>Use a demo account; blur real customer names and phone numbers.  </li>
+<li>Prefer desktop width ~1280px for hub screenshots; also capture mobile for Digital Apply.  </li>
+<li>Show a realistic <strong>Queue ID</strong> format (<code>HK-#########</code>) on status shots.  </li>
+<li>Store files as <code>docs/user_manual/screenshots/&lt;ID&gt;.png</code> when assets are ready.  </li>
+<li>Rebuild the printable HTML after adding inline callouts: <code>python3 docs/user_manual/build_html.py</code>.</li>
+</ol>
+</section><section class="chapter" id="ch-9">
+<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 10 · IT installation</p>
+<h1>DECSI Loan Hub — Installation Manual for IT Staff</h1>
+<p><strong>Audience:</strong> DECSI IT / infrastructure staff installing or upgrading the Loan Hub.  </p>
+<p><strong>Goal:</strong> Bring up a working stack with the <strong>minimum requirements</strong>, then harden for pilot / production.</p>
+<p>End-user operations (admin / staff / customers) are in the <a href="README.md">user manuals index</a>.  </p>
+<p>This document covers <strong>install, configure, verify, backup</strong>.</p>
+<hr>
+<h2>1. What you are installing</h2>
+<table>
+<thead><tr><th>Component</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><strong>Web app</strong> (Django)</td><td>Staff hub (<code>/hub/</code>), Digital Apply (<code>/</code>), Market portal (<code>/market-portal/</code>), optional Django Admin (<code>/admin/</code>)</td></tr>
+<tr><td><strong>PostgreSQL 16</strong></td><td>Primary database</td></tr>
+<tr><td><strong>Media volume</strong></td><td>Uploaded documents, photos, OCR inputs</td></tr>
+<tr><td><strong>Optional nginx HTTPS</strong></td><td>Secure context for field tablets (GPS / camera) on LAN</td></tr>
+</tbody>
+</table>
+<p><strong>Recommended path:</strong> Docker Compose (includes Python 3.9, Tesseract eng+amh, poppler, WeasyPrint libs).</p>
+<hr>
+<h2>2. Minimum requirements</h2>
+<h3>2.1 Server (pilot / single-site minimum)</h3>
+<table>
+<thead><tr><th>Resource</th><th>Minimum</th><th>Recommended (branch pilot+)</th></tr></thead>
+<tbody>
+<tr><td>CPU</td><td>2 vCPU</td><td>4 vCPU</td></tr>
+<tr><td>RAM</td><td><strong>4 GB</strong></td><td>8 GB</td></tr>
+<tr><td>Disk</td><td><strong>40 GB</strong> free SSD</td><td>100 GB+ (media grows with scans/photos)</td></tr>
+<tr><td>OS</td><td>Linux x86_64 (Ubuntu 22.04 LTS or RHEL 8/9 equivalent)</td><td>Same</td></tr>
+<tr><td>Network</td><td>LAN access to staff PCs; outbound HTTPS for updates / Chapa / CBS if used</td><td>Static IP or DNS name</td></tr>
+</tbody>
+</table>
+<blockquote class="manual-shot">These are <strong>application</strong> minimums. Size disk for expected document volume (loan packs + collateral photos).</blockquote>
+<h3>2.2 Client workstations (staff)</h3>
+<table>
+<thead><tr><th>Item</th><th>Minimum</th></tr></thead>
+<tbody>
+<tr><td>Browser</td><td>Current Chrome, Edge, or Firefox</td></tr>
+<tr><td>Display</td><td>1280×720 (1920×1080 preferred for appraisal / collateral)</td></tr>
+<tr><td>Network</td><td>Reach server on ports below</td></tr>
+</tbody>
+</table>
+<p>Field tablets using GPS/camera need <strong>HTTPS</strong> (see §6).</p>
+<h3>2.3 Software prerequisites (Docker path — preferred)</h3>
+<table>
+<thead><tr><th>Software</th><th>Minimum version</th></tr></thead>
+<tbody>
+<tr><td>Docker Engine</td><td>24+</td></tr>
+<tr><td>Docker Compose</td><td>v2 (<code>docker compose</code>)</td></tr>
+<tr><td>Git</td><td>2.x (to obtain / update the codebase)</td></tr>
+</tbody>
+</table>
+<p>Host does <strong>not</strong> need a separate Python/PostgreSQL install when using Compose.</p>
+<h3>2.4 Software prerequisites (non-Docker / bare metal)</h3>
+<table>
+<thead><tr><th>Software</th><th>Minimum</th></tr></thead>
+<tbody>
+<tr><td>Python</td><td><strong>3.9</strong> (3.9.x)</td></tr>
+<tr><td>PostgreSQL</td><td><strong>16</strong></td></tr>
+<tr><td>pip / venv</td><td>Matching Python</td></tr>
+<tr><td>Tesseract OCR</td><td>With <strong>eng</strong> + <strong>amh</strong> language packs</td></tr>
+<tr><td>poppler-utils</td><td>For PDF→image</td></tr>
+<tr><td>WeasyPrint deps</td><td>Pango, Cairo, GDK-Pixbuf, shared-mime-info, DejaVu fonts</td></tr>
+</tbody>
+</table>
+<h3>2.5 Ports</h3>
+<table>
+<thead><tr><th>Port</th><th>Service</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><strong>8000/tcp</strong></td><td>Web (HTTP)</td><td>Default Compose mapping</td></tr>
+<tr><td><strong>5432/tcp</strong></td><td>PostgreSQL</td><td>Bind to localhost / Docker network only in production</td></tr>
+<tr><td><strong>8443/tcp</strong></td><td>HTTPS proxy</td><td>Only if using <code>docker-compose.https.yml</code></td></tr>
+</tbody>
+</table>
+<p>Firewall: allow staff → 8000 (or 8443); do <strong>not</strong> expose PostgreSQL to the internet.</p>
+<h3>2.6 Accounts and secrets you must prepare</h3>
+<table>
+<thead><tr><th>Item</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>SECRET_KEY</code></td><td>Long random Django secret (never reuse across environments)</td></tr>
+<tr><td><code>DB_PASSWORD</code></td><td>Strong password for PostgreSQL</td></tr>
+<tr><td>Superuser</td><td>Created after first migrate (<code>createsuperuser</code>)</td></tr>
+<tr><td>SMTP (optional but needed for staff password reset)</td><td>Host, port, user, password</td></tr>
+<tr><td>Chapa keys (optional)</td><td>Only if Digital Apply live payments</td></tr>
+<tr><td>CBS / party API (optional)</td><td>Keep mock flags until DECSI core banking access is ready</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>3. Pre-install checklist</h2>
+<ul>
+<li>[ ] Server meets §2.1  </li>
+<li>[ ] Docker + Compose installed (<code>docker --version</code>, <code>docker compose version</code>)  </li>
+<li>[ ] Clock/NTP correct (important for MFA TOTP)  </li>
+<li>[ ] Hostname / DNS planned (<code>SITE_URL</code>, <code>ALLOWED_HOSTS</code>)  </li>
+<li>[ ] Backup location identified for DB + <code>media</code>  </li>
+<li>[ ] Release package or Git access available  </li>
+</ul>
+<hr>
+<h2>4. Installation (Docker Compose — recommended)</h2>
+<h3>4.1 Obtain the application</h3>
+<pre class="lang-bash"><code>cd /opt   # or your preferred path
+# Example: git clone &lt;DECSI-internal-repo-url&gt; decsi_loan
+cd decsi_loan</code></pre>
+<h3>4.2 Create environment file</h3>
+<pre class="lang-bash"><code>cp .env.example .env</code></pre>
+<p>Edit <code>.env</code> — <strong>minimum required for a non-debug deploy</strong>:</p>
+<pre class="lang-bash"><code>SECRET_KEY=&lt;generate-a-long-random-value&gt;
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,&lt;server-ip-or-hostname&gt;
+SITE_URL=http://&lt;server-ip-or-hostname&gt;:8000
+
+DB_NAME=decsiloandb
+DB_USER=decsiloandbuser
+DB_PASSWORD=&lt;strong-password&gt;
+DB_HOST=db
+DB_PORT=5432</code></pre>
+<p>Generate <code>SECRET_KEY</code>:</p>
+<pre class="lang-bash"><code>python3 -c &quot;from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())&quot;</code></pre>
+<p>(If Django is not on the host yet, generate any 50+ character random string, or run the same command after the image builds.)</p>
+<p><strong>Auth hardening (recommended from first install):</strong></p>
+<pre class="lang-bash"><code>LOGIN_MAX_FAILED_ATTEMPTS=5
+LOGIN_LOCKOUT_MINUTES=15
+MFA_REQUIRED=True
+MFA_TOTP_ISSUER=DECSI Loan Hub
+SESSION_IDLE_TIMEOUT=1800
+PASSWORD_MIN_LENGTH=10</code></pre>
+<p><strong>Keep mocks until integrations are ready:</strong></p>
+<pre class="lang-bash"><code>DECSI_CUSTOMER_FALLBACK_MOCK=True
+DECSI_CBS_USE_MOCK_LEDGER=True</code></pre>
+<p>Never commit <code>.env</code> to Git.</p>
+<h3>4.3 Build and start</h3>
+<pre class="lang-bash"><code>docker compose up --build -d</code></pre>
+<p>Wait until <code>db</code> is healthy and <code>web</code> is running:</p>
+<pre class="lang-bash"><code>docker compose ps
+docker compose logs -f web</code></pre>
+<h3>4.4 Database migrate and superuser</h3>
+<p>Compose may already run migrations depending on entrypoint; always verify:</p>
+<pre class="lang-bash"><code>docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser</code></pre>
+<p>Follow prompts (username, email optional, password).</p>
+<h3>4.5 Open the application</h3>
+<table>
+<thead><tr><th>Surface</th><th>URL</th></tr></thead>
+<tbody>
+<tr><td>Digital Apply (public)</td><td><code>http://&lt;host&gt;:8000/</code></td></tr>
+<tr><td>Staff hub login</td><td><code>http://&lt;host&gt;:8000/hub/login/</code></td></tr>
+<tr><td>Django Admin</td><td><code>http://&lt;host&gt;:8000/admin/</code></td></tr>
+<tr><td>In-app Help (staff)</td><td><code>http://&lt;host&gt;:8000/hub/help/</code></td></tr>
+</tbody>
+</table>
+<p>Sign in with the superuser, then create staff users and configure Settings (see <a href="01_admin.md">Admin user manual</a>).</p>
+<hr>
+<h2>5. Installation (bare metal — optional)</h2>
+<p>Use only if Docker is not allowed.</p>
+<ol>
+<li>Install PostgreSQL 16; create DB/user matching <code>.env</code>.  </li>
+<li>Install system packages: Tesseract (<code>eng</code>, <code>amh</code>), poppler, Pango/Cairo stack (see Dockerfile for the package list).  </li>
+<li>Python 3.9 venv:</li>
+</ol>
+<pre class="lang-bash"><code>python3.9 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt</code></pre>
+<ol>
+<li><code>.env</code> with <code>DB_HOST=127.0.0.1</code> (not <code>db</code>).  </li>
+<li>Migrate, createsuperuser, then either:</li>
+</ol>
+<pre class="lang-bash"><code>python manage.py runserver 0.0.0.0:8000          # lab only
+# or production-style:
+python manage.py collectstatic --noinput
+gunicorn decsi_loan.wsgi:application -c gunicorn.conf.py</code></pre>
+<p>Put nginx/Apache in front for TLS in production.</p>
+<hr>
+<h2>6. HTTPS for field tablets (optional overlay)</h2>
+<p>Browsers require a <strong>secure context</strong> for camera/GPS on many devices.</p>
+<pre class="lang-bash"><code>./scripts/gen_field_https_certs.sh
+# optionally pass LAN IP: ./scripts/gen_field_https_certs.sh 192.168.x.x
+docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d</code></pre>
+<ul>
+<li>App via proxy: <code>https://&lt;lan-ip&gt;:8443</code>  </li>
+<li>Accept the self-signed certificate once (or install a bank-signed cert in <code>deploy/https/certs/</code>).  </li>
+<li>Set HTTPS-related env vars as documented in <code>.env.example</code> / <code>deploy/https/.env.https</code>.</li>
+</ul>
+<hr>
+<h2>7. Post-install configuration (minimum go-live)</h2>
+<p>Complete in hub <strong>Settings</strong> (superuser) or Admin:</p>
+<ol>
+<li>Districts → Branches → geography (Regions / Zones / Cities)  </li>
+<li>Staff users with correct <strong>roles</strong> and branch/district  </li>
+<li>Loan categories + <strong>document packs</strong>  </li>
+<li>Approval committees  </li>
+<li>Collateral policy / estimation mode  </li>
+<li>Digital Apply: open/closed, processing fee, terms  </li>
+<li>SMTP for staff password reset (if not set in <code>.env</code>)  </li>
+<li>MFA enrollment for privileged accounts  </li>
+</ol>
+<p>CSV imports (optional):</p>
+<pre class="lang-bash"><code>docker compose exec web python manage.py import_zones &lt;file&gt;
+docker compose exec web python manage.py import_branches &lt;file&gt;
+docker compose exec web python manage.py import_loan_categories &lt;file&gt;
+docker compose exec web python manage.py import_users &lt;file&gt;</code></pre>
+<hr>
+<h2>8. Smoke test (IT acceptance)</h2>
+<table>
+<thead><tr><th>#</th><th>Test</th><th>Expected</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>docker compose ps</code></td><td><code>web</code> Up, <code>db</code> healthy</td></tr>
+<tr><td>2</td><td>Open <code>/hub/login/</code></td><td>Login form loads</td></tr>
+<tr><td>3</td><td>Login as superuser</td><td>Hub home / Settings visible</td></tr>
+<tr><td>4</td><td>Open <code>/</code></td><td>Digital Apply landing (or closed page if disabled)</td></tr>
+<tr><td>5</td><td><code>/hub/help/</code></td><td>User manuals list</td></tr>
+<tr><td>6</td><td>Create test loan (staff)</td><td>Queue ID issued</td></tr>
+<tr><td>7</td><td>Upload a PDF/image document</td><td>File stored under media</td></tr>
+<tr><td>8</td><td>(If MFA on) Setup + verify TOTP</td><td>Login succeeds with code</td></tr>
+<tr><td>9</td><td>Restart stack</td><td><code>docker compose restart</code> — data persists</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Day-2 operations</h2>
+<h3>9.1 Useful commands</h3>
+<pre class="lang-bash"><code>docker compose ps
+docker compose logs -f web
+docker compose logs -f db
+docker compose restart web
+docker compose down          # stop (keeps volumes)
+docker compose up -d --build # start / rebuild after code update</code></pre>
+<h3>9.2 Backup (minimum)</h3>
+<table>
+<thead><tr><th>What</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>Database</td><td><code>docker compose exec -T db pg_dump -U $DB_USER $DB_NAME &gt; backup_$(date +%F).sql</code></td></tr>
+<tr><td>Media files</td><td>Backup Docker volume <code>media_data</code> or <code>/app/media</code> bind path</td></tr>
+<tr><td>Config</td><td>Keep a secure offline copy of <code>.env</code> (not in Git)</td></tr>
+</tbody>
+</table>
+<p>Restore DB only after stopping writers; test restore on a non-prod host first.</p>
+<h3>9.3 Update / upgrade</h3>
+<pre class="lang-bash"><code>cd /opt/decsi_loan
+git pull   # or extract new release
+docker compose up -d --build
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py collectstatic --noinput   # if using gunicorn entrypoint</code></pre>
+<h3>9.4 Default Gunicorn sizing (production image/entrypoint)</h3>
+<p>From <code>gunicorn.conf.py</code> (override via env):</p>
+<table>
+<thead><tr><th>Variable</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>GUNICORN_WORKERS</code></td><td>3</td></tr>
+<tr><td><code>GUNICORN_THREADS</code></td><td>2</td></tr>
+<tr><td><code>GUNICORN_TIMEOUT</code></td><td>120</td></tr>
+<tr><td><code>GUNICORN_BIND</code></td><td><code>0.0.0.0:8000</code></td></tr>
+</tbody>
+</table>
+<p>On a 4 GB host, do not raise workers aggressively without more RAM.</p>
+<hr>
+<h2>10. Security baseline for DECSI IT</h2>
+<ul>
+<li>[ ] <code>DEBUG=False</code> in every non-lab environment  </li>
+<li>[ ] Strong unique <code>SECRET_KEY</code> and <code>DB_PASSWORD</code>  </li>
+<li>[ ] PostgreSQL not published to public internet  </li>
+<li>[ ] <code>ALLOWED_HOSTS</code> and <code>SITE_URL</code> match real hostname  </li>
+<li>[ ] <code>MFA_REQUIRED=True</code> for staff (or phased enrollment)  </li>
+<li>[ ] HTTPS for any internet-facing or tablet field use  </li>
+<li>[ ] Restrict <code>/admin/</code> to admin roles / VPN  </li>
+<li>[ ] Regular DB + media backups with restore drills  </li>
+<li>[ ] Keep OS and Docker images patched  </li>
+</ul>
+<p>See also <code>docs/INSA_SECURITY_CLEARANCE_CHECKLIST.md</code> for security control mapping.</p>
+<hr>
+<h2>11. Troubleshooting</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Check</th></tr></thead>
+<tbody>
+<tr><td><code>web</code> restarts / cannot connect DB</td><td><code>DB_HOST=db</code>, password match, <code>docker compose logs db</code></td></tr>
+<tr><td>400 Bad Request / DisallowedHost</td><td>Add host to <code>ALLOWED_HOSTS</code></td></tr>
+<tr><td>Static/CSS missing (prod)</td><td>Run <code>collectstatic</code>; confirm reverse proxy static config</td></tr>
+<tr><td>OCR / PDF features fail</td><td>Confirm Tesseract eng+amh inside container (<code>tesseract --list-langs</code>)</td></tr>
+<tr><td>Staff password reset email never arrives</td><td>Configure SMTP env vars; check mail logs</td></tr>
+<tr><td>MFA codes rejected</td><td>Server time/NTP skew</td></tr>
+<tr><td>Out of disk</td><td>Media volume growth; archive old uploads</td></tr>
+<tr><td>Port 8000 in use</td><td>Set <code>WEB_PORT=8080</code> in <code>.env</code> / Compose</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>12. URL quick reference</h2>
+<table>
+<thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>/</code></td><td>Digital Apply</td></tr>
+<tr><td><code>/hub/login/</code></td><td>Staff login</td></tr>
+<tr><td><code>/hub/</code></td><td>Staff hub</td></tr>
+<tr><td><code>/hub/help/</code></td><td>In-app manuals (staff)</td></tr>
+<tr><td><code>/admin/</code></td><td>Django Admin</td></tr>
+<tr><td><code>/market-portal/</code></td><td>Market price portal</td></tr>
+<tr><td><code>/collateral/</code></td><td>Collateral module (staff auth)</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>13. Related documents</h2>
+<table>
+<thead><tr><th>Document</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td><a href="01_admin.md">Admin user manual</a></td><td>Configure products, users, Digital Apply</td></tr>
+<tr><td><a href="02_staff.md">Staff user manual</a></td><td>Day-to-day lending operations</td></tr>
+<tr><td><a href="../INSA_SECURITY_CLEARANCE_CHECKLIST.md">INSA security checklist</a></td><td>Security clearance controls</td></tr>
+<tr><td><code>.env.example</code></td><td>Full environment variable template</td></tr>
+<tr><td>Project <code>README.md</code></td><td>Architecture and developer reference</td></tr>
+</tbody>
+</table>
+<hr>
+<h2>Document control</h2>
+<table>
+<thead><tr><th>Item</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Product</td><td>DECSI Loan Hub / AI-powered Credit Intelligence</td></tr>
+<tr><td>Audience</td><td>DECSI IT staff</td></tr>
+<tr><td>Install path</td><td>Docker Compose (preferred)</td></tr>
+<tr><td>Min server</td><td>2 vCPU · 4 GB RAM · 40 GB SSD · Linux · Docker 24+</td></tr>
+</tbody>
+</table>
+</section>
+</body>
+</html>

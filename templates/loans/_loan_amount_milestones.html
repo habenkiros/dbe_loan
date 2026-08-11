@@ -1,0 +1,34 @@
+{# Critical requested vs credit-approved amounts. Expects `loan_request`. #}
+{% with lr=loan_request %}
+<div class="lw-milestones" role="group" aria-label="Loan request and approval amounts">
+  <div class="lw-milestone lw-milestone-request">
+    <span class="lw-milestone-kicker">Loan requested</span>
+    <span class="lw-milestone-amt">{{ lr.amount_requested|floatformat:2 }} <small>ETB</small></span>
+    {% if lr.date_requested %}
+    <span class="lw-milestone-meta">{{ lr.date_requested|date:"d M Y" }}</span>
+    {% endif %}
+  </div>
+  <div class="lw-milestone {% if lr.committee_status == 'committee_approved' %}lw-milestone-approved{% elif lr.committee_status == 'committee_declined' %}lw-milestone-declined{% else %}lw-milestone-pending{% endif %}">
+    <span class="lw-milestone-kicker">
+      {% if lr.committee_status == 'committee_approved' %}Loan approved
+      {% elif lr.committee_status == 'committee_declined' %}Not approved
+      {% else %}Loan approved{% endif %}
+    </span>
+    <span class="lw-milestone-amt">
+      {% if lr.committee_status == 'committee_approved' %}
+        {% if lr.committee_final_amount %}{{ lr.committee_final_amount|floatformat:2 }}{% else %}{{ lr.amount_requested|floatformat:2 }}{% endif %}
+        <small>ETB</small>
+      {% elif lr.committee_status == 'committee_declined' %}
+        —
+      {% else %}
+        Pending
+      {% endif %}
+    </span>
+    {% if lr.committee_status == 'committee_approved' and lr.committee_decided_at %}
+    <span class="lw-milestone-meta">{{ lr.committee_decided_at|date:"d M Y" }}</span>
+    {% elif lr.committee_status != 'committee_approved' and lr.committee_status != 'committee_declined' %}
+    <span class="lw-milestone-meta">Awaiting credit decision</span>
+    {% endif %}
+  </div>
+</div>
+{% endwith %}

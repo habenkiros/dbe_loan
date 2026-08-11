@@ -35,6 +35,10 @@ If you see **“Digital apply is temporarily closed”**, the portal is offline 
    - Accept terms if shown
 4. Submit registration.
 
+> **Screenshot (C-01):** Digital Apply landing — Create account or sign in to apply online.
+>
+> **Screenshot (C-02):** Register — DECSI customer number, name, mobile, and password.
+
 Some deployments validate your customer number against DECSI records. If validation fails, confirm the number with your branch before retrying.
 
 ### Already registered?
@@ -68,6 +72,16 @@ Tips:
 From **My applications** / home, start a new application. The wizard shows four steps:
 
 **1 · Details → 2 · Documents → 3 · Fee → 4 · Submit**
+
+> **Screenshot (C-05):** Step 1 · Details — choose product, branch, amount, and purpose.
+>
+> **Screenshot (C-06):** Step 2 · Documents — upload every required file for the product.
+>
+> **Screenshot (C-07):** Step 3 · Fee — pay the processing fee (ETB) before submit.
+>
+> **Screenshot (C-08):** Step 4 · Submit — review and submit to receive a Queue ID.
+>
+> **Screenshot (C-09):** Status — keep your Queue ID for branch follow-up.
 
 ### Step 1 — Details
 
@@ -200,6 +214,7 @@ Processing time depends on product, collateral, completeness of documents, and c
 
 ## 10. Related manuals
 
+- [Amharic version](03_customers_am.md) — የአማርኛ የደንበኛ መመሪያ  
 - [Staff user manual](02_staff.md) — how DECSI processes your file after submit  
 - [Admin user manual](01_admin.md) — for DECSI administrators only  
-- [Manual index](README.md)
+- [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)

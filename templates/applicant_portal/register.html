@@ -3,18 +3,21 @@
 {% block wrap_class %}ap-narrow{% endblock %}
 {% block content %}
 <div class="ap-card">
-  <h1 class="ap-hero-title">Create your account</h1>
-  <p class="ap-sub">
-    Start with your <strong>DECSI customer number</strong>. When core banking is connected,
-    we load your official name, mobile, and related details automatically.
-  </p>
+  <div class="ap-auth-intro">
+    <p class="ap-lp-hero-kicker" style="color:var(--accent);margin-bottom:0.5rem;">Digital Apply</p>
+    <h1 class="ap-hero-title">Create your account</h1>
+    <p class="ap-sub">
+      Start with your <strong>DECSI customer number</strong>. When core banking is connected,
+      we load your official name, mobile, and related details automatically.
+    </p>
+  </div>
   <form method="post" autocomplete="off" id="ap-register-form">
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% if password_hints %}<p class="ap-help">{{ password_hints }}</p>{% endif %}
 
     <label for="{{ form.customer_number.id_for_label }}">{{ form.customer_number.label }}</label>
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:stretch;">
+    <div class="ap-field-row">
       {{ form.customer_number }}
       <button type="button" class="ap-btn ap-btn-ghost" id="ap-lookup-btn" style="white-space:nowrap;">
         Look up
@@ -24,7 +27,7 @@
     {{ form.customer_number.errors }}
     <p class="ap-help" id="ap-lookup-status" style="min-height:1.2em;"></p>
 
-    <div id="ap-profile-card" class="ap-card" style="display:none;margin:0.75rem 0;padding:0.85rem 1rem;background:var(--soft);box-shadow:none;">
+    <div id="ap-profile-card" class="ap-card ap-card-soft" style="display:none;margin:0.75rem 0;padding:0.85rem 1rem;">
       <strong style="display:block;margin-bottom:0.35rem;color:var(--accent-deep);">Customer record</strong>
       <ul class="ap-facts" style="margin:0;">
         <li><span class="k">Name</span><span class="v" id="ap-prof-name">—</span></li>
@@ -67,6 +70,10 @@
       <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">Sign in</a>
     </div>
   </form>
+  <div class="ap-auth-aside">
+    By registering you create a customer account for Digital Apply only.
+    Staff should not register here.
+  </div>
 </div>
 <script>
 (function () {
@@ -89,7 +96,8 @@
     if (phone && profile.phone_number) phone.value = profile.phone_number;
     document.getElementById('ap-prof-name').textContent = profile.name || '—';
     document.getElementById('ap-prof-phone').textContent = profile.phone_number || '—';
-    document.getElementById('ap-prof-status').textContent = profile.status || '—';
+    document.getElementById('ap-prof-status').textContent =
+      [profile.status, profile.customer_status].filter(Boolean).join(' · ') || '—';
     document.getElementById('ap-prof-address').textContent = profile.home_address || '—';
     card.style.display = 'block';
   }

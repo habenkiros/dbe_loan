@@ -308,6 +308,11 @@ def ajax_lookup_customer(request):
             'home_address': profile.get('home_address') or '',
             'tin_number': profile.get('tin_number') or '',
             'status': profile.get('status') or '',
+            'customer_status': profile.get('customer_status') or '',
+            'gender': profile.get('gender') or '',
+            'date_of_birth': profile.get('date_of_birth') or '',
+            'marital_status': profile.get('marital_status') or '',
+            'city': profile.get('city') or '',
             'provider': profile.get('provider') or '',
         },
     })
@@ -633,7 +638,7 @@ def apply_submit(request, public_id):
             return redirect('applicant_portal:apply_submit', public_id=app.public_id)
         messages.success(
             request,
-            f'Application submitted. Your queue ID is {loan.loan_request_id}.',
+            f'LOAN REQUESTED. Your queue ID is {loan.loan_request_id}.',
         )
         return redirect('applicant_portal:apply_status', public_id=app.public_id)
 
@@ -674,6 +679,25 @@ def apply_status(request, public_id):
                 )
             )
         ),
+    })
+
+
+@applicant_login_required
+def apply_schedule(request, public_id):
+    """Customer repayment schedule (read-only amortization after credit approval)."""
+    closed = _portal_or_closed(request)
+    if closed:
+        return closed
+    app = _get_owned_app(request, public_id)
+    from applicant_portal.schedule import build_repayment_schedule
+    from applicant_portal.status import build_applicant_status
+
+    status = build_applicant_status(app)
+    schedule = build_repayment_schedule(app)
+    return render(request, 'applicant_portal/apply_schedule.html', {
+        'application': app,
+        'status': status,
+        'schedule': schedule,
     })
 
 

@@ -1,0 +1,28 @@
+Offline CBS / party mock customers (no DECSI_BASE_URL needed)
+
+Same JSON shape as docs/customer API.txt (Temenos party custdets).
+
+Customer no.   Name                         Phone (local)   Gender
+-------------  ---------------------------  --------------  ------
+2000050041     Tekeste Jigar Meles          0945517351      MALE     ← original sample
+2000050042     Samrawit Berhe Gebre         0914220481      FEMALE
+2000050043     Hagos Weldekidan Abraha      0922881034      MALE
+2000050044     Selamawit Tadesse Hailu      0911556702      FEMALE
+2000050045     Mulugeta Gebremariam Desta   0934112890      MALE
+2000050046     Kidist Alemayehu Tsegay      0913778245      FEMALE
+2000050047     Abel Fisseha Girmay          0970334561      MALE
+2000050048     Rahel Mehari Tesfay          0915889012      FEMALE
+2000050049     Yonas Berhane Kahsay         0924667133      MALE
+2000050050     Helen Asmelash Goitom        0912445678      FEMALE
+2000050051     Daniel Gebrekidan Reda       0931220099      MALE
+2000050052     Meron Hailemariam Zewde      0916778890      FEMALE
+
+Not found: MISSING / NONE / 0
+Any other id → generic "DEMO Customer {id}"
+
+Use in:
+  - Digital Apply register → Look up
+  - Hub Create loan request → Look up customer
+  - Sheet 1 core banking lookup
+
+Source code: loans/services/mock_customers.py

@@ -15,10 +15,9 @@ from typing import Any, Dict, Optional, Tuple
 import requests
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
+from loans.services.mock_customers import SAMPLE_CUSTOMER_ID, build_mock_party_body
 
-# Sample from docs/customer API.txt — used for offline mock of that customer.
-SAMPLE_CUSTOMER_ID = '2000050041'
+logger = logging.getLogger(__name__)
 
 
 def _digits_only(value: str) -> str:
@@ -250,46 +249,10 @@ def normalize_customer_profile(raw: Dict[str, Any], *, customer_number: str = ''
 
 
 def _sample_decsi_body(customer_number: str) -> Dict[str, Any]:
-    """Sample body from docs/customer API.txt (customer 2000050041)."""
-    # Keep real sample shape for the documented id; generic mock for others.
-    if customer_number == SAMPLE_CUSTOMER_ID:
-        return {
-            'code': SAMPLE_CUSTOMER_ID,
-            'gender': 'MALE',
-            'industry': '5003',
-            'title': 'MR',
-            'resideYN': 'Y',
-            'customerStatus': 'Standard Rated - Private Client',
-            'suburbTown': 'Tigray',
-            'customerType': 'ACTIVE',
-            'taxInvoice': 'Y',
-            'countryCode': 'ET',
-            'street': 'MEKELE Debubu ADIHKI',
-            'familyName': 'Tekeste Jigar Meles',
-            'loansWof': 'N',
-            'customerId': SAMPLE_CUSTOMER_ID,
-            'sms': '945517351',
-            'mnemonic': 'TJMT900901',
-            'cityMunicipal': 'Ethiopa',
-            'residence': 'ET',
-            'sector': '5000',
-            'isMobileBankingService': 'NULL',
-            'givenName': 'Tekeste Jigar Meles',
-            'dateOfBirth': '19900920',
-            'firstName': 'Tekeste Jigar Meles',
-            'accountOfficer': '117',
-            'phoneNumber': '945517351',
-            'currAddress': 'Y',
-            'idTypes': '1',
-            'birthIncorpDate': '19900920',
-            'name': 'Tekeste Jigar Meles',
-            'internetBankingService': 'NULL',
-            'middleName': 'Tekeste Jigar Meles',
-            'shortName': 'Tekeste Jigar Meles',
-            'maritalStatus': 'SINGLE',
-            'age': '35',
-            'provider': 'mock',
-        }
+    """Party API body: catalog mock (Tekeste, Samrawit, …) or generic DEMO."""
+    catalog = build_mock_party_body(customer_number)
+    if catalog:
+        return catalog
     digits = _digits_only(customer_number) or '0'
     return {
         'customerId': customer_number,
@@ -313,7 +276,7 @@ def _sample_decsi_body(customer_number: str) -> Dict[str, Any]:
 def mock_fetch_customer_by_number(customer_number: str) -> Optional[Dict[str, Any]]:
     """
     Deterministic mock for local/dev when DECSI_BASE_URL is unset.
-    Uses docs/customer API.txt sample for 2000050041.
+    Catalog: docs/customer API.txt + mock_customers (Samrawit and others).
     """
     cid = (customer_number or '').strip()
     if not cid:

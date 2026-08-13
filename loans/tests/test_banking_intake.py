@@ -99,6 +99,28 @@ class BankingIntakeTests(TestCase):
         self.assertEqual(norm['customer_number'], SAMPLE_CUSTOMER_ID)
 
     @override_settings(DECSI_BASE_URL='', DECSI_CUSTOMER_FORCE_MOCK=True)
+    def test_mock_catalog_samrawit_and_others(self):
+        from loans.services.customer import SAMPLE_CUSTOMER_ID
+        from loans.services.mock_customers import SAMRAWIT_CUSTOMER_ID, list_mock_customer_ids
+
+        ids = list_mock_customer_ids()
+        self.assertEqual(len(ids), 12)
+        self.assertIn(SAMPLE_CUSTOMER_ID, ids)
+        self.assertIn(SAMRAWIT_CUSTOMER_ID, ids)
+
+        sam = fetch_customer_by_number(SAMRAWIT_CUSTOMER_ID)
+        self.assertIsNotNone(sam)
+        self.assertEqual(sam['name'], 'Samrawit Berhe Gebre')
+        self.assertEqual(sam['phone_number'], '0914220481')
+        self.assertEqual(sam['gender'], 'FEMALE')
+        self.assertEqual(sam['status'], 'ACTIVE')
+
+        hagos = fetch_customer_by_number('2000050043')
+        self.assertEqual(hagos['name'], 'Hagos Weldekidan Abraha')
+        meron = fetch_customer_by_number('2000050052')
+        self.assertEqual(meron['name'], 'Meron Hailemariam Zewde')
+
+    @override_settings(DECSI_BASE_URL='', DECSI_CUSTOMER_FORCE_MOCK=True)
     def test_banking_fills_empty_basic_fields(self):
         self.basic.business_name = ''
         self.basic.tin_number = ''

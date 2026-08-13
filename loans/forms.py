@@ -286,7 +286,7 @@ class LoanRequestForm(forms.ModelForm):
             'date_requested': forms.DateInput(attrs={'type': 'date'}),
             'customer_number': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g. 2000050041',
+                'placeholder': 'e.g. 2000050042 Samrawit',
                 'autocomplete': 'off',
                 'inputmode': 'numeric',
             }),

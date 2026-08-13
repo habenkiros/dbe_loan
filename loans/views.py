@@ -250,7 +250,7 @@ def ajax_staff_lookup_customer(request):
             'error': (
                 'Customer not found in DECSI core banking.'
                 if customer_api_is_live()
-                else 'Customer not found (mock: try a sample ID such as 2000050041).'
+                else 'Customer not found (mock: try 2000050041 Tekeste or 2000050042 Samrawit).'
             ),
             'live': customer_api_is_live(),
         }, status=404)

@@ -2270,6 +2270,14 @@ class LoanCommitteeVote(models.Model):
         on_delete=models.CASCADE,
         related_name='committee_votes',
     )
+    cast_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='committee_votes_cast_for_others',
+        help_text='If set, this vote was cast by a delegate acting for member.',
+    )
     vote = models.CharField(max_length=20, choices=VOTE_CHOICES)
     amount_supported = models.DecimalField(
         max_digits=20,
@@ -2436,4 +2444,147 @@ class AgentConversation(models.Model):
 
     def __str__(self):
         return f'AgentChat #{self.pk} ({self.user_id}) {self.title[:40]}'
+
+
+class StaffDelegation(models.Model):
+    """Temporary authority: principal proposes a delegate; admin approves before it is live."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_REVOKED = 'revoked'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending approval'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_REJECTED, 'Rejected'),
+        (STATUS_REVOKED, 'Revoked'),
+    ]
+
+    principal = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='delegations_given',
+        help_text='User whose authority is granted.',
+    )
+    delegate = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='delegations_received',
+        help_text='Proposed / signed user who may act with principal authority.',
+    )
+    scopes = models.JSONField(
+        default=list,
+        help_text='List of scope keys: committee_vote, cooperative_intake, appraisal, …',
+    )
+    starts_at = models.DateTimeField(db_index=True)
+    ends_at = models.DateTimeField(db_index=True)
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+    is_active = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='True only while approved and not revoked (authority gate also checks dates).',
+    )
+    reason = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delegations_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delegations_reviewed',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=255, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delegations_revoked',
+    )
+
+    class Meta:
+        ordering = ['-starts_at']
+        verbose_name = 'Staff delegation'
+        verbose_name_plural = 'Staff delegations'
+        indexes = [
+            models.Index(fields=['delegate', 'status', 'is_active', 'starts_at', 'ends_at']),
+            models.Index(fields=['principal', 'status', 'is_active']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return (
+            f'{self.principal_id} → {self.delegate_id} '
+            f'[{self.status}] ({", ".join(self.scopes or [])})'
+        )
+
+    def is_currently_active(self) -> bool:
+        now = timezone.now()
+        return bool(
+            self.status == self.STATUS_APPROVED
+            and self.is_active
+            and self.revoked_at is None
+            and self.starts_at <= now <= self.ends_at
+        )
+
+    def scope_labels(self) -> list:
+        from loans.delegation import SCOPE_CHOICES
+        labels = dict(SCOPE_CHOICES)
+        return [labels.get(s, s) for s in (self.scopes or [])]
+
+    @property
+    def status_label(self) -> str:
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+
+
+class DelegationActionLog(models.Model):
+    """Audit when a delegate uses principal authority."""
+
+    delegation = models.ForeignKey(
+        StaffDelegation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='action_logs',
+    )
+    actor = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='delegation_actions_as_actor',
+    )
+    principal = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='delegation_actions_as_principal',
+    )
+    action = models.CharField(max_length=64, db_index=True)
+    loan_request = models.ForeignKey(
+        'LoanRequest',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delegation_actions',
+    )
+    detail = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.action} by {self.actor_id} as {self.principal_id}'
 

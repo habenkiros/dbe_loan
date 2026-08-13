@@ -70,8 +70,9 @@ def notify_users(
 
 def notify_eligible_voters(loan_request, level, *, title: str, message: str, kind: str) -> int:
     from loans.committee import get_eligible_voters
+    from loans.delegation import SCOPE_COMMITTEE, expand_users_with_delegates
 
-    voters = get_eligible_voters(loan_request, level)
+    voters = expand_users_with_delegates(get_eligible_voters(loan_request, level), SCOPE_COMMITTEE)
     return notify_users(
         voters,
         loan_request=loan_request,
@@ -82,13 +83,16 @@ def notify_eligible_voters(loan_request, level, *, title: str, message: str, kin
 
 
 def notify_assigned_officer(loan_request, *, title: str, message: str, kind: str, url: str = '') -> int:
-    officer = loan_request.assigned_loan_officer
+    officer = getattr(loan_request, 'assigned_loan_officer', None)
     if not officer:
         return 0
     if not url:
         url = reverse('loan_request_detail', args=[loan_request.pk])
+    from loans.delegation import SCOPE_APPRAISAL, expand_users_with_delegates
+
+    people = expand_users_with_delegates([officer], SCOPE_APPRAISAL)
     return notify_users(
-        [officer],
+        people,
         loan_request=loan_request,
         kind=kind,
         title=title,

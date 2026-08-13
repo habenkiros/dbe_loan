@@ -275,6 +275,32 @@
                 </div>
             {% endif %}
 
+            {% if show_delegated_loans_nav %}
+                <a href="{% url 'view_loan_requests' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Loan requests
+                </a>
+            {% endif %}
+            {% if can_cooperative_intake and user.role != 'cooperative_manager' and user.role != 'operation_manager' %}
+                <a href="{% url 'view_loan_requests_operation_manager' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Cooperative queue
+                </a>
+            {% endif %}
+            {% if can_finance_disbursement and user.role != 'finance_manager' and user.role != 'admin' and user.role != 'superadmin' %}
+                <a href="{% url 'view_loan_requests_finance_manager' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Disbursement queue
+                </a>
+            {% endif %}
+
+            {% if can_manage_delegations %}
+                <a href="{% url 'manage_delegations' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="users" only %}
+                    Delegations{% if pending_delegation_count %} ({{ pending_delegation_count }}){% endif %}
+                </a>
+            {% endif %}
+
             {% if user.is_authenticated and user.is_superuser %}
                 <a href="{% url 'manage_users' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="users" only %}
@@ -349,6 +375,22 @@
             <li class="flash-{{ message.tags|default:'info' }}">{{ message }}</li>
             {% endfor %}
         </ul>
+        {% endif %}
+        {% if pending_delegation_count %}
+        <div class="lw-delegation-banner lw-delegation-pending" role="status">
+          <strong>{{ pending_delegation_count }} delegation request{{ pending_delegation_count|pluralize }} awaiting approval</strong>
+          · <a href="{% url 'manage_delegations' %}">Review</a>
+        </div>
+        {% endif %}
+        {% if active_delegations_received %}
+        <div class="lw-delegation-banner" role="status">
+          <strong>Acting by delegation:</strong>
+          {% for d in active_delegations_received %}
+            {{ d.principal.get_full_name|default:d.principal.username }}
+            <small>({{ d.scope_labels|join:", " }})</small>{% if not forloop.last %}; {% endif %}
+          {% endfor %}
+          · <a href="{% url 'manage_delegations' %}">Manage</a>
+        </div>
         {% endif %}
         {% block content %}
         {% endblock %}

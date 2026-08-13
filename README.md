@@ -536,16 +536,14 @@ docker compose exec web python manage.py test
 | Path | Description |
 |------|-------------|
 | `docs/user_manual/README.md` | User manuals index (admin, staff, customers, market) |
-| `docs/user_manual/01_admin.md` | Admin guide (English) |
-| `docs/user_manual/01_admin_am.md` | Admin guide (Amharic) |
-| `docs/user_manual/02_staff.md` | Staff hub guide (English) |
-| `docs/user_manual/02_staff_am.md` | Staff hub guide (Amharic) |
-| `docs/user_manual/03_customers.md` | Digital Apply (English) |
-| `docs/user_manual/03_customers_am.md` | Digital Apply (Amharic) |
+| `docs/user_manual/01_admin.md` | Admin guide |
+| `docs/user_manual/02_staff.md` | Staff hub guide |
+| `docs/user_manual/03_customers.md` | Digital Apply customer guide |
 | `docs/user_manual/04_market_partners.md` | Seqela Market guide |
-| `docs/user_manual/05_screenshot_captions.md` | Screenshot ID + caption catalog |
+| `docs/user_manual/05_screenshots.md` | Embedded UI screenshots |
 | `docs/user_manual/06_installation_it.md` | IT installation & minimum requirements |
-| `docs/user_manual/DECSI_Loan_Hub_User_Manuals.html` | Printable combined manuals |
+| `docs/user_manual/DECSI_Loan_Hub_User_Manuals.html` | Printable combined manuals (HTML) |
+| `docs/user_manual/DECSI_Loan_Hub_User_Manuals.pdf` | Combined manuals (PDF) |
 | `presentation/LOAN_APPRAISAL_EXCEL_STRUCTURE.md` | Excel sheets ↔ appraisal feature map |
 | `presentation/LOAN_APPRAISAL_EXCEL_DATA.md` | Field-level Excel reference |
 | `presentation/SHEET2_DROPDOWNS_AND_SHEET3_ANALYSIS_PLAN.md` | Qualitative + cashflow plan |

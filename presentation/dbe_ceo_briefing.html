@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seqela × DBE — AI-Powered Credit Intelligence | Pitch Deck</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
+
+    :root {
+      --green: #0c6b3c;
+      --green-deep: #052818;
+      --green-mid: #148a4c;
+      --gold: #c9a227;
+      --gold-soft: #e8d48a;
+      --cream: #f6f3eb;
+      --paper: #fffdf8;
+      --ink: #102018;
+      --muted: #5d6e64;
+      --line: rgba(12, 107, 60, 0.13);
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #1a241e; color: var(--ink);
+    }
+
+    .slide {
+      display: none;
+      position: absolute; inset: 0;
+      padding: 1.5rem 2.5rem 4.2rem;
+      flex-direction: column;
+      background:
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(201, 162, 39, 0.07), transparent 50%),
+        linear-gradient(180deg, #fbfaf6 0%, var(--cream) 100%);
+    }
+    .slide::before {
+      content: '';
+      position: absolute; top: 0; left: 0; bottom: 0; width: 6px;
+      background: linear-gradient(180deg, var(--gold), var(--green-mid) 55%, var(--green-deep));
+    }
+    .slide.active { display: flex; animation: rise 0.32s ease; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.95rem; padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .wordmark {
+      display: flex; align-items: center; gap: 0.45rem;
+      font-weight: 700; letter-spacing: 0.04em; color: var(--green-deep); font-size: 0.9rem;
+    }
+    .chevrons { display: flex; flex-direction: column; gap: 1px; line-height: 0; }
+    .chevrons span {
+      display: block; width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-bottom: 5px solid var(--green);
+    }
+    .chevrons span:first-child { border-bottom-color: var(--gold); transform: scale(0.78); margin: 0 auto 1px; }
+    .topbar .doc {
+      font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--muted);
+    }
+
+    .kicker {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.16em; color: var(--gold); margin-bottom: 0.25rem;
+    }
+    .slide h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.92rem; font-weight: 600;
+      color: var(--green-deep); letter-spacing: -0.03em;
+      line-height: 1.12; max-width: 24ch;
+    }
+    .rule { width: 3rem; height: 3px; background: var(--gold); margin: 0.6rem 0 0.8rem; border-radius: 2px; }
+    .lede { font-size: 0.98rem; font-weight: 500; color: #2c3f34; line-height: 1.45; max-width: 46rem; margin-bottom: 0.85rem; }
+    .source { font-size: 0.72rem; color: var(--muted); margin-top: 0.7rem; }
+
+    .stage { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; }
+    .split { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 1.35rem; align-items: center; flex: 1; }
+    .split-top { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1.2rem; align-items: start; }
+
+    .panel {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: 14px; padding: 0.9rem 1rem;
+    }
+    .panel .tag {
+      display: inline-block; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 0.25rem;
+    }
+    .panel h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.05rem; font-weight: 600; color: var(--green-deep);
+      margin-bottom: 0.25rem; line-height: 1.2;
+    }
+    .panel p { font-size: 0.84rem; color: #3d4f46; line-height: 1.4; margin: 0; }
+    .panel.dark {
+      background: var(--green-deep); border: none; color: #e7f3ea;
+    }
+    .panel.dark .tag { color: var(--gold-soft); }
+    .panel.dark h3 { color: #fff; }
+    .panel.dark p { color: #c5d9cc; }
+
+    .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; margin-bottom: 0.85rem; }
+    .kpi .box {
+      background: var(--green-deep); color: #fff; border-radius: 14px;
+      padding: 0.95rem 1rem; min-height: 6rem;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .kpi .n {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.7rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em;
+    }
+    .kpi .l { font-size: 0.7rem; color: #b7cfc0; margin-top: 0.38rem; line-height: 1.3; }
+    .kpi .box.gold { background: linear-gradient(165deg, #8a6d12, #c9a227); }
+    .kpi .box.gold .l { color: #fff4d0; }
+
+    .pipe { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; margin: 0.2rem 0 1rem; }
+    .pipe::before {
+      content: ''; position: absolute; top: 22px; left: 10%; right: 10%;
+      height: 2px; background: linear-gradient(90deg, var(--gold), var(--green-mid));
+    }
+    .pipe .node { position: relative; z-index: 1; text-align: center; padding: 0 0.25rem; }
+    .pipe .dot {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--green-deep); color: var(--gold-soft);
+      font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 0.92rem;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.45rem; border: 3px solid #f6f3eb;
+    }
+    .pipe .node.hi .dot { background: var(--gold); color: var(--green-deep); }
+    .pipe h4 { font-size: 0.78rem; color: var(--green-deep); font-weight: 700; }
+    .pipe p { font-size: 0.68rem; color: var(--muted); margin-top: 0.12rem; }
+
+    table.rich {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      background: var(--paper); border-radius: 14px; overflow: hidden;
+      border: 1px solid var(--line); font-size: 0.8rem;
+    }
+    table.rich th {
+      background: var(--green-deep); color: #fff; text-align: left;
+      padding: 0.55rem 0.8rem; font-size: 0.66rem; letter-spacing: 0.08em;
+      text-transform: uppercase; font-weight: 700;
+    }
+    table.rich td {
+      padding: 0.48rem 0.8rem; border-top: 1px solid var(--line);
+      vertical-align: top; line-height: 1.35; color: #2c3b34;
+    }
+    table.rich tr:nth-child(even) td { background: #f7faf6; }
+    table.rich td.k { font-weight: 700; color: var(--green-deep); white-space: nowrap; width: 24%; }
+    table.rich td.gap { color: #8a3b30; }
+
+    .sheets { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; }
+    .sheet {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: 12px; padding: 0.7rem 0.5rem 0.75rem; min-height: 10.2rem;
+    }
+    .sheet .sn {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.3rem; color: var(--gold); font-weight: 700;
+    }
+    .sheet h4 { font-size: 0.76rem; color: var(--green-deep); margin: 0.2rem 0 0.3rem; line-height: 1.25; }
+    .sheet p { font-size: 0.66rem; color: #4a5c54; line-height: 1.35; margin: 0; }
+
+    .flow-pills { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.8rem; }
+    .flow-pills span {
+      background: var(--green-deep); color: #fff;
+      padding: 0.38rem 0.7rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+    }
+
+    .steps { display: flex; flex-direction: column; gap: 0.32rem; }
+    .steps .row {
+      display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.55rem;
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: 11px; padding: 0.5rem 0.75rem;
+    }
+    .steps .num {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.1rem; font-weight: 700; color: var(--gold);
+    }
+    .steps .title { font-weight: 700; color: var(--green-deep); font-size: 0.86rem; }
+    .steps .desc { font-size: 0.76rem; color: #4a5c54; margin-top: 0.06rem; }
+
+    .device {
+      background: #0b1a12; border-radius: 16px; padding: 0.5rem 0.5rem 0.65rem;
+      border: 1px solid rgba(232, 212, 138, 0.18);
+    }
+    .device .chrome { display: flex; gap: 5px; padding: 0.12rem 0.3rem 0.4rem; }
+    .device .chrome i { width: 7px; height: 7px; border-radius: 50%; background: #3d5a48; display: block; }
+    .device img {
+      display: block; width: 100%; height: auto; max-height: 44vh;
+      object-fit: cover; object-position: top; border-radius: 8px; background: #fff;
+    }
+    .cap { font-size: 0.72rem; color: var(--muted); margin-top: 0.4rem; }
+
+    .file-meta {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 0.8rem;
+      font-size: 0.82rem;
+    }
+    .file-meta dt { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+    .file-meta dd { font-weight: 700; color: var(--green-deep); margin-bottom: 0.25rem; }
+
+    .rail { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    .rail .can { background: #ecf8f0; border: 1px solid rgba(12,107,60,0.16); border-radius: 14px; padding: 0.9rem 1rem; }
+    .rail .cant { background: #fbf3f1; border: 1px solid rgba(180,35,24,0.12); border-radius: 14px; padding: 0.9rem 1rem; }
+    .rail h3 { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.45rem; }
+    .rail .can h3 { color: var(--green); }
+    .rail .cant h3 { color: var(--danger); }
+    .rail ul { list-style: none; }
+    .rail li { font-size: 0.84rem; color: #2c3b34; padding: 0.26rem 0; border-bottom: 1px solid rgba(16,32,24,0.06); }
+    .rail li:last-child { border-bottom: none; }
+
+    .ask { position: relative; overflow: hidden; min-height: 11.2rem; display: flex; flex-direction: column; justify-content: flex-end; }
+    .ask .giant {
+      position: absolute; top: -0.35rem; right: 0.4rem;
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 4.8rem; font-weight: 700; color: rgba(12, 107, 60, 0.08); line-height: 1;
+    }
+    .ask.dark .giant { color: rgba(232, 212, 138, 0.12); }
+
+    .proof-head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 0.75rem; }
+    .proof-head img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+    .proof-head .who { font-size: 0.84rem; color: #3d4f46; }
+
+    .chapters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .chapter {
+      position: relative; overflow: hidden; min-height: 9.2rem;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .chapter .cn {
+      position: absolute; top: 0.35rem; right: 0.65rem;
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 2.5rem; font-weight: 700; color: rgba(12, 107, 60, 0.1); line-height: 1;
+    }
+    .chapter.dark .cn { color: rgba(232, 212, 138, 0.14); }
+    .chapter .mins {
+      font-size: 0.68rem; font-weight: 700; color: var(--muted); margin-top: 0.35rem;
+    }
+    .chapter.dark .mins { color: #8aa898; }
+
+    .slide.dark {
+      background:
+        radial-gradient(ellipse 80% 60% at 80% 20%, rgba(201, 162, 39, 0.14), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 0% 100%, rgba(20, 138, 76, 0.18), transparent 45%),
+        linear-gradient(165deg, #04150d 0%, #0a2c1a 48%, #052113 100%);
+      color: #fff;
+    }
+    .slide.dark::before { background: linear-gradient(180deg, var(--gold-soft), var(--gold), transparent); }
+    .slide.dark .topbar { border-bottom-color: rgba(255,255,255,0.08); }
+    .slide.dark .wordmark { color: #fff; }
+    .slide.dark .chevrons span { border-bottom-color: #fff; }
+    .slide.dark .chevrons span:first-child { border-bottom-color: var(--gold-soft); }
+    .slide.dark .doc { color: #9bb8a8; }
+    .slide.dark h1, .slide.dark h2 { color: #fff; }
+    .slide.dark .lede { color: #c5d9cc; }
+    .slide.dark .kicker { color: var(--gold-soft); }
+    .slide.dark .rule { background: var(--gold-soft); }
+    .slide.dark .source { color: #8aa898; }
+    .slide.dark .cap { color: #8aa898; }
+
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 2.85rem; font-weight: 600; letter-spacing: -0.035em;
+      line-height: 1.05; max-width: 14ch; color: #fff;
+    }
+    .for-line {
+      font-size: 0.74rem; font-weight: 700; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold-soft); margin-bottom: 0.3rem;
+    }
+    .project-name {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.15rem; font-weight: 500; color: #fff; margin: 0.15rem 0 0.85rem; line-height: 1.3;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.95rem; }
+    .chips span {
+      border: 1px solid rgba(232, 212, 138, 0.35);
+      color: var(--gold-soft); padding: 0.28rem 0.65rem;
+      border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+    }
+    .meta { margin-top: 1.2rem; font-size: 0.82rem; color: #8aa898; }
+
+    .nav {
+      position: fixed; bottom: 1.1rem; right: 1.6rem;
+      display: flex; gap: 0.4rem; z-index: 100;
+    }
+    .nav button {
+      background: var(--green-deep); border: none; color: #fff;
+      padding: 0.45rem 0.85rem; border-radius: 999px; cursor: pointer;
+      font-family: inherit; font-size: 0.78rem; font-weight: 600;
+    }
+    .nav button:hover { background: var(--green); }
+    .slide-counter {
+      position: fixed; bottom: 1.2rem; left: 2.3rem;
+      font-size: 0.7rem; color: #7a8c82; font-weight: 700; letter-spacing: 0.08em; z-index: 100;
+    }
+    body:has(.slide.dark.active) .slide-counter { color: #8aa898; }
+    body:has(.slide.dark.active) .nav button { background: rgba(255,255,255,0.12); }
+
+    @media (max-width: 980px) {
+      .g2, .g3, .g4, .split, .split-top, .kpi, .pipe, .sheets, .rail, .chapters { grid-template-columns: 1fr; }
+      .pipe { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .pipe::before { display: none; }
+      h1 { font-size: 2rem; }
+      .slide { padding: 1.15rem 1.05rem 4.4rem; }
+    }
+    @media print {
+      html, body { overflow: visible; height: auto; background: #fff; }
+      .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; animation: none; }
+      .nav, .slide-counter { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1 Title -->
+  <div class="slide dark active" data-slide="1">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">Confidential · Company &amp; partnership deck</div>
+    </div>
+    <div class="split">
+      <div>
+        <p class="for-line">Prepared for Development Bank of Ethiopia</p>
+        <p class="project-name">Seqela · Digital solutions for banks, MFIs &amp; SACCOs</p>
+        <h1>Company. Products. Partnership. Credit Intelligence.</h1>
+        <p class="lede">
+          Who we are, what we build, how we work with DBE — then the credit factory
+          aligned to the EU/KfW MSME recovery credit line (DBE 218.26).
+        </p>
+        <div class="chips">
+          <span>Addis Ababa</span>
+          <span>8 platforms</span>
+          <span>Credit Intelligence live at DECSI</span>
+          <span>DBE 218.26 alignment</span>
+        </div>
+        <p class="meta">14 August 2026 · Head Office, Addis Ababa · seqela.com</p>
+      </div>
+      <div class="device">
+        <div class="chrome"><i></i><i></i><i></i></div>
+        <img src="screenshots/02-dashboard-home.png" alt="Credit Intelligence dashboard">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 Agenda -->
+  <div class="slide" data-slide="2">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">Agenda</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Four chapters</p>
+      <h2>Seqela first. Credit Intelligence where it meets DBE’s live project.</h2>
+      <div class="rule"></div>
+      <div class="chapters">
+        <div class="panel chapter">
+          <span class="cn">01</span>
+          <span class="tag">Company</span>
+          <h3>Who Seqela is</h3>
+          <p>Ethiopian banking technology. Production systems for banks, MFIs, and SACCOs.</p>
+        </div>
+        <div class="panel chapter">
+          <span class="cn">02</span>
+          <span class="tag">Products</span>
+          <h3>The eight platforms</h3>
+          <p>Credit Intelligence, Digital Equb, Degaf, core banking, PLSA, School ERP, fleet.</p>
+        </div>
+        <div class="panel chapter">
+          <span class="cn">03</span>
+          <span class="tag">Partnership</span>
+          <h3>How we work with DBE</h3>
+          <p>DBE owns the standard. Seqela operates the factory. PFIs adopt. CBS stays DBE’s.</p>
+        </div>
+        <div class="panel chapter dark">
+          <span class="cn">04</span>
+          <span class="tag">Focus</span>
+          <h3>Credit Intelligence × 218.26</h3>
+          <p>AI-powered credit factory aligned to the MSME recovery credit line in Tigray, Amhara, and Afar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 Company -->
+  <div class="slide" data-slide="3">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">01 · Company profile</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Seqela</p>
+      <h2>Ethiopian banking technology, already in production</h2>
+      <div class="rule"></div>
+      <div class="g2">
+        <div class="panel dark">
+          <span class="tag">Who we are</span>
+          <h3>Digital solutions for banks, MFIs &amp; SACCOs</h3>
+          <p>Addis Ababa. We build and run platforms for credit, deposits, core systems, community finance, and operations — one team, live products.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">How we deliver</span>
+          <h3>Configure → pilot → integrate → scale</h3>
+          <p>Discovery workshop, policy configuration, fixed-scope pilot, CBS / channel APIs, then network rollout. Your brand. Your gates. Your data residency.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Architecture</span>
+          <h3>Complements core banking</h3>
+          <p>Where a CBS already exists, we layer the credit factory and growth products on top. Where unions and networks need a core, we deploy multipurpose or multi-tenant CBS.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">On AI</span>
+          <h3>Intelligence with hard rails</h3>
+          <p>AI accelerates officers. Humans and committees still decide. No auto-approve. No silent disbursement. Every assist is audited.</p>
+        </div>
+      </div>
+      <p class="source">info@seqela.com · +251 964 790 724 · seqela.com · equb.seqela.com · degaf.et</p>
+    </div>
+  </div>
+
+  <!-- 4 Products catalogue -->
+  <div class="slide" data-slide="4">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">02 · Product suite</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Catalogue</p>
+      <h2>Eight platforms. One team.</h2>
+      <div class="rule"></div>
+      <table class="rich">
+        <thead><tr><th>#</th><th>Product</th><th>What it is</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="k">01</td><td><strong>AI-powered Credit Intelligence</strong></td><td>Origination factory: docs, cashflow appraisal, GPS collateral, committees, CBS handoff, Agentic Assist</td><td>Production · DECSI</td></tr>
+          <tr><td class="k">02</td><td>Seqela Digital Equb</td><td>Rotating savings &amp; credit — family to bank-integrated and marketplace</td><td>equb.seqela.com</td></tr>
+          <tr><td class="k">03</td><td>Degaf Crowdfunding</td><td>Causes, creators, and funders on one platform</td><td>degaf.et</td></tr>
+          <tr><td class="k">04</td><td>Multipurpose Core Banking</td><td>Members, savings, loans, shares for unions, SACCOs, cooperatives</td><td>Institution deploy</td></tr>
+          <tr><td class="k">05</td><td>Multi-tenant Core Banking</td><td>One stack, many institutions — isolated books and branding</td><td>Network / hub</td></tr>
+          <tr><td class="k">06</td><td>Prize-Linked Saving Account</td><td>Campaigns, tickets, transparent draws — principal never at risk</td><td>Campaign platform</td></tr>
+          <tr><td class="k">07</td><td>Seqela School ERP</td><td>Students, fees, parents, academics, school finance</td><td>Education</td></tr>
+          <tr><td class="k">08</td><td>Vehicle History &amp; Fleet</td><td>Asset history and fleet operations for institutional control</td><td>Mobility / collateral</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 5 Portfolio map -->
+  <div class="slide" data-slide="5">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">02 · How the suite fits</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Portfolio</p>
+      <h2>Credit on the asset side. Engagement on liabilities. Core where needed.</h2>
+      <div class="rule"></div>
+      <div class="g2">
+        <div class="panel dark">
+          <span class="tag">Lending &amp; credit quality</span>
+          <h3>AI-powered Credit Intelligence</h3>
+          <p>MSME and corporate origination factory. GPS collateral, document authentication, committees, Agentic Assist. Works with DBE’s existing core systems.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Liabilities &amp; inclusion</span>
+          <h3>Digital Equb · PLSA · Degaf</h3>
+          <p>Equb at scale (equb.seqela.com), prize-linked savings, crowdfunding (degaf.et) — Ethiopian savings culture on institutional rails.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Institution systems</span>
+          <h3>Multipurpose &amp; multi-tenant core</h3>
+          <p>Full core for unions and SACCOs, or a shared hub when many institutions sit under one technology operator — relevant to DBE’s PFI / cooperative partners.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Adjacent</span>
+          <h3>School ERP · Vehicle &amp; fleet</h3>
+          <p>Education operations; vehicle history for asset-backed lending and institutional fleet control.</p>
+        </div>
+      </div>
+      <p class="source">For DBE the first wedge is Credit Intelligence. Equb, PLSA, and core remain available for PFI and inclusion programs.</p>
+    </div>
+  </div>
+
+  <!-- 6 How we work with DBE -->
+  <div class="slide" data-slide="6">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">03 · Partnership with DBE</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Operating model</p>
+      <h2>DBE owns the methodology. Seqela runs the digital factory.</h2>
+      <div class="rule"></div>
+      <div class="g3" style="margin-bottom:0.8rem;">
+        <div class="panel dark">
+          <span class="tag">DBE</span>
+          <h3>Champion &amp; standard owner</h3>
+          <p>Cashflow MSME Excel, wholesale lines, TA, policy thresholds. Endorse, co-brand, optionally use internally. Core banking stays with DBE.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Seqela</span>
+          <h3>Technology operator</h3>
+          <p>Host or private deploy. Configure products, gates, hierarchy. Train credit and field teams. CBS customer prefill. Keep sheets Excel-faithful as DBE updates them.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Banks &amp; MFIs</span>
+          <h3>Adopting PFIs</h3>
+          <p>Pilot selected branches and products. Align committees to policy. Measure cycle time and file quality. Scale after the pilot.</p>
+        </div>
+      </div>
+      <div class="g4">
+        <div class="panel"><span class="tag">01</span><h3>Recommend</h3><p>Letter / circular that the digital factory is the preferred implementation of DBE’s cashflow workbook.</p></div>
+        <div class="panel"><span class="tag">02</span><h3>Co-brand</h3><p>“DBE methodology · Seqela platform” for PFI buy-in and donor visibility.</p></div>
+        <div class="panel"><span class="tag">03</span><h3>Bundle with TA</h3><p>Configuration and training ride EU/KfW technical assistance already in the project.</p></div>
+        <div class="panel"><span class="tag">04</span><h3>Afford</h3><p>Shared instance for small MFIs; dedicated / private deploy for large banks and DBE.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 CI factory -->
+  <div class="slide" data-slide="7">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · AI-powered Credit Intelligence</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">The product</p>
+      <h2>A credit factory PFIs can run every day</h2>
+      <div class="rule"></div>
+      <div class="flow-pills">
+        <span>Intake</span><span>Documents · OCR eng+amh</span><span>7-step appraisal</span>
+        <span>GPS collateral</span><span>Lock &amp; QA</span><span>Committee</span><span>CBS booking</span>
+      </div>
+      <div class="split-top">
+        <div class="steps">
+          <div class="row"><div class="num">01</div><div><div class="title">Branch intake + CBS prefill</div><div class="desc">Create request, assign officer, pull customer from core banking.</div></div></div>
+          <div class="row"><div class="num">02</div><div><div class="title">Document authentication</div><div class="desc">Type-driven checklist. OCR English + Amharic. Identity match. Verify or reject with a trail.</div></div></div>
+          <div class="row"><div class="num">03</div><div><div class="title">DBE-faithful appraisal with hard gates</div><div class="desc">Character, DSCR, E&amp;S, collateral, explainable scorecard. Weak files never reach committee.</div></div></div>
+          <div class="row"><div class="num">04</div><div><div class="title">GPS field + multi-level vote</div><div class="desc">Offline tablet, evidence pack, amount routing Branch → District → HO → Management.</div></div></div>
+        </div>
+        <div class="device">
+          <div class="chrome"><i></i><i></i><i></i></div>
+          <img src="screenshots/06-appraisal-step3.png" alt="Cashflow appraisal Sheet 3">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 Seven sheets -->
+  <div class="slide" data-slide="8">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · DBE cashflow MSME workbook</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Excel-faithful</p>
+      <h2>DBE’s seven sheets, enforced in software</h2>
+      <div class="rule"></div>
+      <div class="sheets">
+        <div class="sheet"><span class="sn">1</span><h4>Basic info</h4><p>CBS / OCR provenance. Gender &amp; age for 30% / 20% reporting.</p></div>
+        <div class="sheet"><span class="sn">2</span><h4>Character</h4><p>10 factors. Default pass gate ≥75%.</p></div>
+        <div class="sheet"><span class="sn">3</span><h4>Cashflow</h4><p>Monthly grid, DSCR, stress, max capacity vs ask.</p></div>
+        <div class="sheet"><span class="sn">4</span><h4>E&amp;S</h4><p>21 items, 5 sections. PASS / ACTIONS / REJECT.</p></div>
+        <div class="sheet"><span class="sn">5</span><h4>Collateral</h4><p>Coverage from GPS field valuation.</p></div>
+        <div class="sheet"><span class="sn">6</span><h4>Scorecard</h4><p>4 pillars / 100. Approve, decline, escalate.</p></div>
+        <div class="sheet"><span class="sn">7</span><h4>Schedule</h4><p>Amortization for committee and CBS.</p></div>
+      </div>
+      <p class="source">Corporate mode: same wizard with governance, statements, UBO. Weights: Qualitative 25 · Financial 35 · E&amp;S 15 · Collateral 25.</p>
+    </div>
+  </div>
+
+  <!-- 9 Live file -->
+  <div class="slide" data-slide="9">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · Live file HK-000015919 · Mekelle No Two</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Production evidence</p>
+      <h2>Aster Bekele Trading PLC — ETB 2,500,000 MSME cashflow file</h2>
+      <div class="rule"></div>
+      <div class="split-top">
+        <div>
+          <dl class="file-meta">
+            <div><dt>Borrower</dt><dd>Aster Bekele Trading PLC</dd></div>
+            <div><dt>Product</dt><dd>MSME · 36 months @ 16.50%</dd></div>
+            <div><dt>Ask</dt><dd>ETB 2,500,000</dd></div>
+            <div><dt>Annual DSCR</dt><dd>2.61 · stressed 1.53</dd></div>
+            <div><dt>Bureau</dt><dd>712 · Grade A</dd></div>
+            <div><dt>E&amp;S</dt><dd>Low · PASS</dd></div>
+            <div><dt>Collateral</dt><dd>ETB 20,900,000 · 8.36×</dd></div>
+            <div><dt>Scorecard</dt><dd>83.12 / 100 · Strong · Approve</dd></div>
+          </dl>
+          <p class="source">Qualitative 23.12/25 · Financial 30/35 · E&amp;S 5/15 · Collateral 25/25. Licence, TIN, National ID verified authentic.</p>
+        </div>
+        <div class="device">
+          <div class="chrome"><i></i><i></i><i></i></div>
+          <img src="screenshots/07-committee-pack.png" alt="Committee appraisal pack">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 GPS + AI -->
+  <div class="slide" data-slide="10">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · Evidence, committees, AI rails</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Governance</p>
+      <h2>GPS packs. Digital votes. AI that cannot approve.</h2>
+      <div class="rule"></div>
+      <div class="g2" style="margin-bottom:0.75rem;">
+        <div>
+          <div class="device"><div class="chrome"><i></i><i></i><i></i></div>
+            <img src="screenshots/12-evidence-pack.png" alt="Collateral evidence pack">
+          </div>
+          <p class="cap">HK-000015919 · coverage 836% meets policy · geotagged photos · BOQ · engineering approval.</p>
+        </div>
+        <div class="rail">
+          <div class="can">
+            <h3>AI can</h3>
+            <ul>
+              <li>Draft the borrower story</li>
+              <li>Bootstrap a clean application</li>
+              <li>Check document completeness</li>
+              <li>Flag thin pillars, capacity, bureau</li>
+              <li>Persist every run for audit</li>
+            </ul>
+          </div>
+          <div class="cant">
+            <h3>AI cannot</h3>
+            <ul>
+              <li>Approve a loan</li>
+              <li>Submit to committee</li>
+              <li>Disburse</li>
+              <li>Invent documents or valuations</li>
+              <li>Override DSCR / E&amp;S gates</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11 DBE 218.26 project -->
+  <div class="slide" data-slide="11">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · DBE 218.26 · July 2026</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">DBE’s current project</p>
+      <h2>Support for Recovery of MSMEs in Conflict-Affected Areas</h2>
+      <div class="rule"></div>
+      <div class="g3">
+        <div class="panel dark">
+          <span class="tag">Executing agency</span>
+          <h3>Development Bank of Ethiopia</h3>
+          <p>MSME and Green Economy Programs and Projects Directorate. EU + KfW parallel finance via Ministry of Finance on-lending.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">Geography</span>
+          <h3>Tigray · Amhara · Afar</h3>
+          <p>Working capital and investment: manufacturing, construction, trade, agro-processing, services.</p>
+        </div>
+        <div class="panel">
+          <span class="tag">PFIs</span>
+          <h3>Banks and MFIs</h3>
+          <p>7 PFIs selected in round 1. Second-round EoI for additional institutions with a branch in the three regions.</p>
+        </div>
+      </div>
+      <div class="kpi" style="margin-top:0.85rem;">
+        <div class="box"><div class="n">4.5%</div><div class="l">DBE on-lending rate to PFIs</div></div>
+        <div class="box gold"><div class="n">≤ 11%</div><div class="l">PFI ceiling to MSME end-users</div></div>
+        <div class="box"><div class="n">30%</div><div class="l">Minimum women-owned MSMEs</div></div>
+        <div class="box"><div class="n">20%</div><div class="l">Minimum youth-owned MSMEs</div></div>
+      </div>
+      <p class="source">Source: DBE 218.26 Project Briefings and Minimum Requirements. Micro ≤10 staff / ETB 600k · Small 11–50 / ETB 0.6–10m · Medium 51–100 / ETB 10–90m.</p>
+    </div>
+  </div>
+
+  <!-- 12 Alignment -->
+  <div class="slide" data-slide="12">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · Alignment · 218.26 × Credit Intelligence</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Fit</p>
+      <h2>The factory covers the tests this credit line already requires of PFIs</h2>
+      <div class="rule"></div>
+      <table class="rich">
+        <thead><tr><th>218.26 / donor need</th><th>Credit Intelligence in production</th></tr></thead>
+        <tbody>
+          <tr><td class="k">xii · Adequate MIS</td><td>Single pipeline, role dashboards, reconstructable dossier — not Excel and paper</td></tr>
+          <tr><td class="k">xiii · Credit risk &amp; control</td><td>Mandatory 7-step appraisal, lock after submit, dual control, amount-routed committees</td></tr>
+          <tr><td class="k">xiv · E&amp;S / ESMS</td><td>Sheet 4: 21-item checklist, risk category, PASS / ACTIONS / REJECT, sign-off trail</td></tr>
+          <tr><td class="k">xi · PAR &gt;90 ≤ 10%</td><td>DSCR and stress gates before approval — origination quality that protects PAR</td></tr>
+          <tr><td class="k">30% women · 20% youth</td><td>Gender and age on Sheet 1 — reportable cuts for DBE / KfW / EU utilization</td></tr>
+          <tr><td class="k">Training &amp; monitoring</td><td>Standard workflow + audit export; TA trains once across the PFI cohort</td></tr>
+          <tr><td class="k">Post-conflict field</td><td>Offline tablet GPS capture; bilingual OCR; works where connectivity and records are thin</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 13 DECSI proof -->
+  <div class="slide" data-slide="13">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">04 · Proof · same geography as 218.26</div>
+    </div>
+    <div class="stage">
+      <div class="proof-head">
+        <img src="milestones/msme-secured-2026/logod.jpeg" alt="DECSI">
+        <div>
+          <p class="kicker" style="margin:0;">Reference case</p>
+          <h2 style="max-width:none;">DECSI · Mekelle, Tigray — live Credit Intelligence book</h2>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <div class="kpi">
+        <div class="box"><div class="n">53,901</div><div class="l">Loan requests</div></div>
+        <div class="box"><div class="n">29.56B</div><div class="l">ETB requested</div></div>
+        <div class="box gold"><div class="n">17.03B</div><div class="l">ETB approved</div></div>
+        <div class="box"><div class="n">13B+</div><div class="l">ETB disbursed · secured MSME</div></div>
+      </div>
+      <div class="g3">
+        <div class="panel"><span class="tag">Customers</span><h3>25,397 approved</h3><p>1,762 rejected (ETB 1.37B). ~76% of approved amount disbursed.</p></div>
+        <div class="panel dark"><span class="tag">Why it matters for 218.26</span><h3>Tigray is the mandate, not a future market</h3><p>DECSI has run post-conflict rehabilitation credit since 1994. The factory already operates in that reality.</p></div>
+        <div class="panel"><span class="tag">Exact</span><h3>ETB 17,025,387,000</h3><p>Approved from ETB 29,562,221,974 requested. Branch → District → HO. Construction collateral + cashflow sheets.</p></div>
+      </div>
+      <p class="source">Reference: Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978</p>
+    </div>
+  </div>
+
+  <!-- 14 Decisions -->
+  <div class="slide" data-slide="14">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">Decisions</div>
+    </div>
+    <div class="stage">
+      <p class="kicker">Next</p>
+      <h2>Three decisions to start the partnership</h2>
+      <div class="rule"></div>
+      <div class="g3">
+        <div class="panel ask">
+          <span class="giant">01</span>
+          <span class="tag">Sponsors</span>
+          <h3>Name Credit, MSME, IT, Partnerships</h3>
+          <p>90-minute live walkthrough of the DBE sheets in the running system.</p>
+        </div>
+        <div class="panel ask dark">
+          <span class="giant">02</span>
+          <span class="tag">Pilot</span>
+          <h3>2–4 PFIs on the recovery line</h3>
+          <p>DECSI (live, Tigray) plus at least one Amhara and/or Afar PFI. Parallel-run vs Excel.</p>
+        </div>
+        <div class="panel ask">
+          <span class="giant">03</span>
+          <span class="tag">Affordability</span>
+          <h3>Shared instance + TA bundling</h3>
+          <p>Smaller PFIs are not priced out of the standard DBE already published.</p>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:0.8rem;">
+        <span class="tag">Optional</span>
+        <h3>DBE internal MSME / lease appraisal</h3>
+        <p>Same factory inside the bank if Credit wants one language for DBE files and PFI files. Pilot go-live ≈ 1 month after requirements. Does not replace DBE core banking.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 15 Close -->
+  <div class="slide dark" data-slide="15">
+    <div class="topbar">
+      <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
+      <div class="doc">Seqela × Development Bank of Ethiopia</div>
+    </div>
+    <div class="stage" style="justify-content:center;max-width:40rem;">
+      <p class="kicker">Close</p>
+      <h2 style="font-size:2.45rem;max-width:16ch;">Seqela builds the platforms. Credit Intelligence makes DBE’s MSME standard the default on the recovery line.</h2>
+      <div class="rule"></div>
+      <p class="lede">
+        53,901 files already processed at DECSI in Tigray.
+        Next: the same factory across PFIs in Tigray, Amhara, and Afar.
+      </p>
+      <p class="meta">
+        Seqela · info@seqela.com · +251 964 790 724 · seqela.com<br>
+        equb.seqela.com · degaf.et<br>
+        Leave-behind: DBE_AI_Credit_Intelligence_Partnership_Proposal.pdf
+      </p>
+    </div>
+  </div>
+
+  <div class="slide-counter">1 / 15</div>
+  <nav class="nav">
+    <button type="button" id="prev">← Previous</button>
+    <button type="button" id="next">Next →</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    const counterEl = document.querySelector('.slide-counter');
+
+    function go(n) {
+      slides[current].classList.remove('active');
+      current = (current + n + total) % total;
+      slides[current].classList.add('active');
+      counterEl.textContent = (current + 1) + ' / ' + total;
+    }
+    document.getElementById('prev').addEventListener('click', () => go(-1));
+    document.getElementById('next').addEventListener('click', () => go(1));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+    });
+  </script>
+</body>
+</html>

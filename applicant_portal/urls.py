@@ -8,6 +8,7 @@ app_name = 'applicant_portal'
 urlpatterns = [
     path('', views.landing, name='landing'),
     path('help/', applicant_help.help_index, name='help_index'),
+    path('help/screenshots/<str:name>', applicant_help.help_screenshot, name='help_screenshot'),
     path('help/<slug:slug>/', applicant_help.help_chapter, name='help_chapter'),
     path('register/', views.register, name='register'),
     path('login/', views.login_view, name='login'),

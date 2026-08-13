@@ -4,17 +4,20 @@ Practical guides for **DECSI Loan Hub** (*AI-powered Credit Intelligence*), **Di
 
 | Manual | Who it is for | In-app Help |
 |--------|---------------|-------------|
-| [Admin](01_admin.md) · [አማርኛ](01_admin_am.md) | System administrators | Hub → **Help** (`/hub/help/`) |
-| [Staff](02_staff.md) · [አማርኛ](02_staff_am.md) | Branch / HO / eng / finance / committee | Hub → **Help** |
-| [Customers](03_customers.md) · [አማርኛ](03_customers_am.md) | Borrowers applying online | Digital Apply → **Help** (`/help/`) |
+| [Admin](01_admin.md) | System administrators | Hub → **Help** (`/hub/help/`) |
+| [Staff](02_staff.md) | Branch / HO / eng / finance / committee | Hub → **Help** |
+| [Customers](03_customers.md) | Borrowers applying online | Digital Apply → **Help** (`/help/`) |
 | [Market partners](04_market_partners.md) | Dealers & price reporters | Market → **Help** (`/market-portal/help/`) |
-| [Screenshot captions](05_screenshot_captions.md) | Trainers / doc authors | Hub Help (staff) |
+| [Screenshots](05_screenshots.md) | UI captures used in this pack | Hub / Digital Apply Help |
 | [IT installation](06_installation_it.md) | DECSI IT — install & minimum requirements | Hub → **Help** |
 
-**Printable pack:** [DECSI_Loan_Hub_User_Manuals.html](DECSI_Loan_Hub_User_Manuals.html) → browser **Print → Save as PDF**.
+**Printable pack:**
+- [HTML](DECSI_Loan_Hub_User_Manuals.html)  
+- [PDF](DECSI_Loan_Hub_User_Manuals.pdf)  
 
 ```bash
 python3 docs/user_manual/build_html.py
+docker compose exec web python docs/user_manual/build_pdf.py
 ```
 
 ---
@@ -36,8 +39,9 @@ Legacy: `/staff/` → hub; `/applicant-portal/` → Digital Apply.
 ```text
 Customer (Digital Apply)          Staff hub                     Admin
 Register → Apply → Fee            Intake → Docs → Appraisal     Users & geography
-→ Submit → Track Queue ID         → Collateral → Committee      Document packs
-                                  → Post-approval → Disburse    Digital Apply settings
+→ Submit → Notices / status       → Collateral → Committee      Document packs
+→ Schedule (when approved)        → Post-approval → Disburse    Digital Apply settings
+                                  Delegations (cover)           Approve delegations
 
 Market (Seqela Market): Area → Product & price → price bands
 ```
@@ -57,7 +61,11 @@ Market (Seqela Market): Area → Product & price → price bands
 | **Approval queue** | Committee voting |
 | **Post-approval** | Conditions → schedule → ready |
 | **Agentic Assist** | Staff AI helper (cannot approve/disburse) |
+| **Delegation** | Temporary cover of staff powers (admin-approved) |
+| **Source channel** | Online (Digital Apply) vs staff/branch entry |
+| **Repayment schedule** | Customer installment table after credit approval |
 | **Seqela Market** | External price quotes |
+| **Price band** | Aggregated market price range for an area/product |
 
 ---
 

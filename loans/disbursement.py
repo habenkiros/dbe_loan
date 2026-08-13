@@ -183,15 +183,15 @@ def can_mark_ready(user, loan_request) -> bool:
 
 
 def can_approve_finance_disbursement(user, loan_request) -> bool:
-    """Finance manager approves release of funds after loan is ready for disbursement."""
+    """Finance manager (or delegate) approves release after ready-for-disbursement."""
     if not is_post_approval(loan_request):
         return False
     if loan_request.disbursement_status != loan_request.DISBURSE_READY:
         return False
     if loan_request.finance_disbursement_approval:
         return False
-    role = getattr(user, 'role', None)
-    return getattr(user, 'is_superuser', False) or role in ('admin', 'superadmin', 'finance_manager')
+    from loans.delegation import user_has_finance_authority
+    return user_has_finance_authority(user)
 
 
 def set_finance_disbursement_approval(loan_request, user, *, approved: bool = True) -> None:

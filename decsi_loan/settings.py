@@ -61,6 +61,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'loans.context_processors.loan_notifications',
+                'loans.context_processors.staff_delegations',
                 'loans.context_processors.agent_assistant',
                 'collateral.context_processors.gebeta_maps',
             ],

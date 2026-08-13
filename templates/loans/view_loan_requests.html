@@ -35,7 +35,7 @@
                 <th>Requested</th>
                 <th>Approved</th>
                 <th>Status / stage</th>
-                {% if user.role == 'branch_manager' or user.is_superuser %}
+                {% if can_assign_loan_officer %}
                 <th>Assigned to</th>
                 {% endif %}
                 <th>Requested date</th>
@@ -67,7 +67,7 @@
                     {% include "loans/_loan_status_chips.html" %}
                   </div>
                 </td>
-                {% if user.role == 'branch_manager' or user.is_superuser %}
+                {% if can_assign_loan_officer %}
                 <td>{% if loan_request.assigned_loan_officer %}{{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}{% else %}—{% endif %}</td>
                 {% endif %}
                 <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
@@ -76,18 +76,22 @@
                     <div class="list-actions">
                     {% url 'loan_request_detail' loan_request.id as detail_url %}
                     {% include "includes/list_action.html" with href=detail_url icon="open" label="Open details" tone="blue" only %}
-                    {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
+                    {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id or can_delegated_appraisal %}
                     {% url 'loan_appraisal_edit' loan_request.id as appraisal_url %}
                     {% include "includes/list_action.html" with href=appraisal_url icon="appraisal" label="Appraisal" tone="green" only %}
                     {% endif %}
+                    {% if can_assign_loan_officer and loan_request.status|default:''|lower == 'approved' %}
+                    {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
+                    {% url 'assign_loan_officer' loan_request.id as assign_url %}
+                    {% if not loan_request.assigned_loan_officer %}
+                    {% include "includes/list_action.html" with href=assign_url icon="assign" label="Assign officer" tone="green" only %}
+                    {% else %}
+                    {% include "includes/list_action.html" with href=assign_url icon="assign" label="Reassign officer" tone="green" only %}
+                    {% endif %}
+                    {% endif %}
+                    {% endif %}
                     {% if user.role == 'branch_manager' or user.is_superuser %}
                     {% if loan_request.status|default:''|lower == 'approved' %}
-                    {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
-                    {% if not loan_request.assigned_loan_officer %}
-                    {% url 'assign_loan_officer' loan_request.id as assign_url %}
-                    {% include "includes/list_action.html" with href=assign_url icon="assign" label="Assign officer" tone="green" only %}
-                    {% endif %}
-                    {% endif %}
                     {% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
                     {% if not loan_request.sent_to_engineering_at %}
                     {% url 'send_to_engineering_head' loan_request.id as eng_url %}

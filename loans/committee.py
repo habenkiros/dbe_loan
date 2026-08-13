@@ -357,7 +357,8 @@ def get_eligible_voters(loan_request, level) -> List:
     return list(users_by_id.values())
 
 
-def user_can_vote_at_level(user, loan_request, level) -> bool:
+def _user_can_vote_as_member(user, loan_request, level) -> bool:
+    """Eligibility for `user` as the vote member (no delegation expansion)."""
     if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
         return False
     if loan_request.current_approval_level_id != level.id:
@@ -369,6 +370,18 @@ def user_can_vote_at_level(user, loan_request, level) -> bool:
     ).exists():
         return False
     return any(u.id == user.id for u in get_eligible_voters(loan_request, level))
+
+
+def user_can_vote_at_level(user, loan_request, level) -> bool:
+    """True if user can vote as self or via active committee_vote delegation."""
+    if _user_can_vote_as_member(user, loan_request, level):
+        return True
+    from loans.delegation import SCOPE_COMMITTEE, principals_for
+
+    for principal in principals_for(user, SCOPE_COMMITTEE):
+        if _user_can_vote_as_member(principal, loan_request, level):
+            return True
+    return False
 
 
 def user_is_approval_participant(user) -> bool:
@@ -499,7 +512,18 @@ def user_can_view_committee_loan(user, loan_request) -> bool:
         return True
     if loan_request.committee_status in ('', None):
         return False
-    return committee_loan_requests_queryset(user).filter(pk=loan_request.pk).exists()
+    if committee_loan_requests_queryset(user).filter(pk=loan_request.pk).exists():
+        return True
+    # Delegate covering a principal who can see / vote on this loan
+    from loans.delegation import SCOPE_COMMITTEE, principals_for
+
+    for principal in principals_for(user, SCOPE_COMMITTEE):
+        if committee_loan_requests_queryset(principal).filter(pk=loan_request.pk).exists():
+            return True
+        level = loan_request.current_approval_level
+        if level and _user_can_vote_as_member(principal, loan_request, level):
+            return True
+    return False
 
 
 def committee_filter_districts(user):

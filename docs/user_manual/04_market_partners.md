@@ -48,6 +48,8 @@ Trust status (managed by DECSI staff) may show as **Pending**, **Trusted**, or *
 
 > **Screenshot (M-01):** Share a local price — Step 1 Area (who you are + Region/Zone/City).
 >
+> ![M-01 — Market portal](screenshots/M-01_market.png)
+>
 > **Screenshot (M-02):** Step 2 Product — enter item and price (ETB) for that area.
 
 Guest quotes are useful for one-off reporting. For frequent updates, register an account.
@@ -63,7 +65,7 @@ Guest quotes are useful for one-off reporting. For frequent updates, register an
 5. Submit **Create free account**.
 6. Sign in at `/market-portal/login/`.
 
-After registration, your trading area is stored on your profile so you mainly enter product and price next time.
+After registration, your trading area is stored on your profile so you mainly enter product and price next time. **Branch** tagging is optional. DECSI staff manage trust status (**Pending** / **Trusted** / **Suspended**) and portal enablement in Django Admin.
 
 ---
 

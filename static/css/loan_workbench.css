@@ -132,6 +132,21 @@
 .lw-amt-ok { font-weight: 800; color: #0a6b2e; }
 .lw-amt-pending { color: #90a0a8; }
 
+.lw-delegation-banner {
+  background: linear-gradient(90deg, #e8f8ee, #fff8e6);
+  border: 1px solid #b7d9c8;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  color: #0e2418;
+}
+.lw-delegation-banner a { font-weight: 700; color: #064420; }
+.lw-delegation-pending {
+  background: linear-gradient(90deg, #fff8e6, #fff3cd);
+  border-color: #e0c36a;
+}
+
 .lw-strip {
   position: sticky;
   top: 0;

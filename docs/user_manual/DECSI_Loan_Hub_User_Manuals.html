@@ -6,124 +6,422 @@
 <title>DECSI Loan Hub — User Manuals</title>
 <style>
 
-  @page { size: A4; margin: 16mm 14mm; }
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700&family=Source+Sans+3:wght@400;600;700&family=Libre+Baskerville:wght@700&display=swap');
+
+  @page {
+    size: A4;
+    margin: 18mm 15mm 20mm;
+    @bottom-center {
+      content: "DECSI Loan Hub · User Manuals · " counter(page);
+      font-size: 8pt;
+      color: #5a6f68;
+      font-family: "Source Sans 3", "Noto Sans Ethiopic", sans-serif;
+    }
+  }
   :root {
-    --ink: #1a1a1a;
-    --brand: #0b3d5c;
-    --brand-soft: #1f4e6e;
-    --line: #c5d4de;
-    --wash: #e8eef3;
-    --zebra: #f7fafc;
-    --code-bg: #f0f3f6;
+    --ink: #0e2418;
+    --muted: #4f6558;
+    --brand: #064420;
+    --brand-mid: #0a6b2e;
+    --accent: #28b446;
+    --line: #c9dbd1;
+    --wash: #eef8f2;
+    --soft: #f3f8f5;
+    --zebra: #f7fbf8;
+    --code-bg: #e8f4ec;
+    --gold: #b8892c;
+    --card: #ffffff;
   }
   * { box-sizing: border-box; }
   body {
-    font-family: "Segoe UI", "Noto Sans Ethiopic", "Helvetica Neue", Arial, sans-serif;
-    font-size: 10pt;
-    line-height: 1.45;
+    font-family: "Source Sans 3", "Noto Sans Ethiopic", "Segoe UI", sans-serif;
+    font-size: 10.25pt;
+    line-height: 1.5;
     color: var(--ink);
-    max-width: 920px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 24px 20px 48px;
-  }
-  .cover {
-    border: 1px solid var(--line);
-    background: linear-gradient(160deg, #f3f7fa 0%, #fff 55%);
-    padding: 28px 24px;
-    margin-bottom: 1.5rem;
-  }
-  .cover .eyebrow {
-    color: var(--brand-soft);
-    font-size: 9pt;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin: 0 0 0.4rem;
-  }
-  .cover h1 { border: none; margin: 0 0 0.4rem; font-size: 20pt; }
-  .cover p { margin: 0.35rem 0; color: #334; }
-  .toc { margin: 1rem 0 2rem; }
-  .toc a { display: block; padding: 0.2rem 0; }
-  .chapter { page-break-before: always; margin-top: 1.5rem; }
-  .chapter:first-of-type { page-break-before: auto; }
-  h1 {
-    font-size: 16pt; border-bottom: 2px solid var(--brand); padding-bottom: 6px;
-    color: var(--brand); page-break-after: avoid;
-  }
-  h2 {
-    font-size: 12.5pt; color: var(--brand); margin-top: 1.2em;
-    border-bottom: 1px solid var(--line); padding-bottom: 3px; page-break-after: avoid;
-  }
-  h3 { font-size: 11pt; color: var(--brand-soft); margin-top: 1em; page-break-after: avoid; }
-  p { margin: 0.4em 0; }
-  table {
-    width: 100%; border-collapse: collapse; margin: 0.6em 0 0.9em;
-    font-size: 9pt; page-break-inside: avoid;
-  }
-  th, td {
-    border: 1px solid #b8c7d1; padding: 4px 6px; vertical-align: top; text-align: left;
-  }
-  th { background: var(--wash); color: var(--brand); font-weight: 600; }
-  tr:nth-child(even) td { background: var(--zebra); }
-  code {
-    font-family: Consolas, Menlo, monospace; font-size: 8.5pt;
-    background: var(--code-bg); padding: 1px 3px;
-  }
-  pre {
-    background: #f4f6f8; border: 1px solid #d5dde3; padding: 8px 10px;
-    font-size: 8pt; line-height: 1.35; page-break-inside: avoid; white-space: pre-wrap;
-  }
-  pre code { background: none; padding: 0; }
-  ul, ol { margin: 0.35em 0 0.6em 1.15em; padding: 0; }
-  li { margin: 0.15em 0; }
-  hr { border: none; border-top: 1px solid var(--line); margin: 1em 0; }
-  a { color: var(--brand); text-decoration: none; }
-  blockquote.manual-shot {
-    margin: 0.7em 0; padding: 7px 10px; border-left: 3px solid var(--brand); background: #f3f7fa;
+    padding: 20px 18px 56px;
+    background:
+      radial-gradient(ellipse 70% 40% at 0% 0%, rgba(10, 107, 46, 0.07), transparent 55%),
+      radial-gradient(ellipse 50% 30% at 100% 0%, rgba(40, 180, 70, 0.06), transparent 50%),
+      #fafcfb;
   }
   .nav-print {
-    position: sticky; top: 0; background: rgba(255,255,255,0.96);
-    border-bottom: 1px solid var(--line); padding: 8px 0; margin: -8px 0 16px; z-index: 2; font-size: 9pt;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    margin: -8px -6px 1.25rem;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    font-size: 8.5pt;
+    box-shadow: 0 4px 18px rgba(6, 68, 32, 0.06);
   }
-  .nav-print a { margin-right: 0.85rem; }
+  .nav-print a {
+    color: var(--brand-mid);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.15rem 0.35rem;
+    border-radius: 6px;
+  }
+  .nav-print a:hover { background: var(--wash); }
+
+  .cover {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background:
+      linear-gradient(145deg, #053d1e 0%, #064420 42%, #0a6b2e 78%, #0d8038 100%);
+    color: #f4fbf6;
+    padding: 2.4rem 2rem 2rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 18px 40px rgba(6, 68, 32, 0.18);
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 90% 10%, rgba(40, 180, 70, 0.35), transparent 40%),
+      radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.08), transparent 45%);
+    pointer-events: none;
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    right: -20px;
+    bottom: -30px;
+    width: 180px;
+    height: 180px;
+    border: 18px solid rgba(255,255,255,0.06);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .cover-inner { position: relative; z-index: 1; }
+  .cover .eyebrow {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin: 0 0 0.75rem;
+    padding: 0.25rem 0.65rem;
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.12);
+  }
+  .cover h1 {
+    font-family: "Libre Baskerville", "Noto Sans Ethiopic", Georgia, serif;
+    font-size: 26pt;
+    font-weight: 700;
+    line-height: 1.2;
+    border: none;
+    margin: 0 0 0.55rem;
+    color: #fff;
+    padding: 0;
+  }
+  .cover .lead {
+    font-size: 11.5pt;
+    max-width: 34rem;
+    margin: 0 0 1.1rem;
+    opacity: 0.95;
+    line-height: 1.45;
+  }
+  .cover .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 0 0 1rem;
+  }
+  .cover .chip {
+    font-size: 8.5pt;
+    font-weight: 700;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+  .cover .hint {
+    margin: 0;
+    font-size: 9pt;
+    opacity: 0.82;
+  }
+  .cover .accent-bar {
+    width: 3.5rem;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin: 0 0 1rem;
+  }
+
+  .toc {
+    margin: 0 0 2rem;
+    padding: 1.15rem 1.2rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(6, 68, 32, 0.05);
+  }
+  .toc h2 {
+    margin-top: 0;
+    border: none;
+    font-family: "Libre Baskerville", Georgia, serif;
+    font-size: 14pt;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .toc a {
+    display: block;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--soft);
+    color: var(--brand);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 9.5pt;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toc a:hover {
+    background: var(--wash);
+    border-color: #8fc9a8;
+  }
+  .toc .num {
+    display: inline-block;
+    min-width: 1.4rem;
+    color: var(--brand-mid);
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+  }
+
+  .chapter {
+    page-break-before: always;
+    margin-top: 1.75rem;
+    padding: 1.15rem 1.2rem 1.4rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(6, 68, 32, 0.04);
+  }
+  .chapter:first-of-type { page-break-before: auto; }
+  .chapter-label {
+    display: inline-block;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--brand-mid);
+    background: var(--wash);
+    border: 1px solid #b7d9c8;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    margin: 0 0 0.65rem;
+  }
+
+  h1 {
+    font-family: "Libre Baskerville", "Noto Sans Ethiopic", Georgia, serif;
+    font-size: 16.5pt;
+    color: var(--brand);
+    border-bottom: 3px solid var(--brand-mid);
+    padding-bottom: 0.4rem;
+    margin: 0.2rem 0 0.85rem;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 12.5pt;
+    color: var(--brand);
+    margin-top: 1.35em;
+    padding: 0.35rem 0 0.3rem 0.65rem;
+    border-left: 4px solid var(--accent);
+    border-bottom: 1px solid var(--line);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    color: var(--brand-mid);
+    margin-top: 1.05em;
+    page-break-after: avoid;
+  }
+  p { margin: 0.45em 0; }
+  strong { color: var(--brand); }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.75em 0 1em;
+    font-size: 9pt;
+    page-break-inside: avoid;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 0.45rem 0.55rem;
+    vertical-align: top;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    background: linear-gradient(180deg, #e8f6ee, var(--wash));
+    color: var(--brand);
+    font-weight: 700;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: var(--zebra); }
+
+  code {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 8.5pt;
+    background: var(--code-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    color: #053d1e;
+  }
+  pre {
+    background: #f0f7f3;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--brand-mid);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    font-size: 8pt;
+    line-height: 1.4;
+    page-break-inside: avoid;
+    white-space: pre-wrap;
+  }
+  pre code { background: none; padding: 0; }
+  ul, ol { margin: 0.4em 0 0.7em 1.2em; padding: 0; }
+  li { margin: 0.2em 0; }
+  hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line), transparent);
+    margin: 1.15em 0;
+  }
+  a { color: var(--brand-mid); text-decoration: none; font-weight: 600; }
+
+  blockquote.manual-shot {
+    margin: 0.9em 0;
+    padding: 0.75rem 0.95rem;
+    border-radius: 10px;
+    border: 1px solid #b7d9c8;
+    border-left: 5px solid var(--gold);
+    background: linear-gradient(135deg, #fffdf7 0%, #f3f8f5 100%);
+    color: #1a3326;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  figure.manual-figure {
+    margin: 1rem 0 1.25rem;
+    padding: 0.55rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 8px 22px rgba(6, 68, 32, 0.06);
+    page-break-inside: avoid;
+    text-align: center;
+  }
+  figure.manual-figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #dce8e1;
+  }
+  figure.manual-figure figcaption {
+    margin-top: 0.45rem;
+    font-size: 8.5pt;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
   @media print {
-    body { padding: 0; max-width: none; }
+    body {
+      padding: 0;
+      max-width: none;
+      background: #fff;
+    }
     .nav-print { display: none; }
-    a { color: inherit; text-decoration: none; }
+    .cover {
+      box-shadow: none;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .chapter, .toc {
+      box-shadow: none;
+      break-inside: avoid;
+    }
+    a { color: inherit; text-decoration: none; font-weight: inherit; }
+  }
+  @media (max-width: 640px) {
+    .toc-grid { grid-template-columns: 1fr; }
+    .cover { padding: 1.5rem 1.15rem; }
+    .cover h1 { font-size: 20pt; }
   }
 
 </style>
 </head>
 <body>
-<nav class="nav-print" aria-label="Chapters">
-  <a href="#ch-0">Overview</a> <a href="#ch-1">Admin</a> <a href="#ch-2">Admin (Amharic)</a> <a href="#ch-3">Staff</a> <a href="#ch-4">Staff (Amharic)</a> <a href="#ch-5">Customers</a> <a href="#ch-6">Customers (Amharic)</a> <a href="#ch-7">Market partners</a> <a href="#ch-8">Screenshot captions</a> <a href="#ch-9">IT installation</a>
-</nav>
+<nav class="nav-print" aria-label="Chapters"><a href="#ch-0">Overview</a> <a href="#ch-1">Admin</a> <a href="#ch-2">Staff</a> <a href="#ch-3">Customers</a> <a href="#ch-4">Market partners</a> <a href="#ch-5">Screenshots</a> <a href="#ch-6">IT installation</a></nav>
 <header class="cover">
-  <p class="eyebrow">DECSI · Seqela Technologies</p>
-  <h1>Loan Hub User Manuals</h1>
-  <p>Admin · Staff · Customers · Market · Screenshot captions (EN &amp; AM where available)</p>
-  <p>Print this page (Ctrl/Cmd+P) to PDF. Screen navigation links are hidden when printing.</p>
+  <div class="cover-inner">
+    <p class="eyebrow">DECSI · Seqela Technologies</p>
+    <div class="accent-bar" aria-hidden="true"></div>
+    <h1>Loan Hub User Manuals</h1>
+    <p class="lead">
+      Guides for administrators, staff, customers, market partners, and IT —
+      with real product screenshots.
+    </p>
+    <div class="meta" aria-label="Topics">
+      <span class="chip">Admin</span>
+      <span class="chip">Staff</span>
+      <span class="chip">Digital Apply</span>
+      <span class="chip">Market</span>
+      <span class="chip">IT install</span>
+      <span class="chip">Screenshots</span>
+    </div>
+    <p class="hint">Print or Save as PDF (Ctrl/Cmd+P). Navigation links are hidden when printing.</p>
+  </div>
 </header>
 <nav class="toc" aria-label="Table of contents">
   <h2>Contents</h2>
-  <div><a href="#ch-0">Overview</a></div><div><a href="#ch-1">Admin</a></div><div><a href="#ch-2">Admin (Amharic)</a></div><div><a href="#ch-3">Staff</a></div><div><a href="#ch-4">Staff (Amharic)</a></div><div><a href="#ch-5">Customers</a></div><div><a href="#ch-6">Customers (Amharic)</a></div><div><a href="#ch-7">Market partners</a></div><div><a href="#ch-8">Screenshot captions</a></div><div><a href="#ch-9">IT installation</a></div>
+  <div class="toc-grid">
+    <a href="#ch-0"><span class="num">01</span> Overview</a><a href="#ch-1"><span class="num">02</span> Admin</a><a href="#ch-2"><span class="num">03</span> Staff</a><a href="#ch-3"><span class="num">04</span> Customers</a><a href="#ch-4"><span class="num">05</span> Market partners</a><a href="#ch-5"><span class="num">06</span> Screenshots</a><a href="#ch-6"><span class="num">07</span> IT installation</a>
+  </div>
 </nav>
 <section class="chapter" id="ch-0">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 1 · Overview</p>
+<div class="chapter-label">Chapter 01</div>
 <h1>DECSI Loan Hub — User Manuals</h1>
 <p>Practical guides for <strong>DECSI Loan Hub</strong> (<em>AI-powered Credit Intelligence</em>), <strong>Digital Apply</strong>, and <strong>Seqela Market</strong>.</p>
 <table>
 <thead><tr><th>Manual</th><th>Who it is for</th><th>In-app Help</th></tr></thead>
 <tbody>
-<tr><td><a href="01_admin.md">Admin</a> · <a href="01_admin_am.md">አማርኛ</a></td><td>System administrators</td><td>Hub → <strong>Help</strong> (<code>/hub/help/</code>)</td></tr>
-<tr><td><a href="02_staff.md">Staff</a> · <a href="02_staff_am.md">አማርኛ</a></td><td>Branch / HO / eng / finance / committee</td><td>Hub → <strong>Help</strong></td></tr>
-<tr><td><a href="03_customers.md">Customers</a> · <a href="03_customers_am.md">አማርኛ</a></td><td>Borrowers applying online</td><td>Digital Apply → <strong>Help</strong> (<code>/help/</code>)</td></tr>
+<tr><td><a href="01_admin.md">Admin</a></td><td>System administrators</td><td>Hub → <strong>Help</strong> (<code>/hub/help/</code>)</td></tr>
+<tr><td><a href="02_staff.md">Staff</a></td><td>Branch / HO / eng / finance / committee</td><td>Hub → <strong>Help</strong></td></tr>
+<tr><td><a href="03_customers.md">Customers</a></td><td>Borrowers applying online</td><td>Digital Apply → <strong>Help</strong> (<code>/help/</code>)</td></tr>
 <tr><td><a href="04_market_partners.md">Market partners</a></td><td>Dealers &amp; price reporters</td><td>Market → <strong>Help</strong> (<code>/market-portal/help/</code>)</td></tr>
-<tr><td><a href="05_screenshot_captions.md">Screenshot captions</a></td><td>Trainers / doc authors</td><td>Hub Help (staff)</td></tr>
+<tr><td><a href="05_screenshots.md">Screenshots</a></td><td>UI captures used in this pack</td><td>Hub / Digital Apply Help</td></tr>
 <tr><td><a href="06_installation_it.md">IT installation</a></td><td>DECSI IT — install &amp; minimum requirements</td><td>Hub → <strong>Help</strong></td></tr>
 </tbody>
 </table>
-<p><strong>Printable pack:</strong> <a href="DECSI_Loan_Hub_User_Manuals.html">DECSI_Loan_Hub_User_Manuals.html</a> → browser <strong>Print → Save as PDF</strong>.</p>
-<pre class="lang-bash"><code>python3 docs/user_manual/build_html.py</code></pre>
+<p><strong>Printable pack:</strong></p>
+<ul>
+<li><a href="DECSI_Loan_Hub_User_Manuals.html">HTML</a>  </li>
+<li><a href="DECSI_Loan_Hub_User_Manuals.pdf">PDF</a>  </li>
+</ul>
+<pre class="lang-bash"><code>python3 docs/user_manual/build_html.py
+docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
 <hr>
 <h2>Which portal am I on?</h2>
 <table>
@@ -139,8 +437,9 @@
 <h2>Product at a glance</h2>
 <pre class="lang-text"><code>Customer (Digital Apply)          Staff hub                     Admin
 Register → Apply → Fee            Intake → Docs → Appraisal     Users &amp; geography
-→ Submit → Track Queue ID         → Collateral → Committee      Document packs
-                                  → Post-approval → Disburse    Digital Apply settings
+→ Submit → Notices / status       → Collateral → Committee      Document packs
+→ Schedule (when approved)        → Post-approval → Disburse    Digital Apply settings
+                                  Delegations (cover)           Approve delegations
 
 Market (Seqela Market): Area → Product &amp; price → price bands</code></pre>
 <hr>
@@ -157,14 +456,18 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td><strong>Approval queue</strong></td><td>Committee voting</td></tr>
 <tr><td><strong>Post-approval</strong></td><td>Conditions → schedule → ready</td></tr>
 <tr><td><strong>Agentic Assist</strong></td><td>Staff AI helper (cannot approve/disburse)</td></tr>
+<tr><td><strong>Delegation</strong></td><td>Temporary cover of staff powers (admin-approved)</td></tr>
+<tr><td><strong>Source channel</strong></td><td>Online (Digital Apply) vs staff/branch entry</td></tr>
+<tr><td><strong>Repayment schedule</strong></td><td>Customer installment table after credit approval</td></tr>
 <tr><td><strong>Seqela Market</strong></td><td>External price quotes</td></tr>
+<tr><td><strong>Price band</strong></td><td>Aggregated market price range for an area/product</td></tr>
 </tbody>
 </table>
 <hr>
 <h2>Support</h2>
 <p>Lockouts / MFA / outages → DECSI IT. Customers → branch with Queue ID. Market actors → DECSI liaison if suspended.</p>
 </section><section class="chapter" id="ch-1">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 2 · Admin</p>
+<div class="chapter-label">Chapter 02</div>
 <h1>Admin User Manual</h1>
 <p><strong>Audience:</strong> Super Administrators and System Administrators who configure DECSI Loan Hub.  </p>
 <p><strong>Entry:</strong> Staff hub → <code>/hub/login/</code> (Django Admin also available at <code>/admin/</code> for data maintenance).</p>
@@ -174,11 +477,11 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <table>
 <thead><tr><th>Role</th><th>What you typically do</th></tr></thead>
 <tbody>
-<tr><td><strong>Super Administrator</strong> (<code>superadmin</code>) / Django <strong>superuser</strong></td><td>Full <strong>Settings</strong> menu: geography, users, loan products, document packs, Digital Apply, committees, collateral policy, estimation mode</td></tr>
-<tr><td><strong>System Administrator</strong> (<code>admin</code>)</td><td>Oversight, checkup views, unlock users (with IT), security audit when permitted</td></tr>
+<tr><td><strong>Super Administrator</strong> (<code>superadmin</code>) / Django <strong>superuser</strong></td><td>Full <strong>Settings</strong> menu: geography, users, loan products, document packs, Digital Apply, committees, collateral policy, estimation mode; <strong>approve/reject authority delegations</strong></td></tr>
+<tr><td><strong>System Administrator</strong> (<code>admin</code>)</td><td>Oversight, checkup views, unlock users (with IT), security audit when permitted; <strong>approve/reject authority delegations</strong></td></tr>
 </tbody>
 </table>
-<p>Menus are role-scoped. If you do not see <strong>Settings</strong>, ask for a superuser account or elevated role.</p>
+<p>Menus are role-scoped. If you do not see <strong>Settings</strong>, ask for a superuser account or elevated role. All staff see <strong>Delegations</strong> in the hub nav.</p>
 <hr>
 <h2>2. Sign in and security</h2>
 <h3>2.1 Sign in</h3>
@@ -187,7 +490,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Enter your <strong>username</strong> and <strong>password</strong>.</li>
 <li>If MFA is enabled for your account (or required by policy), open your authenticator app and enter the one-time code at <code>/hub/mfa/verify/</code>.</li>
 </ol>
-<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><strong>Screenshot (H-02):</strong> MFA verify — enter the one-time code from your authenticator app.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><figure class="manual-figure"><img src="screenshots/H-01_hub_login.png" alt="H-01 — Staff hub login"/><figcaption>H-01 — Staff hub login</figcaption></figure><br><br><strong>Screenshot (H-02):</strong> MFA verify — enter the one-time code from your authenticator app.</blockquote>
 <h3>2.2 First-time MFA enrollment</h3>
 <ol>
 <li>After password login (or from security settings), open <strong>MFA setup</strong> (<code>/hub/mfa/setup/</code>).</li>
@@ -205,6 +508,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 </table>
 <h3>2.4 Lockouts</h3>
 <p>Repeated failed logins can lock an account. Unlock from the user edit screen or the unlock action (allowed for admin / VP IT / superuser). Review related events in the <strong>security audit</strong> log.</p>
+<p>Staff and Digital Apply applicants use <strong>separate</strong> lockout / auth-event stores. Disabling MFA (if allowed): <code>/hub/mfa/disable/</code>. Sessions may use idle timeout with keepalive (<code>/hub/session/keepalive/</code>).</p>
 <h3>2.5 Security audit</h3>
 <p>Roles such as admin, auditor, risk &amp; compliance, VP IT, and superuser can open:</p>
 <ul>
@@ -264,7 +568,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li><strong>Document pack per category</strong> — Settings → open a category → <strong>Document pack</strong>  </li>
 </ol>
 <p>   Mark each type <strong>required</strong> or <strong>optional</strong> and set display order.</p>
-<p>Digital Apply and staff document screens both use the pack for the selected product. After changing packs, test one online draft and one staff loan.</p>
+<p>Digital Apply and staff document screens both use the pack for the selected product. If a category has <strong>no pack</strong>, the system falls back to the global document catalog (filtered by appraisal mode). After changing packs, test one online draft and one staff loan.</p>
+<p>Staff can also <strong>Request document</strong> on a loan (type from the pack) so the branch manager is notified to upload a missing file.</p>
 <h3>3.5 Approval committees</h3>
 <p><strong>Settings → Approval committees</strong></p>
 <ul>
@@ -290,15 +595,35 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <thead><tr><th>Control</th><th>Effect</th></tr></thead>
 <tbody>
 <tr><td>Portal open / closed</td><td>When closed, applicants see “Digital apply is temporarily closed”</td></tr>
-<tr><td>Processing fee (ETB)</td><td>Amount charged before submit</td></tr>
-<tr><td>Password / lockout / rate limits</td><td>Applicant account security</td></tr>
+<tr><td>Processing fee (ETB)</td><td>Amount charged before submit; <strong>0 ETB</strong> auto-waives payment</td></tr>
+<tr><td>Password rules</td><td>Length and character requirements for applicant passwords</td></tr>
+<tr><td>Max failed logins / lockout minutes</td><td>Applicant account lockout</td></tr>
+<tr><td>Register rate limit (per IP / hour)</td><td>Limits new registrations from one IP</td></tr>
 <tr><td>Idle session minutes</td><td>Applicant session timeout</td></tr>
-<tr><td>Terms text</td><td>Shown at registration / apply</td></tr>
-<tr><td>Require CBS customer lookup</td><td>When enabled, registration validates customer number against core banking</td></tr>
+<tr><td>Require terms acceptance</td><td>Checkbox at registration (terms wording is fixed in the UI)</td></tr>
+<tr><td>Require CBS customer lookup</td><td>Validates customer number against core banking when enabled</td></tr>
 <tr><td>Chapa status</td><td>Live vs mock/demo payment mode (environment-driven; shown for operators)</td></tr>
 </tbody>
 </table>
 <p>After go-live, use <strong>Online loan intake</strong> to confirm applications appear for branch staff.</p>
+<h3>3.8 Authority delegation (approve as admin)</h3>
+<p>Staff can request a colleague to cover selected powers (<strong>Delegations</strong> in the hub nav → <code>/hub/delegations/</code>).</p>
+<ol>
+<li>A staff user creates a request (principal, delegate, scopes, date window, reason).  </li>
+<li>Status stays <strong>Pending</strong> until an <strong>admin / superadmin</strong> <strong>Approves</strong> or <strong>Rejects</strong>.  </li>
+<li>While approved and inside the window, the delegate may act; actions are audited as <em>acted by delegate for principal</em>.  </li>
+<li>Principal or admin can <strong>Revoke</strong> early.</li>
+</ol>
+<p>Scopes that can be delegated (only powers the principal already holds):</p>
+<ul>
+<li>Committee voting  </li>
+<li>Cooperative intake approval  </li>
+<li>Loan officer appraisal / documents  </li>
+<li>Finance disbursement approval  </li>
+<li>Assign loan officer  </li>
+</ul>
+<p>Admins see a banner when requests await approval.</p>
+<blockquote class="manual-shot"><strong>Screenshot (H-23):</strong> Delegations — pending approval list and Approve / Reject actions.</blockquote>
 <hr>
 <h2>4. Day-to-day admin tasks</h2>
 <h3>4.1 Open or close Digital Apply</h3>
@@ -335,11 +660,23 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Advise password reset and MFA check.</li>
 </ol>
 <h3>4.6 Monitor online applications</h3>
-<p><strong>Settings → Online loan intake</strong> (or hub online intake screen)</p>
+<p><strong>Settings → Online loan intake</strong> (<code>/hub/online_loan_intake/</code> — nav under Settings for superuser)</p>
 <ul>
-<li>See drafts and submitted Digital Apply loans.</li>
-<li>Coordinate with branch managers if intake is stuck.</li>
+<li>Lists <strong>submitted</strong> Digital Apply loans and <strong>open drafts</strong>.  </li>
+<li>Search by Queue ID, name, phone, or customer number.  </li>
+<li>Non-HO roles are branch-scoped when they open the page.  </li>
+<li>Submitted apps mint a <code>LoanRequest</code> with <strong>source channel = online</strong>.  </li>
+<li>On submit, the system may <strong>auto-assign</strong> the first active loan officer at the branch (else the branch manager).  </li>
+<li>Branch staff also receive <strong>Notifications</strong> (<code>online_intake</code>) when a customer submits.</li>
 </ul>
+<p>Coordinate with branch managers if intake is stuck.</p>
+<h3>4.7 Approve or reject a delegation</h3>
+<ol>
+<li>Open <strong>Delegations</strong> (or use the pending-approval banner).  </li>
+<li>Review principal, proposed delegate, scopes, and window.  </li>
+<li><strong>Approve</strong> or <strong>Reject</strong>.  </li>
+<li>Confirm the delegate sees “Acting by delegation” after approval.</li>
+</ol>
 <hr>
 <h2>5. Django Admin (<code>/admin/</code>)</h2>
 <p>Use Django Admin for advanced data maintenance (models, flags, one-off corrections). Prefer hub <strong>Settings</strong> UIs for routine configuration so audits and validation stay consistent.</p>
@@ -347,7 +684,9 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <ul>
 <li>Loan requests, categories, document requirements  </li>
 <li>Committees and votes  </li>
-<li>Applicant portal settings, accounts, online applications  </li>
+<li>Applicant portal settings, accounts, online applications, applicant notices  </li>
+<li>Market actors, observations, price bands (Seqela Market)  </li>
+<li>Staff delegations (if registered)  </li>
 <li>Security / auth-related records as registered  </li>
 </ul>
 <p>Treat Admin changes as privileged: log why you changed a record.</p>
@@ -357,12 +696,11 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <table>
 <thead><tr><th>Topic</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td>MFA required</td><td>Forces staff MFA when policy demands it</td></tr>
-<tr><td>Login lockout</td><td>Max failed attempts and lock duration</td></tr>
-<tr><td>Session idle</td><td>Staff idle timeout (if middleware enabled in deployment)</td></tr>
+<tr><td>MFA / lockout / idle</td><td>Staff auth hardening (see IT manual and deployment settings)</td></tr>
 <tr><td>Email (SMTP)</td><td>Required for staff password reset</td></tr>
-<tr><td>Chapa keys</td><td>Live vs mock Digital Apply payments</td></tr>
-<tr><td>Applicant SMS</td><td>OTP for customer password reset</td></tr>
+<tr><td>Chapa keys</td><td>Live vs mock Digital Apply payments (<code>CHAPA_*</code>, <code>CHAPA_FORCE_MOCK</code>)</td></tr>
+<tr><td>Applicant SMS</td><td>OTP / status SMS gateway (<code>APPLICANT_SMS_*</code>)</td></tr>
+<tr><td>Market bands</td><td>Periodic <code>recompute_market_bands</code> for price bands</td></tr>
 </tbody>
 </table>
 <p>Coordinate with DevOps before changing production secrets.</p>
@@ -377,141 +715,26 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td>Committees</td><td>Settings → Approval committees</td></tr>
 <tr><td>Portal fee / open</td><td>Settings → Digital apply</td></tr>
 <tr><td>Online apps</td><td>Settings → Online loan intake</td></tr>
+<tr><td>Delegations</td><td>Hub → Delegations</td></tr>
 <tr><td>Collateral rules</td><td>Settings → Collateral policy / Estimation config</td></tr>
 <tr><td>Audit</td><td><code>/hub/security/audit/</code></td></tr>
 <tr><td>Unlock user</td><td>Edit user → unlock</td></tr>
+<tr><td>In-app Help / PDF</td><td><code>/hub/help/</code></td></tr>
 <tr><td>Low-level data</td><td><code>/admin/</code></td></tr>
 </tbody>
 </table>
 <hr>
 <h2>8. Related manuals</h2>
 <ul>
-<li><a href="02_staff.md">Staff user manual</a> · <a href="02_staff_am.md">አማርኛ</a>  </li>
-<li><a href="03_customers.md">Customer user manual</a> · <a href="03_customers_am.md">አማርኛ</a>  </li>
+<li><a href="02_staff.md">Staff user manual</a>  </li>
+<li><a href="03_customers.md">Customer user manual</a>  </li>
 <li><a href="04_market_partners.md">Market partners</a>  </li>
-<li><a href="05_screenshot_captions.md">Screenshot captions</a>  </li>
+<li><a href="05_screenshots.md">Screenshots</a>  </li>
 <li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a>  </li>
 <li>In-app: <code>/hub/help/</code></li>
 </ul>
 </section><section class="chapter" id="ch-2">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 3 · Admin (Amharic)</p>
-<h1>የአስተዳዳሪ መመሪያ</h1>
-<p><strong>ለማን ነው:</strong> የDECSI Loan Hubን የሚያዋቅሩ ሱፐር አስተዳዳሪዎች እና የስርዓት አስተዳዳሪዎች።  </p>
-<p><strong>መግቢያ:</strong> የሰራተኛ ሃብ <code>/hub/login/</code> (Django Admin በ <code>/admin/</code>)።  </p>
-<p><strong>እንግሊዘኛ:</strong> <a href="01_admin.md">01_admin.md</a></p>
-<p>ይህ መመሪያ <strong>ውቅረት</strong> እና <strong>ክትትል</strong> ላይ ያተኩራል። የዕለት ተዕለት የብድር ስራ በ<a href="02_staff_am.md">የሰራተኛ መመሪያ</a> ነው።</p>
-<hr>
-<h2>1. ሚናዎ</h2>
-<table>
-<thead><tr><th>ሚና</th><th>የተለመደ ስራ</th></tr></thead>
-<tbody>
-<tr><td><strong>ሱፐር አስተዳዳሪ</strong> / Django <strong>superuser</strong></td><td>ሙሉ <strong>Settings</strong>: ጂኦግራፊ፣ ተጠቃሚዎች፣ የብድር ምርቶች፣ የሰነድ ጥቅል፣ ዲጂታል ማመልከቻ፣ ኮሚቴዎች፣ የዋስትና ፖሊሲ</td></tr>
-<tr><td><strong>የስርዓት አስተዳዳሪ</strong> (<code>admin</code>)</td><td>ክትትል፣ ተጠቃሚ መክፈት፣ የደህንነት ኦዲት (በፍቃድ)</td></tr>
-</tbody>
-</table>
-<p><strong>Settings</strong> ካላዩ ከIT ከፍ ያለ መብት ይጠይቁ።</p>
-<hr>
-<h2>2. መግባት እና ደህንነት</h2>
-<h3>2.1 መግባት</h3>
-<ol>
-<li><code>/hub/login/</code> ይክፈቱ።  </li>
-<li>የተጠቃሚ ስምና የይለፍ ቃል ያስገቡ።  </li>
-<li>MFA ካለ በ <code>/hub/mfa/verify/</code> የአንድ ጊዜ ኮድ ያስገቡ።</li>
-</ol>
-<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> የሰራተኛ መግቢያ — የተጠቃሚ ስም እና የይለፍ ቃል።  <br><strong>Screenshot (H-02):</strong> MFA ማረጋገጫ — ከአፕሊኬሽኑ የሚመጣ ኮድ።</blockquote>
-<h3>2.2 MFA ማስጀመር</h3>
-<ol>
-<li><code>/hub/mfa/setup/</code> ይክፈቱ።  </li>
-<li>QR ኮዱን በauthenticator ያንብቡ።  </li>
-<li>በኮድ ያረጋግጡ።</li>
-</ol>
-<h3>2.3 የይለፍ ቃል</h3>
-<table>
-<thead><tr><th>ፍላጎት</th><th>ቦታ</th></tr></thead>
-<tbody>
-<tr><td>ረሳሁ</td><td><code>/hub/password-reset/</code> (ኢሜይል — SMTP ያስፈልጋል)</td></tr>
-<tr><td>መቀየር</td><td><code>/hub/password-change/</code></td></tr>
-</tbody>
-</table>
-<h3>2.4 መቆለፍ እና ኦዲት</h3>
-<p>ተደጋጋሚ ስህተት መግቢያ መለያውን ሊቆልፍ ይችላል — ከተጠቃሚ ማረሚያ ገጽ ይክፈቱ።  </p>
-<p><strong>የደህንነት ኦዲት:</strong> <code>/hub/security/audit/</code> (+ export)።</p>
-<hr>
-<h2>3. Hub Settings (የውቅረት ቅደም ተከተል)</h2>
-<pre class="lang-text"><code>1. ወረዳዎች → ቅርንጫፎች → ዲፓርትመንቶች (HO)
-2. ክልል → ዞን → ከተማ/ወረዳ
-3. ተጠቃሚዎች (ሚና፣ ቅርንጫፍ/ወረዳ)
-4. የብድር ምድቦች (ምርቶች)
-5. የሰነድ አይነቶች
-6. በምድብ የሰነድ ጥቅል
-7. የፈቃድ ኮሚቴዎች
-8. የዋስትና አይነቶች፣ ፖሊሲ፣ ግምት ውቅረት
-9. ዲጂታል ማመልከቻ (መክፈት/መዝጋት፣ ክፍያ)
-10. የኦንላይን ማመልከቻ ክትትል</code></pre>
-<blockquote class="manual-shot"><strong>Screenshot (H-19):</strong> የዲጂታል ማመልከቻ ቅንብሮች።  <br><strong>Screenshot (H-20):</strong> የሰነድ ጥቅል በምድብ።</blockquote>
-<h3>3.1 ጂኦግራፊ እና ድርጅት</h3>
-<p>ወረዳ/ቅርንጫፍ የሪፖርት እና የብድር እይታን ይገድባል። HO ተጠቃሚዎች ዲፓርትመንት ሊኖራቸው ይችላል።</p>
-<h3>3.2 ተጠቃሚዎች</h3>
-<p>የሰራተኛ መለያዎችን ይፍጠሩ — <strong>ሚና</strong>፣ <strong>ቅርንጫፍ/ወረዳ</strong>፣ አስፈላጊ ከሆነ <strong>ዲፓርትመንት</strong>።  </p>
-<p>የደንበኛ መለያዎች እዚህ አይፈጠሩም — በዲጂታል ማመልከቻ ይመዘገባሉ።</p>
-<h3>3.3 የብድር ምድቦች እና ሰነዶች</h3>
-<ol>
-<li><strong>Loan categories</strong> — ምርቶች።  </li>
-<li><strong>Document types</strong> — አጠቃላይ ካታሎግ።  </li>
-<li><strong>Document pack</strong> በእያንዳንዱ ምድብ — የግዴታ/አማራጭ እና ቅደም ተከተል።</li>
-</ol>
-<h3>3.4 ኮሚቴዎች እና ዋስትና</h3>
-<p><strong>Approval committees</strong> — የድምጽ አባላት እና ደረጃዎች።  </p>
-<p><strong>Collateral policy / Estimation config</strong> — ማን ዋስትና እንደሚገመግም (LO / ኢንጂነሪንግ / ሁለቱም)።  </p>
-<p><strong>Unlock queue</strong> — ከተቆለፈ በኋላ ማረም።</p>
-<h3>3.5 ዲጂታል ማመልከቻ</h3>
-<table>
-<thead><tr><th>ቁጥጥር</th><th>ውጤት</th></tr></thead>
-<tbody>
-<tr><td>መክፈት/መዝጋት</td><td>ሲዘጋ ደንበኞች “temporarily closed” ያያሉ</td></tr>
-<tr><td>የማቀናበሪያ ክፍያ (ብር)</td><td>ከማስገባት በፊት</td></tr>
-<tr><td>የይለፍ ቃል / lockout</td><td>የደንበኛ ደህንነት</td></tr>
-<tr><td>የCBS ማረጋገጫ</td><td>አማራጭ የደንበኛ ቁጥር ማረጋገጥ</td></tr>
-<tr><td>Chapa</td><td>ህያው ወይም mock</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>4. የዕለት ተዕለት ተግባራት</h2>
-<ul>
-<li>ዲጂታል ማመልከቻን መክፈት/መዝጋት  </li>
-<li>ክፍያ ማስተካከል  </li>
-<li>አዲስ ምርት + የሰነድ ጥቅል  </li>
-<li>አዲስ ቅርንጫፍ እና ተጠቃሚዎች ማስጀመር  </li>
-<li>የተቆለፈ ተጠቃሚ መክፈት  </li>
-<li><strong>Online loan intake</strong> መከታተል  </li>
-</ul>
-<hr>
-<h2>5. Django Admin</h2>
-<p>ለላቀ የውሂብ ጥገና <code>/admin/</code> ይጠቀሙ። ለመደበኛ ውቅረት የhub <strong>Settings</strong> ይመረጡ።</p>
-<hr>
-<h2>6. ፈጣን ማጣቀሻ</h2>
-<table>
-<thead><tr><th>ተግባር</th><th>መንገድ</th></tr></thead>
-<tbody>
-<tr><td>ምርቶች</td><td>Settings → Loan categories</td></tr>
-<tr><td>ሰነድ ካታሎግ</td><td>Document types</td></tr>
-<tr><td>የሰነድ ጥቅል</td><td>Category → Document pack</td></tr>
-<tr><td>ኮሚቴ</td><td>Approval committees</td></tr>
-<tr><td>ፖርታል ክፍያ</td><td>Digital apply</td></tr>
-<tr><td>ኦዲት</td><td><code>/hub/security/audit/</code></td></tr>
-<tr><td>እገዛ በመተግበሪያ</td><td><code>/hub/help/</code></td></tr>
-</tbody>
-</table>
-<hr>
-<h2>7. ተዛማጅ</h2>
-<ul>
-<li><a href="01_admin.md">English admin</a>  </li>
-<li><a href="02_staff_am.md">Staff Amharic</a>  </li>
-<li><a href="03_customers_am.md">Customers Amharic</a>  </li>
-<li><a href="05_screenshot_captions.md">Screenshot captions</a></li>
-</ul>
-</section><section class="chapter" id="ch-3">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 4 · Staff</p>
+<div class="chapter-label">Chapter 03</div>
 <h1>Staff User Manual</h1>
 <p><strong>Audience:</strong> Branch, district, head-office, engineering, finance, risk, and committee users.  </p>
 <p><strong>Entry:</strong> <code>/hub/login/</code> — product brand in the hub: <em>AI-powered Credit Intelligence</em>.</p>
@@ -525,27 +748,30 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Complete MFA if prompted (<code>/hub/mfa/verify/</code>).</li>
 <li>You land on the Credit Intelligence / hub home for your role.</li>
 </ol>
-<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><strong>Screenshot (H-04):</strong> Hub home — role-scoped KPIs and shortcuts after sign-in.<br><br><strong>Screenshot (H-05):</strong> Header — Notifications, Help, and Logout sit beside your name and role.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> Staff login — enter username and password for AI-powered Credit Intelligence.<br><br><figure class="manual-figure"><img src="screenshots/H-01_hub_login.png" alt="H-01 — Staff hub login"/><figcaption>H-01 — Staff hub login</figcaption></figure><br><br><strong>Screenshot (H-04):</strong> Hub home — role-scoped KPIs and shortcuts after sign-in.<br><br><strong>Screenshot (H-05):</strong> Header — Notifications, Help, Delegations, and Logout sit beside your name and role.</blockquote>
 <p><strong>Forgot password:</strong> <code>/hub/password-reset/</code> (email link).  </p>
 <p><strong>Change password while logged in:</strong> <code>/hub/password-change/</code>.  </p>
-<p><strong>MFA setup:</strong> <code>/hub/mfa/setup/</code>.</p>
+<p><strong>MFA setup:</strong> <code>/hub/mfa/setup/</code>.  </p>
+<p><strong>Delegations:</strong> <code>/hub/delegations/</code>.  </p>
+<p><strong>Help / PDF:</strong> <code>/hub/help/</code>.</p>
 <p>If your account is locked after failed attempts, contact an administrator or IT.</p>
 <h3>1.2 What you see depends on your role</h3>
 <p>Menus are role-scoped. Examples:</p>
 <table>
 <thead><tr><th>Role</th><th>Typical menus</th></tr></thead>
 <tbody>
-<tr><td>Branch Manager</td><td>Loan requests, Collateral, Approval queue, Post-approval, Notifications, Reports, Unlock</td></tr>
-<tr><td>Loan Officer</td><td>Loan requests, documents, appraisal, collateral (when allowed)</td></tr>
-<tr><td>Cooperative Manager</td><td>Cooperative queue, Approval / Post-approval, Collateral, Reports</td></tr>
-<tr><td>Credit Loan Officer / Credit Head</td><td>HO loans, committees (head), oversight</td></tr>
-<tr><td>Finance Manager</td><td>Disbursement queue, Approval / Post-approval, Reports</td></tr>
-<tr><td>Accountant / District Manager / Exec / Board</td><td>Approval queue, Committee loans, Reports</td></tr>
-<tr><td>Engineer / Engineering Head</td><td>Catalog, Unit prices, Collateral, Engineering QA, Unlock (head)</td></tr>
-<tr><td>Risk / Auditor</td><td>Reports, review, security audit (when permitted)</td></tr>
+<tr><td>Branch Manager</td><td>Loan requests, Collateral, Approval queue, Post-approval, Notifications, Reports, Unlock, <strong>Delegations</strong></td></tr>
+<tr><td>Loan Officer</td><td>Loan requests, documents, appraisal, collateral (when allowed), <strong>Delegations</strong></td></tr>
+<tr><td>Cooperative Manager</td><td>Cooperative queue, Approval / Post-approval, Collateral, Reports, <strong>Delegations</strong></td></tr>
+<tr><td>Credit Loan Officer / Credit Head</td><td>HO loans, committees (head), oversight, <strong>Delegations</strong></td></tr>
+<tr><td>Finance Manager</td><td>Disbursement queue, Approval / Post-approval, Reports, <strong>Delegations</strong></td></tr>
+<tr><td>Accountant / District Manager / Exec / Board</td><td>Approval queue, Committee loans, Reports, <strong>Delegations</strong></td></tr>
+<tr><td>Engineer / Engineering Head</td><td>Catalog, Unit prices, Collateral, Engineering QA, Unlock (head), <strong>Delegations</strong></td></tr>
+<tr><td>Risk / Auditor</td><td>Reports, review, security audit (when permitted), <strong>Delegations</strong></td></tr>
+<tr><td>Admin / Superadmin</td><td>Settings, checkup, <strong>approve Delegations</strong>, audit</td></tr>
 </tbody>
 </table>
-<p>Always work only on loans in <strong>your branch / district / department</strong> scope.</p>
+<p>Always work only on loans in <strong>your branch / district / department</strong> scope. When covering a colleague, a green banner shows <strong>Acting by delegation</strong>.</p>
 <hr>
 <h2>2. Loan lifecycle (happy path)</h2>
 <pre class="lang-text"><code>Create / receive request
@@ -562,10 +788,32 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <table>
 <thead><tr><th>Source</th><th>How it enters the hub</th></tr></thead>
 <tbody>
-<tr><td>Branch / HO staff</td><td><strong>Add loan request</strong> (or Agentic Assist draft for eligible roles)</td></tr>
-<tr><td>Digital Apply</td><td>Appears under <strong>Online loan intake</strong>; continues as a normal <code>LoanRequest</code> after customer submit</td></tr>
+<tr><td>Branch / HO staff</td><td><strong>Add loan request</strong> (or Agentic Assist draft for eligible roles); <code>source_channel</code> = staff/branch</td></tr>
+<tr><td>Digital Apply</td><td>Customer submit mints a loan with <strong><code>source_channel=online</code></strong>; appears in <strong>Online loan intake</strong> and <strong>Notifications</strong>; may <strong>auto-assign</strong> LO (or BM) at the branch</td></tr>
 </tbody>
 </table>
+<hr>
+<h2>2.1 Authority delegation</h2>
+<p>Use <strong>Delegations</strong> when you need a colleague to cover you (leave, travel, overload).</p>
+<ol>
+<li>Open <strong>Delegations</strong> (<code>/hub/delegations/</code>).  </li>
+<li>Request cover: choose <strong>delegate</strong>, <strong>scopes</strong> you already hold, start/end time, and reason.  </li>
+<li>Wait for <strong>admin approval</strong> (Pending → Approved / Rejected).  </li>
+<li>While approved, the delegate sees <strong>Acting by delegation</strong> and can perform those scopes.  </li>
+<li>Principal or admin can <strong>Revoke</strong> early.</li>
+</ol>
+<table>
+<thead><tr><th>Scope</th><th>What the delegate can do</th></tr></thead>
+<tbody>
+<tr><td>Committee voting</td><td>Cast votes as the principal</td></tr>
+<tr><td>Cooperative intake</td><td>Approve/reject branch intake</td></tr>
+<tr><td>Appraisal / documents</td><td>Work as assigned loan officer</td></tr>
+<tr><td>Finance disbursement</td><td>Finance disbursement approval</td></tr>
+<tr><td>Assign loan officer</td><td>BM / DM / Credit Head assignment powers</td></tr>
+</tbody>
+</table>
+<p>Actions are audited as <em>acted by delegate for principal</em>. Do not share passwords — use delegation instead.</p>
+<blockquote class="manual-shot"><strong>Screenshot (H-23):</strong> Delegations — request cover and (for admins) Approve / Reject.</blockquote>
 <hr>
 <h2>3. Role playbooks</h2>
 <h3>3.1 Branch Manager</h3>
@@ -653,16 +901,20 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <blockquote class="manual-shot"><strong>Screenshot (H-08):</strong> Create loan request — capture customer number, product, amount, and branch.<br><br><strong>Screenshot (H-07):</strong> Loan requests — open a Queue ID to continue documents, appraisal, or collateral.</blockquote>
 <h3>4.2 Online loan intake</h3>
 <ol>
-<li>Open <strong>Online loan intake</strong> (also under Settings for admins).</li>
-<li>Find applications submitted via Digital Apply.</li>
-<li>Continue the same lifecycle as branch-created loans (cooperative → LO → …).</li>
+<li>Open <strong>Online loan intake</strong> (<code>/hub/online_loan_intake/</code> — Settings nav for superuser; others may open the URL or use <strong>Notifications</strong>).  </li>
+<li>Find <strong>submitted</strong> Digital Apply loans and open <strong>drafts</strong> if you need to assist.  </li>
+<li>Search by Queue ID, name, phone, or customer number.  </li>
+<li>Continue the same lifecycle as branch-created loans (cooperative → LO → …).  </li>
+<li>Confirm officer assignment (auto-assign may already have set an LO).</li>
 </ol>
+<p>Customers also get in-portal <strong>Notices</strong> when you accept intake or when credit is decided.</p>
 <h3>4.3 Documents</h3>
 <ol>
-<li>Open the loan → document upload / checklist screen.</li>
-<li>Upload each required type for the <strong>document pack</strong>.</li>
-<li>Review automated authentication results; fix or re-upload rejects.</li>
-<li>Keep files readable (scan quality matters for OCR English/Amharic).</li>
+<li>Open the loan → document upload / checklist screen.  </li>
+<li>Upload each required type for the <strong>document pack</strong> (or global fallback).  </li>
+<li>Review automated authentication results; fix or re-upload rejects.  </li>
+<li>Use <strong>Request document</strong> when a missing type must be supplied by BM/uploaders.  </li>
+<li>Keep files readable (scan quality matters for OCR).</li>
 </ol>
 <h3>4.4 Appraisal</h3>
 <ol>
@@ -670,27 +922,29 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Complete <strong>steps 1–7</strong> for MSME or corporate mode.</li>
 <li>Address scorecard / policy gate warnings before committee.</li>
 <li>Export appraisal pack (Excel/PDF) when preparing committee materials.</li>
+<li>Sheet 7 / post-approval amortization feeds the customer <strong>Repayment schedule</strong> in Digital Apply after credit approval.</li>
 </ol>
 <h3>4.5 Collateral</h3>
 <ol>
 <li>Open collateral for the loan.</li>
-<li>Capture buildings, land, or other items per catalog and <strong>unit prices</strong> for the woreda.</li>
+<li>Capture buildings, land, or other items per catalog and <strong>unit prices</strong> for the woreda (market price bands may inform suggestions).</li>
 <li>Record field visit evidence (GPS / photos) per policy.</li>
 <li>Submit estimation (locks when configured).</li>
 <li>If locked in error, request unlock via the unlock workflow; managers / eng head process the <strong>Unlock queue</strong>.</li>
 </ol>
 <h3>4.6 Committee</h3>
 <ol>
-<li>Eligible role submits the loan to committee.</li>
-<li>Members vote from the approval worklist.</li>
-<li>On <strong>Returned to loan officer</strong>, LO corrects and resubmits.</li>
-<li>On <strong>Approved</strong>, move to post-approval; on <strong>Declined</strong>, close per policy and communicate via branch.</li>
+<li>Eligible role submits the loan to committee.  </li>
+<li>Members vote from the approval worklist (or via <strong>approved delegation</strong>).  </li>
+<li>On <strong>Returned to loan officer</strong>, LO corrects and resubmits (customer status stays “in progress”).  </li>
+<li>On <strong>Approved</strong>, move to post-approval and confirm schedule so the customer can view it online; on <strong>Declined</strong>, close per policy.</li>
 </ol>
 <h3>4.7 Notifications and reports</h3>
 <ul>
-<li><strong>Notifications</strong> — assignments, returns, queue events.</li>
-<li><strong>Reports / Dashboard</strong> — scoped to your branch or district.</li>
-<li><strong>Credit Intelligence</strong> — KPIs and risk views for managers.</li>
+<li><strong>Notifications</strong> — assignments, returns, queue events, <strong>online intake</strong> submissions.  </li>
+<li><strong>Reports / Dashboard</strong> — scoped to your branch or district.  </li>
+<li><strong>Credit Intelligence</strong> — KPIs and risk views for managers.  </li>
+<li><strong>Delegations</strong> — pending approval count for admins; “Acting by…” for delegates.</li>
 </ul>
 <hr>
 <h2>5. Agentic Assist</h2>
@@ -700,10 +954,10 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <hr>
 <h2>6. Security good practice</h2>
 <ul>
-<li>Never share passwords or MFA codes.</li>
-<li>Lock your workstation; the hub may idle-timeout sessions.</li>
-<li>Use official email for password reset only.</li>
-<li>Report suspicious unlock or vote activity to IT / risk.</li>
+<li>Never share passwords or MFA codes — use <strong>Delegations</strong> for cover.  </li>
+<li>Lock your workstation; the hub may idle-timeout sessions.  </li>
+<li>Use official email for password reset only.  </li>
+<li>Report suspicious unlock, vote, or delegation activity to IT / risk.</li>
 </ul>
 <hr>
 <h2>7. Status cheat sheet</h2>
@@ -712,7 +966,9 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tbody>
 <tr><td>Committee</td><td>Not submitted, Pending, Approved, Declined, Returned to loan officer</td></tr>
 <tr><td>Disbursement</td><td>Not started, Awaiting conditions, Schedule confirmed, Ready, Disbursed</td></tr>
-<tr><td>Customer-visible pipeline</td><td>Submitted → Branch intake → Loan processing → Credit decision → Disbursement prep → Disbursed</td></tr>
+<tr><td>Delegation</td><td>Pending → Approved / Rejected; Revoked</td></tr>
+<tr><td>Source channel</td><td>Online (Digital Apply) vs staff/branch entry</td></tr>
+<tr><td>Customer-visible pipeline</td><td>Submitted → Branch intake → Loan processing → Credit decision → Disbursement prep → Disbursed (+ repayment schedule when approved)</td></tr>
 </tbody>
 </table>
 <hr>
@@ -723,130 +979,24 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td>Missing menu</td><td>Confirm your <strong>role</strong> and <strong>branch/district</strong> with admin</td></tr>
 <tr><td>Cannot edit collateral</td><td>Estimation may be <strong>locked</strong> — use unlock queue</td></tr>
 <tr><td>Cannot progress branch loan</td><td>Check <strong>Cooperative queue</strong> approval</td></tr>
-<tr><td>Documents incomplete</td><td>Open category <strong>document pack</strong>; upload missing required types</td></tr>
+<tr><td>Documents incomplete</td><td>Open category <strong>document pack</strong>; upload or <strong>Request document</strong></td></tr>
 <tr><td>MFA / lockout</td><td>Contact admin; use password reset if email works</td></tr>
-<tr><td>Online application missing</td><td>Confirm customer <strong>submitted</strong> (not draft); check Online loan intake</td></tr>
+<tr><td>Online application missing</td><td>Confirm customer <strong>submitted</strong> (not draft); check Notifications / Online loan intake</td></tr>
+<tr><td>Cannot act for colleague</td><td>Delegation must be <strong>Approved</strong> and inside the date window</td></tr>
+<tr><td>Customer has no schedule</td><td>Complete post-approval amortization after committee <strong>Approved</strong></td></tr>
 </tbody>
 </table>
 <hr>
 <h2>9. Related manuals</h2>
 <ul>
 <li><a href="01_admin.md">Admin user manual</a>  </li>
-<li><a href="03_customers.md">Customer user manual</a> · <a href="03_customers_am.md">Amharic</a>  </li>
+<li><a href="03_customers.md">Customer user manual</a>  </li>
 <li><a href="04_market_partners.md">Market partners</a>  </li>
+<li><a href="05_screenshots.md">Screenshots</a>  </li>
 <li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
 </ul>
-</section><section class="chapter" id="ch-4">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 5 · Staff (Amharic)</p>
-<h1>የሰራተኛ መመሪያ</h1>
-<p><strong>ለማን ነው:</strong> ቅርንጫፍ፣ ወረዳ፣ ሆድ ኦፊስ፣ ኢንጂነሪንግ፣ ፋይናንስ፣ ሪስክ እና የኮሚቴ አባላት።  </p>
-<p><strong>መግቢያ:</strong> <code>/hub/login/</code> — <em>AI-powered Credit Intelligence</em>።  </p>
-<p><strong>እንግሊዘኛ:</strong> <a href="02_staff.md">02_staff.md</a></p>
-<p>የደንበኛ ኦንላይን ማመልከቻ በ<a href="03_customers_am.md">ደንበኛ መመሪያ</a> ነው።</p>
-<hr>
-<h2>1. መጀመር</h2>
-<h3>1.1 መግባት</h3>
-<ol>
-<li><code>/hub/login/</code> ይሂዱ።  </li>
-<li>የተጠቃሚ ስምና የይለፍ ቃል።  </li>
-<li>MFA ካለ ያጠናቅቁ።  </li>
-<li>ወደ Credit Intelligence / መነሻ ይገባሉ።</li>
-</ol>
-<blockquote class="manual-shot"><strong>Screenshot (H-01):</strong> የሰራተኛ መግቢያ።  <br><strong>Screenshot (H-04):</strong> የሃብ መነሻ — በሚና የተገደቡ KPIs።  <br><strong>Screenshot (H-05):</strong> ራስጌ — Notifications፣ <strong>Help</strong>፣ Logout።</blockquote>
-<p><strong>የይለፍ ቃል ረሳሁ:</strong> <code>/hub/password-reset/</code>።  </p>
-<p><strong>Help በመተግበሪያ:</strong> <code>/hub/help/</code>።</p>
-<p>ሜኑዎ በሚናዎ ይለያያል። በቅርንጫፍ/ወረዳዎ ስፓን ውስጥ ብቻ ይስሩ።</p>
-<hr>
-<h2>2. የብድር የህይወት ኡደት</h2>
-<pre class="lang-text"><code>መፍጠር / መቀበል
-  → የብድር ባለሙያ መመደብ
-  → የኮኦፕሬቲቭ መቀበያ (ቅርንጫፍ)
-  → ሰነዶች
-  → ትንተና (ደረጃ 1–7)
-  → ዋስትና (+ አማራጭ የኢንጂነሪንግ QA)
-  → ወደ ኮሚቴ → ድምጽ
-  → ከፈቃድ በኋላ (ሁኔታዎች → መርሃ ግብር → ዝግጁ)
-  → የፋይናንስ ክፍያ → ተከፍሏል</code></pre>
-<p><strong>Queue ID</strong> (ለምሳሌ <code>HK-000000001</code>) ሁልጊዜ ይያዙ።</p>
-<table>
-<thead><tr><th>ምንጭ</th><th>እንዴት ይገባል</th></tr></thead>
-<tbody>
-<tr><td>ቅርንጫፍ / HO</td><td>Add loan request</td></tr>
-<tr><td>ዲጂታል ማመልከቻ</td><td>Online loan intake</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>3. በሚና የሚሰሩ ስራዎች</h2>
-<h3>3.1 የቅርንጫፍ ሥራ አስኪያጅ (Branch Manager)</h3>
-<p>ብድር ይፍጠሩ፣ ባለሙያ ይመድቡ፣ የኮኦፕሬቲቭ መቀበያን ያረጋግጡ፣ ወደ ኮሚቴ ያስገቡ፣ ከፈቃድ በኋላ ይከታተሉ። Unlock ካስፈለገ ይፍቀዱ።</p>
-<h3>3.2 የብድር ባለሙያ (Loan Officer)</h3>
-<p>ሰነድ ይስቀሉ/ይገምግሙ፣ ትንተና 1–7 ያጠናቅቁ፣ ዋስትና (እንደውቅረት)፣ ከኮሚቴ ተመላሽ ከሆነ ያርሙ።</p>
-<h3>3.3 የኮኦፕሬቲቭ ሥራ አስኪያጅ</h3>
-<p><strong>Cooperative queue</strong> — ወደ ባለሙያ ስራ ከመግባቱ በፊት መቀበያ።</p>
-<h3>3.4 Credit LO / Credit Head</h3>
-<p>የHO ብድር መፍጠር እና ቁጥጥር፣ የኮሚቴ ውቅረት (ከአስተዳዳሪ ጋር)።</p>
-<h3>3.5 የኮሚቴ አባላት</h3>
-<p><strong>Approval queue</strong> — ጥቅል ይገምግሙ፣ ድምጽ ይስጡ። Agentic Assist ውሳኔ አይተካም።</p>
-<p>ሁኔታዎች፦ Not submitted → Pending → Approved / Declined / Returned to loan officer።</p>
-<h3>3.6 ከፈቃድ በኋላ</h3>
-<p>ሁኔታዎች → መርሃ ግብር → Ready።</p>
-<h3>3.7 የፋይናንስ ሥራ አስኪያጅ</h3>
-<p><strong>Disbursement queue</strong> — ዝግጁ ከሆነ ክፍያ / Disbursed።</p>
-<h3>3.8 ኢንጂነሪንግ</h3>
-<p>ካታሎግ፣ የአሃድ ዋጋ፣ የመስክ ግምት፣ Engineering QA፣ Unlock (እንደሚና)።</p>
-<h3>3.9 ሪስክ / ኦዲተር</h3>
-<p>ሪፖርቶች፣ Credit Intelligence፣ የደህንነት ኦዲት (በፍቃድ)።</p>
-<hr>
-<h2>4. ዋና ማያዎች</h2>
-<h3>4.1 ብድር መፍጠር</h3>
-<blockquote class="manual-shot"><strong>Screenshot (H-08):</strong> ብድር መፍጠር — ደንበኛ ቁጥር፣ ምርት፣ መጠን፣ ቅርንጫፍ።  <br><strong>Screenshot (H-07):</strong> የብድር ዝርዝር — በQueue ID ይቀጥሉ።</blockquote>
-<h3>4.2 ሰነዶች፣ ትንተና፣ ዋስትና</h3>
-<ul>
-<li>የሰነድ ጥቅሉን ይሙሉ፣ የauth ውጤቶችን ያጽዱ።  </li>
-<li>ትንተና 1–7 እና የፖሊሲ ማስጠንቀቂያዎች።  </li>
-<li>ዋስትና + GPS/ፎቶ፤ ከተቆለፈ Unlock queue።</li>
-</ul>
-<h3>4.3 ኮሚቴ እና ክፍያ</h3>
-<p>ወደ ኮሚቴ ያስገቡ → ድምጽ → ከፈቃድ በኋላ → የፋይናንስ ክፍያ።</p>
-<h3>4.4 Online loan intake</h3>
-<p>ከዲጂታል ማመልከቻ የመጡ ማመልከቻዎችን ይቀጥሉ።</p>
-<hr>
-<h2>5. Agentic Assist</h2>
-<p>መረጃ ማግኘት እና ረቂቅ መርዳት ይችላል። <strong>ማፅደቅ፣ ዋስትና መገመት ወይም ክፍያ ማድረግ አይችልም።</strong></p>
-<hr>
-<h2>6. የሁኔታ ማጣቀሻ</h2>
-<table>
-<thead><tr><th>አካባቢ</th><th>እሴቶች</th></tr></thead>
-<tbody>
-<tr><td>ኮሚቴ</td><td>Not submitted, Pending, Approved, Declined, Returned</td></tr>
-<tr><td>ክፍያ</td><td>Not started → … → Ready → Disbursed</td></tr>
-<tr><td>ለደንበኛ</td><td>Submitted → Branch intake → Processing → Decision → Disbursement prep → Disbursed</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>7. ችግር መፍታት</h2>
-<table>
-<thead><tr><th>ችግር</th><th>መፍትሔ</th></tr></thead>
-<tbody>
-<tr><td>ሜኑ የለም</td><td>ሚና/ቅርንጫፍ ከአስተዳዳሪ ያረጋግጡ</td></tr>
-<tr><td>ዋስትና አይታረም</td><td>Locked — Unlock queue</td></tr>
-<tr><td>ቅርንጫፍ ብድር አይራመድም</td><td>Cooperative queue</td></tr>
-<tr><td>ሰነድ ጎድሏል</td><td>Document pack ያረጋግጡ</td></tr>
-<tr><td>MFA / lockout</td><td>አስተዳዳሪ / password reset</td></tr>
-<tr><td>ኦንላይን ማመልከቻ የለም</td><td>ደንበኛ Submit አድርጓል? Online intake</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>8. ተዛማጅ</h2>
-<ul>
-<li><a href="02_staff.md">English staff</a>  </li>
-<li><a href="01_admin_am.md">Admin Amharic</a>  </li>
-<li><a href="03_customers_am.md">Customers Amharic</a>  </li>
-<li><a href="05_screenshot_captions.md">Screenshot captions</a>  </li>
-<li>በመተግበሪያ፡ <code>/hub/help/</code></li>
-</ul>
-</section><section class="chapter" id="ch-5">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 6 · Customers</p>
+</section><section class="chapter" id="ch-3">
+<div class="chapter-label">Chapter 04</div>
 <h1>Customer User Manual — Digital Apply</h1>
 <p><strong>Audience:</strong> DECSI customers applying for a loan online.  </p>
 <p><strong>Entry:</strong> Digital Apply home at <code>/</code> (public portal).  </p>
@@ -857,11 +1007,11 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <p>You can:</p>
 <ol>
 <li>Create an applicant account with your <strong>DECSI customer number</strong> and mobile phone.</li>
-<li>Start a loan application: product, branch, amount, purpose.</li>
+<li>Start a loan application: product, district/branch, amount, purpose, collateral type.</li>
 <li>Upload the <strong>documents required for that product</strong>.</li>
-<li>Pay the <strong>processing fee</strong> online.</li>
+<li>Pay the <strong>processing fee</strong> online (or skip if the fee is waived / zero).</li>
 <li>Submit and receive a <strong>Queue ID</strong> (for example <code>HK-000000001</code>).</li>
-<li>Track progress until disbursement (or a decision).</li>
+<li>Track progress, read <strong>Notices</strong>, and — after credit approval — view your <strong>Repayment schedule</strong>.</li>
 </ol>
 <p>If you see <strong>“Digital apply is temporarily closed”</strong>, the portal is offline for maintenance — visit your branch or try again later.</p>
 <hr>
@@ -879,7 +1029,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <ol>
 <li>Submit registration.</li>
 </ol>
-<blockquote class="manual-shot"><strong>Screenshot (C-01):</strong> Digital Apply landing — Create account or sign in to apply online.<br><br><strong>Screenshot (C-02):</strong> Register — DECSI customer number, name, mobile, and password.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (C-01):</strong> Digital Apply landing — Create account or sign in to apply online.<br><br><figure class="manual-figure"><img src="screenshots/C-01_landing.png" alt="C-01 — Digital Apply landing"/><figcaption>C-01 — Digital Apply landing</figcaption></figure><br><br><strong>Screenshot (C-02):</strong> Register — DECSI customer number, name, mobile, and password.<br><br><figure class="manual-figure"><img src="screenshots/C-02_register.png" alt="C-02 — Create account / register"/><figcaption>C-02 — Create account / register</figcaption></figure></blockquote>
 <p>Some deployments validate your customer number against DECSI records. If validation fails, confirm the number with your branch before retrying.</p>
 <h3>Already registered?</h3>
 <p>Choose <strong>I already have an account</strong> and sign in with:</p>
@@ -911,9 +1061,11 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <blockquote class="manual-shot"><strong>Screenshot (C-05):</strong> Step 1 · Details — choose product, branch, amount, and purpose.<br><br><strong>Screenshot (C-06):</strong> Step 2 · Documents — upload every required file for the product.<br><br><strong>Screenshot (C-07):</strong> Step 3 · Fee — pay the processing fee (ETB) before submit.<br><br><strong>Screenshot (C-08):</strong> Step 4 · Submit — review and submit to receive a Queue ID.<br><br><strong>Screenshot (C-09):</strong> Status — keep your Queue ID for branch follow-up.</blockquote>
 <h3>Step 1 — Details</h3>
 <ol>
-<li>Select the <strong>loan product</strong> (loan category).</li>
-<li>Choose your <strong>branch</strong>.</li>
-<li>Enter <strong>amount</strong>, <strong>purpose</strong>, and collateral type if asked.</li>
+<li>Select <strong>District</strong>, then <strong>Branch</strong> (lists cascade).  </li>
+<li>Select the <strong>loan product</strong> (loan category).  </li>
+<li>Choose <strong>collateral type</strong> (required).  </li>
+<li>Enter <strong>amount</strong>, <strong>purpose</strong>, and customer history (new / existing) if asked.  </li>
+<li>Name, phone, and customer number come from your account (CBS may lock name/phone to the bank record).  </li>
 <li>Save and continue.</li>
 </ol>
 <p>You can leave a draft and return later until you submit.</p>
@@ -926,24 +1078,28 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <p>If a file is rejected, replace it with a clearer copy.</p>
 <h3>Step 3 — Processing fee</h3>
 <ol>
-<li>Review the fee amount (ETB).</li>
-<li>Start payment (Chapa or the payment screen shown).</li>
-<li>Complete payment and wait for confirmation.</li>
+<li>Review the fee amount (ETB).  </li>
+<li>If the fee is <strong>0 ETB</strong>, payment is <strong>waived</strong> and you continue without Chapa.  </li>
+<li>Otherwise start payment (live Chapa, or a <strong>demo/mock</strong> checkout when the bank runs Digital Apply in test mode).  </li>
+<li>Complete payment and wait for confirmation (statuses: unpaid → pending → paid / failed / waived).  </li>
 <li>Do not close the browser until the portal confirms success.</li>
 </ol>
 <p>If payment fails, retry from the Fee step or contact support with the time of the attempt. Do not submit until the fee is paid when the portal requires it.</p>
 <h3>Step 4 — Submit</h3>
 <ol>
-<li>Review your details and documents.</li>
-<li>Confirm submit.</li>
-<li>Save your <strong>Queue ID</strong> immediately.</li>
+<li>Review your details and documents.  </li>
+<li>Confirm submit.  </li>
+<li>Save your <strong>Queue ID</strong> immediately — you will also get a <strong>Notice</strong> (Loan requested).</li>
 </ol>
 <p>After submit, the application enters the DECSI branch queue. Staff will continue documents review, appraisal, collateral, credit decision, and disbursement preparation.</p>
 <h3>Withdraw a draft</h3>
-<p>Unsubmitted drafts can be cancelled/withdrawn from the application actions if shown. Submitted applications are handled by the branch — visit the branch for withdrawal or cancellation requests.</p>
+<p>Unsubmitted drafts can be cancelled/withdrawn from the application actions if shown (optional reason). Submitted applications are handled by the branch — visit the branch for withdrawal or cancellation requests.</p>
 <hr>
 <h2>5. Track your application</h2>
 <p>Open the application from <strong>My applications</strong> or the status page.</p>
+<h3>Notices</h3>
+<p>On <strong>My applications</strong> you may see a <strong>Notices</strong> list (payment, loan requested + Queue ID, branch intake, credit approved/declined). Use <strong>mark all read</strong> when available.</p>
+<blockquote class="manual-shot"><strong>Screenshot (C-14):</strong> Notices — in-portal messages about your application.</blockquote>
 <h3>While drafting</h3>
 <p>You may see stages such as:</p>
 <ul>
@@ -958,14 +1114,15 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <table>
 <thead><tr><th>Stage</th><th>Meaning</th></tr></thead>
 <tbody>
-<tr><td><strong>Submitted</strong></td><td>Received online; waiting in the branch queue</td></tr>
+<tr><td><strong>Submitted</strong></td><td>Received online; waiting in the branch queue (<strong>Loan requested</strong>)</td></tr>
 <tr><td><strong>Branch intake</strong></td><td>Branch cooperative reviews your application</td></tr>
 <tr><td><strong>Loan processing</strong></td><td>Officer reviews documents, collateral, and analysis</td></tr>
 <tr><td><strong>Credit decision</strong></td><td>Credit approval process underway</td></tr>
-<tr><td><strong>Disbursement prep</strong></td><td>Approved loan prepared for payment</td></tr>
+<tr><td><strong>Disbursement prep</strong></td><td>Approved loan prepared for payment (<strong>Loan approved</strong> milestone when decided)</td></tr>
 <tr><td><strong>Disbursed</strong></td><td>Funds released per DECSI records</td></tr>
 </tbody>
 </table>
+<p>Status may show <strong>requested amount</strong> vs <strong>approved amount/date</strong> when credit has decided. If returned to the officer for corrections, the pipeline stays <strong>in progress</strong>.</p>
 <p>Other outcomes you may see:</p>
 <table>
 <thead><tr><th>Outcome</th><th>What it means</th></tr></thead>
@@ -977,6 +1134,14 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 </table>
 <p>Always quote your <strong>Queue ID</strong> when calling or visiting the branch.</p>
 <p>Status facts often include: product, branch, amount requested, submitted date, and assigned loan officer (when assigned).</p>
+<h3>Repayment schedule</h3>
+<p>After <strong>credit approval</strong> (or disbursement), open <strong>Repayment schedule</strong> from the status page (<code>/apply/&lt;id&gt;/schedule/</code>).</p>
+<ul>
+<li>Read-only amortization prepared by the branch (Sheet 7 / post-approval).  </li>
+<li>If approved but the schedule is empty, the branch is still preparing it — check again later.  </li>
+<li>Confirm final figures with your branch at disbursement if anything differs.</li>
+</ul>
+<blockquote class="manual-shot"><strong>Screenshot (C-13):</strong> Repayment schedule — installment table after credit approval.</blockquote>
 <hr>
 <h2>6. What happens after you submit?</h2>
 <p>You do <strong>not</strong> complete appraisal or collateral online. DECSI staff:</p>
@@ -985,9 +1150,9 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Verify documents and run internal checks.  </li>
 <li>Complete credit appraisal and collateral valuation as required.  </li>
 <li>Send the file through credit committee.  </li>
-<li>Complete post-approval conditions and disburse if approved.  </li>
+<li>Complete post-approval conditions, build the <strong>repayment schedule</strong>, and disburse if approved.  </li>
 </ol>
-<p>Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page updates as the loan moves forward.</p>
+<p>Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page and <strong>Notices</strong> update as the loan moves forward.</p>
 <hr>
 <h2>7. Tips for a smooth application</h2>
 <ul>
@@ -1007,8 +1172,10 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td>Cannot register</td><td>Check customer number and phone; ask branch if CBS validation is required</td></tr>
 <tr><td>OTP not received</td><td>Confirm phone number; wait and retry; contact branch if SMS is down</td></tr>
 <tr><td>Payment stuck</td><td>Do not create duplicate applications immediately; retry Fee step or ask branch with timestamp</td></tr>
+<tr><td>Fee skipped</td><td>Fee may be <strong>0 / waived</strong> — continue to Submit</td></tr>
 <tr><td>No Queue ID</td><td>Application is still a draft — complete Fee and Submit</td></tr>
 <tr><td>Status not moving</td><td>Normal for several days; contact branch with Queue ID if urgently delayed</td></tr>
+<tr><td>No repayment schedule</td><td>Wait until after credit approval; branch may still be preparing amortization</td></tr>
 <tr><td>Forgot which product</td><td>Open My applications — product and amount are listed on each card / status</td></tr>
 </tbody>
 </table>
@@ -1022,164 +1189,13 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <hr>
 <h2>10. Related manuals</h2>
 <ul>
-<li><a href="03_customers_am.md">Amharic version</a> — የአማርኛ የደንበኛ መመሪያ  </li>
 <li><a href="02_staff.md">Staff user manual</a> — how DECSI processes your file after submit  </li>
 <li><a href="01_admin.md">Admin user manual</a> — for DECSI administrators only  </li>
+<li><a href="05_screenshots.md">Screenshots</a>  </li>
 <li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
 </ul>
-</section><section class="chapter" id="ch-6">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 7 · Customers (Amharic)</p>
-<h1>የደንበኛ መመሪያ — ዲጂታል ማመልከቻ (Digital Apply)</h1>
-<p><strong>ለማን ነው:</strong> በኦንላይን ብድር ማመልከት የሚፈልጉ የDECSI ደንበኞች።  </p>
-<p><strong>መግቢያ:</strong> ዲጂታል ማመልከቻ በ <code>/</code>  </p>
-<p><strong>እንግሊዘኛው መመሪያ:</strong> <a href="03_customers.md">03_customers.md</a></p>
-<hr>
-<h2>1. ዲጂታል ማመልከቻ ምን ያደርጋል?</h2>
-<p>በዚህ ፖርታል፦</p>
-<ol>
-<li>በ<strong>የDECSI ደንበኛ ቁጥር</strong> እና በሞባይል ስልክ መለያ ይፈጥራሉ።  </li>
-<li>የብድር ማመልከቻ ይጀምራሉ (ምርት፣ ቅርንጫፍ፣ መጠን፣ ዓላማ)።  </li>
-<li>ለዚያ ምርት የሚያስፈልጉ <strong>ሰነዶችን</strong> ይሰቀላሉ።  </li>
-<li>የ<strong>ማቀናበሪያ ክፍያ</strong> (processing fee) በኦንላይን ይከፍላሉ።  </li>
-<li>ካስገቡ በኋላ <strong>የተራ ቁጥር / Queue ID</strong> (ለምሳሌ <code>HK-000000001</code>) ያገኛሉ።  </li>
-<li>እስከ ክፍያ/ውሳኔ ድረስ ሁኔታውን ይከታተላሉ።</li>
-</ol>
-<p><strong>“Digital apply is temporarily closed”</strong> ካዩ፣ ፖርታሉ ለጊዜው ዝግ ነው — ቅርንጫፍዎን ይጎብኙ ወይም በኋላ ይሞክሩ።</p>
-<hr>
-<h2>2. መለያ መፍጠር</h2>
-<ol>
-<li>የዲጂታል ማመልከቻ መነሻ ገጽ ይክፈቱ።  </li>
-<li><strong>Create account</strong> ይምረጡ።  </li>
-<li>ያስገቡ፦  </li>
-</ol>
-<p>   - የDECSI <strong>ደንበኛ ቁጥር</strong>  </p>
-<p>   - ሙሉ ስም  </p>
-<p>   - የሞባይል ቁጥር  </p>
-<p>   - የይለፍ ቃል (በገጹ ላይ ያሉትን ህጎች ይከተሉ)  </p>
-<p>   - የውል ሁኔታ ካለ ይቀበሉ  </p>
-<ol>
-<li>ምዝገባውን ያስገቡ።</li>
-</ol>
-<blockquote class="manual-shot"><strong>Screenshot (C-01):</strong> የዲጂታል ማመልከቻ መነሻ — መለያ መፍጠር ወይም መግባት።  <br><strong>Screenshot (C-02):</strong> ምዝገባ — የደንበኛ ቁጥር፣ ስም፣ ሞባይል፣ የይለፍ ቃል።</blockquote>
-<p>አንዳንድ ጊዜ የደንበኛ ቁጥር ከDECSI መዝገብ ጋር ይረጋገጣል። ካልተሳካ ከቅርንጫፍዎ ጋር ቁጥሩን ያረጋግጡ።</p>
-<h3>አስቀድመው ተመዝግበዋል?</h3>
-<p><strong>I already have an account</strong> ይምረጡ፤ በ<strong>ሞባይል</strong> ወይም በ<strong>ደንበኛ ቁጥር</strong> እና በይለፍ ቃል ይግቡ።</p>
-<hr>
-<h2>3. መግባት፣ የይለፍ ቃል እርዳታ እና ደህንነት</h2>
-<table>
-<thead><tr><th>ተግባር</th><th>እንዴት</th></tr></thead>
-<tbody>
-<tr><td>መግባት</td><td><code>/login/</code> — ስልክ ወይም ደንበኛ ቁጥር + የይለፍ ቃል</td></tr>
-<tr><td>መውጣት</td><td>ከሜኑ Logout</td></tr>
-<tr><td>የይለፍ ቃል ረሱ</td><td>Forgot password → ወደ ስልክዎ OTP → አዲስ የይለፍ ቃል</td></tr>
-<tr><td>የይለፍ ቃል መቀየር</td><td>ከመለያ ገጽ — change password</td></tr>
-</tbody>
-</table>
-<ul>
-<li>ጠንካራ የይለፍ ቃል ይጠቀሙ።  </li>
-<li>ለOTP ስልክዎን ዝግጁ ያድርጉ።  </li>
-<li>ብዙ ጊዜ ስህተት ከገቡ መለያ ለጊዜው ሊቆልፍ ይችላል።</li>
-</ul>
-<hr>
-<h2>4. ብድር ማመልከት (ደረጃ በደረጃ)</h2>
-<p>ከ<strong>My applications</strong> / መነሻ አዲስ ማመልከቻ ይጀምሩ። አራት ደረጃዎች አሉ፦</p>
-<p><strong>1 · ዝርዝር → 2 · ሰነዶች → 3 · ክፍያ → 4 · ማስገባት</strong></p>
-<h3>ደረጃ 1 — ዝርዝር (Details)</h3>
-<ol>
-<li>የብድር <strong>ምርት</strong> ይምረጡ።  </li>
-<li><strong>ቅርንጫፍ</strong> ይምረጡ።  </li>
-<li><strong>መጠን</strong>፣ <strong>ዓላማ</strong> እና ካለ የዋስትና አይነት ያስገቡ።  </li>
-<li>ያስቀምጡና ይቀጥሉ።</li>
-</ol>
-<p>እስከማስገባት ድረስ ረቂቁን (draft) ትተው በኋላ መመለስ ይችላሉ።</p>
-<h3>ደረጃ 2 — ሰነዶች (Documents)</h3>
-<ol>
-<li>ለምርቱ የተዘረዘሩ ሰነዶችን ይሰቀሉ።  </li>
-<li>የግዴታ ሰነዶች ሳይሟሉ ማለፍ አይቻልም።  </li>
-<li>ግልጽ ስካን/ፎቶ ይጠቀሙ።</li>
-</ol>
-<h3>ደረጃ 3 — የማቀናበሪያ ክፍያ (Fee)</h3>
-<ol>
-<li>የክፍያ መጠኑን (ብር) ያረጋግጡ።  </li>
-<li>ክፍያውን ይጀምሩ (Chapa ወይም በገጹ የሚታየው)።  </li>
-<li>እስከማረጋገጫ ድረስ አሳሹን አይዝጉ።</li>
-</ol>
-<p>ክፍያ ካልተሳካ ከFee ደረጃ እንደገና ይሞክሩ፤ ጊዜውን ከቅርንጫፍ ጋር ይጋሩ።</p>
-<h3>ደረጃ 4 — ማስገባት (Submit)</h3>
-<ol>
-<li>ዝርዝርና ሰነዶችን ይገምግሙ።  </li>
-<li>Submit ያረጋግጡ።  </li>
-<li><strong>Queue ID</strong> ወዲያውኑ ያስቀምጡ / ይቅረጹ።</li>
-</ol>
-<p>ረቂቅ (ያልገባ) ማመልከቻን ማቋረጥ ከተፈቀደ በገጹ ላይ ይታያል። የገባ ማመልከቻ ለቅርንጫፍ ነው — ለመሰረዝ ቅርንጫፍዎን ያነጋግሩ።</p>
-<hr>
-<h2>5. ሁኔታ መከታተል</h2>
-<p>ከ<strong>My applications</strong> ማመልከቻዎን ይክፈቱ።</p>
-<h3>ረቂቅ ሳለ</h3>
-<p>ደረጃዎች፦ ዝርዝር → ሰነዶች → ክፍያ → ማስገባት። Queue ID ለማግኘት እስከ ማስገባት ይድረሱ።</p>
-<h3>ካስገቡ በኋላ</h3>
-<table>
-<thead><tr><th>ደረጃ</th><th>ትርጉም</th></tr></thead>
-<tbody>
-<tr><td><strong>Submitted</strong></td><td>በኦንላይን ተቀብሏል፤ በቅርንጫፍ ተራ ላይ ነው</td></tr>
-<tr><td><strong>Branch intake</strong></td><td>የቅርንጫፍ ኮኦፕሬቲቭ እየገመገመ ነው</td></tr>
-<tr><td><strong>Loan processing</strong></td><td>ባለሙያ ሰነድ፣ ዋስትና እና ትንተና እያደረገ ነው</td></tr>
-<tr><td><strong>Credit decision</strong></td><td>የብድር ውሳኔ ሂደት ላይ ነው</td></tr>
-<tr><td><strong>Disbursement prep</strong></td><td>የተፈቀደ ብድር ለክፍያ እየተዘጋጀ ነው</td></tr>
-<tr><td><strong>Disbursed</strong></td><td>ገንዘቡ ተከፍሏል</td></tr>
-</tbody>
-</table>
-<table>
-<thead><tr><th>ውጤት</th><th>ትርጉም</th></tr></thead>
-<tbody>
-<tr><td><strong>Not approved / Declined</strong></td><td>አልፈቀዱም — ዝርዝር ለቅርንጫፍ</td></tr>
-<tr><td><strong>Closed / Rejected</strong></td><td>ያለ ፈቃድ ተዘግቷል</td></tr>
-<tr><td><strong>Cancelled</strong></td><td>ረቂቁ ከማስገባት በፊት ተሰርዟል</td></tr>
-</tbody>
-</table>
-<p>ስልክ ሲደውሉ ወይም ቅርንጫፍ ሲሄዱ <strong>Queue ID</strong> ይጠቀሙ።</p>
-<hr>
-<h2>6. ካስገቡ በኋላ ምን ይሆናል?</h2>
-<p>የብድር ትንተናና የዋስትና ግምገማ በኦንላይን አያጠናቅቁም። የDECSI ሰራተኞች ሰነድ ማረጋገጥ፣ ትንተና፣ ኮሚቴ እና ክፍያን ይቀጥላሉ። ጊዜው በምርት፣ በሰነድ ሙሉነት እና በኮሚቴ መርሃ ግብር ይለያያል።</p>
-<hr>
-<h2>7. ለስኬታማ ማመልከቻ</h2>
-<ul>
-<li>ትክክለኛ <strong>ደንበኛ ቁጥር</strong> ይጠቀሙ።  </li>
-<li>የሚያገለግልዎትን <strong>ቅርንጫፍ</strong> ይምረጡ።  </li>
-<li>ከክፍያ በፊት <strong>ሁሉንም የግዴታ ሰነዶች</strong> ይስቀሉ።  </li>
-<li>የክፍያ ማረጋገጫ እና <strong>Queue ID</strong> ይያዙ።  </li>
-<li>ቅርንጫፍ ተጨማሪ ሰነድ ወይም ጉብኝት ካለፈለገ በፍጥነት ምላሽ ይስጡ።  </li>
-<li>የይለፍ ቃልዎን ወይም OTPን ለማንም አይስጡ።</li>
-</ul>
-<hr>
-<h2>8. ችግር መፍታት</h2>
-<table>
-<thead><tr><th>ችግር</th><th>መፍትሔ</th></tr></thead>
-<tbody>
-<tr><td>ፖርታሉ ዝግ ነው</td><td>ቅርንጫፍ ይጎብኙ ወይም በኋላ ይሞክሩ</td></tr>
-<tr><td>መመዝገብ አልተቻለም</td><td>ደንበኛ ቁጥርና ስልክ ያረጋግጡ</td></tr>
-<tr><td>OTP አልመጣም</td><td>ስልክ ያረጋግጡ፤ እንደገና ይሞክሩ፤ ካልሆነ ቅርንጫፍ</td></tr>
-<tr><td>ክፍያ ተቋርጧል</td><td>ወዲያው ተመሳሳይ ማመልከቻ አይፍጠሩ፤ Feeን እንደገና ይሞክሩ</td></tr>
-<tr><td>Queue ID የለም</td><td>አሁንም ረቂቅ ነው — Fee እና Submit ያጠናቅቁ</td></tr>
-<tr><td>ሁኔታ አይንቀሳቀስም</td><td>ብዙ ጊዜ ብዙ ቀናት ሊፈጅ ይችላል፤ አስቸኳይ ከሆነ በQueue ID ቅርንጫፍ ያነጋግሩ</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>9. ግላዊነት እና ድጋፍ</h2>
-<ul>
-<li>መረጃዎ ለብድር ግምገማ በDECSI ይሰራበታል።  </li>
-<li>ለእርዳታ፡ ሙሉ ስም፣ ደንበኛ ቁጥር እና <strong>Queue ID</strong> ይዘው <strong>ቅርንጫፍዎን</strong> ያነጋግሩ።  </li>
-<li>ሰራተኞች የዲጂታል ማመልከቻ የይለፍ ቃልዎን አይጠይቁም።</li>
-</ul>
-<hr>
-<h2>10. ተዛማጅ መመሪያዎች</h2>
-<ul>
-<li><a href="03_customers.md">English customer manual</a>  </li>
-<li><a href="02_staff.md">Staff manual</a>  </li>
-<li><a href="README.md">Manual index</a></li>
-</ul>
-</section><section class="chapter" id="ch-7">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 8 · Market partners</p>
+</section><section class="chapter" id="ch-4">
+<div class="chapter-label">Chapter 05</div>
 <h1>Market Partners User Manual — Seqela Market</h1>
 <p><strong>Audience:</strong> Dealers, brokers, sales persons, suppliers, cooperatives/SACCOs, and other market actors who report local prices.  </p>
 <p><strong>Entry:</strong> <code>/market-portal/</code>  </p>
@@ -1219,7 +1235,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Choose product mode and enter the item + price (ETB) as prompted.</li>
 <li>Submit. You should see confirmation that the quote was saved.</li>
 </ol>
-<blockquote class="manual-shot"><strong>Screenshot (M-01):</strong> Share a local price — Step 1 Area (who you are + Region/Zone/City).<br><br><strong>Screenshot (M-02):</strong> Step 2 Product — enter item and price (ETB) for that area.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (M-01):</strong> Share a local price — Step 1 Area (who you are + Region/Zone/City).<br><br><figure class="manual-figure"><img src="screenshots/M-01_market.png" alt="M-01 — Market portal"/><figcaption>M-01 — Market portal</figcaption></figure><br><br><strong>Screenshot (M-02):</strong> Step 2 Product — enter item and price (ETB) for that area.</blockquote>
 <p>Guest quotes are useful for one-off reporting. For frequent updates, register an account.</p>
 <hr>
 <h2>4. Register a free account</h2>
@@ -1231,7 +1247,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Submit <strong>Create free account</strong>.</li>
 <li>Sign in at <code>/market-portal/login/</code>.</li>
 </ol>
-<p>After registration, your trading area is stored on your profile so you mainly enter product and price next time.</p>
+<p>After registration, your trading area is stored on your profile so you mainly enter product and price next time. <strong>Branch</strong> tagging is optional. DECSI staff manage trust status (<strong>Pending</strong> / <strong>Trusted</strong> / <strong>Suspended</strong>) and portal enablement in Django Admin.</p>
 <hr>
 <h2>5. Sign in and profile</h2>
 <table>
@@ -1298,84 +1314,40 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li><a href="01_admin.md">Admin</a> — platform configuration  </li>
 <li><a href="README.md">Manual index</a></li>
 </ul>
-</section><section class="chapter" id="ch-8">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 9 · Screenshot captions</p>
-<h1>Screenshot captions catalog</h1>
-<p>Use this catalog when capturing UI screenshots for training decks, PDFs, or LMS content.  </p>
-<p>Each entry gives a <strong>shot ID</strong>, <strong>where to capture</strong>, and a <strong>caption</strong> to place under the image.</p>
-<p>Inline callouts in the manuals use the same wording after <code>&gt; <strong>Screenshot:</strong></code>.</p>
-<hr>
-<h2>A. Staff hub</h2>
+</section><section class="chapter" id="ch-5">
+<div class="chapter-label">Chapter 06</div>
+<h1>Screenshots</h1>
+<p>Real UI captures from DECSI Loan Hub used in this manual pack. Files live in <code>docs/user_manual/screenshots/</code>.</p>
+<h2>Digital Apply (customers)</h2>
+<figure class="manual-figure"><img src="screenshots/C-01_landing.png" alt="C-01 — Digital Apply landing"/><figcaption>C-01 — Digital Apply landing</figcaption></figure>
+<figure class="manual-figure"><img src="screenshots/C-02_register.png" alt="C-02 — Create account / register"/><figcaption>C-02 — Create account / register</figcaption></figure>
+<figure class="manual-figure"><img src="screenshots/C-03_login.png" alt="C-03 — Customer sign-in"/><figcaption>C-03 — Customer sign-in</figcaption></figure>
+<figure class="manual-figure"><img src="screenshots/C-11_help.png" alt="C-11 — Digital Apply Help"/><figcaption>C-11 — Digital Apply Help</figcaption></figure>
+<h2>Staff hub</h2>
+<figure class="manual-figure"><img src="screenshots/H-01_hub_login.png" alt="H-01 — Staff hub login"/><figcaption>H-01 — Staff hub login</figcaption></figure>
+<h2>Seqela Market</h2>
+<figure class="manual-figure"><img src="screenshots/M-01_market.png" alt="M-01 — Market portal (share a local price)"/><figcaption>M-01 — Market portal (share a local price)</figcaption></figure>
+<h2>How to refresh captures</h2>
+<p>With the app running on port 8000:</p>
+<pre class="lang-bash"><code>mkdir -p docs/user_manual/screenshots
+cd docs/user_manual/screenshots
+google-chrome --headless --disable-gpu --no-sandbox --window-size=1280,900 \
+  --screenshot=C-01_landing.png http://127.0.0.1:8000/
+# …repeat for other URLs
+docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
 <table>
-<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
+<thead><tr><th>ID</th><th>URL</th><th>File</th></tr></thead>
 <tbody>
-<tr><td>H-01</td><td><code>/hub/login/</code></td><td>Staff login — enter username and password for AI-powered Credit Intelligence.</td></tr>
-<tr><td>H-02</td><td><code>/hub/mfa/verify/</code></td><td>MFA verify — enter the one-time code from your authenticator app.</td></tr>
-<tr><td>H-03</td><td><code>/hub/mfa/setup/</code></td><td>MFA setup — scan the QR code, then confirm with a code from the app.</td></tr>
-<tr><td>H-04</td><td>Hub home / Credit Intelligence</td><td>Hub home — role-scoped KPIs and shortcuts after sign-in.</td></tr>
-<tr><td>H-05</td><td>Header user menu</td><td>Header — Notifications, Help, and Logout sit beside your name and role.</td></tr>
-<tr><td>H-06</td><td><code>/hub/help/</code></td><td>Help index — open any manual chapter or the printable HTML pack.</td></tr>
-<tr><td>H-07</td><td>Loan requests list</td><td>Loan requests — open a Queue ID to continue documents, appraisal, or collateral.</td></tr>
-<tr><td>H-08</td><td>Create loan request</td><td>Create loan request — capture customer number, product, amount, and branch.</td></tr>
-<tr><td>H-09</td><td>Assign loan officer</td><td>Assign loan officer — branch/district managers route the file to an officer.</td></tr>
-<tr><td>H-10</td><td>Cooperative queue</td><td>Cooperative queue — approve branch intake before officer work continues.</td></tr>
-<tr><td>H-11</td><td>Document upload</td><td>Documents — upload each required type from the product document pack.</td></tr>
-<tr><td>H-12</td><td>Appraisal steps</td><td>Appraisal — complete steps 1–7 (MSME or corporate mode).</td></tr>
-<tr><td>H-13</td><td>Collateral dashboard</td><td>Collateral — buildings, land, or other items with field evidence.</td></tr>
-<tr><td>H-14</td><td>Engineering QA</td><td>Engineering QA — approve or return submitted valuations.</td></tr>
-<tr><td>H-15</td><td>Approval queue</td><td>Approval queue — committee members cast votes on pending loans.</td></tr>
-<tr><td>H-16</td><td>Post-approval detail</td><td>Post-approval — clear conditions, confirm schedule, mark ready.</td></tr>
-<tr><td>H-17</td><td>Disbursement queue</td><td>Disbursement queue — finance releases funds when the loan is ready.</td></tr>
-<tr><td>H-18</td><td>Online loan intake</td><td>Online loan intake — Digital Apply submissions waiting for branch processing.</td></tr>
-<tr><td>H-19</td><td>Settings → Digital apply</td><td>Digital Apply settings — open/close portal, fee, and security controls.</td></tr>
-<tr><td>H-20</td><td>Settings → Document pack</td><td>Document pack — required and optional docs for one loan category.</td></tr>
-<tr><td>H-21</td><td>Security audit</td><td>Security audit — review login, MFA, and unlock events.</td></tr>
-<tr><td>H-22</td><td>Agentic Assist widget</td><td>Agentic Assist — asks questions and drafts; cannot approve or disburse.</td></tr>
+<tr><td>C-01</td><td><code>/</code></td><td><code>C-01_landing.png</code></td></tr>
+<tr><td>C-02</td><td><code>/register/</code></td><td><code>C-02_register.png</code></td></tr>
+<tr><td>C-03</td><td><code>/login/</code></td><td><code>C-03_login.png</code></td></tr>
+<tr><td>C-11</td><td><code>/help/</code></td><td><code>C-11_help.png</code></td></tr>
+<tr><td>H-01</td><td><code>/hub/login/</code></td><td><code>H-01_hub_login.png</code></td></tr>
+<tr><td>M-01</td><td><code>/market-portal/</code></td><td><code>M-01_market.png</code></td></tr>
 </tbody>
 </table>
-<hr>
-<h2>B. Digital Apply (customers)</h2>
-<table>
-<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
-<tbody>
-<tr><td>C-01</td><td><code>/</code> landing</td><td>Digital Apply landing — Create account or sign in to apply online.</td></tr>
-<tr><td>C-02</td><td><code>/register/</code></td><td>Register — DECSI customer number, name, mobile, and password.</td></tr>
-<tr><td>C-03</td><td><code>/login/</code></td><td>Customer sign-in — use mobile number or customer number.</td></tr>
-<tr><td>C-04</td><td><code>/home/</code></td><td>My applications — drafts and submitted loans with status chips.</td></tr>
-<tr><td>C-05</td><td>Apply step 1 Details</td><td>Step 1 · Details — choose product, branch, amount, and purpose.</td></tr>
-<tr><td>C-06</td><td>Apply step 2 Documents</td><td>Step 2 · Documents — upload every required file for the product.</td></tr>
-<tr><td>C-07</td><td>Apply step 3 Fee</td><td>Step 3 · Fee — pay the processing fee (ETB) before submit.</td></tr>
-<tr><td>C-08</td><td>Apply step 4 Submit</td><td>Step 4 · Submit — review and submit to receive a Queue ID.</td></tr>
-<tr><td>C-09</td><td>Status / Queue ID</td><td>Status — keep your Queue ID for branch follow-up.</td></tr>
-<tr><td>C-10</td><td>Pipeline tracker</td><td>Pipeline — Submitted → intake → processing → decision → disbursement.</td></tr>
-<tr><td>C-11</td><td><code>/help/</code></td><td>Help — English and Amharic customer manuals inside Digital Apply.</td></tr>
-<tr><td>C-12</td><td>Password forgot / OTP</td><td>Password reset — request an OTP on your registered phone.</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>C. Seqela Market</h2>
-<table>
-<thead><tr><th>ID</th><th>Screen / URL</th><th>Caption</th></tr></thead>
-<tbody>
-<tr><td>M-01</td><td><code>/market-portal/</code> guest step 1</td><td>Share a local price — Step 1 Area (who you are + Region/Zone/City).</td></tr>
-<tr><td>M-02</td><td>Guest step 2 product</td><td>Step 2 Product — enter item and price (ETB) for that area.</td></tr>
-<tr><td>M-03</td><td>Register</td><td>Create free account — actor type, product focus, and trading area.</td></tr>
-<tr><td>M-04</td><td>Login</td><td>Market sign-in — portal username and password (not staff hub).</td></tr>
-<tr><td>M-05</td><td>Recent quotes</td><td>Recent quotes — confirm your last submissions on the home/area screen.</td></tr>
-<tr><td>M-06</td><td><code>/market-portal/help/</code></td><td>Market Help — open the Seqela Market user manual.</td></tr>
-</tbody>
-</table>
-<hr>
-<h2>Capture tips</h2>
-<ol>
-<li>Use a demo account; blur real customer names and phone numbers.  </li>
-<li>Prefer desktop width ~1280px for hub screenshots; also capture mobile for Digital Apply.  </li>
-<li>Show a realistic <strong>Queue ID</strong> format (<code>HK-#########</code>) on status shots.  </li>
-<li>Store files as <code>docs/user_manual/screenshots/&lt;ID&gt;.png</code> when assets are ready.  </li>
-<li>Rebuild the printable HTML after adding inline callouts: <code>python3 docs/user_manual/build_html.py</code>.</li>
-</ol>
-</section><section class="chapter" id="ch-9">
-<p class="eyebrow" style="color:var(--brand-soft);font-size:9pt;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 0.25rem">Chapter 10 · IT installation</p>
+</section><section class="chapter" id="ch-6">
+<div class="chapter-label">Chapter 07</div>
 <h1>DECSI Loan Hub — Installation Manual for IT Staff</h1>
 <p><strong>Audience:</strong> DECSI IT / infrastructure staff installing or upgrading the Loan Hub.  </p>
 <p><strong>Goal:</strong> Bring up a working stack with the <strong>minimum requirements</strong>, then harden for pilot / production.</p>
@@ -1503,6 +1475,18 @@ PASSWORD_MIN_LENGTH=10</code></pre>
 <p><strong>Keep mocks until integrations are ready:</strong></p>
 <pre class="lang-bash"><code>DECSI_CUSTOMER_FALLBACK_MOCK=True
 DECSI_CBS_USE_MOCK_LEDGER=True</code></pre>
+<p><strong>Digital Apply payments &amp; SMS (optional):</strong></p>
+<pre class="lang-bash"><code># Live Chapa (leave empty + or set CHAPA_FORCE_MOCK=True for demo checkout)
+CHAPA_SECRET_KEY=
+CHAPA_PUBLIC_KEY=
+CHAPA_CURRENCY=ETB
+CHAPA_FORCE_MOCK=True
+
+# Applicant OTP / status SMS gateway (optional)
+APPLICANT_SMS_URL=
+APPLICANT_SMS_API_KEY=</code></pre>
+<p><strong>OCR language (Docker image already includes eng+amh):</strong></p>
+<pre class="lang-bash"><code>DOCUMENT_OCR_LANG=eng+amh</code></pre>
 <p>Never commit <code>.env</code> to Git.</p>
 <h3>4.3 Build and start</h3>
 <pre class="lang-bash"><code>docker compose up --build -d</code></pre>
@@ -1566,9 +1550,11 @@ docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d</
 <li>Loan categories + <strong>document packs</strong>  </li>
 <li>Approval committees  </li>
 <li>Collateral policy / estimation mode  </li>
-<li>Digital Apply: open/closed, processing fee, terms  </li>
+<li>Digital Apply: open/closed, processing fee, password/lockout, CBS lookup, terms checkbox  </li>
 <li>SMTP for staff password reset (if not set in <code>.env</code>)  </li>
 <li>MFA enrollment for privileged accounts  </li>
+<li>Confirm <strong>Delegations</strong> works (staff request → admin approve)  </li>
+<li>If using Seqela Market, schedule <code>recompute_market_bands</code> (see §9.5)</li>
 </ol>
 <p>CSV imports (optional):</p>
 <pre class="lang-bash"><code>docker compose exec web python manage.py import_zones &lt;file&gt;
@@ -1582,13 +1568,17 @@ docker compose exec web python manage.py import_users &lt;file&gt;</code></pre>
 <tbody>
 <tr><td>1</td><td><code>docker compose ps</code></td><td><code>web</code> Up, <code>db</code> healthy</td></tr>
 <tr><td>2</td><td>Open <code>/hub/login/</code></td><td>Login form loads</td></tr>
-<tr><td>3</td><td>Login as superuser</td><td>Hub home / Settings visible</td></tr>
+<tr><td>3</td><td>Login as superuser</td><td>Hub home / Settings / <strong>Delegations</strong> visible</td></tr>
 <tr><td>4</td><td>Open <code>/</code></td><td>Digital Apply landing (or closed page if disabled)</td></tr>
-<tr><td>5</td><td><code>/hub/help/</code></td><td>User manuals list</td></tr>
+<tr><td>5</td><td><code>/hub/help/</code></td><td>User manuals list; <strong>Download PDF</strong> if built</td></tr>
 <tr><td>6</td><td>Create test loan (staff)</td><td>Queue ID issued</td></tr>
 <tr><td>7</td><td>Upload a PDF/image document</td><td>File stored under media</td></tr>
 <tr><td>8</td><td>(If MFA on) Setup + verify TOTP</td><td>Login succeeds with code</td></tr>
-<tr><td>9</td><td>Restart stack</td><td><code>docker compose restart</code> — data persists</td></tr>
+<tr><td>9</td><td>Digital Apply fee (mock)</td><td>Mock/waived fee path reaches Submit</td></tr>
+<tr><td>10</td><td>Submit online app</td><td>Appears in Online loan intake + staff Notification</td></tr>
+<tr><td>11</td><td><code>/market-portal/</code></td><td>Guest price quote saves</td></tr>
+<tr><td>12</td><td>Restart stack</td><td><code>docker compose restart</code> — data persists</td></tr>
+<tr><td>13</td><td>Migrations</td><td>Includes loan delegation (<code>0064</code>–<code>0066</code>) and applicant portal latest</td></tr>
 </tbody>
 </table>
 <hr>
@@ -1616,6 +1606,8 @@ git pull   # or extract new release
 docker compose up -d --build
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py collectstatic --noinput   # if using gunicorn entrypoint</code></pre>
+<p>After upgrades that change manuals:</p>
+<pre class="lang-bash"><code>docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
 <h3>9.4 Default Gunicorn sizing (production image/entrypoint)</h3>
 <p>From <code>gunicorn.conf.py</code> (override via env):</p>
 <table>
@@ -1628,6 +1620,10 @@ docker compose exec web python manage.py collectstatic --noinput   # if using gu
 </tbody>
 </table>
 <p>On a 4 GB host, do not raise workers aggressively without more RAM.</p>
+<h3>9.5 Market price bands (optional)</h3>
+<p>If Seqela Market is used for local quotes that feed collateral reference prices:</p>
+<pre class="lang-bash"><code>docker compose exec web python manage.py recompute_market_bands</code></pre>
+<p>Schedule this periodically (cron) after go-live. Manage actors / trust in Django Admin.</p>
 <hr>
 <h2>10. Security baseline for DECSI IT</h2>
 <ul>
@@ -1665,10 +1661,13 @@ docker compose exec web python manage.py collectstatic --noinput   # if using gu
 <tr><td><code>/</code></td><td>Digital Apply</td></tr>
 <tr><td><code>/hub/login/</code></td><td>Staff login</td></tr>
 <tr><td><code>/hub/</code></td><td>Staff hub</td></tr>
-<tr><td><code>/hub/help/</code></td><td>In-app manuals (staff)</td></tr>
+<tr><td><code>/hub/help/</code></td><td>In-app manuals (staff) + PDF download</td></tr>
+<tr><td><code>/hub/delegations/</code></td><td>Authority delegation</td></tr>
+<tr><td><code>/hub/online_loan_intake/</code></td><td>Digital Apply intake list</td></tr>
 <tr><td><code>/admin/</code></td><td>Django Admin</td></tr>
 <tr><td><code>/market-portal/</code></td><td>Market price portal</td></tr>
 <tr><td><code>/collateral/</code></td><td>Collateral module (staff auth)</td></tr>
+<tr><td><code>/payments/chapa/webhook/</code></td><td>Chapa payment webhook (must be reachable when live)</td></tr>
 </tbody>
 </table>
 <hr>

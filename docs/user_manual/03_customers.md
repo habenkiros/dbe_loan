@@ -13,11 +13,11 @@ Staff processing after you submit is described for employees in the [Staff manua
 You can:
 
 1. Create an applicant account with your **DECSI customer number** and mobile phone.
-2. Start a loan application: product, branch, amount, purpose.
+2. Start a loan application: product, district/branch, amount, purpose, collateral type.
 3. Upload the **documents required for that product**.
-4. Pay the **processing fee** online.
+4. Pay the **processing fee** online (or skip if the fee is waived / zero).
 5. Submit and receive a **Queue ID** (for example `HK-000000001`).
-6. Track progress until disbursement (or a decision).
+6. Track progress, read **Notices**, and — after credit approval — view your **Repayment schedule**.
 
 If you see **“Digital apply is temporarily closed”**, the portal is offline for maintenance — visit your branch or try again later.
 
@@ -37,7 +37,11 @@ If you see **“Digital apply is temporarily closed”**, the portal is offline 
 
 > **Screenshot (C-01):** Digital Apply landing — Create account or sign in to apply online.
 >
+> ![C-01 — Digital Apply landing](screenshots/C-01_landing.png)
+>
 > **Screenshot (C-02):** Register — DECSI customer number, name, mobile, and password.
+>
+> ![C-02 — Create account / register](screenshots/C-02_register.png)
 
 Some deployments validate your customer number against DECSI records. If validation fails, confirm the number with your branch before retrying.
 
@@ -85,10 +89,12 @@ From **My applications** / home, start a new application. The wizard shows four 
 
 ### Step 1 — Details
 
-1. Select the **loan product** (loan category).
-2. Choose your **branch**.
-3. Enter **amount**, **purpose**, and collateral type if asked.
-4. Save and continue.
+1. Select **District**, then **Branch** (lists cascade).  
+2. Select the **loan product** (loan category).  
+3. Choose **collateral type** (required).  
+4. Enter **amount**, **purpose**, and customer history (new / existing) if asked.  
+5. Name, phone, and customer number come from your account (CBS may lock name/phone to the bank record).  
+6. Save and continue.
 
 You can leave a draft and return later until you submit.
 
@@ -102,30 +108,37 @@ If a file is rejected, replace it with a clearer copy.
 
 ### Step 3 — Processing fee
 
-1. Review the fee amount (ETB).
-2. Start payment (Chapa or the payment screen shown).
-3. Complete payment and wait for confirmation.
-4. Do not close the browser until the portal confirms success.
+1. Review the fee amount (ETB).  
+2. If the fee is **0 ETB**, payment is **waived** and you continue without Chapa.  
+3. Otherwise start payment (live Chapa, or a **demo/mock** checkout when the bank runs Digital Apply in test mode).  
+4. Complete payment and wait for confirmation (statuses: unpaid → pending → paid / failed / waived).  
+5. Do not close the browser until the portal confirms success.
 
 If payment fails, retry from the Fee step or contact support with the time of the attempt. Do not submit until the fee is paid when the portal requires it.
 
 ### Step 4 — Submit
 
-1. Review your details and documents.
-2. Confirm submit.
-3. Save your **Queue ID** immediately.
+1. Review your details and documents.  
+2. Confirm submit.  
+3. Save your **Queue ID** immediately — you will also get a **Notice** (Loan requested).
 
 After submit, the application enters the DECSI branch queue. Staff will continue documents review, appraisal, collateral, credit decision, and disbursement preparation.
 
 ### Withdraw a draft
 
-Unsubmitted drafts can be cancelled/withdrawn from the application actions if shown. Submitted applications are handled by the branch — visit the branch for withdrawal or cancellation requests.
+Unsubmitted drafts can be cancelled/withdrawn from the application actions if shown (optional reason). Submitted applications are handled by the branch — visit the branch for withdrawal or cancellation requests.
 
 ---
 
 ## 5. Track your application
 
 Open the application from **My applications** or the status page.
+
+### Notices
+
+On **My applications** you may see a **Notices** list (payment, loan requested + Queue ID, branch intake, credit approved/declined). Use **mark all read** when available.
+
+> **Screenshot (C-14):** Notices — in-portal messages about your application.
 
 ### While drafting
 
@@ -144,12 +157,14 @@ Typical pipeline:
 
 | Stage | Meaning |
 |-------|---------|
-| **Submitted** | Received online; waiting in the branch queue |
+| **Submitted** | Received online; waiting in the branch queue (**Loan requested**) |
 | **Branch intake** | Branch cooperative reviews your application |
 | **Loan processing** | Officer reviews documents, collateral, and analysis |
 | **Credit decision** | Credit approval process underway |
-| **Disbursement prep** | Approved loan prepared for payment |
+| **Disbursement prep** | Approved loan prepared for payment (**Loan approved** milestone when decided) |
 | **Disbursed** | Funds released per DECSI records |
+
+Status may show **requested amount** vs **approved amount/date** when credit has decided. If returned to the officer for corrections, the pipeline stays **in progress**.
 
 Other outcomes you may see:
 
@@ -163,6 +178,16 @@ Always quote your **Queue ID** when calling or visiting the branch.
 
 Status facts often include: product, branch, amount requested, submitted date, and assigned loan officer (when assigned).
 
+### Repayment schedule
+
+After **credit approval** (or disbursement), open **Repayment schedule** from the status page (`/apply/<id>/schedule/`).
+
+- Read-only amortization prepared by the branch (Sheet 7 / post-approval).  
+- If approved but the schedule is empty, the branch is still preparing it — check again later.  
+- Confirm final figures with your branch at disbursement if anything differs.
+
+> **Screenshot (C-13):** Repayment schedule — installment table after credit approval.
+
 ---
 
 ## 6. What happens after you submit?
@@ -173,9 +198,9 @@ You do **not** complete appraisal or collateral online. DECSI staff:
 2. Verify documents and run internal checks.  
 3. Complete credit appraisal and collateral valuation as required.  
 4. Send the file through credit committee.  
-5. Complete post-approval conditions and disburse if approved.  
+5. Complete post-approval conditions, build the **repayment schedule**, and disburse if approved.  
 
-Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page updates as the loan moves forward.
+Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page and **Notices** update as the loan moves forward.
 
 ---
 
@@ -198,8 +223,10 @@ Processing time depends on product, collateral, completeness of documents, and c
 | Cannot register | Check customer number and phone; ask branch if CBS validation is required |
 | OTP not received | Confirm phone number; wait and retry; contact branch if SMS is down |
 | Payment stuck | Do not create duplicate applications immediately; retry Fee step or ask branch with timestamp |
+| Fee skipped | Fee may be **0 / waived** — continue to Submit |
 | No Queue ID | Application is still a draft — complete Fee and Submit |
 | Status not moving | Normal for several days; contact branch with Queue ID if urgently delayed |
+| No repayment schedule | Wait until after credit approval; branch may still be preparing amortization |
 | Forgot which product | Open My applications — product and amount are listed on each card / status |
 
 ---
@@ -214,7 +241,7 @@ Processing time depends on product, collateral, completeness of documents, and c
 
 ## 10. Related manuals
 
-- [Amharic version](03_customers_am.md) — የአማርኛ የደንበኛ መመሪያ  
 - [Staff user manual](02_staff.md) — how DECSI processes your file after submit  
 - [Admin user manual](01_admin.md) — for DECSI administrators only  
+- [Screenshots](05_screenshots.md)  
 - [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)

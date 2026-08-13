@@ -4,6 +4,7 @@ from django.urls import path
 from . import views
 from . import views_credit_intelligence as ci_views
 from . import views_agent
+from . import views_delegation
 from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
@@ -47,6 +48,10 @@ urlpatterns = [
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('create_loan_request/', views.create_loan_request, name='create_loan_request'),
     path('ajax/customer_lookup/', views.ajax_staff_lookup_customer, name='ajax_staff_lookup_customer'),
+    path('delegations/', views_delegation.manage_delegations, name='manage_delegations'),
+    path('delegations/<int:delegation_id>/approve/', views_delegation.approve_delegation, name='approve_delegation'),
+    path('delegations/<int:delegation_id>/reject/', views_delegation.reject_delegation, name='reject_delegation'),
+    path('delegations/<int:delegation_id>/revoke/', views_delegation.revoke_delegation, name='revoke_delegation'),
     path('loan_request/<int:loan_request_id>/documents/', views.upload_loan_request_documents, name='upload_loan_request_documents'),
     path('loan_request/<int:loan_request_id>/request_document/', views.request_loan_document, name='request_loan_document'),
     path(

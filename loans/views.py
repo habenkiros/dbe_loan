@@ -79,7 +79,8 @@ import pandas as pd
 
 
 def _user_is_cooperative_manager(user) -> bool:
-    return getattr(user, 'role', None) in ('cooperative_manager', 'operation_manager')
+    from loans.delegation import user_has_cooperative_authority
+    return user_has_cooperative_authority(user)
 
 
 def _user_is_credit_staff(user) -> bool:
@@ -95,6 +96,77 @@ def _user_can_configure_committees(user) -> bool:
 def _user_can_create_loan(user) -> bool:
     role = getattr(user, 'role', None)
     return role == 'branch_manager' or role in ('credit_head', 'credit_loan_officer')
+
+
+def _user_is_finance_manager(user) -> bool:
+    from loans.delegation import user_has_finance_authority
+    return user_has_finance_authority(user)
+
+
+def _user_can_work_appraisal(user) -> bool:
+    if getattr(user, 'role', None) in ('loan_officer', 'credit_loan_officer'):
+        return True
+    from loans.delegation import SCOPE_APPRAISAL, principals_for
+    return bool(principals_for(user, SCOPE_APPRAISAL))
+
+
+def _user_can_assign_officer(user) -> bool:
+    from loans.delegation import user_has_assign_officer_authority
+    return user_has_assign_officer_authority(user)
+
+
+def _user_can_view_loan_list(user) -> bool:
+    if getattr(user, 'is_superuser', False):
+        return True
+    role = getattr(user, 'role', None)
+    if role in (
+        'branch_manager', 'loan_officer', 'credit_loan_officer', 'credit_head',
+        'district_manager', 'engineer', 'engineering_head', 'superadmin', 'admin',
+    ):
+        return True
+    from loans.delegation import (
+        SCOPE_APPRAISAL,
+        principals_for,
+        user_has_assign_officer_authority,
+    )
+    if user_has_assign_officer_authority(user):
+        return True
+    if principals_for(user, SCOPE_APPRAISAL):
+        return True
+    return False
+
+
+def _user_can_open_loan_detail(user) -> bool:
+    if _user_can_view_loan_list(user):
+        return True
+    if _user_is_cooperative_manager(user) or _user_is_finance_manager(user):
+        return True
+    role = getattr(user, 'role', None)
+    return role in (
+        'cooperative_manager', 'operation_manager', 'finance_manager',
+        'accountant', 'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
+        'board_member', 'risk_compliance', 'auditor',
+    )
+
+
+def _get_loan_for_officer(user, loan_request_id):
+    """Assigned LO or appraisal-delegate covering that officer."""
+    from loans.delegation import can_access_loan_as_officer, log_delegation_action
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    ok, principal = can_access_loan_as_officer(user, loan_request)
+    if not ok:
+        from django.http import Http404
+        raise Http404('No loan request found matching the query')
+    if principal and principal.id != user.id:
+        log_delegation_action(
+            actor=user,
+            principal=principal,
+            action='appraisal_access',
+            loan_request=loan_request,
+            detail={'path': 'officer_loan'},
+        )
+    return loan_request
 
 
 @login_required
@@ -452,7 +524,7 @@ def update_operation_manager_approval(request, loan_request_id):
     return render(request, 'loans/update_operation_manager_approval.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance_manager')
+@user_passes_test(_user_is_finance_manager)
 def update_finance_manager_approval(request, loan_request_id):
     """Finance disbursement approval (not intake queue)."""
     from .disbursement import can_approve_finance_disbursement, set_finance_disbursement_approval
@@ -574,15 +646,40 @@ def serve_loan_document_inline(request, loan_request_id, document_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['branch_manager', 'cooperative_manager', 'operation_manager', 'finance_manager', 'loan_officer', 'credit_loan_officer', 'credit_head', 'district_manager', 'engineer', 'engineering_head', 'superadmin', 'admin'])
+@user_passes_test(_user_can_open_loan_detail)
 def loan_request_detail(request, loan_request_id):
     user = request.user
+    from loans.delegation import (
+        can_access_loan_as_officer,
+        user_can_access_loan_for_assign,
+    )
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if user.role in ('loan_officer', 'credit_loan_officer'):
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=user)
+        ok, _ = can_access_loan_as_officer(user, loan_request)
+        if not ok:
+            messages.warning(request, 'You do not have access to this loan request.')
+            return redirect('view_loan_requests')
     elif user.role == 'engineer':
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=user)
-    else:
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+        if loan_request.assigned_engineer_id != user.id:
+            messages.warning(request, 'You do not have access to this loan request.')
+            return redirect('view_loan_requests')
+    elif user.role not in (
+        'branch_manager', 'district_manager', 'credit_head', 'admin', 'superadmin',
+        'cooperative_manager', 'operation_manager', 'finance_manager',
+        'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service', 'board_member',
+        'risk_compliance', 'auditor', 'engineering_head', 'accountant',
+    ) and not getattr(user, 'is_superuser', False):
+        if not (
+            user_can_access_loan_for_assign(user, loan_request)
+            or can_access_loan_as_officer(user, loan_request)[0]
+        ):
+            messages.warning(request, 'You do not have access to this loan request.')
+            return redirect('home')
+    elif user.role == 'accountant':
+        # Accountants only open loans when covering assign_officer (or similar)
+        if not user_can_access_loan_for_assign(user, loan_request):
+            messages.warning(request, 'You do not have access to this loan request.')
+            return redirect('home')
     collateral_mode = get_collateral_estimation_mode()
     from .document_checklist import checklist_for_loan
     document_types = checklist_for_loan(loan_request)
@@ -669,7 +766,7 @@ def request_loan_document(request, loan_request_id):
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     if request.user.role == 'loan_officer':
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+        loan_request = _get_loan_for_officer(request.user, loan_request_id)
     else:
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
     doc_type_id = request.POST.get('document_type_id')
@@ -709,7 +806,7 @@ def proceed_to_collateral(request, loan_request_id):
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     if request.user.role == 'loan_officer':
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+        loan_request = _get_loan_for_officer(request.user, loan_request_id)
     else:
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
     from .services.document_auth import loan_documents_collateral_readiness
@@ -752,7 +849,7 @@ def authenticate_loan_document(request, loan_request_id, document_id):
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     if request.user.role == 'loan_officer':
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+        loan_request = _get_loan_for_officer(request.user, loan_request_id)
     else:
         loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
     doc = get_object_or_404(LoanRequestDocument, pk=document_id, loan_request=loan_request)
@@ -804,7 +901,7 @@ def authenticate_loan_document(request, loan_request_id, document_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(_user_can_work_appraisal)
 def loan_appraisal_steps(request):
     """Loan officers only: static clickable steps from Cashflow based MSME loan appraisal tool (V1.8.3). Presentation only."""
     return render(request, 'loans/loan_appraisal_steps.html')
@@ -925,14 +1022,14 @@ def _try_submit_to_committee(request, loan_request, notes=''):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(_user_can_work_appraisal)
 def loan_appraisal_edit(request, loan_request_id):
     """Redirect to step-based appraisal (step 1)."""
     return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=1)
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(_user_can_work_appraisal)
 def loan_appraisal_step(request, loan_request_id, step):
     """
     Page-based loan appraisal: one sheet per step (1–7).
@@ -941,7 +1038,7 @@ def loan_appraisal_step(request, loan_request_id, step):
     if step < 1 or step > TOTAL_APPRAISAL_STEPS:
         return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
 
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user)
+    loan_request = _get_loan_for_officer(request.user, loan_request_id)
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     from .appraisal_mode import (
         MODE_CORPORATE, ensure_appraisal_mode, is_corporate, mode_label, resolve_appraisal_mode,
@@ -1553,21 +1650,26 @@ def _generate_amortization_schedule(appraisal, basic_info, loan_request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in [
-    'branch_manager', 'district_manager', 'credit_head', 'admin', 'superadmin',
-])
+@user_passes_test(_user_can_assign_officer)
 def assign_loan_officer(request, loan_request_id):
+    from loans.delegation import assign_officer_scope_user, log_delegation_action
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    role = request.user.role
-    if role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
+    scope_user = assign_officer_scope_user(request.user)
+    role = scope_user.role
+    if role == 'branch_manager' and loan_request.branch_id != scope_user.branch_id:
         return redirect('view_loan_requests')
     if role == 'district_manager':
         loan_district = loan_request.district_id or getattr(loan_request.branch, 'district_id', None)
-        if loan_district != request.user.district_id:
+        if loan_district != scope_user.district_id:
             return redirect('view_loan_requests')
     if role == 'credit_head' and loan_request.origin_level != LoanRequest.ORIGIN_HEAD_OFFICE:
         messages.warning(request, 'Credit Head assigns officers on head-office Credit loans only.')
         return redirect('view_loan_requests')
+    if scope_user.id != request.user.id:
+        log_delegation_action(
+            actor=request.user, principal=scope_user, action='assign_officer_access',
+            loan_request=loan_request,
+        )
     if not loan_request.queue_approved:
         messages.warning(
             request,
@@ -1698,7 +1800,7 @@ def loan_request_detail_operation_manager(request, loan_request_id):
     return render(request, 'loans/loan_request_detail_operation_manager.html', {'loan_request': loan_request})
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance_manager')
+@user_passes_test(_user_is_finance_manager)
 def loan_request_detail_finance(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     return render(request, 'loans/loan_request_detail_finance.html', {'loan_request': loan_request})
@@ -1737,14 +1839,12 @@ def loan_request_detail_manager(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'loan_officer')
+@user_passes_test(_user_can_work_appraisal)
 def submit_to_committee(request, loan_request_id):
     """Loan officer submits completed appraisal package to the approval committee."""
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-    loan_request = get_object_or_404(
-        LoanRequest, pk=loan_request_id, assigned_loan_officer=request.user,
-    )
+    loan_request = _get_loan_for_officer(request.user, loan_request_id)
     notes = request.POST.get('committee_submission_notes', '').strip()
     submitted, errors = _try_submit_to_committee(request, loan_request, notes=notes)
     if not submitted:
@@ -1785,16 +1885,42 @@ def cast_committee_vote(request, loan_request_id):
     if not amount and form.cleaned_data['vote'] == 'approve' and appraisal:
         amount = appraisal.amount_approved
 
+    from loans.delegation import (
+        find_delegation,
+        log_delegation_action,
+        resolve_vote_principal,
+        SCOPE_COMMITTEE,
+    )
     from .models import LoanCommitteeVote
+
+    member, cast_by = resolve_vote_principal(request.user, loan_request, level)
+    if not member:
+        messages.warning(request, 'You cannot vote on this loan at the current approval level.')
+        return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
     LoanCommitteeVote.objects.create(
         loan_request=loan_request,
         approval_level=level,
-        member=request.user,
+        member=member,
+        cast_by=cast_by,
         vote=form.cleaned_data['vote'],
         amount_supported=amount,
         comments=form.cleaned_data.get('comments') or '',
     )
+    if cast_by:
+        log_delegation_action(
+            actor=cast_by,
+            principal=member,
+            action='committee_vote',
+            loan_request=loan_request,
+            delegation=find_delegation(cast_by, member, SCOPE_COMMITTEE),
+            detail={'vote': form.cleaned_data['vote'], 'level': level.key},
+        )
+        messages.info(
+            request,
+            f'Vote recorded for {member.get_full_name() or member.username} (you are acting by delegation).',
+        )
+
     from .committee import get_level_tally, resolve_level_vote_decision
 
     finalized = try_finalize_committee_decision(loan_request)
@@ -2160,20 +2286,24 @@ def loan_notification_mark_read(request, notification_id):
 
 
 def _loan_requests_queryset_for_user(user):
-    """Base queryset scoped by role (branch, district LO, credit, assigned officer, engineering)."""
+    """Base queryset scoped by role (branch, district LO, credit, assigned officer, engineering)
+    plus loans visible via active authority delegation.
+    """
     role = getattr(user, 'role', None)
     if getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin', 'credit_head'):
         if role == 'credit_head':
-            return LoanRequest.objects.filter(origin_level=LoanRequest.ORIGIN_HEAD_OFFICE)
-        return LoanRequest.objects.all()
-    if role == 'engineering_head':
+            qs = LoanRequest.objects.filter(origin_level=LoanRequest.ORIGIN_HEAD_OFFICE)
+        else:
+            qs = LoanRequest.objects.all()
+    elif role == 'engineering_head':
         if allows_engineering_team():
-            return LoanRequest.objects.filter(sent_to_engineering_at__isnull=False)
-        return LoanRequest.objects.none()
-    if role in ('loan_officer', 'credit_loan_officer'):
+            qs = LoanRequest.objects.filter(sent_to_engineering_at__isnull=False)
+        else:
+            qs = LoanRequest.objects.none()
+    elif role in ('loan_officer', 'credit_loan_officer'):
         # District LO (district, no branch): see assigned loans in that district.
         if role == 'loan_officer' and getattr(user, 'district_id', None) and not getattr(user, 'branch_id', None):
-            return LoanRequest.objects.filter(
+            qs = LoanRequest.objects.filter(
                 Q(assigned_loan_officer=user)
                 | Q(
                     branch__district_id=user.district_id,
@@ -2181,24 +2311,43 @@ def _loan_requests_queryset_for_user(user):
                     assigned_loan_officer__isnull=True,
                 )
             )
-        return LoanRequest.objects.filter(assigned_loan_officer=user)
-    if role == 'engineer':
+        else:
+            qs = LoanRequest.objects.filter(assigned_loan_officer=user)
+    elif role == 'engineer':
         if allows_engineering_team():
-            return LoanRequest.objects.filter(assigned_engineer=user)
-        return LoanRequest.objects.none()
-    if role == 'branch_manager':
+            qs = LoanRequest.objects.filter(assigned_engineer=user)
+        else:
+            qs = LoanRequest.objects.none()
+    elif role == 'branch_manager':
         if getattr(user, 'branch_id', None):
-            return LoanRequest.objects.filter(branch=user.branch)
-        if getattr(user, 'district_id', None):
-            return LoanRequest.objects.filter(branch__district=user.district)
-        return LoanRequest.objects.none()
-    if role == 'district_manager' and getattr(user, 'district_id', None):
-        return LoanRequest.objects.filter(branch__district_id=user.district_id)
-    return LoanRequest.objects.none()
+            qs = LoanRequest.objects.filter(branch=user.branch)
+        elif getattr(user, 'district_id', None):
+            qs = LoanRequest.objects.filter(branch__district=user.district)
+        else:
+            qs = LoanRequest.objects.none()
+    elif role == 'district_manager' and getattr(user, 'district_id', None):
+        qs = LoanRequest.objects.filter(branch__district_id=user.district_id)
+    else:
+        qs = LoanRequest.objects.none()
+
+    # Delegation: assign_officer cover → principal's branch/district loans
+    # Appraisal cover → loans assigned to those officers
+    from loans.delegation import (
+        loan_visibility_q_for_assign_principals,
+        officer_loan_filter_q,
+    )
+    extra_q = officer_loan_filter_q(user)
+    assign_q = loan_visibility_q_for_assign_principals(user)
+    if assign_q is not None:
+        extra_q = extra_q | assign_q
+    # Merge without chaining .distinct() mid-OR (Django forbids unique vs non-unique combine).
+    return LoanRequest.objects.filter(
+        Q(pk__in=qs.values('pk')) | extra_q
+    ).distinct()
 
 
 @login_required
-@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or u.role in ['branch_manager', 'loan_officer', 'credit_loan_officer', 'credit_head', 'district_manager', 'engineer', 'engineering_head', 'superadmin', 'admin'])
+@user_passes_test(_user_can_view_loan_list)
 def view_loan_requests(request):
     if getattr(request.user, 'role', None) == 'engineering_head' and allows_engineering_team():
         return redirect('loans_sent_for_collateral')
@@ -2320,7 +2469,7 @@ def view_loan_requests_operation_manager(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'finance_manager')
+@user_passes_test(_user_is_finance_manager)
 def view_loan_requests_finance_manager(request):
     """Finance disbursement approval queue (not intake)."""
     from .disbursement import finance_disbursement_queue_queryset

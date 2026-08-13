@@ -11,10 +11,10 @@ This guide covers day-to-day **configuration** and **oversight**. Operational le
 
 | Role | What you typically do |
 |------|------------------------|
-| **Super Administrator** (`superadmin`) / Django **superuser** | Full **Settings** menu: geography, users, loan products, document packs, Digital Apply, committees, collateral policy, estimation mode |
-| **System Administrator** (`admin`) | Oversight, checkup views, unlock users (with IT), security audit when permitted |
+| **Super Administrator** (`superadmin`) / Django **superuser** | Full **Settings** menu: geography, users, loan products, document packs, Digital Apply, committees, collateral policy, estimation mode; **approve/reject authority delegations** |
+| **System Administrator** (`admin`) | Oversight, checkup views, unlock users (with IT), security audit when permitted; **approve/reject authority delegations** |
 
-Menus are role-scoped. If you do not see **Settings**, ask for a superuser account or elevated role.
+Menus are role-scoped. If you do not see **Settings**, ask for a superuser account or elevated role. All staff see **Delegations** in the hub nav.
 
 ---
 
@@ -27,6 +27,8 @@ Menus are role-scoped. If you do not see **Settings**, ask for a superuser accou
 3. If MFA is enabled for your account (or required by policy), open your authenticator app and enter the one-time code at `/hub/mfa/verify/`.
 
 > **Screenshot (H-01):** Staff login — enter username and password for AI-powered Credit Intelligence.
+>
+> ![H-01 — Staff hub login](screenshots/H-01_hub_login.png)
 >
 > **Screenshot (H-02):** MFA verify — enter the one-time code from your authenticator app.
 
@@ -47,6 +49,8 @@ Menus are role-scoped. If you do not see **Settings**, ask for a superuser accou
 ### 2.4 Lockouts
 
 Repeated failed logins can lock an account. Unlock from the user edit screen or the unlock action (allowed for admin / VP IT / superuser). Review related events in the **security audit** log.
+
+Staff and Digital Apply applicants use **separate** lockout / auth-event stores. Disabling MFA (if allowed): `/hub/mfa/disable/`. Sessions may use idle timeout with keepalive (`/hub/session/keepalive/`).
 
 ### 2.5 Security audit
 
@@ -119,7 +123,9 @@ Do **not** create borrower accounts here — customers register in Digital Apply
 2. **Document pack per category** — Settings → open a category → **Document pack**  
    Mark each type **required** or **optional** and set display order.
 
-Digital Apply and staff document screens both use the pack for the selected product. After changing packs, test one online draft and one staff loan.
+Digital Apply and staff document screens both use the pack for the selected product. If a category has **no pack**, the system falls back to the global document catalog (filtered by appraisal mode). After changing packs, test one online draft and one staff loan.
+
+Staff can also **Request document** on a loan (type from the pack) so the branch manager is notified to upload a missing file.
 
 ### 3.5 Approval committees
 
@@ -148,14 +154,37 @@ Typical controls:
 | Control | Effect |
 |---------|--------|
 | Portal open / closed | When closed, applicants see “Digital apply is temporarily closed” |
-| Processing fee (ETB) | Amount charged before submit |
-| Password / lockout / rate limits | Applicant account security |
+| Processing fee (ETB) | Amount charged before submit; **0 ETB** auto-waives payment |
+| Password rules | Length and character requirements for applicant passwords |
+| Max failed logins / lockout minutes | Applicant account lockout |
+| Register rate limit (per IP / hour) | Limits new registrations from one IP |
 | Idle session minutes | Applicant session timeout |
-| Terms text | Shown at registration / apply |
-| Require CBS customer lookup | When enabled, registration validates customer number against core banking |
+| Require terms acceptance | Checkbox at registration (terms wording is fixed in the UI) |
+| Require CBS customer lookup | Validates customer number against core banking when enabled |
 | Chapa status | Live vs mock/demo payment mode (environment-driven; shown for operators) |
 
 After go-live, use **Online loan intake** to confirm applications appear for branch staff.
+
+### 3.8 Authority delegation (approve as admin)
+
+Staff can request a colleague to cover selected powers (**Delegations** in the hub nav → `/hub/delegations/`).
+
+1. A staff user creates a request (principal, delegate, scopes, date window, reason).  
+2. Status stays **Pending** until an **admin / superadmin** **Approves** or **Rejects**.  
+3. While approved and inside the window, the delegate may act; actions are audited as *acted by delegate for principal*.  
+4. Principal or admin can **Revoke** early.
+
+Scopes that can be delegated (only powers the principal already holds):
+
+- Committee voting  
+- Cooperative intake approval  
+- Loan officer appraisal / documents  
+- Finance disbursement approval  
+- Assign loan officer  
+
+Admins see a banner when requests await approval.
+
+> **Screenshot (H-23):** Delegations — pending approval list and Approve / Reject actions.
 
 ---
 
@@ -196,10 +225,23 @@ After go-live, use **Online loan intake** to confirm applications appear for bra
 
 ### 4.6 Monitor online applications
 
-**Settings → Online loan intake** (or hub online intake screen)
+**Settings → Online loan intake** (`/hub/online_loan_intake/` — nav under Settings for superuser)
 
-- See drafts and submitted Digital Apply loans.
-- Coordinate with branch managers if intake is stuck.
+- Lists **submitted** Digital Apply loans and **open drafts**.  
+- Search by Queue ID, name, phone, or customer number.  
+- Non-HO roles are branch-scoped when they open the page.  
+- Submitted apps mint a `LoanRequest` with **source channel = online**.  
+- On submit, the system may **auto-assign** the first active loan officer at the branch (else the branch manager).  
+- Branch staff also receive **Notifications** (`online_intake`) when a customer submits.
+
+Coordinate with branch managers if intake is stuck.
+
+### 4.7 Approve or reject a delegation
+
+1. Open **Delegations** (or use the pending-approval banner).  
+2. Review principal, proposed delegate, scopes, and window.  
+3. **Approve** or **Reject**.  
+4. Confirm the delegate sees “Acting by delegation” after approval.
 
 ---
 
@@ -211,7 +253,9 @@ Common admin areas:
 
 - Loan requests, categories, document requirements  
 - Committees and votes  
-- Applicant portal settings, accounts, online applications  
+- Applicant portal settings, accounts, online applications, applicant notices  
+- Market actors, observations, price bands (Seqela Market)  
+- Staff delegations (if registered)  
 - Security / auth-related records as registered  
 
 Treat Admin changes as privileged: log why you changed a record.
@@ -224,12 +268,11 @@ These are usually set in deployment (`.env`), not only in the UI:
 
 | Topic | Notes |
 |-------|--------|
-| MFA required | Forces staff MFA when policy demands it |
-| Login lockout | Max failed attempts and lock duration |
-| Session idle | Staff idle timeout (if middleware enabled in deployment) |
+| MFA / lockout / idle | Staff auth hardening (see IT manual and deployment settings) |
 | Email (SMTP) | Required for staff password reset |
-| Chapa keys | Live vs mock Digital Apply payments |
-| Applicant SMS | OTP for customer password reset |
+| Chapa keys | Live vs mock Digital Apply payments (`CHAPA_*`, `CHAPA_FORCE_MOCK`) |
+| Applicant SMS | OTP / status SMS gateway (`APPLICANT_SMS_*`) |
+| Market bands | Periodic `recompute_market_bands` for price bands |
 
 Coordinate with DevOps before changing production secrets.
 
@@ -245,19 +288,21 @@ Coordinate with DevOps before changing production secrets.
 | Committees | Settings → Approval committees |
 | Portal fee / open | Settings → Digital apply |
 | Online apps | Settings → Online loan intake |
+| Delegations | Hub → Delegations |
 | Collateral rules | Settings → Collateral policy / Estimation config |
 | Audit | `/hub/security/audit/` |
 | Unlock user | Edit user → unlock |
+| In-app Help / PDF | `/hub/help/` |
 | Low-level data | `/admin/` |
 
 ---
 
 ## 8. Related manuals
 
-- [Staff user manual](02_staff.md) · [አማርኛ](02_staff_am.md)  
-- [Customer user manual](03_customers.md) · [አማርኛ](03_customers_am.md)  
+- [Staff user manual](02_staff.md)  
+- [Customer user manual](03_customers.md)  
 - [Market partners](04_market_partners.md)  
-- [Screenshot captions](05_screenshot_captions.md)  
+- [Screenshots](05_screenshots.md)  
 - [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)  
 - In-app: `/hub/help/`
 

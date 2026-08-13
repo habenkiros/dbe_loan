@@ -29,6 +29,8 @@ class HubHelpTests(TestCase):
         resp = self.client.get(reverse('help_index'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'User manuals')
+        self.assertNotContains(resp, 'Amharic')
+        self.assertNotContains(resp, 'Tigrigna')
 
     def test_help_chapter_customers(self):
         self.client.login(username='helpstaff', password='StaffPass1!')
@@ -48,14 +50,20 @@ class ApplicantHelpTests(TestCase):
         resp = self.client.get('/help/')
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Digital Apply')
+        self.assertNotContains(resp, 'Amharic')
+        self.assertNotContains(resp, 'Tigrigna')
 
     def test_public_help_hides_admin(self):
         resp = self.client.get('/help/01-admin/')
         self.assertEqual(resp.status_code, 404)
 
-    def test_amharic_customer_chapter(self):
-        resp = self.client.get('/help/03-customers-am/')
+    def test_customer_chapter(self):
+        resp = self.client.get('/help/03-customers/')
         self.assertEqual(resp.status_code, 200)
+
+    def test_amharic_and_tigrigna_removed(self):
+        self.assertEqual(self.client.get('/help/03-customers-am/').status_code, 404)
+        self.assertEqual(self.client.get('/help/03-customers-ti/').status_code, 404)
 
 
 class MarketHelpTests(TestCase):

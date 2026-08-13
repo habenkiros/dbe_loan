@@ -50,6 +50,8 @@ _staff_auth_urlpatterns = [
     path('session/keepalive/', staff_auth.session_keepalive, name='session_keepalive'),
     path('help/', hub_help.help_index, name='help_index'),
     path('help/manual/', hub_help.help_combined_html, name='help_manual_html'),
+    path('help/manual.pdf', hub_help.help_combined_pdf, name='help_manual_pdf'),
+    path('help/screenshots/<str:name>', hub_help.help_screenshot, name='help_screenshot'),
     path('help/<slug:slug>/', hub_help.help_chapter, name='help_chapter'),
     path('security/audit/', staff_auth.security_audit_list, name='security_audit_list'),
     path(

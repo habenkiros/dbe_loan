@@ -6,7 +6,12 @@
 <h1>Assign Loan Officer</h1>
 
 <p><strong>Loan request:</strong> {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}</p>
-<p>Assign a loan officer from this branch to perform loan analysis and collateral estimation.</p>
+<p>
+  Choose which <strong>loan officer</strong> will analyze this file.
+  {% if user.role != 'loan_officer' and user.role != 'credit_loan_officer' %}
+  You are assigning on behalf of the branch manager — you are not becoming the loan officer yourself.
+  {% endif %}
+</p>
 
 <form method="post">
     {% csrf_token %}

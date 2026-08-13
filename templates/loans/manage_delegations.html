@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Delegations{% endblock %}
+
+{% block content %}
+<div class="lw-wrap" style="max-width:56rem;">
+  <h1 class="lw-identity" style="font-size:1.4rem;">Authority delegation</h1>
+  <p class="lw-identity-sub">
+    Request a colleague to cover you (you name who should be signed). You may only grant
+    <strong>permissions you already hold</strong>. An <strong>admin must approve</strong>
+    before the delegate can act. Cover <strong>ends automatically on the end date</strong>,
+    or earlier if an <strong>admin revokes</strong> — the requester cannot revoke an approved cover.
+  </p>
+
+  {% if received %}
+  <div class="lw-panel" style="border-color:#0a6b2e;background:#f0faf4;">
+    <h3 style="margin-top:0;color:#064420;">You may act for (approved)</h3>
+    <ul style="margin:0;padding-left:1.1rem;">
+      {% for d in received %}
+      <li style="margin-bottom:0.45rem;">
+        <strong>{{ d.principal.get_full_name|default:d.principal.username }}</strong>
+        ({{ d.principal.get_role_display }})
+        — {{ d.scope_labels|join:", " }}
+        · until {{ d.ends_at|date:"d M Y H:i" }}
+        {% if d.reason %}<br><small>{{ d.reason }}</small>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if can_approve %}
+  <div class="lw-panel" style="border-color:#c9a227;background:#fffbeb;">
+    <h3 style="margin-top:0;">Pending approval (admin)</h3>
+    <p class="help" style="margin-top:0;">The named delegate is who will be signed if you approve.</p>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Principal</th>
+            <th>Proposed delegate (signed if approved)</th>
+            <th>Scopes</th>
+            <th>Window</th>
+            <th>Reason</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in pending %}
+          <tr>
+            <td>
+              {{ d.principal.get_full_name|default:d.principal.username }}
+              <br><small>{{ d.principal.get_role_display }}</small>
+            </td>
+            <td>
+              <strong>{{ d.delegate.get_full_name|default:d.delegate.username }}</strong>
+              <br><small>{{ d.delegate.get_role_display }}</small>
+            </td>
+            <td><small>{{ d.scope_labels|join:", " }}</small></td>
+            <td>
+              <small>{{ d.starts_at|date:"d M Y H:i" }} → {{ d.ends_at|date:"d M Y H:i" }}</small>
+            </td>
+            <td><small>{{ d.reason|default:"—" }}</small></td>
+            <td style="white-space:nowrap;">
+              <form method="post" action="{% url 'approve_delegation' d.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-green" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Approve</button>
+              </form>
+              <form method="post" action="{% url 'reject_delegation' d.id %}" style="display:inline;"
+                    onsubmit="return confirm('Reject this request?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-gray" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Reject</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">No pending delegation requests.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="lw-panel" style="border-color:#a33;background:#fff5f5;">
+    <h3 style="margin-top:0;">Active covers (admin revoke)</h3>
+    <p class="help" style="margin-top:0;">
+      Only admins can end an approved cover early. Otherwise it stops at the end date.
+    </p>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Principal</th>
+            <th>Signed delegate</th>
+            <th>Scopes</th>
+            <th>Ends</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in admin_active %}
+          <tr>
+            <td>
+              {{ d.principal.get_full_name|default:d.principal.username }}
+              <br><small>{{ d.principal.get_role_display }}</small>
+            </td>
+            <td>
+              <strong>{{ d.delegate.get_full_name|default:d.delegate.username }}</strong>
+              <br><small>{{ d.delegate.get_role_display }}</small>
+            </td>
+            <td><small>{{ d.scope_labels|join:", " }}</small></td>
+            <td><small>{{ d.ends_at|date:"d M Y H:i" }}</small></td>
+            <td>
+              <form method="post" action="{% url 'revoke_delegation' d.id %}" style="display:inline;"
+                    onsubmit="return confirm('Revoke this approved delegation now?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-gray" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Revoke</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No active approved delegations.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="lw-panel">
+    <h3 style="margin-top:0;">Request delegation (you are the principal)</h3>
+    <p class="help">Pick who should be signed. Scope checkboxes show only your current access.</p>
+    {% if not form.fields.scopes.choices %}
+    <p class="help" style="color:#8a5a00;">
+      No delegable permissions on your account yet. If you should be able to vote or approve,
+      ask an admin to add you to the right committee or role.
+    </p>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="form-group">
+        <label for="{{ form.delegate.id_for_label }}"><strong>{{ form.delegate.label }}</strong></label>
+        {{ form.delegate }}
+        {{ form.delegate.errors }}
+      </div>
+      <div class="form-group">
+        <strong>Scopes</strong>
+        {{ form.scopes }}
+        {% if form.scopes.help_text %}<p class="help">{{ form.scopes.help_text }}</p>{% endif %}
+        {{ form.scopes.errors }}
+      </div>
+      <div class="form-group" style="display:flex;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <label for="{{ form.starts_at.id_for_label }}">Starts</label>
+          {{ form.starts_at }}
+          {{ form.starts_at.errors }}
+        </div>
+        <div>
+          <label for="{{ form.ends_at.id_for_label }}">Ends</label>
+          {{ form.ends_at }}
+          {{ form.ends_at.errors }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="{{ form.reason.id_for_label }}">Reason</label>
+        {{ form.reason }}
+        {{ form.reason.errors }}
+      </div>
+      <button type="submit" class="btn btn-green">Submit request</button>
+    </form>
+  </div>
+
+  <div class="lw-panel">
+    <h3 style="margin-top:0;">Your requests</h3>
+    <p class="help">Approved cover ends on the end date. Ask an admin if it must stop earlier.</p>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Proposed / signed delegate</th>
+            <th>Scopes</th>
+            <th>Window</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in given %}
+          <tr>
+            <td>{{ d.delegate.get_full_name|default:d.delegate.username }}</td>
+            <td><small>{{ d.scope_labels|join:", " }}</small></td>
+            <td>
+              {{ d.starts_at|date:"d M Y H:i" }}
+              → {{ d.ends_at|date:"d M Y H:i" }}
+            </td>
+            <td>
+              {% if d.status == 'pending' %}
+              <span class="lw-badge lw-warn">Pending approval</span>
+              {% elif d.is_currently_active %}
+              <span class="lw-badge lw-ok">Active (signed)</span>
+              {% elif d.status == 'approved' %}
+              <span class="lw-badge lw-muted">Ended (date passed)</span>
+              {% elif d.status == 'rejected' %}
+              <span class="lw-badge lw-muted">Rejected</span>
+              {% elif d.status == 'revoked' %}
+              <span class="lw-badge lw-muted">Revoked by admin</span>
+              {% else %}
+              <span class="lw-badge lw-muted">{{ d.status_label }}</span>
+              {% endif %}
+              {% if d.reviewed_by %}
+              <br><small>reviewed by {{ d.reviewed_by.get_full_name|default:d.reviewed_by.username }}</small>
+              {% endif %}
+              {% if d.revoked_by %}
+              <br><small>revoked by {{ d.revoked_by.get_full_name|default:d.revoked_by.username }}</small>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No delegation requests yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

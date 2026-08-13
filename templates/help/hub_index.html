@@ -7,8 +7,11 @@
     Guides for configuring and operating AI-powered Credit Intelligence.
     Open a chapter below, or open the printable pack.
   </p>
-  <p style="margin:0 0 1.5rem;">
-    <a class="btn" href="{% url 'help_manual_html' %}">Open printable HTML (Save as PDF)</a>
+  <p style="margin:0 0 1.5rem;display:flex;flex-wrap:wrap;gap:0.65rem;">
+    {% if pdf_ready %}
+    <a class="btn" href="{% url 'help_manual_pdf' %}">Download PDF</a>
+    {% endif %}
+    <a class="btn" href="{% url 'help_manual_html' %}">Open printable HTML</a>
   </p>
   <ul style="list-style:none;padding:0;margin:0;">
     {% for filename, label, label_am, slug in chapters %}
@@ -16,9 +19,6 @@
       <a href="{% url 'help_chapter' slug=slug %}" style="font-weight:700;text-decoration:none;">
         {{ label }}
       </a>
-      {% if label_am and label_am != label %}
-      <div style="color:#5a6f68;font-size:0.88rem;margin-top:0.2rem;">{{ label_am }}</div>
-      {% endif %}
     </li>
     {% endfor %}
   </ul>

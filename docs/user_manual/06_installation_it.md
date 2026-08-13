@@ -157,6 +157,26 @@ DECSI_CUSTOMER_FALLBACK_MOCK=True
 DECSI_CBS_USE_MOCK_LEDGER=True
 ```
 
+**Digital Apply payments & SMS (optional):**
+
+```bash
+# Live Chapa (leave empty + or set CHAPA_FORCE_MOCK=True for demo checkout)
+CHAPA_SECRET_KEY=
+CHAPA_PUBLIC_KEY=
+CHAPA_CURRENCY=ETB
+CHAPA_FORCE_MOCK=True
+
+# Applicant OTP / status SMS gateway (optional)
+APPLICANT_SMS_URL=
+APPLICANT_SMS_API_KEY=
+```
+
+**OCR language (Docker image already includes eng+amh):**
+
+```bash
+DOCUMENT_OCR_LANG=eng+amh
+```
+
 Never commit `.env` to Git.
 
 ### 4.3 Build and start
@@ -250,9 +270,11 @@ Complete in hub **Settings** (superuser) or Admin:
 3. Loan categories + **document packs**  
 4. Approval committees  
 5. Collateral policy / estimation mode  
-6. Digital Apply: open/closed, processing fee, terms  
+6. Digital Apply: open/closed, processing fee, password/lockout, CBS lookup, terms checkbox  
 7. SMTP for staff password reset (if not set in `.env`)  
 8. MFA enrollment for privileged accounts  
+9. Confirm **Delegations** works (staff request → admin approve)  
+10. If using Seqela Market, schedule `recompute_market_bands` (see §9.5)
 
 CSV imports (optional):
 
@@ -271,13 +293,17 @@ docker compose exec web python manage.py import_users <file>
 |---|------|----------|
 | 1 | `docker compose ps` | `web` Up, `db` healthy |
 | 2 | Open `/hub/login/` | Login form loads |
-| 3 | Login as superuser | Hub home / Settings visible |
+| 3 | Login as superuser | Hub home / Settings / **Delegations** visible |
 | 4 | Open `/` | Digital Apply landing (or closed page if disabled) |
-| 5 | `/hub/help/` | User manuals list |
+| 5 | `/hub/help/` | User manuals list; **Download PDF** if built |
 | 6 | Create test loan (staff) | Queue ID issued |
 | 7 | Upload a PDF/image document | File stored under media |
 | 8 | (If MFA on) Setup + verify TOTP | Login succeeds with code |
-| 9 | Restart stack | `docker compose restart` — data persists |
+| 9 | Digital Apply fee (mock) | Mock/waived fee path reaches Submit |
+| 10 | Submit online app | Appears in Online loan intake + staff Notification |
+| 11 | `/market-portal/` | Guest price quote saves |
+| 12 | Restart stack | `docker compose restart` — data persists |
+| 13 | Migrations | Includes loan delegation (`0064`–`0066`) and applicant portal latest |
 
 ---
 
@@ -314,6 +340,12 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py collectstatic --noinput   # if using gunicorn entrypoint
 ```
 
+After upgrades that change manuals:
+
+```bash
+docker compose exec web python docs/user_manual/build_pdf.py
+```
+
 ### 9.4 Default Gunicorn sizing (production image/entrypoint)
 
 From `gunicorn.conf.py` (override via env):
@@ -326,6 +358,16 @@ From `gunicorn.conf.py` (override via env):
 | `GUNICORN_BIND` | `0.0.0.0:8000` |
 
 On a 4 GB host, do not raise workers aggressively without more RAM.
+
+### 9.5 Market price bands (optional)
+
+If Seqela Market is used for local quotes that feed collateral reference prices:
+
+```bash
+docker compose exec web python manage.py recompute_market_bands
+```
+
+Schedule this periodically (cron) after go-live. Manage actors / trust in Django Admin.
 
 ---
 
@@ -367,10 +409,13 @@ See also `docs/INSA_SECURITY_CLEARANCE_CHECKLIST.md` for security control mappin
 | `/` | Digital Apply |
 | `/hub/login/` | Staff login |
 | `/hub/` | Staff hub |
-| `/hub/help/` | In-app manuals (staff) |
+| `/hub/help/` | In-app manuals (staff) + PDF download |
+| `/hub/delegations/` | Authority delegation |
+| `/hub/online_loan_intake/` | Digital Apply intake list |
 | `/admin/` | Django Admin |
 | `/market-portal/` | Market price portal |
 | `/collateral/` | Collateral module (staff auth) |
+| `/payments/chapa/webhook/` | Chapa payment webhook (must be reachable when live) |
 
 ---
 

@@ -316,17 +316,20 @@
   <div class="lw-footer-actions list-actions list-actions-lg">
     {% url 'view_loan_requests' as list_url %}
     {% include "includes/list_action.html" with href=list_url icon="list" label="Back to list" tone="gray" only %}
-{% if user.role == 'branch_manager' or user.is_superuser or user.role == 'engineering_head' or user.role == 'admin' or user.role == 'superadmin' %}
+{% if user.role == 'branch_manager' or user.is_superuser or user.role == 'engineering_head' or user.role == 'admin' or user.role == 'superadmin' or can_assign_loan_officer %}
 {% if loan_request.status|default:''|lower == 'approved' or loan_request.queue_approved %}
-{% if user.role == 'branch_manager' or user.is_superuser %}
+{% if can_assign_loan_officer %}
 {% if collateral_estimation_mode == 'loan_officer' or collateral_estimation_mode == 'both' %}
- {% if not loan_request.assigned_loan_officer %}
     {% url 'assign_loan_officer' loan_request.id as assign_lo_url %}
+    {% if not loan_request.assigned_loan_officer %}
     {% include "includes/list_action.html" with href=assign_lo_url icon="assign" label="Assign loan officer" tone="green" only %}
- {% else %}
-    <span class="help">Assigned LO: {{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}</span>
- {% endif %}
+    {% else %}
+    {% include "includes/list_action.html" with href=assign_lo_url icon="assign" label="Reassign loan officer" tone="green" only %}
+    <span class="help">Current: {{ loan_request.assigned_loan_officer.get_full_name|default:loan_request.assigned_loan_officer.username }}</span>
+    {% endif %}
 {% endif %}
+{% endif %}
+{% if user.role == 'branch_manager' or user.is_superuser %}
 {% if collateral_estimation_mode == 'engineering_team' or collateral_estimation_mode == 'both' %}
  {% if not loan_request.sent_to_engineering_at %}
     {% url 'send_to_engineering_head' loan_request.id as eng_url %}

@@ -25,7 +25,7 @@ def help_index(request):
 def help_chapter(request, slug: str):
     filename = None
     label = slug
-    for name, en, _am in CHAPTERS:
+    for name, en in CHAPTERS:
         if slug_for(name) != slug:
             continue
         if name not in MARKET_CHAPTERS:

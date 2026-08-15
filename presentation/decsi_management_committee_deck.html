@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DECSI Product Presentation — AI-powered Credit Intelligence</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+    :root {
+      --g: #0b6b3a; --gd: #064528; --gm: #128a4c;
+      --gold: #c4a035; --gold-soft: #e8d48a;
+      --ink: #14201a; --muted: #5a6b62;
+      --line: rgba(11, 107, 58, 0.14); --white: #ffffff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #dfe8e2; color: var(--ink);
+    }
+    .slide {
+      display: none; position: absolute; inset: 0;
+      padding: 1.55rem 2.4rem 4.4rem;
+      flex-direction: column; justify-content: flex-start; align-items: center; text-align: center;
+      background:
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(11, 107, 58, 0.07), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(196, 160, 53, 0.08), transparent 50%),
+        linear-gradient(165deg, #f7faf8 0%, #eef4f0 55%, #e6efe9 100%);
+    }
+    .slide::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--gd), var(--gm), var(--gold), var(--gm), var(--gd));
+    }
+    .slide.active { display: flex; animation: fadeIn 0.28s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .slide-content { width: 100%; max-width: 64rem; margin: 0 auto; }
+    .slide h1 {
+      font-family: 'Fraunces', Georgia, serif; font-size: 2.2rem; font-weight: 700;
+      color: var(--gd); letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5rem;
+    }
+    .slide h2 {
+      font-family: 'Fraunces', Georgia, serif; font-size: 1.55rem; font-weight: 700;
+      color: var(--gd); letter-spacing: -0.015em; margin-bottom: 0.4rem;
+    }
+    .slide p, .slide li { font-size: 0.9rem; line-height: 1.45; color: #2c3b34; margin-bottom: 0.25rem; }
+    .slide ul, .slide ol { margin: 0 auto 0.4rem; padding-left: 1.15rem; text-align: left; display: inline-block; }
+    .sub { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; }
+    .confidential {
+      position: absolute; top: 0.75rem; right: 1.5rem;
+      font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+    }
+    .eyebrow {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--gold); margin-bottom: 0.25rem;
+    }
+    .title-slide {
+      justify-content: center;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 25%, rgba(255,255,255,0.1), transparent 55%),
+        linear-gradient(165deg, #053820 0%, #0b6b3a 42%, #064528 100%);
+    }
+    .title-slide::before { background: linear-gradient(90deg, transparent, var(--gold-soft), transparent); }
+    .title-slide h1 { color: #fff; font-size: 2.35rem; max-width: 22ch; margin-left: auto; margin-right: auto; }
+    .title-slide .for { font-size: 0.82rem; color: var(--gold-soft); text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 0.4rem; font-weight: 600; }
+    .title-slide .bank-name { font-family: 'Fraunces', Georgia, serif; font-size: 1.35rem; color: #fff; font-weight: 600; margin-bottom: 0.75rem; }
+    .title-slide .tagline { font-size: 1.02rem; color: #d7ebe0; max-width: 42rem; margin: 0 auto; line-height: 1.5; }
+    .title-slide .meta { margin-top: 1.4rem; font-size: 0.86rem; color: #a8cbb8; }
+    .badge-row { display: flex; gap: 0.45rem; justify-content: center; flex-wrap: wrap; margin-top: 1.1rem; }
+    .badge {
+      border: 1px solid rgba(232, 212, 138, 0.35); color: var(--gold-soft);
+      padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+    }
+    .stats { display: flex; gap: 0.6rem; margin-top: 0.55rem; flex-wrap: wrap; justify-content: center; }
+    .stat {
+      background: var(--white); border: 1px solid var(--line);
+      padding: 0.75rem 0.9rem; border-radius: 10px; min-width: 128px; position: relative; overflow: hidden;
+    }
+    .stat::after { content: ''; position: absolute; bottom: 0; left: 0; height: 3px; width: 100%; background: linear-gradient(90deg, var(--g), var(--gold)); }
+    .stat .value { font-family: 'Fraunces', Georgia, serif; font-size: 1.28rem; font-weight: 700; color: var(--gd); }
+    .stat .label { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 0.8rem; width: 100%; max-width: 60rem; margin-top: 0.45rem; text-align: left; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; width: 100%; max-width: 60rem; margin-top: 0.45rem; text-align: left; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; width: 100%; max-width: 62rem; margin-top: 0.5rem; text-align: left; }
+    .card {
+      background: var(--white); border: 1px solid var(--line);
+      border-radius: 10px; padding: 0.7rem 0.85rem; text-align: left;
+    }
+    .card p { margin: 0; font-size: 0.82rem; color: #3d4f46; line-height: 1.4; }
+    .card strong { color: var(--gd); display: block; margin-bottom: 0.15rem; font-size: 0.86rem; }
+    .card .tag { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 0.15rem; }
+    .agenda-list { list-style: none; padding: 0; display: block; width: 100%; max-width: 40rem; margin: 0.6rem auto 0; text-align: left; }
+    .agenda-list li {
+      display: flex; gap: 0.75rem; align-items: baseline;
+      padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 1rem; color: var(--gd); font-weight: 600;
+    }
+    .agenda-list .ix { color: var(--gold); font-size: 0.78rem; letter-spacing: 0.08em; min-width: 1.6rem; }
+    .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; width: 100%; max-width: 62rem; margin-top: 0.45rem; }
+    .shots figure {
+      margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: left;
+    }
+    .shots img {
+      display: block; width: 100%; height: 8.6rem; object-fit: cover; object-position: top left; background: #eef4f0;
+    }
+    .shots figcaption { font-size: 0.72rem; color: var(--muted); padding: 0.4rem 0.6rem 0.5rem; line-height: 1.3; }
+    .shots.one { grid-template-columns: 1fr; max-width: 52rem; }
+    .shots.one img { height: 10.4rem; object-fit: contain; object-position: center top; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.35rem; justify-content: center; margin: 0.55rem 0 0.2rem; }
+    .pill {
+      background: var(--white); border: 1px solid var(--line); color: var(--gd);
+      padding: 0.32rem 0.65rem; border-radius: 8px; font-size: 0.74rem; font-weight: 600;
+    }
+    .pill.live { border-color: var(--g); background: #eef6f1; }
+    .pill::after { content: ' →'; color: #9aada2; font-weight: 400; }
+    .pill:last-child::after { content: ''; }
+    .cta-box { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.6rem; display: inline-block; text-align: left; }
+    .cta-box a { color: var(--g); font-weight: 600; text-decoration: none; }
+    .slide-counter {
+      position: absolute; bottom: 1.15rem; left: 50%; transform: translateX(-50%);
+      font-size: 0.72rem; color: var(--muted); font-weight: 600;
+    }
+    .nav {
+      position: absolute; bottom: 0.85rem; right: 1.5rem; display: flex; gap: 0.4rem;
+    }
+    .nav button {
+      background: var(--gd); color: #fff; border: none; border-radius: 8px;
+      padding: 0.4rem 0.75rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .nav button:hover { background: var(--g); }
+    .logo-mini { height: 36px; width: auto; display: block; margin: 0 auto 0.6rem; }
+    .title-slide .logo-mini { height: 48px; margin-bottom: 0.9rem; }
+    @media print {
+      html, body { height: auto; overflow: visible; background: #fff; }
+      .nav, .slide-counter { display: none !important; }
+      .slide {
+        display: flex !important; position: relative; inset: auto;
+        width: 297mm; height: 167mm; page-break-after: always; break-after: page;
+        animation: none; overflow: hidden;
+      }
+      .slide:last-of-type { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slide title-slide active" data-slide="1">
+    <img class="logo-mini" src="logo.png" alt="Seqela"/>
+    <p class="for">Product presentation for DECSI Management</p>
+    <p class="bank-name">Dedebit Credit and Savings Institution S.C.</p>
+    <h1>AI-powered Credit Intelligence</h1>
+    <p class="tagline">A walkthrough of the system Seqela built for DECSI — what is live in production today, and the credit factory built around it.</p>
+    <div class="badge-row">
+      <span class="badge">Product presentation</span>
+      <span class="badge">15 August 2026</span>
+      <span class="badge">Confidential</span>
+    </div>
+    <p class="meta">Seqela · info@seqela.com · +251 964 790 724</p>
+  </div>
+
+  <div class="slide" data-slide="2">
+    <span class="confidential">Confidential · Product presentation</span>
+    <p class="eyebrow">Agenda</p>
+    <h2>What We Will Walk Through</h2>
+    <ol class="agenda-list">
+      <li><span class="ix">01</span> The live system at DECSI today</li>
+      <li><span class="ix">02</span> Queue, users, branches, loan types, collateral types</li>
+      <li><span class="ix">03</span> Operating results from production</li>
+      <li><span class="ix">04</span> The credit factory built around that queue</li>
+      <li><span class="ix">05</span> Documents, appraisal, GPS collateral, committees</li>
+      <li><span class="ix">06</span> Digital Apply, roles, and core-banking fit</li>
+    </ol>
+    <p class="sub">This is a product walkthrough — not a commercial pitch. Price and terms are in the financial proposal.</p>
+  </div>
+
+  <div class="slide" data-slide="3">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">In production at DECSI</p>
+    <h2>The Current Live System</h2>
+    <p class="sub" style="margin-bottom:0.15rem;">Seqela developed this for DECSI at no charge. These five modules are what staff use today.</p>
+    <div class="grid-5">
+      <div class="card"><span class="tag">Live</span><strong>Queue management</strong><p>Create and track loan requests. Search, filter, assign, and follow status across the network.</p></div>
+      <div class="card"><span class="tag">Live</span><strong>User management</strong><p>Staff accounts, roles, and access scoped to branch, district, and head office.</p></div>
+      <div class="card"><span class="tag">Live</span><strong>Branch management</strong><p>Institution geography: districts, branches, and the hierarchy officers work in.</p></div>
+      <div class="card"><span class="tag">Live</span><strong>Loan type management</strong><p>Product catalog — the loan types a branch can originate on the queue.</p></div>
+      <div class="card"><span class="tag">Live</span><strong>Collateral type management</strong><p>Collateral categories used on requests and in later valuation.</p></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="value">53,901</div><div class="label">Applications processed</div></div>
+      <div class="stat"><div class="value">ETB 17.03B</div><div class="label">Amount approved</div></div>
+      <div class="stat"><div class="value">ETB 13B+</div><div class="label">Actually disbursed</div></div>
+      <div class="stat"><div class="value">25,397</div><div class="label">Customers approved</div></div>
+    </div>
+    <p class="sub">Exact: ETB 29,562,221,974 requested · ETB 17,025,387,000 approved · 1,762 rejected (ETB 1.37B) · ~76% of approved amount disbursed.</p>
+  </div>
+
+  <div class="slide" data-slide="4">
+    <span class="confidential">Confidential · Live at DECSI</span>
+    <p class="eyebrow">Queue management</p>
+    <h2>Dashboard and Loan Request Pipeline</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/02-dashboard-home.png" alt="Hub dashboard — live totals and navigation"/>
+        <figcaption>Hub home — totals, status mix, and role navigation (Home, Loan requests, Catalog, Users, Districts, Branches).</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/03-loan-list.png" alt="View loan requests"/>
+        <figcaption>View loan requests — searchable, filterable queue with status, assignee, and actions.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="5">
+    <span class="confidential">Confidential · Live at DECSI</span>
+    <p class="eyebrow">Queue management</p>
+    <h2>Create a Request and Open a File</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/16-create-loan.png" alt="Create loan request"/>
+        <figcaption>Create loan request — branch-owned intake: product, amount, collateral type, customer details.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/04b-officer-loan-detail.png" alt="Officer loan detail"/>
+        <figcaption>Loan detail — one record for the file: intake, status, and the path into appraisal and collateral.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="6">
+    <span class="confidential">Confidential · Live at DECSI</span>
+    <p class="eyebrow">User and branch management</p>
+    <h2>People and Geography</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/20-manage-users.png" alt="User and role administration"/>
+        <figcaption>User management — accounts and roles aligned to how DECSI staff actually work.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/21-manage-branches.png" alt="Branch master data"/>
+        <figcaption>Branch management — districts and branches as first-class master data.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="7">
+    <span class="confidential">Confidential · Live at DECSI</span>
+    <p class="eyebrow">Catalogs</p>
+    <h2>Loan Types and Collateral Types</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/15-loan-categories.png" alt="Loan type / category catalog"/>
+        <figcaption>Loan type management — the products a branch can put on the queue.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/13-collateral-policy.png" alt="Collateral type and policy configuration"/>
+        <figcaption>Collateral type management — categories and policy used on requests and in valuation.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="8">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">The product around the queue</p>
+    <h2>Credit Factory — End to End</h2>
+    <p class="sub">Green pills are live at DECSI today. The rest is the system built around that queue, ready to configure.</p>
+    <div class="pill-row">
+      <span class="pill live">Queue</span>
+      <span class="pill">Digital Apply</span>
+      <span class="pill">Documents / OCR</span>
+      <span class="pill">7-step appraisal</span>
+      <span class="pill">GPS collateral</span>
+      <span class="pill">Committees</span>
+      <span class="pill">Post-approval</span>
+      <span class="pill">Finance disbursement</span>
+    </div>
+    <div class="grid-2" style="margin-top:0.7rem;">
+      <div class="card">
+        <strong>Customer path</strong>
+        <ol style="display:block;margin:0.3rem 0 0;padding-left:1.1rem;font-size:0.84rem;">
+          <li>Digital Apply — register with DECSI customer number</li>
+          <li>Details → documents → fee (or waived) → submit</li>
+          <li>Queue ID, status, and notices</li>
+          <li>After credit approval — repayment schedule</li>
+        </ol>
+      </div>
+      <div class="card">
+        <strong>Staff path</strong>
+        <ol style="display:block;margin:0.3rem 0 0;padding-left:1.1rem;font-size:0.84rem;">
+          <li>Online intake or branch create (today’s queue)</li>
+          <li>Documents, 7-step appraisal, GPS collateral</li>
+          <li>Committee vote or return-to-officer</li>
+          <li>Post-approval conditions → Finance disbursement</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="9">
+    <span class="confidential">Confidential · Product</span>
+    <p class="eyebrow">Documents</p>
+    <h2>Authentication Before Appraisal Starts</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/05-documents.png" alt="Application documents"/>
+        <figcaption>Required types, English + Amharic OCR, identity match, verify / reject — incomplete packs stop early.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/06-appraisal-step1.png" alt="Appraisal sheet 1"/>
+        <figcaption>Appraisal Sheet 1 — 7-step wizard, workbook requirements, look-up from core banking.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="10">
+    <span class="confidential">Confidential · Product</span>
+    <p class="eyebrow">7-step cashflow appraisal</p>
+    <h2>One Methodology — MSME and Corporate</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/06-appraisal-step3.png" alt="Cashflow analysis"/>
+        <figcaption>Sheet 3 cashflow — DSCR, stress, annual capacity, 12-month grid. The analytical heart of MSME underwriting.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/06-appraisal-step6.png" alt="Summary and decision"/>
+        <figcaption>Sheet 6 summary — explainable scorecard and officer recommendation that feeds committee.</figcaption>
+      </figure>
+    </div>
+    <p class="sub">Sheets also cover character, E&amp;S, collateral worksheet, and amortization. Corporate mode uses the same seven steps.</p>
+  </div>
+
+  <div class="slide" data-slide="11">
+    <span class="confidential">Confidential · Product</span>
+    <p class="eyebrow">GPS collateral</p>
+    <h2>Field Evidence Committees Can Trust</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/10-field-visit.png" alt="Field visit with GPS"/>
+        <figcaption>Field visit — site → BOQ → photos → review; GPS pin; offline tablet for weak connectivity.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/12-evidence-pack.png" alt="Collateral evidence pack"/>
+        <figcaption>Evidence pack — coverage, GPS map, BOQ totals, photos, engineering QA, reconstructable dossier.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="12">
+    <span class="confidential">Confidential · Product</span>
+    <p class="eyebrow">Approval committees</p>
+    <h2>Complete Packs, Amount-Routed Votes</h2>
+    <div class="shots">
+      <figure>
+        <img src="screenshots/print/26-approval-queue.png" alt="Approval committee queue"/>
+        <figcaption>Committee queue — Branch → District → Head Office → Management, by amount threshold.</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/print/27-committee-vote.png" alt="Committee vote form"/>
+        <figcaption>Vote — approve, decline, or return to officer with notes. Pack includes scorecard, DSCR, E&amp;S, GPS.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="slide" data-slide="13">
+    <span class="confidential">Confidential · Product</span>
+    <p class="eyebrow">Who uses what</p>
+    <h2>Roles, Core Banking, and Deployment</h2>
+    <div class="grid-2">
+      <div class="card"><span class="tag">Customers</span><strong>Digital Apply</strong><p>Register, upload documents, pay or waive the fee, keep a Queue ID, see notices and the schedule after approval.</p></div>
+      <div class="card"><span class="tag">Officers</span><strong>Queue plus factory</strong><p>Today’s queue stays. Documents, appraisal, GPS, Assist, and delegations sit on the same file.</p></div>
+      <div class="card"><span class="tag">Credit, committee, Finance</span><strong>Pack to disbursement</strong><p>Votes on complete dossiers. Post-approval conditions. Finance marks ready and disburses.</p></div>
+      <div class="card"><span class="tag">IT, Risk, management</span><strong>Control</strong><p>On-premises Docker / PostgreSQL. MFA and audit. Digital Apply open/close. CBS remains the system of record for accounts.</p></div>
+    </div>
+    <p class="sub" style="margin-top:0.7rem;">The Hub is the credit factory. Core banking stays the book of record. There is no CBS rip-and-replace.</p>
+  </div>
+
+  <div class="slide" data-slide="14">
+    <span class="confidential">Confidential</span>
+    <p class="eyebrow">Close</p>
+    <h2>The System Is Here to Walk Through</h2>
+    <div class="cta-box">
+      <p style="font-size:1rem;font-weight:600;color:var(--gd);margin-bottom:0.5rem;">What you have seen</p>
+      <ol style="margin:0;font-size:0.94rem;">
+        <li>The <strong>live system at DECSI</strong> — queue, users, branches, loan types, collateral types</li>
+        <li>Production volume on that system — 53,901 files · ETB 17.03B approved · ETB 13B+ disbursed</li>
+        <li>The <strong>credit factory</strong> built around it — documents, appraisal, GPS, committees, Digital Apply</li>
+      </ol>
+      <p style="margin-top:0.85rem;font-size:0.88rem;color:#3d4f46;">A live demonstration can continue from any screen in this pack. Commercial terms are in the financial proposal (SEQ/DECSI/FIN/2026-08).</p>
+      <p style="margin-top:0.85rem;">
+        <a href="mailto:info@seqela.com">info@seqela.com</a>
+        &nbsp;·&nbsp; +251 964 790 724 &nbsp;·&nbsp;
+        <a href="https://seqela.com" target="_blank" rel="noopener">seqela.com</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="slide-counter" aria-live="polite">1 / 14</div>
+  <nav class="nav" aria-label="Slide navigation">
+    <button type="button" id="prev" aria-label="Previous slide">← Previous</button>
+    <button type="button" id="next" aria-label="Next slide">Next →</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    const counterEl = document.querySelector('.slide-counter');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    function go(n) {
+      slides[current].classList.remove('active');
+      current = (current + n + total) % total;
+      slides[current].classList.add('active');
+      counterEl.textContent = (current + 1) + ' / ' + total;
+    }
+    prevBtn.addEventListener('click', () => go(-1));
+    nextBtn.addEventListener('click', () => go(1));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'ArrowRight') go(1);
+    });
+  </script>
+</body>
+</html>

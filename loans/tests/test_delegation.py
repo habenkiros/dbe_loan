@@ -170,6 +170,10 @@ class DelegationTests(TestCase):
         self.assertFalse(ok)
 
     def test_staff_request_admin_approve_signs_delegate(self):
+        # Principal must not already be locked out by setUp covers when submitting a request
+        StaffDelegation.objects.filter(principal=self.principal).update(
+            status=StaffDelegation.STATUS_REVOKED, is_active=False,
+        )
         client = Client()
         client.force_login(self.principal)
         now = timezone.now()
@@ -341,3 +345,44 @@ class DelegationTests(TestCase):
         d.refresh_from_db()
         self.assertEqual(d.status, StaffDelegation.STATUS_REVOKED)
         self.assertFalse(d.is_active)
+
+    def test_principal_locked_out_while_cover_active_delegate_expires(self):
+        from loans.delegation import (
+            can_access_loan_as_officer,
+            principal_locked_out_by_delegation,
+        )
+
+        now = timezone.now()
+        # Fresh approved cover: principal locked; delegate can act
+        StaffDelegation.objects.filter(principal=self.principal).update(
+            status=StaffDelegation.STATUS_REVOKED, is_active=False,
+        )
+        StaffDelegation.objects.create(
+            principal=self.principal,
+            delegate=self.delegate,
+            scopes=[SCOPE_APPRAISAL],
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(days=1),
+            created_by=self.principal,
+            status=StaffDelegation.STATUS_APPROVED,
+            is_active=True,
+            reviewed_by=self.admin,
+            reviewed_at=now,
+        )
+        locked, ends, rows = principal_locked_out_by_delegation(self.principal)
+        self.assertTrue(locked)
+        self.assertTrue(rows)
+        self.assertTrue(ends)
+        ok, _ = can_access_loan_as_officer(self.delegate, self.loan)
+        self.assertTrue(ok)
+
+        # Past end: principal unlocked; delegate loses privilege
+        past = now - timedelta(days=2)
+        StaffDelegation.objects.filter(principal=self.principal, delegate=self.delegate).update(
+            starts_at=past - timedelta(days=1),
+            ends_at=past,
+        )
+        locked2, _, _ = principal_locked_out_by_delegation(self.principal)
+        self.assertFalse(locked2)
+        ok2, _ = can_access_loan_as_officer(self.delegate, self.loan)
+        self.assertFalse(ok2)

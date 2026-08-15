@@ -1,0 +1,28 @@
+---
+description: DECSI vs other bank/MFI proposal positioning
+alwaysApply: true
+---
+
+# DECSI vs other institution proposals
+
+## DECSI (internal pack only)
+
+What is **live in production at DECSI today** (Seqela built it at no charge):
+
+- Queue management
+- User management
+- Branch management
+- Loan type management
+- Collateral type management
+
+Live operating figures (from that queue system, not the new factory): 53,901 applications · ETB 29,562,221,974 requested · ETB 17,025,387,000 approved · 25,397 customers approved · 1,762 rejected · ETB 13B+ disbursed. Reference: Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978.
+
+The **enhanced credit factory** (documents/OCR Eng+Amh, 7-step MSME/corporate appraisal, GPS collateral/BOQ/field/eng QA, multi-level committees, Digital Apply, Seqela Market, Agentic Assist, Credit Intelligence, MFA, delegations, post-approval → Finance disbursement) is **built and ready** but **not currently deployed** at DECSI.
+
+DECSI management/committee slides are a **product presentation** of the current live system (and the product around it) — not a commercial pitch. Price, VAT, endorse, and ROI-vs-book belong in the financial proposal, not the product deck.
+
+## Other banks and microfinances
+
+When writing a **proposal for another bank or MFI**, present the **new enhanced system as already implemented at DECSI**. DECSI is the live reference customer for the full credit factory (appraisal, GPS, committees, Digital Apply, and the rest) plus the proven volume above. Do **not** tell other institutions that DECSI only runs queue/admin.
+
+Example: “Implemented at DECSI — 53,901 files, ETB 17.03B approved, ETB 13B+ disbursed.”

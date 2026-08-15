@@ -36,7 +36,8 @@ def manage_delegations(request):
                 f'is proposed to act for you until '
                 f'{timezone.localtime(obj.ends_at).strftime("%d %b %Y %H:%M")}. '
                 f'An admin must approve before it takes effect. '
-                f'It ends automatically on the end date (or when an admin revokes).',
+                f'After approval you cannot use the hub until that end time '
+                f'(and the cover ends automatically then, unless an admin revokes earlier).',
             )
             return redirect('manage_delegations')
 
@@ -88,7 +89,9 @@ def approve_delegation(request, delegation_id):
     messages.success(
         request,
         f'Approved: {d.delegate.get_full_name() or d.delegate.username} '
-        f'is signed to act for {d.principal.get_full_name() or d.principal.username}.',
+        f'is signed to act for {d.principal.get_full_name() or d.principal.username}. '
+        f'The principal is locked out of the hub until '
+        f'{timezone.localtime(d.ends_at).strftime("%d %b %Y %H:%M")} (or revoke).',
     )
     return redirect('manage_delegations')
 

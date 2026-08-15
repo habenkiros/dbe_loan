@@ -58,6 +58,45 @@ class EnforceMfaMiddleware:
         return self.get_response(request)
 
 
+class DelegationPrincipalLockoutMiddleware:
+    """
+    Principals with an active approved outgoing delegation cannot use the hub
+    until the cover window ends (or an admin revokes).
+    """
+
+    EXEMPT_PREFIXES = (
+        '/hub/login/',
+        '/hub/logout/',
+        '/hub/password-reset/',
+        '/hub/mfa/',
+        '/login/',
+        '/logout/',
+        '/password-reset/',
+        '/reset/',
+        '/static/',
+        '/media/',
+        '/admin/',
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        path = request.path or '/'
+        if user and user.is_authenticated and not any(path.startswith(p) for p in self.EXEMPT_PREFIXES):
+            from loans.delegation import (
+                principal_locked_out_by_delegation,
+                principal_lockout_message,
+            )
+            locked, ends_at, _ = principal_locked_out_by_delegation(user)
+            if locked:
+                logout(request)
+                messages.warning(request, principal_lockout_message(ends_at))
+                return redirect(reverse('login'))
+        return self.get_response(request)
+
+
 class IdleSessionMiddleware:
     """End authenticated sessions after SESSION_IDLE_TIMEOUT seconds idle."""
 

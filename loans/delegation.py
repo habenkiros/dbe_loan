@@ -105,6 +105,49 @@ def given_delegations(principal, *, at: Optional[datetime] = None) -> List:
     return list(active_delegation_qs(at).filter(principal=principal))
 
 
+def active_cover_as_principal(user, *, at: Optional[datetime] = None) -> List:
+    """Approved covers this user has given that are currently in force (locks them out)."""
+    if not user or not getattr(user, 'pk', None):
+        return []
+    return list(
+        active_delegation_qs(at)
+        .filter(principal_id=user.pk)
+        .select_related('delegate')
+        .order_by('ends_at')
+    )
+
+
+def principal_locked_out_by_delegation(user, *, at: Optional[datetime] = None):
+    """
+    While an approved cover you gave is in its date window, you cannot use the hub.
+    Returns (locked: bool, ends_at_or_None, active_rows).
+    Delegate privileges also stop when the window ends (via active_delegation_qs).
+    """
+    rows = active_cover_as_principal(user, at=at)
+    if not rows:
+        return False, None, []
+    ends = max(d.ends_at for d in rows)
+    return True, ends, rows
+
+
+def principal_lockout_message(ends_at) -> str:
+    when = ''
+    if ends_at:
+        try:
+            when = timezone.localtime(ends_at).strftime('%d %b %Y %H:%M')
+        except Exception:
+            when = str(ends_at)
+    if when:
+        return (
+            'Your account is suspended while your approved authority delegation is active. '
+            f'You can sign in again after {when} (or when an admin revokes the cover).'
+        )
+    return (
+        'Your account is suspended while your approved authority delegation is active. '
+        'You can sign in again when the cover end date passes or an admin revokes it.'
+    )
+
+
 def can_act_as(actor, principal, scope: str) -> bool:
     if not actor or not principal:
         return False

@@ -45,6 +45,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # After apps URLs: bare staff paths (/manage_users/ …) → /hub/…
     'loans.legacy_hub_redirect.StaffHubLegacyRedirectMiddleware',
+    'loans.middleware.DelegationPrincipalLockoutMiddleware',
 ]
 
 ROOT_URLCONF = 'decsi_loan.urls'

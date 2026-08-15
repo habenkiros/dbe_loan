@@ -22,6 +22,8 @@ Borrower self-service is covered in the [Customer manual](03_customers.md). Plat
 >
 > **Screenshot (H-04):** Hub home — role-scoped KPIs and shortcuts after sign-in.
 >
+> ![H-04 — Hub home](screenshots/H-04_hub_home.png)
+>
 > **Screenshot (H-05):** Header — Notifications, Help, Delegations, and Logout sit beside your name and role.
 
 **Forgot password:** `/hub/password-reset/` (email link).  
@@ -98,6 +100,8 @@ Use **Delegations** when you need a colleague to cover you (leave, travel, overl
 Actions are audited as *acted by delegate for principal*. Do not share passwords — use delegation instead.
 
 > **Screenshot (H-23):** Delegations — request cover and (for admins) Approve / Reject.
+>
+> ![H-23 — Delegations](screenshots/H-23_delegations.png)
 
 ---
 
@@ -196,9 +200,17 @@ Typical path: loan sent for collateral → assign engineer → field work → su
 
 > **Screenshot (H-08):** Create loan request — capture customer number, product, amount, and branch.
 >
+> ![H-08 — Register / create loan request](screenshots/H-08_create_loan.png)
+>
 > **Screenshot (H-07):** Loan requests — open a Queue ID to continue documents, appraisal, or collateral.
+>
+> ![H-07 — Loan requests list](screenshots/H-07_loan_requests.png)
+>
+> **Screenshot (H-09):** Loan detail — Queue ID, requested amount, intake status, and core-banking snapshot.
+>
+> ![H-09 — Loan request detail (online)](screenshots/H-09_loan_detail.png)
 
-### 4.2 Online loan intake
+### 4.2 Online loan intake (virtual / Digital Apply)
 
 1. Open **Online loan intake** (`/hub/online_loan_intake/` — Settings nav for superuser; others may open the URL or use **Notifications**).  
 2. Find **submitted** Digital Apply loans and open **drafts** if you need to assist.  
@@ -207,6 +219,10 @@ Typical path: loan sent for collateral → assign engineer → field work → su
 5. Confirm officer assignment (auto-assign may already have set an LO).
 
 Customers also get in-portal **Notices** when you accept intake or when credit is decided.
+
+> **Screenshot (H-18):** Online loan intake — submitted Digital Apply loans in the branch queue.
+>
+> ![H-18 — Digital apply / online intake](screenshots/H-18_online_intake.png)
 
 ### 4.3 Documents
 

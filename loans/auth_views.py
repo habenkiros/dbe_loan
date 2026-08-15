@@ -118,6 +118,19 @@ class StaffLoginView(LoginView):
             request.session['auth_error'] = 'This account is disabled.'
             return redirect('login')
 
+        from loans.delegation import principal_locked_out_by_delegation, principal_lockout_message
+        locked, ends_at, _ = principal_locked_out_by_delegation(user)
+        if locked:
+            request.session['auth_error'] = principal_lockout_message(ends_at)
+            log_security_event(
+                SecurityAuditLog.EVT_LOGIN_LOCKED,
+                request=request,
+                user=user,
+                username=username,
+                detail={'reason': 'delegation_cover_active', 'ends_at': ends_at.isoformat() if ends_at else None},
+            )
+            return redirect('login')
+
         register_successful_password(user, request)
         needs_mfa = bool(user.mfa_enabled) or mfa_required()
 
@@ -188,6 +201,13 @@ def mfa_verify(request):
         code = request.POST.get('otp_code') or ''
         secret = user_mfa_secret(user)
         if secret and verify_totp(secret, code):
+            from loans.delegation import principal_locked_out_by_delegation, principal_lockout_message
+            locked, ends_at, _ = principal_locked_out_by_delegation(user)
+            if locked:
+                request.session.pop(SESSION_MFA_USER_ID, None)
+                request.session.pop(SESSION_MFA_BACKEND, None)
+                messages.warning(request, principal_lockout_message(ends_at))
+                return redirect('login')
             backend = request.session.get(SESSION_MFA_BACKEND) or _auth_backend_path(user)
             request.session.pop(SESSION_MFA_USER_ID, None)
             request.session.pop(SESSION_MFA_BACKEND, None)

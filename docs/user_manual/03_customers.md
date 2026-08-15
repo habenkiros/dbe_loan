@@ -63,6 +63,10 @@ Choose **I already have an account** and sign in with:
 | Forgot password | **Forgot password** → OTP sent to your registered phone → set a new password |
 | Change password (signed in) | Account → change password |
 
+> **Screenshot (C-03):** Sign in — mobile or customer number plus password.
+>
+> ![C-03 — Customer sign-in](screenshots/C-03_login.png)
+
 Tips:
 
 - Use a strong unique password.
@@ -77,15 +81,29 @@ From **My applications** / home, start a new application. The wizard shows four 
 
 **1 · Details → 2 · Documents → 3 · Fee → 4 · Submit**
 
+> **Screenshot (C-04):** My applications — Notices and submitted virtual loans with Queue ID.
+>
+> ![C-04 — My applications / home](screenshots/C-04_home_applications.png)
+>
 > **Screenshot (C-05):** Step 1 · Details — choose product, branch, amount, and purpose.
+>
+> ![C-05 — Apply details](screenshots/C-05_apply_details.png)
 >
 > **Screenshot (C-06):** Step 2 · Documents — upload every required file for the product.
 >
+> ![C-06 — Upload documents](screenshots/C-06_apply_documents.png)
+>
 > **Screenshot (C-07):** Step 3 · Fee — pay the processing fee (ETB) before submit.
+>
+> ![C-07 — Processing fee (Chapa)](screenshots/C-07_apply_payment.png)
 >
 > **Screenshot (C-08):** Step 4 · Submit — review and submit to receive a Queue ID.
 >
+> ![C-08 — Review and submit](screenshots/C-08_apply_submit.png)
+>
 > **Screenshot (C-09):** Status — keep your Queue ID for branch follow-up.
+>
+> ![C-09 — Application status / loan processing](screenshots/C-09_apply_status.png)
 
 ### Step 1 — Details
 
@@ -187,6 +205,8 @@ After **credit approval** (or disbursement), open **Repayment schedule** from th
 - Confirm final figures with your branch at disbursement if anything differs.
 
 > **Screenshot (C-13):** Repayment schedule — installment table after credit approval.
+>
+> ![C-13 — Repayment schedule](screenshots/C-13_apply_schedule.png)
 
 ---
 

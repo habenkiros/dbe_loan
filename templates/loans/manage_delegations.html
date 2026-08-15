@@ -8,8 +8,9 @@
   <p class="lw-identity-sub">
     Request a colleague to cover you (you name who should be signed). You may only grant
     <strong>permissions you already hold</strong>. An <strong>admin must approve</strong>
-    before the delegate can act. Cover <strong>ends automatically on the end date</strong>,
-    or earlier if an <strong>admin revokes</strong> — the requester cannot revoke an approved cover.
+    before the delegate can act. Once approved, <strong>you cannot use the hub</strong> until the
+    cover end date (or admin revoke). The delegate’s privileges also <strong>stop automatically</strong>
+    when that end time passes.
   </p>
 
   {% if received %}
@@ -129,7 +130,8 @@
 
   <div class="lw-panel">
     <h3 style="margin-top:0;">Request delegation (you are the principal)</h3>
-    <p class="help">Pick who should be signed. Scope checkboxes show only your current access.</p>
+    <p class="help">Pick who should be signed. Scope checkboxes show only your current access.
+      After approval you will be locked out until the end date.</p>
     {% if not form.fields.scopes.choices %}
     <p class="help" style="color:#8a5a00;">
       No delegable permissions on your account yet. If you should be able to vote or approve,

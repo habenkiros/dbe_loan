@@ -52,9 +52,17 @@
 
   function geoErrorText(err) {
     if (!err) return 'Location unavailable';
-    if (err.code === 1) return 'Location permission denied — allow location for this site in browser settings';
-    if (err.code === 2) return 'Location unavailable — check OS location services (Wi‑Fi/GPS)';
-    if (err.code === 3) return 'Location timed out — try again near a window or enable Wi‑Fi';
+    if (err.code === 1) {
+      return 'Location permission denied — allow location for this site/app, then Try again';
+    }
+    if (err.code === 2) {
+      return isMobile()
+        ? 'Location unavailable — turn on GPS / high-accuracy location'
+        : 'PC has no GPS — enable browser location (Wi‑Fi estimate) or capture GPS on the phone at the site';
+    }
+    if (err.code === 3) {
+      return 'Location timed out — try again near a window, outdoors, or with Wi‑Fi on';
+    }
     return 'GPS error: ' + (err.message || 'unknown');
   }
 
@@ -175,8 +183,10 @@
             'Capturing…'
           );
         }
-        var targetAccuracy = 35;
-        if (best && (best.coords.accuracy <= targetAccuracy || samples >= 6)) {
+        // Phones: wait for ~35m. Desktop PWA: accept weaker Wi‑Fi fix sooner.
+        var targetAccuracy = isMobile() ? 35 : 150;
+        var minSamples = isMobile() ? 6 : 2;
+        if (best && (best.coords.accuracy <= targetAccuracy || samples >= minSamples)) {
           finish(best, null);
         }
       }
@@ -195,12 +205,12 @@
               finish(null, { code: 3, message: 'Location timed out' });
             }
           }
-        }, 28000);
+        }, isMobile() ? 28000 : 12000);
       } else {
         navigator.geolocation.getCurrentPosition(
           function (pos) { finish(pos, null); },
           function (err) { finish(null, err); },
-          { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: isMobile() ? 25000 : 12000, maximumAge: 0 }
         );
       }
     });
@@ -211,7 +221,13 @@
   }
 
   function compressImage(file, maxWidth, quality, callback) {
-    if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+    if (!file) {
+      callback(file);
+      return;
+    }
+    // Some phone cameras omit type or use HEIC — still try decode; fall back to original.
+    var type = (file.type || '').toLowerCase();
+    if (type && type.indexOf('image/') !== 0 && type !== 'application/octet-stream') {
       callback(file);
       return;
     }
@@ -219,23 +235,37 @@
     reader.onload = function (e) {
       var img = new Image();
       img.onload = function () {
-        var w = img.width;
-        var h = img.height;
-        if (w > maxWidth) {
-          h = Math.round(h * (maxWidth / w));
-          w = maxWidth;
+        try {
+          var w = img.width || 0;
+          var h = img.height || 0;
+          if (!w || !h) {
+            callback(file);
+            return;
+          }
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            function (blob) {
+              if (!blob) {
+                callback(file);
+                return;
+              }
+              var name = (file.name || 'photo.jpg').replace(/\.(heic|heif|png|webp)$/i, '.jpg');
+              if (!/\.jpe?g$/i.test(name)) name += '.jpg';
+              callback(new File([blob], name, { type: 'image/jpeg' }));
+            },
+            'image/jpeg',
+            quality || 0.82
+          );
+        } catch (err) {
+          callback(file);
         }
-        var canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          function (blob) {
-            callback(blob ? new File([blob], file.name || 'photo.jpg', { type: 'image/jpeg' }) : file);
-          },
-          'image/jpeg',
-          quality || 0.82
-        );
       };
       img.onerror = function () { callback(file); };
       img.src = e.target.result;

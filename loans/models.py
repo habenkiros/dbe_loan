@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.utils import timezone
 
@@ -377,6 +377,15 @@ class CollateralEstimationConfig(models.Model):
     def __str__(self):
         return dict(self.MODE_CHOICES).get(self.mode, self.mode)
 
+
+class CustomUserManager(UserManager):
+    """Ensure createsuperuser gets hub role=superadmin, not the loan_officer default."""
+
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('role', 'superadmin')
+        return super().create_superuser(username, email, password, **extra_fields)
+
+
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('superadmin', 'Super Administrator'),
@@ -404,6 +413,8 @@ class CustomUser(AbstractUser):
         ('credit_committee', 'Credit Committee Member (legacy)'),
     ]
     MANAGEMENT_VP_ROLES = ('vp', 'vp_operations', 'vp_it', 'vp_customer_service')
+
+    objects = CustomUserManager()
 
     role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='loan_officer')
     phone_number = models.CharField(max_length=20)

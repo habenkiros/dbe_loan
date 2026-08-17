@@ -657,8 +657,20 @@ def loan_request_detail(request, loan_request_id):
     if user.role in ('loan_officer', 'credit_loan_officer'):
         ok, _ = can_access_loan_as_officer(user, loan_request)
         if not ok:
-            messages.warning(request, 'You do not have access to this loan request.')
-            return redirect('view_loan_requests')
+            # District LO may open district-branch files found via filter (read / pick up).
+            in_district = False
+            if (
+                user.role == 'loan_officer'
+                and getattr(user, 'district_id', None)
+                and not getattr(user, 'branch_id', None)
+            ):
+                loan_district = loan_request.district_id or getattr(
+                    loan_request.branch, 'district_id', None,
+                )
+                in_district = loan_district == user.district_id
+            if not in_district:
+                messages.warning(request, 'You do not have access to this loan request.')
+                return redirect('view_loan_requests')
     elif user.role == 'engineer':
         if loan_request.assigned_engineer_id != user.id:
             messages.warning(request, 'You do not have access to this loan request.')
@@ -732,6 +744,8 @@ def loan_request_detail(request, loan_request_id):
         from .ci_decision import build_application_decision
         basic_info = getattr(loan_request, 'basic_info', None)
         decision_card = build_application_decision(loan_request, appraisal, basic_info)
+    from .risk_desk import loan_risk_summary
+    risk_summary = loan_risk_summary(loan_request)
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -756,6 +770,7 @@ def loan_request_detail(request, loan_request_id):
         'committee_submit': committee_submit,
         'committee_tally': committee_tally,
         'decision_card': decision_card,
+        'risk_summary': risk_summary,
     })
 
 
@@ -1744,9 +1759,13 @@ def loans_sent_for_collateral(request):
         qs = qs.filter(
             Q(loan_request_id__icontains=q) | Q(applicant_name__icontains=q) | Q(phone_number__icontains=q)
         )
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, qs)
     return render(request, 'loans/loans_sent_for_collateral.html', {
-        'loan_requests': qs,
+        'loan_requests': page_obj,
+        'page_obj': page_obj,
         'query': q or '',
+        'querystring': page_querystring(request),
     })
 
 
@@ -2053,10 +2072,14 @@ def post_approval_queue(request):
     status_filter = (request.GET.get('disbursement_status') or '').strip()
     if status_filter:
         qs = qs.filter(disbursement_status=status_filter)
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, qs)
     return render(request, 'loans/post_approval_queue.html', {
-        'loan_requests': qs[:100],
+        'loan_requests': page_obj,
+        'page_obj': page_obj,
         'disbursement_status_choices': LoanRequest.DISBURSE_STATUS_CHOICES,
         'selected_status': status_filter,
+        'querystring': page_querystring(request),
     })
 
 
@@ -2084,13 +2107,18 @@ def post_approval_detail(request, loan_request_id):
     readiness = disbursement_readiness(loan_request)
     conditions = list(appraisal.conditions.order_by('display_order', 'id')) if appraisal else []
 
+    from .collateral_legal import closing_pack_summary
     from .disbursement import can_approve_finance_disbursement
+    pack = closing_pack_summary(loan_request)
     return render(request, 'loans/post_approval_detail.html', {
         'loan_request': loan_request,
         'appraisal': appraisal,
         'basic_info': basic_info,
         'readiness': readiness,
         'conditions': conditions,
+        'closing_pack': pack,
+        'collateral_legal': pack['legal'],
+        'agreement_signing': pack['agreement'],
         'final_amount': final_loan_amount(loan_request, appraisal),
         'can_manage_conditions': can_manage_conditions(request.user, loan_request),
         'can_confirm_schedule': can_confirm_schedule(request.user, loan_request),
@@ -2125,6 +2153,260 @@ def post_approval_condition_toggle(request, loan_request_id, condition_id):
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
     set_condition_fulfilled(condition, request.user, fulfilled=fulfilled, evidence_note=evidence)
     messages.success(request, 'Condition updated.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_collateral_flags(request, loan_request_id):
+    """Toggle require restriction / POA on the loan (officer / BM)."""
+    from .disbursement import can_manage_conditions
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot update collateral legal flags on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    loan_request.require_collateral_restriction = request.POST.get('require_collateral_restriction') == '1'
+    loan_request.collateral_held_via_poa = request.POST.get('collateral_held_via_poa') == '1'
+    loan_request.require_agreement_signatures = request.POST.get('require_agreement_signatures') == '1'
+    loan_request.save(update_fields=[
+        'require_collateral_restriction',
+        'collateral_held_via_poa',
+        'require_agreement_signatures',
+    ])
+    messages.success(request, 'Collateral legal and agreement signing requirements updated.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_agreement_generate(request, loan_request_id):
+    from .agreement_signing import generate_loan_agreement
+    from .disbursement import can_manage_conditions
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot generate agreements on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    agr = generate_loan_agreement(
+        loan_request,
+        request.user,
+        require_guarantor=request.POST.get('require_guarantor') == '1',
+        require_branch_manager=request.POST.get('require_branch_manager') == '1',
+    )
+    messages.success(request, f'Agreement generated — ready for digital signatures ({agr.title}).')
+    return redirect('post_approval_agreement_sign', loan_request_id=loan_request_id, agreement_id=agr.pk)
+
+
+@login_required
+def post_approval_agreement_sign(request, loan_request_id, agreement_id):
+    """Signature pad page — borrower / guarantor / officer / BM draw on canvas."""
+    from .agreement_signing import record_signature
+    from .disbursement import can_manage_conditions
+    from .models import LoanAgreement, LoanAgreementSignature
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _can_view_post_approval(request.user, loan_request):
+        messages.warning(request, 'You do not have access to this post-approval workspace.')
+        return redirect('view_loan_requests')
+    agreement = get_object_or_404(
+        LoanAgreement, pk=agreement_id, loan_request=loan_request,
+    )
+    can_sign = can_manage_conditions(request.user, loan_request)
+
+    if request.method == 'POST':
+        if not can_sign:
+            messages.warning(request, 'You cannot capture signatures on this loan.')
+            return redirect('post_approval_detail', loan_request_id=loan_request_id)
+        role = (request.POST.get('role') or '').strip()
+        signer_name = (request.POST.get('signer_name') or '').strip()
+        data_url = request.POST.get('signature_data') or ''
+        # Staff roles bind to logged-in user when officer/BM signs
+        signer_user = None
+        if role in (
+            LoanAgreementSignature.ROLE_OFFICER,
+            LoanAgreementSignature.ROLE_BRANCH_MANAGER,
+        ):
+            signer_user = request.user
+            if not signer_name:
+                signer_name = (
+                    getattr(request.user, 'get_full_name', lambda: '')()
+                    or request.user.username
+                )
+        try:
+            record_signature(
+                agreement,
+                role=role,
+                signer_name=signer_name,
+                data_url=data_url,
+                request=request,
+                signer_user=signer_user,
+                typed_name=(request.POST.get('typed_name') or '').strip(),
+                signer_id_number=(request.POST.get('signer_id_number') or '').strip(),
+                declaration_accepted=request.POST.get('declaration_accepted') == '1',
+            )
+            messages.success(request, f'Signature recorded ({role}).')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        agreement.refresh_from_db()
+        if agreement.status == LoanAgreement.STATUS_SIGNED:
+            messages.success(request, 'Agreement is fully signed.')
+            return redirect('post_approval_detail', loan_request_id=loan_request_id)
+        return redirect(
+            'post_approval_agreement_sign',
+            loan_request_id=loan_request_id,
+            agreement_id=agreement.pk,
+        )
+
+    from .agreement_signing import signature_slots
+    from .models import LoanRequestBasicInfo
+    basic = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
+    officer_name = (
+        getattr(request.user, 'get_full_name', lambda: '')()
+        or request.user.username
+    )
+    return render(request, 'loans/agreement_sign.html', {
+        'loan_request': loan_request,
+        'agreement': agreement,
+        'signatures': list(agreement.signatures.filter(is_valid=True).order_by('signed_at')),
+        'slots': signature_slots(agreement),
+        'can_sign': can_sign,
+        'applicant_tin': (basic.tin_number if basic else '') or '',
+        'officer_name': officer_name,
+        'ROLE_BORROWER': LoanAgreementSignature.ROLE_BORROWER,
+        'ROLE_GUARANTOR': LoanAgreementSignature.ROLE_GUARANTOR,
+        'ROLE_OFFICER': LoanAgreementSignature.ROLE_OFFICER,
+        'ROLE_BRANCH_MANAGER': LoanAgreementSignature.ROLE_BRANCH_MANAGER,
+        'role_choices': LoanAgreementSignature.ROLE_CHOICES,
+    })
+
+
+@login_required
+def post_approval_agreement_print(request, loan_request_id, agreement_id):
+    from .agreement_signing import signature_slots
+    from .models import LoanAgreement
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _can_view_post_approval(request.user, loan_request):
+        messages.warning(request, 'You do not have access to this post-approval workspace.')
+        return redirect('view_loan_requests')
+    agreement = get_object_or_404(
+        LoanAgreement, pk=agreement_id, loan_request=loan_request,
+    )
+    return render(request, 'loans/agreement_print.html', {
+        'loan_request': loan_request,
+        'agreement': agreement,
+        'slots': signature_slots(agreement),
+        'is_pdf': False,
+    })
+
+
+@login_required
+def post_approval_agreement_pdf(request, loan_request_id, agreement_id):
+    from .agreement_pdf import agreement_pdf_response
+    from .models import LoanAgreement
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _can_view_post_approval(request.user, loan_request):
+        messages.warning(request, 'You do not have access to this post-approval workspace.')
+        return redirect('view_loan_requests')
+    agreement = get_object_or_404(
+        LoanAgreement, pk=agreement_id, loan_request=loan_request,
+    )
+    return agreement_pdf_response(agreement, request=request)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_collateral_legal_upload(request, loan_request_id):
+    from .disbursement import can_manage_conditions
+    from .models import LoanCollateralLegalDocument
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot upload collateral legal documents on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+    kind = (request.POST.get('kind') or '').strip()
+    if kind not in (
+        LoanCollateralLegalDocument.KIND_RESTRICTION,
+        LoanCollateralLegalDocument.KIND_POA,
+    ):
+        messages.warning(request, 'Select Collateral Restriction or Power of Attorney.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+    upload = request.FILES.get('file')
+    if not upload:
+        messages.warning(request, 'Attach a scan or photo of the paper.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+    from .collateral_legal import validate_legal_upload
+    payload = {
+        'reference_number': (request.POST.get('reference_number') or '').strip()[:120],
+        'issuing_office': (request.POST.get('issuing_office') or '').strip()[:255],
+        'grantor_name': (request.POST.get('grantor_name') or '').strip()[:255],
+        'attorney_name': (request.POST.get('attorney_name') or '').strip()[:255],
+    }
+    err = validate_legal_upload(kind, payload)
+    if err:
+        messages.warning(request, err)
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+    def _parse_date(raw):
+        raw = (raw or '').strip()
+        if not raw:
+            return None
+        from datetime import datetime
+        try:
+            return datetime.strptime(raw, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+
+    LoanCollateralLegalDocument.objects.create(
+        loan_request=loan_request,
+        kind=kind,
+        reference_number=payload['reference_number'],
+        issuing_office=payload['issuing_office'],
+        issue_date=_parse_date(request.POST.get('issue_date')),
+        expiry_date=_parse_date(request.POST.get('expiry_date')),
+        grantor_name=payload['grantor_name'],
+        attorney_name=payload['attorney_name'],
+        parcel_reference=(request.POST.get('parcel_reference') or '').strip()[:160],
+        property_location=(request.POST.get('property_location') or '').strip()[:255],
+        notes=(request.POST.get('notes') or '').strip(),
+        file=upload,
+        uploaded_by=request.user,
+        status=LoanCollateralLegalDocument.STATUS_UPLOADED,
+    )
+    messages.success(request, 'Legal paper uploaded — pending verification.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_collateral_legal_verify(request, loan_request_id, doc_id):
+    from .collateral_legal import verify_legal_document
+    from .disbursement import can_manage_conditions
+    from .models import LoanCollateralLegalDocument
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot verify collateral legal documents on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    doc = get_object_or_404(
+        LoanCollateralLegalDocument, pk=doc_id, loan_request=loan_request,
+    )
+    approve = request.POST.get('approve') == '1'
+    note = (request.POST.get('note') or '').strip()
+    try:
+        verify_legal_document(doc, request.user, approve=approve, note=note)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    messages.success(
+        request,
+        'Legal paper verified.' if approve else 'Legal paper rejected.',
+    )
     return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
 
@@ -2261,15 +2543,18 @@ def loan_notifications_list(request):
     notifications = LoanNotification.objects.filter(user=request.user).select_related('loan_request')
     if kind_filter:
         notifications = notifications.filter(kind=kind_filter)
-    notifications = notifications[:100]
     if request.method == 'POST' and request.POST.get('mark_all_read'):
         LoanNotification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         messages.success(request, 'All notifications marked as read.')
         return redirect('loan_notifications_list')
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, notifications)
     return render(request, 'loans/loan_notifications.html', {
-        'notifications': notifications,
+        'notifications': page_obj,
+        'page_obj': page_obj,
         'kind_choices': LoanNotification.KIND_CHOICES,
         'selected_kind': kind_filter,
+        'querystring': page_querystring(request),
     })
 
 
@@ -2285,34 +2570,38 @@ def loan_notification_mark_read(request, notification_id):
     return redirect('loan_notifications_list')
 
 
-def _loan_requests_queryset_for_user(user):
-    """Base queryset scoped by role (branch, district LO, credit, assigned officer, engineering)
-    plus loans visible via active authority delegation.
-    """
+def _is_district_loan_officer(user) -> bool:
+    return (
+        getattr(user, 'role', None) == 'loan_officer'
+        and bool(getattr(user, 'district_id', None))
+        and not getattr(user, 'branch_id', None)
+    )
+
+
+def _loan_list_is_filter_first(user) -> bool:
+    """Wide scopes: do not dump all district/HO/branch loans until a filter is applied."""
     role = getattr(user, 'role', None)
-    if getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin', 'credit_head'):
-        if role == 'credit_head':
-            qs = LoanRequest.objects.filter(origin_level=LoanRequest.ORIGIN_HEAD_OFFICE)
-        else:
-            qs = LoanRequest.objects.all()
+    if role in ('credit_head', 'district_manager'):
+        return True
+    return _is_district_loan_officer(user)
+
+
+def _loan_requests_queryset_for_user(user):
+    """Personal / default list scope (branch BM, assigned officer, etc.)."""
+    role = getattr(user, 'role', None)
+    if getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin'):
+        qs = LoanRequest.objects.all()
+    elif role == 'credit_head':
+        # Filter-first: empty until branch/district/search — see browse helper.
+        qs = LoanRequest.objects.none()
     elif role == 'engineering_head':
         if allows_engineering_team():
             qs = LoanRequest.objects.filter(sent_to_engineering_at__isnull=False)
         else:
             qs = LoanRequest.objects.none()
     elif role in ('loan_officer', 'credit_loan_officer'):
-        # District LO (district, no branch): see assigned loans in that district.
-        if role == 'loan_officer' and getattr(user, 'district_id', None) and not getattr(user, 'branch_id', None):
-            qs = LoanRequest.objects.filter(
-                Q(assigned_loan_officer=user)
-                | Q(
-                    branch__district_id=user.district_id,
-                    queue_approved=True,
-                    assigned_loan_officer__isnull=True,
-                )
-            )
-        else:
-            qs = LoanRequest.objects.filter(assigned_loan_officer=user)
+        # District LO: assigned only by default (branch browse via filters).
+        qs = LoanRequest.objects.filter(assigned_loan_officer=user)
     elif role == 'engineer':
         if allows_engineering_team():
             qs = LoanRequest.objects.filter(assigned_engineer=user)
@@ -2322,16 +2611,15 @@ def _loan_requests_queryset_for_user(user):
         if getattr(user, 'branch_id', None):
             qs = LoanRequest.objects.filter(branch=user.branch)
         elif getattr(user, 'district_id', None):
-            qs = LoanRequest.objects.filter(branch__district=user.district)
+            # District-level BM without branch: filter-first browse.
+            qs = LoanRequest.objects.none()
         else:
             qs = LoanRequest.objects.none()
-    elif role == 'district_manager' and getattr(user, 'district_id', None):
-        qs = LoanRequest.objects.filter(branch__district_id=user.district_id)
+    elif role == 'district_manager':
+        qs = LoanRequest.objects.none()
     else:
         qs = LoanRequest.objects.none()
 
-    # Delegation: assign_officer cover → principal's branch/district loans
-    # Appraisal cover → loans assigned to those officers
     from loans.delegation import (
         loan_visibility_q_for_assign_principals,
         officer_loan_filter_q,
@@ -2340,10 +2628,85 @@ def _loan_requests_queryset_for_user(user):
     assign_q = loan_visibility_q_for_assign_principals(user)
     if assign_q is not None:
         extra_q = extra_q | assign_q
-    # Merge without chaining .distinct() mid-OR (Django forbids unique vs non-unique combine).
     return LoanRequest.objects.filter(
         Q(pk__in=qs.values('pk')) | extra_q
     ).distinct()
+
+
+def _loan_browse_queryset_for_user(user, *, branch_id=None, district_id=None):
+    """
+    Scope available when the user applies geo/search filters.
+    District officers → their district branches; Credit head → any branch/district or HO.
+    """
+    role = getattr(user, 'role', None)
+    qs = LoanRequest.objects.none()
+
+    if _is_district_loan_officer(user):
+        qs = LoanRequest.objects.filter(branch__district_id=user.district_id)
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+    elif role == 'district_manager' and getattr(user, 'district_id', None):
+        qs = LoanRequest.objects.filter(branch__district_id=user.district_id)
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+    elif role == 'branch_manager' and not getattr(user, 'branch_id', None) and getattr(user, 'district_id', None):
+        qs = LoanRequest.objects.filter(branch__district_id=user.district_id)
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+    elif role == 'credit_head':
+        if branch_id:
+            qs = LoanRequest.objects.filter(branch_id=branch_id)
+        elif district_id:
+            qs = LoanRequest.objects.filter(
+                Q(district_id=district_id) | Q(branch__district_id=district_id)
+            )
+        else:
+            # Search-only: HO credit book
+            qs = LoanRequest.objects.filter(origin_level=LoanRequest.ORIGIN_HEAD_OFFICE)
+    elif getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin'):
+        qs = LoanRequest.objects.all()
+        if branch_id:
+            qs = qs.filter(branch_id=branch_id)
+        elif district_id:
+            qs = qs.filter(Q(district_id=district_id) | Q(branch__district_id=district_id))
+
+    return qs
+
+
+def _filter_choices_for_loan_list(user, district_id=None):
+    """District/branch pickers for filter-first roles. Branches follow selected district."""
+    from loans.models import Branch, District
+
+    role = getattr(user, 'role', None)
+    districts = District.objects.none()
+    branches = Branch.objects.none()
+    can_pick_district = False
+    can_pick_branch = False
+
+    if _is_district_loan_officer(user) or role == 'district_manager':
+        districts = District.objects.filter(pk=user.district_id)
+        branches = Branch.objects.filter(district_id=user.district_id).order_by('name')
+        can_pick_branch = True
+    elif role == 'branch_manager' and not user.branch_id and user.district_id:
+        districts = District.objects.filter(pk=user.district_id)
+        branches = Branch.objects.filter(district_id=user.district_id).order_by('name')
+        can_pick_branch = True
+    elif role == 'credit_head' or getattr(user, 'is_superuser', False) or role in ('superadmin', 'admin'):
+        districts = District.objects.order_by('name')
+        can_pick_district = True
+        can_pick_branch = True
+        if district_id:
+            branches = Branch.objects.filter(district_id=district_id).order_by('name')
+        else:
+            # Do not list every branch until a district is chosen.
+            branches = Branch.objects.none()
+
+    return {
+        'filter_districts': districts,
+        'filter_branches': branches,
+        'can_pick_district': can_pick_district,
+        'can_pick_branch': can_pick_branch,
+    }
 
 
 @login_required
@@ -2353,43 +2716,71 @@ def view_loan_requests(request):
         return redirect('loans_sent_for_collateral')
     if getattr(request.user, 'role', None) == 'engineer' and allows_engineering_team():
         return redirect(reverse('collateral:dashboard'))
-    loan_requests = _loan_requests_queryset_for_user(request.user).select_related(
-        'branch', 'assigned_loan_officer',
-    ).order_by('-date_requested', '-id')
-    
-    query = request.GET.get("q")
-    # Filtering
+
+    user = request.user
+    query = (request.GET.get('q') or '').strip()
     date_requested = request.GET.get('date_requested')
     status = request.GET.get('status')
     loan_request_id = request.GET.get('loan_request_id')
-    
+    branch_id = request.GET.get('branch') or request.GET.get('branch_id')
+    district_id = request.GET.get('district') or request.GET.get('district_id')
+
+    filter_first = _loan_list_is_filter_first(user)
+    has_browse_filter = bool(
+        branch_id or district_id or query or loan_request_id or date_requested or status
+    )
+
+    personal = _loan_requests_queryset_for_user(user)
+    if filter_first and has_browse_filter:
+        browse = _loan_browse_queryset_for_user(
+            user, branch_id=branch_id or None, district_id=district_id or None,
+        )
+        loan_requests = LoanRequest.objects.filter(
+            Q(pk__in=personal.values('pk')) | Q(pk__in=browse.values('pk'))
+        ).distinct()
+    else:
+        loan_requests = personal
+
+    loan_requests = loan_requests.select_related(
+        'branch', 'assigned_loan_officer',
+    ).order_by('-date_requested', '-id')
+
     if query:
         loan_requests = loan_requests.filter(
             Q(applicant_name__icontains=query) |
             Q(phone_number__icontains=query) |
             Q(loan_request_id__icontains=query)
         )
-
     if date_requested:
         loan_requests = loan_requests.filter(date_requested__date=date_requested)
     if loan_request_id:
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
+    if branch_id and not filter_first:
+        loan_requests = loan_requests.filter(branch_id=branch_id)
+    if district_id and not filter_first:
+        loan_requests = loan_requests.filter(
+            Q(district_id=district_id) | Q(branch__district_id=district_id)
+        )
 
-    # Pagination
-    paginator = Paginator(loan_requests, 10)  # Show 10 loan requests per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
+    paginator = Paginator(loan_requests, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    filter_choices = _filter_choices_for_loan_list(user, district_id=district_id or None)
+
     context = {
         'page_obj': page_obj,
         'loan_requests': loan_requests,
-        "query": query or "",
+        'query': query,
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
         'selected_status': status,
+        'selected_branch': branch_id or '',
+        'selected_district': district_id or '',
         'collateral_estimation_mode': get_collateral_estimation_mode(),
+        'loan_list_filter_first': filter_first,
+        'loan_list_needs_filter': filter_first and not has_browse_filter,
+        **filter_choices,
     }
     return render(request, 'loans/view_loan_requests.html', context)
 
@@ -2448,9 +2839,18 @@ def view_loan_requests_operation_manager(request):
         loan_requests = loan_requests.filter(loan_request_id__icontains=loan_request_id)
     if status:
         loan_requests = loan_requests.filter(status__iexact=status)
+    show = request.GET.get('show') or 'pending'
+    if show == 'pending':
+        loan_requests = loan_requests.filter(operation_manager_approval=False).exclude(
+            status__iexact='Rejected',
+        )
+    elif show == 'approved':
+        loan_requests = loan_requests.filter(operation_manager_approval=True)
     paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    from .cooperative_performance import annotate_intake_aging
+    annotate_intake_aging(list(page_obj.object_list))
     districts = District.objects.all()
     branches = Branch.objects.filter(district_id=district_id) if district_id else Branch.objects.none()
     context = {
@@ -2464,6 +2864,7 @@ def view_loan_requests_operation_manager(request):
         'selected_date_requested': date_requested,
         'selected_loan_request_id': loan_request_id,
         'selected_status': status,
+        'selected_show': show,
     }
     return render(request, 'loans/view_loan_requests_operation_manager.html', context)
 
@@ -2531,7 +2932,7 @@ def view_loan_requests_finance_manager(request):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def manage_districts(request):
-    districts = District.objects.all()
+    districts = District.objects.all().order_by('name')
     if request.method == 'POST':
         form = DistrictForm(request.POST)
         if form.is_valid():
@@ -2539,7 +2940,14 @@ def manage_districts(request):
             return redirect('manage_districts')
     else:
         form = DistrictForm()
-    return render(request, 'loans/manage_districts.html', {'districts': districts, 'form': form})
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, districts)
+    return render(request, 'loans/manage_districts.html', {
+        'districts': page_obj,
+        'page_obj': page_obj,
+        'form': form,
+        'querystring': page_querystring(request),
+    })
 
 
 @login_required
@@ -2554,9 +2962,13 @@ def manage_departments(request):
             return redirect('manage_departments')
     else:
         form = DepartmentForm()
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, departments)
     return render(request, 'loans/manage_departments.html', {
-        'departments': departments,
+        'departments': page_obj,
+        'page_obj': page_obj,
         'form': form,
+        'querystring': page_querystring(request),
     })
 
 
@@ -2582,6 +2994,12 @@ def edit_department(request, department_id):
 def view_loan_requests_manager(request):
     from urllib.parse import urlencode
 
+    from loans.nav import user_can_access_committee_queues
+
+    if not user_can_access_committee_queues(request.user):
+        messages.warning(request, 'Committee approval queues are not part of your role.')
+        return redirect('home')
+
     district_id = request.GET.get('district')
     branch_id = request.GET.get('branch')
     date_requested = request.GET.get('date_requested')
@@ -2589,17 +3007,20 @@ def view_loan_requests_manager(request):
     status = request.GET.get('status')
     committee_status = request.GET.get('committee_status')
     queue = request.GET.get('queue')
-    if queue == 'my_votes':
-        loan_requests = committee_queue_queryset(request.user)
-    elif (
-        getattr(request.user, 'is_superuser', False)
-        or request.user.role in ('superadmin', 'admin')
+    # Always use the voter queue for non-admins — avoid a second “committee loans” list.
+    if (
+        queue == 'my_votes'
+        or not (
+            getattr(request.user, 'is_superuser', False)
+            or request.user.role in ('superadmin', 'admin')
+        )
     ):
+        loan_requests = committee_queue_queryset(request.user)
+        queue = 'my_votes'
+    else:
         loan_requests = LoanRequest.objects.filter(
             ~Q(committee_status='') & ~Q(committee_status__isnull=True)
         )
-    else:
-        loan_requests = committee_loan_requests_queryset(request.user)
     loan_requests = loan_requests.select_related(
         'branch', 'current_approval_level', 'appraisal',
     )
@@ -3188,7 +3609,7 @@ def view_report(request):
     loan_requests = filtered_reporting_queryset(request.user, params)
     paginator = Paginator(loan_requests, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
-    choices = filter_choices_for_user(request.user)
+    choices = filter_choices_for_user(request.user, district_id=params.get('district_id') or None)
     return render(request, 'loans/view_report.html', {
         'page_obj': page_obj,
         'filters': {
@@ -3275,7 +3696,7 @@ def branch_report_dashboard(request):
     params = request.GET
     qs = filtered_reporting_queryset(request.user, params)
     stats = branch_dashboard_stats(qs)
-    choices = filter_choices_for_user(request.user)
+    choices = filter_choices_for_user(request.user, district_id=params.get('district_id') or None)
     eng_stats = None
     if is_engineering_reporter(request.user) or choices.get('show_engineering_workload'):
         eng_stats = engineering_workload_stats(qs)
@@ -3299,7 +3720,17 @@ def branch_report_dashboard(request):
 
 @login_required(login_url='login')  # redirect to login page if not logged in
 def home(request):
-    """Home is Credit Intelligence Executive Overview (Phase 1)."""
+    """Role home: one product landing — not a second dashboard beside CI/Reports."""
+    from django.shortcuts import redirect
+
+    role = getattr(request.user, 'role', None)
+    if role in ('cooperative_manager', 'operation_manager'):
+        return redirect('view_loan_requests_operation_manager')
+    if role == 'risk_compliance':
+        return redirect('risk_desk')
+    if role == 'finance_manager':
+        return redirect('view_loan_requests_finance_manager')
+
     from .views_credit_intelligence import credit_intelligence_overview
     return credit_intelligence_overview(request)
 

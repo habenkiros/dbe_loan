@@ -117,7 +117,7 @@ def actor_list(request):
     if request.GET.get('export') == 'xlsx':
         return _export_actors_xlsx(qs)
 
-    page = Paginator(qs.order_by('name'), 25).get_page(request.GET.get('page'))
+    page = Paginator(qs.order_by('name'), 10).get_page(request.GET.get('page'))
     return render(request, 'partners/actor_list.html', {
         'page_obj': page,
         'q': q,
@@ -312,7 +312,7 @@ def observation_list(request):
     if request.GET.get('export') == 'xlsx':
         return _export_observations_xlsx(qs.order_by('-observed_at', '-id')[:5000])
 
-    page = Paginator(qs.order_by('-observed_at', '-id'), 30).get_page(request.GET.get('page'))
+    page = Paginator(qs.order_by('-observed_at', '-id'), 10).get_page(request.GET.get('page'))
     return render(request, 'partners/observation_list.html', {
         'page_obj': page,
         'q': q,
@@ -412,7 +412,7 @@ def band_list(request):
     city_id = request.GET.get('city_id')
     if city_id:
         qs = qs.filter(city_id=city_id)
-    page = Paginator(qs, 40).get_page(request.GET.get('page'))
+    page = Paginator(qs, 10).get_page(request.GET.get('page'))
     return render(request, 'partners/band_list.html', {
         'page_obj': page,
         'can_write': user_can_write_market(request.user),

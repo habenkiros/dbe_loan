@@ -2,7 +2,7 @@
 {% block title %}Post-approval — {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
 <style>
-.pa-wrap { max-width: 960px; }
+.pa-wrap { max-width: 980px; }
 .pa-strip {
   position: sticky; top: 0; z-index: 15;
   background:#fff; border:2px solid #064420; border-radius:10px;
@@ -13,6 +13,24 @@
 .pa-badge { display:inline-block; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; background:#fff3cd; color:#856404; }
 .pa-ok { background:#d4edda; color:#155724; }
 .pa-bad { background:#f8d7da; color:#721c24; }
+.pa-muted { background:#e9ecef; color:#495057; }
+.pack-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.65rem; margin:0.75rem 0 0.25rem; }
+.pack-card { background:#fff; border:1px solid #d5ddd8; border-radius:8px; padding:0.75rem 0.9rem; }
+.pack-card.ok { border-color:#0a6b2e; background:#e8f4ec; }
+.pack-card.open { border-color:#c9a227; }
+.pack-card h3 { margin:0 0 0.25rem; font-size:0.92rem; }
+.pack-card p { margin:0; font-size:0.82rem; color:#444; }
+.legal-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.85rem; }
+@media (max-width: 760px) { .legal-grid { grid-template-columns:1fr; } }
+.legal-card { background:#fff; border:1px solid #d5ddd8; border-radius:8px; padding:0.9rem 1rem; }
+.legal-card h3 { margin:0 0 0.35rem; font-size:1.02rem; }
+.legal-form label { display:block; font-size:0.82rem; margin:0.35rem 0 0.1rem; }
+.legal-form input, .legal-form select, .legal-form textarea { width:100%; max-width:100%; }
+.doc-row { border-top:1px solid #eee; padding:0.55rem 0; font-size:0.88rem; }
+.sig-slots { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.5rem 0; }
+.sig-slot { background:#fff; border:1px dashed #bbb; border-radius:6px; padding:0.4rem 0.6rem; font-size:0.82rem; min-width:8.5rem; }
+.sig-slot.done { border-style:solid; border-color:#0a6b2e; background:#e8f4ec; }
+.sig-slot img { display:block; height:36px; margin-top:0.25rem; }
 </style>
 
 <div class="pa-wrap">
@@ -100,6 +118,292 @@
     {% else %}
     <p class="help">No conditions on Sheet 6. You can still confirm the schedule and proceed.</p>
     {% endif %}
+  </div>
+
+  <div class="pa-panel" id="closing-pack">
+    <h2 style="margin-top:0; font-size:1.15rem;">1b. Closing pack — restriction, POA &amp; signatures</h2>
+    <p class="help" style="margin-top:0;">
+      These three items sit between committee approval and disbursement.
+      Restriction is the government paper that freezes the collateral; POA is only needed when
+      the pledged asset is held through a power of attorney; the loan agreement is signed on a
+      tablet or PC at the branch.
+    </p>
+    <p>
+      Pack
+      {% if closing_pack.ok %}
+        <span class="pa-badge pa-ok">Complete {{ closing_pack.done }}/{{ closing_pack.total }}</span>
+      {% else %}
+        <span class="pa-badge pa-bad">{{ closing_pack.done }}/{{ closing_pack.total }} complete</span>
+      {% endif %}
+    </p>
+    <div class="pack-grid">
+      {% for item in closing_pack.items %}
+      <div class="pack-card {% if item.ok %}ok{% else %}open{% endif %}">
+        <h3>{{ item.title }}</h3>
+        <p>
+          {% if item.ok %}<span class="pa-badge pa-ok">{{ item.label }}</span>
+          {% elif not item.required %}<span class="pa-badge pa-muted">{{ item.label }}</span>
+          {% else %}<span class="pa-badge pa-bad">{{ item.label }}</span>{% endif %}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if can_manage_conditions %}
+    <form method="post" action="{% url 'post_approval_collateral_flags' loan_request.id %}" style="margin:0.85rem 0 0.4rem;">
+      {% csrf_token %}
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="require_collateral_restriction" value="1"
+               {% if collateral_legal.require_restriction %}checked{% endif %}>
+        Require government Collateral Restriction before disbursement
+      </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="collateral_held_via_poa" value="1"
+               {% if collateral_legal.via_poa %}checked{% endif %}>
+        Collateral is held under Loan Collateral Power of Attorney
+      </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="require_agreement_signatures" value="1"
+               {% if agreement_signing.required %}checked{% endif %}>
+        Require digital loan agreement signatures before disbursement
+      </label>
+      <button type="submit" class="btn btn-gray" style="font-size:0.85rem; margin-top:0.35rem;">Save requirements</button>
+    </form>
+    {% endif %}
+
+    <div class="legal-grid" style="margin-top:0.85rem;">
+      <div class="legal-card" id="restriction-card">
+        <h3>Collateral Restriction</h3>
+        <p class="help" style="margin-top:0;">
+          Land / municipality paper that restricts sale or transfer of the pledged property
+          until DECSI releases it.
+        </p>
+        <p>
+          {% if collateral_legal.restriction_ok %}
+            <span class="pa-badge pa-ok">{% if collateral_legal.require_restriction %}Verified{% else %}Not required{% endif %}</span>
+          {% else %}
+            <span class="pa-badge pa-bad">Required — not verified</span>
+          {% endif %}
+        </p>
+        {% if can_manage_conditions and collateral_legal.require_restriction and loan_request.disbursement_status != 'disbursed' %}
+        <form method="post" action="{% url 'post_approval_collateral_legal_upload' loan_request.id %}"
+              enctype="multipart/form-data" class="legal-form">
+          {% csrf_token %}
+          <input type="hidden" name="kind" value="collateral_restriction">
+          <label>Restriction / title ref. <span style="color:#c62828;">*</span></label>
+          <input type="text" name="reference_number" class="form-control" required placeholder="e.g. LR-MK-2026-441">
+          <label>Issuing office <span style="color:#c62828;">*</span></label>
+          <input type="text" name="issuing_office" class="form-control" required placeholder="Land Administration / Municipality">
+          <label>Plot / parcel / kebele</label>
+          <input type="text" name="parcel_reference" class="form-control" placeholder="Parcel or title plot no.">
+          <label>Property location</label>
+          <input type="text" name="property_location" class="form-control" placeholder="Woreda / kebele / site">
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <div style="flex:1; min-width:8rem;">
+              <label>Issue date</label>
+              <input type="date" name="issue_date" class="form-control">
+            </div>
+            <div style="flex:1; min-width:8rem;">
+              <label>Expiry (if any)</label>
+              <input type="date" name="expiry_date" class="form-control">
+            </div>
+          </div>
+          <label>Scan / photo (PDF, JPG, PNG) <span style="color:#c62828;">*</span></label>
+          <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+          <label>Notes</label>
+          <input type="text" name="notes" class="form-control" placeholder="Optional">
+          <p><button type="submit" class="btn btn-green" style="font-size:0.85rem;">Upload restriction</button></p>
+        </form>
+        {% endif %}
+        {% for d in collateral_legal.restriction_docs %}
+        <div class="doc-row">
+          <strong>{{ d.reference_number|default:"No ref." }}</strong>
+          {% if d.status == 'verified' %}<span class="pa-badge pa-ok">Verified</span>
+          {% elif d.status == 'rejected' %}<span class="pa-badge pa-bad">Rejected</span>
+          {% else %}<span class="pa-badge">Pending verify</span>{% endif %}
+          <br>
+          <small>
+            {{ d.issuing_office|default:"—" }}
+            {% if d.parcel_reference %} · parcel {{ d.parcel_reference }}{% endif %}
+            {% if d.property_location %} · {{ d.property_location }}{% endif %}
+            {% if d.issue_date %} · {{ d.issue_date|date:"Y-m-d" }}{% endif %}
+            {% if d.file %} · <a href="{{ d.file.url }}" target="_blank" rel="noopener">Open file</a>{% endif %}
+          </small>
+          {% if d.verification_note %}<br><small><em>{{ d.verification_note }}</em></small>{% endif %}
+          {% if can_manage_conditions and d.status != 'verified' %}
+          <form method="post" action="{% url 'post_approval_collateral_legal_verify' loan_request.id d.id %}" style="margin-top:0.35rem;">
+            {% csrf_token %}
+            <input type="hidden" name="approve" value="1">
+            <input type="text" name="note" class="form-control" placeholder="Verification note (optional)" style="max-width:16rem; display:inline-block;">
+            <button type="submit" class="btn btn-green" style="font-size:0.8rem;">Verify</button>
+          </form>
+          <form method="post" action="{% url 'post_approval_collateral_legal_verify' loan_request.id d.id %}" style="margin-top:0.25rem;">
+            {% csrf_token %}
+            <input type="hidden" name="approve" value="0">
+            <input type="text" name="note" class="form-control" required minlength="5" placeholder="Reason for rejection" style="max-width:16rem; display:inline-block;">
+            <button type="submit" class="btn btn-gray" style="font-size:0.8rem;">Reject</button>
+          </form>
+          {% endif %}
+        </div>
+        {% empty %}
+        {% if collateral_legal.require_restriction %}
+        <p class="help">No restriction paper uploaded yet.</p>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="legal-card" id="poa-card">
+        <h3>Loan Collateral Power of Attorney</h3>
+        <p class="help" style="margin-top:0;">
+          Needed when the owner of the collateral is not the borrower, or when the pledge
+          is executed through an attorney-in-fact.
+        </p>
+        <p>
+          {% if not collateral_legal.via_poa %}
+            <span class="pa-badge pa-muted">Not used on this loan</span>
+          {% elif collateral_legal.poa_ok %}
+            <span class="pa-badge pa-ok">Verified</span>
+          {% else %}
+            <span class="pa-badge pa-bad">Required — not verified</span>
+          {% endif %}
+        </p>
+        {% if can_manage_conditions and collateral_legal.via_poa and loan_request.disbursement_status != 'disbursed' %}
+        <form method="post" action="{% url 'post_approval_collateral_legal_upload' loan_request.id %}"
+              enctype="multipart/form-data" class="legal-form">
+          {% csrf_token %}
+          <input type="hidden" name="kind" value="power_of_attorney">
+          <label>Deed / notary ref. <span style="color:#c62828;">*</span></label>
+          <input type="text" name="reference_number" class="form-control" required placeholder="e.g. POA-2026-12">
+          <label>Notary / issuing office</label>
+          <input type="text" name="issuing_office" class="form-control" placeholder="Notary Public — Mekelle">
+          <label>Grantor (owner) <span style="color:#c62828;">*</span></label>
+          <input type="text" name="grantor_name" class="form-control" required placeholder="Collateral owner">
+          <label>Attorney-in-fact <span style="color:#c62828;">*</span></label>
+          <input type="text" name="attorney_name" class="form-control" required value="{{ loan_request.applicant_name }}">
+          <label>Property / parcel</label>
+          <input type="text" name="parcel_reference" class="form-control" placeholder="Optional plot / deed">
+          <label>Location</label>
+          <input type="text" name="property_location" class="form-control">
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <div style="flex:1; min-width:8rem;">
+              <label>Issue date</label>
+              <input type="date" name="issue_date" class="form-control">
+            </div>
+            <div style="flex:1; min-width:8rem;">
+              <label>Expiry</label>
+              <input type="date" name="expiry_date" class="form-control">
+            </div>
+          </div>
+          <label>Scan / photo (PDF, JPG, PNG) <span style="color:#c62828;">*</span></label>
+          <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+          <label>Notes</label>
+          <input type="text" name="notes" class="form-control">
+          <p><button type="submit" class="btn btn-green" style="font-size:0.85rem;">Upload POA</button></p>
+        </form>
+        {% endif %}
+        {% for d in collateral_legal.poa_docs %}
+        <div class="doc-row">
+          <strong>{{ d.grantor_name|default:d.reference_number|default:"POA" }}</strong>
+          {% if d.attorney_name %} → {{ d.attorney_name }}{% endif %}
+          {% if d.status == 'verified' %}<span class="pa-badge pa-ok">Verified</span>
+          {% elif d.status == 'rejected' %}<span class="pa-badge pa-bad">Rejected</span>
+          {% else %}<span class="pa-badge">Pending verify</span>{% endif %}
+          <br>
+          <small>
+            {{ d.reference_number|default:"—" }}
+            {% if d.issuing_office %} · {{ d.issuing_office }}{% endif %}
+            {% if d.file %} · <a href="{{ d.file.url }}" target="_blank" rel="noopener">Open deed</a>{% endif %}
+          </small>
+          {% if d.verification_note %}<br><small><em>{{ d.verification_note }}</em></small>{% endif %}
+          {% if can_manage_conditions and d.status != 'verified' %}
+          <form method="post" action="{% url 'post_approval_collateral_legal_verify' loan_request.id d.id %}" style="margin-top:0.35rem;">
+            {% csrf_token %}
+            <input type="hidden" name="approve" value="1">
+            <input type="text" name="note" class="form-control" placeholder="Verification note (optional)" style="max-width:16rem; display:inline-block;">
+            <button type="submit" class="btn btn-green" style="font-size:0.8rem;">Verify</button>
+          </form>
+          <form method="post" action="{% url 'post_approval_collateral_legal_verify' loan_request.id d.id %}" style="margin-top:0.25rem;">
+            {% csrf_token %}
+            <input type="hidden" name="approve" value="0">
+            <input type="text" name="note" class="form-control" required minlength="5" placeholder="Reason for rejection" style="max-width:16rem; display:inline-block;">
+            <button type="submit" class="btn btn-gray" style="font-size:0.8rem;">Reject</button>
+          </form>
+          {% endif %}
+        </div>
+        {% empty %}
+        {% if collateral_legal.via_poa %}
+        <p class="help">No POA deed uploaded yet.</p>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="legal-card" id="agreement-card" style="margin-top:0.85rem;">
+      <h3 style="margin-top:0;">Loan agreement — digital signatures</h3>
+      <p class="help" style="margin-top:0;">
+        Generate the agreement from approved terms. Each signer draws on the pad, types their name,
+        and (for borrower / guarantor) records an ID number. The mark is bound to a SHA-256 hash of the text.
+      </p>
+      <p>
+        {% if not agreement_signing.required %}
+          <span class="pa-badge pa-muted">Not required</span>
+        {% elif agreement_signing.ok %}
+          <span class="pa-badge pa-ok">Fully signed</span>
+        {% else %}
+          <span class="pa-badge pa-bad">Required — not complete</span>
+        {% endif %}
+      </p>
+      {% if agreement_signing.slots %}
+      <div class="sig-slots">
+        {% for slot in agreement_signing.slots %}
+        <div class="sig-slot {% if slot.signed %}done{% endif %}">
+          <strong>{{ slot.label }}</strong><br>
+          {% if slot.signed %}
+            {{ slot.signature.signer_name }}
+            {% if slot.signature.signature_image %}
+              <img src="{{ slot.signature.signature_image.url }}" alt="Signature of {{ slot.signature.signer_name }}">
+            {% endif %}
+          {% else %}
+            Awaiting
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if agreement_signing.latest_loan %}
+      <p class="help" style="margin:0.4rem 0;">
+        {{ agreement_signing.latest_loan.title }}
+        · {{ agreement_signing.latest_loan.get_status_display }}
+        · hash <code>{{ agreement_signing.latest_loan.content_hash|slice:":16" }}…</code>
+      </p>
+      <p style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+        {% if can_manage_conditions and agreement_signing.latest_loan.status != 'fully_signed' %}
+        <a class="btn btn-green" href="{% url 'post_approval_agreement_sign' loan_request.id agreement_signing.latest_loan.id %}">
+          Open signature pad
+        </a>
+        {% endif %}
+        <a class="btn btn-gray" href="{% url 'post_approval_agreement_print' loan_request.id agreement_signing.latest_loan.id %}">Print / view</a>
+        <a class="btn btn-gray" href="{% url 'post_approval_agreement_pdf' loan_request.id agreement_signing.latest_loan.id %}">Download PDF</a>
+      </p>
+      {% endif %}
+      {% if can_manage_conditions and loan_request.disbursement_status != 'disbursed' %}
+      <form method="post" action="{% url 'post_approval_agreement_generate' loan_request.id %}" style="margin-top:0.5rem;">
+        {% csrf_token %}
+        <label style="margin-right:1rem;">
+          <input type="checkbox" name="require_guarantor" value="1">
+          Also require guarantor
+        </label>
+        <label style="margin-right:1rem;">
+          <input type="checkbox" name="require_branch_manager" value="1">
+          Also require branch manager
+        </label>
+        <button type="submit" class="btn btn-gray" style="font-size:0.85rem;">
+          {% if agreement_signing.latest_loan %}Regenerate agreement{% else %}Generate loan agreement{% endif %}
+        </button>
+      </form>
+      <p class="help">Regenerating voids prior signatures so they bind to the new text (including any restriction / POA refs now on file).</p>
+      {% endif %}
+    </div>
   </div>
 
   <div class="pa-panel">

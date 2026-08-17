@@ -3,14 +3,25 @@
 {% block content %}
 <div class="table-container">
     <h2>Branch Cooperative intake queue</h2>
-    <p class="help">Approve new branch loan requests before loan officer assignment.</p>
+    <p class="help">
+      Approve new branch loan requests before loan officer assignment.
+      <a href="{% url 'cooperative_performance' %}">Branch performance →</a>
+    </p>
+
+    <p style="margin:0 0 0.75rem;">
+      <a href="?show=pending{% if selected_district %}&district={{ selected_district }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}"
+         {% if selected_show == 'pending' %}style="font-weight:700;"{% endif %}>Pending</a>
+      ·
+      <a href="?show=approved{% if selected_district %}&district={{ selected_district }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}"
+         {% if selected_show == 'approved' %}style="font-weight:700;"{% endif %}>Approved</a>
+      ·
+      <a href="?show=all{% if selected_district %}&district={{ selected_district }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}"
+         {% if selected_show == 'all' %}style="font-weight:700;"{% endif %}>All</a>
+    </p>
     
     <!-- Filter Form -->
     <form method="get" class="form-inline" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px;">
-        <!--<div class="form-group">
-            <label for="id_loan_request_id">Applicant ID:</label>
-            <input type="text" id="id_loan_request_id" name="loan_request_id" value="{{ selected_loan_request_id }}" class="form-control" style="width: 150px;">
-        </div>-->
+        <input type="hidden" name="show" value="{{ selected_show|default:'pending' }}">
 
         <div class="form-group">
             <label for="id_district">District:</label>
@@ -72,12 +83,13 @@
                         <th>Amount Approved</th>
                         <th>Status</th>
                         <th>Date Requested</th>
+                        <th>Age</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for loan_request in page_obj.object_list %}
-                        <tr>
+                        <tr {% if loan_request.intake_overdue %}style="background:#fff7ed;"{% endif %}>
                             <td>{{ loan_request.loan_request_id }}</td>
                             <td>
                               <strong>{{ loan_request.applicant_name }}</strong>
@@ -88,6 +100,15 @@
                             <td>{% if loan_request.amount_approved_display != None %}{{ loan_request.amount_approved_display|floatformat:2 }}{% else %}—{% endif %}</td>
                             <td>{{ loan_request.status }}</td>
                             <td>{{ loan_request.date_requested|date:"Y-m-d" }}</td>
+                            <td>
+                              {% if loan_request.intake_age_days != None %}
+                                {% if loan_request.intake_overdue %}
+                                  <span class="lw-badge lw-warn">{{ loan_request.intake_age_days }}d</span>
+                                {% else %}
+                                  {{ loan_request.intake_age_days }}d
+                                {% endif %}
+                              {% else %}—{% endif %}
+                            </td>
                             <td>
                                 <div class="list-actions">
                                 {% url 'loan_request_detail_operation_manager' loan_request.id as detail_url %}

@@ -583,6 +583,20 @@ class LoanRequest(models.Model):
         default=False,
         help_text='Finance department approval required before confirming disbursement.',
     )
+
+    # Collateral legal papers (post-approval → before disbursement)
+    require_collateral_restriction = models.BooleanField(
+        default=True,
+        help_text='Applicant must bring a government Collateral Restriction paper before disbursement.',
+    )
+    collateral_held_via_poa = models.BooleanField(
+        default=False,
+        help_text='Collateral is pledged under a Loan Collateral Power of Attorney (POA required).',
+    )
+    require_agreement_signatures = models.BooleanField(
+        default=True,
+        help_text='Loan agreement must be digitally signed before disbursement.',
+    )
     ORIGIN_BRANCH = 'branch'
     ORIGIN_HEAD_OFFICE = 'head_office'
     ORIGIN_CHOICES = [
@@ -780,6 +794,21 @@ class LoanRequest(models.Model):
         null=True,
         blank=True,
         related_name='loan_requests_returned_to_officer',
+    )
+
+    # Risk & Compliance desk review (advisory — does not gate committee by itself)
+    risk_reviewed_at = models.DateTimeField(null=True, blank=True)
+    risk_reviewed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_requests_risk_reviewed',
+        limit_choices_to={'role': 'risk_compliance'},
+    )
+    risk_review_note = models.TextField(
+        blank=True,
+        help_text='Risk & Compliance note on credit / E&S / coverage concerns.',
     )
 
     # Post-committee disbursement track (conditions → schedule → ready → disbursed)
@@ -2455,6 +2484,282 @@ class AgentConversation(models.Model):
 
     def __str__(self):
         return f'AgentChat #{self.pk} ({self.user_id}) {self.title[:40]}'
+
+
+class LoanCollateralLegalDocument(models.Model):
+    """
+    Post-approval legal papers for collateral:
+    - Government Collateral Restriction (required before disbursement when flagged on the loan)
+    - Loan Collateral Power of Attorney (when collateral is pledged via POA)
+    """
+
+    KIND_RESTRICTION = 'collateral_restriction'
+    KIND_POA = 'power_of_attorney'
+    KIND_CHOICES = [
+        (KIND_RESTRICTION, 'Collateral Restriction (government)'),
+        (KIND_POA, 'Loan Collateral Power of Attorney'),
+    ]
+
+    STATUS_UPLOADED = 'uploaded'
+    STATUS_VERIFIED = 'verified'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_UPLOADED, 'Uploaded — pending verification'),
+        (STATUS_VERIFIED, 'Verified'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='collateral_legal_documents',
+    )
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES, db_index=True)
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_UPLOADED,
+        db_index=True,
+    )
+    reference_number = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='Government restriction ref / POA deed number.',
+    )
+    issuing_office = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='e.g. Land Administration / Municipality / Notary.',
+    )
+    issue_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    # POA parties
+    grantor_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Person/entity granting the Power of Attorney (collateral owner).',
+    )
+    attorney_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Attorney-in-fact named in the POA (often the borrower).',
+    )
+    parcel_reference = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text='Plot / parcel / kebele / title deed number.',
+    )
+    property_location = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Woreda / kebele / site of the restricted or pledged property.',
+    )
+    verification_note = models.CharField(
+        max_length=400,
+        blank=True,
+        help_text='Staff note recorded when verifying or rejecting.',
+    )
+    file = models.FileField(
+        upload_to='collateral_legal/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Scan/photo of the restriction paper or POA deed.',
+    )
+    notes = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collateral_legal_uploads',
+    )
+    verified_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='collateral_legal_verifications',
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Collateral legal document'
+        verbose_name_plural = 'Collateral legal documents'
+        indexes = [
+            models.Index(fields=['loan_request', 'kind', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_kind_display()} — {self.loan_request_id} [{self.status}]'
+
+
+class LoanAgreement(models.Model):
+    """Loan / collateral agreement prepared after approval; signed digitally before disbursement."""
+
+    KIND_LOAN = 'loan_agreement'
+    KIND_COLLATERAL_PLEDGE = 'collateral_pledge'
+    KIND_GUARANTEE = 'guarantee'
+    KIND_CHOICES = [
+        (KIND_LOAN, 'Loan agreement'),
+        (KIND_COLLATERAL_PLEDGE, 'Collateral pledge agreement'),
+        (KIND_GUARANTEE, 'Guarantee agreement'),
+    ]
+
+    STATUS_DRAFT = 'draft'
+    STATUS_PENDING = 'pending_signatures'
+    STATUS_PARTIAL = 'partially_signed'
+    STATUS_SIGNED = 'fully_signed'
+    STATUS_VOID = 'void'
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Draft'),
+        (STATUS_PENDING, 'Pending signatures'),
+        (STATUS_PARTIAL, 'Partially signed'),
+        (STATUS_SIGNED, 'Fully signed'),
+        (STATUS_VOID, 'Void'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='agreements',
+    )
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES, default=KIND_LOAN, db_index=True)
+    title = models.CharField(max_length=255)
+    body_text = models.TextField(help_text='Agreement text snapshot at generation time.')
+    content_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='SHA-256 of body_text; signatures bind to this hash.',
+    )
+    status = models.CharField(
+        max_length=24,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        db_index=True,
+    )
+    require_borrower = models.BooleanField(default=True)
+    require_guarantor = models.BooleanField(default=False)
+    require_officer = models.BooleanField(default=True)
+    require_branch_manager = models.BooleanField(default=False)
+    generated_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agreements_generated',
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    voided_at = models.DateTimeField(null=True, blank=True)
+    void_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-generated_at']
+        verbose_name = 'Loan agreement'
+        verbose_name_plural = 'Loan agreements'
+
+    def __str__(self):
+        return f'{self.title} ({self.loan_request_id}) [{self.status}]'
+
+    def refresh_status(self):
+        needed = []
+        if self.require_borrower:
+            needed.append(LoanAgreementSignature.ROLE_BORROWER)
+        if self.require_guarantor:
+            needed.append(LoanAgreementSignature.ROLE_GUARANTOR)
+        if self.require_officer:
+            needed.append(LoanAgreementSignature.ROLE_OFFICER)
+        if self.require_branch_manager:
+            needed.append(LoanAgreementSignature.ROLE_BRANCH_MANAGER)
+        have = set(
+            self.signatures.filter(is_valid=True).values_list('role', flat=True)
+        )
+        if self.status == self.STATUS_VOID:
+            return
+        if not needed:
+            self.status = self.STATUS_SIGNED
+        elif all(r in have for r in needed):
+            self.status = self.STATUS_SIGNED
+        elif any(r in have for r in needed):
+            self.status = self.STATUS_PARTIAL
+        else:
+            self.status = self.STATUS_PENDING
+        self.save(update_fields=['status'])
+
+
+class LoanAgreementSignature(models.Model):
+    """One digital (drawn) signature on an agreement, with audit metadata."""
+
+    ROLE_BORROWER = 'borrower'
+    ROLE_GUARANTOR = 'guarantor'
+    ROLE_OFFICER = 'officer'
+    ROLE_BRANCH_MANAGER = 'branch_manager'
+    ROLE_CHOICES = [
+        (ROLE_BORROWER, 'Borrower / applicant'),
+        (ROLE_GUARANTOR, 'Guarantor'),
+        (ROLE_OFFICER, 'Loan officer'),
+        (ROLE_BRANCH_MANAGER, 'Branch manager'),
+    ]
+
+    agreement = models.ForeignKey(
+        LoanAgreement,
+        on_delete=models.CASCADE,
+        related_name='signatures',
+    )
+    role = models.CharField(max_length=24, choices=ROLE_CHOICES, db_index=True)
+    signer_name = models.CharField(max_length=255)
+    typed_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Name typed by the signer to confirm identity (must match signer_name).',
+    )
+    signer_id_number = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text='National ID / kebele ID / passport / staff ID shown at signing.',
+    )
+    declaration_accepted = models.BooleanField(
+        default=False,
+        help_text='Signer confirmed they have read the agreement and intend to be bound.',
+    )
+    signer_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agreement_signatures',
+        help_text='Staff user when an officer/BM signs; blank for walk-in borrower.',
+    )
+    signature_image = models.ImageField(
+        upload_to='agreement_signatures/%Y/%m/',
+        help_text='PNG captured from signature pad.',
+    )
+    content_hash_at_sign = models.CharField(
+        max_length=64,
+        help_text='Must match agreement.content_hash at time of signing.',
+    )
+    signed_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True)
+    is_valid = models.BooleanField(default=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['signed_at']
+        verbose_name = 'Agreement signature'
+        verbose_name_plural = 'Agreement signatures'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['agreement', 'role'],
+                condition=models.Q(is_valid=True),
+                name='loans_unique_valid_signature_per_role',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_role_display()} — {self.signer_name} @ {self.signed_at}'
 
 
 class StaffDelegation(models.Model):

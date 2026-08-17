@@ -35,7 +35,10 @@
   <a href="{% url 'security_audit_export' %}?{{ export_query }}&amp;format=xlsx">Export Excel</a>
 </form>
 
-<p style="font-size:0.9rem;color:#555;">Showing {{ result_count }} row(s).</p>
+<p style="font-size:0.9rem;color:#555;">
+  {{ result_count }} matching event(s)
+  {% if page_obj %}· page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% endif %}.
+</p>
 
 <div class="table-container">
   <table>
@@ -63,4 +66,5 @@
     </tbody>
   </table>
 </div>
+{% include "includes/pagination.html" %}
 {% endblock %}

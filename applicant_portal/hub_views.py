@@ -91,8 +91,8 @@ def online_loan_intake(request):
             | Q(applicant__full_name__icontains=q)
         )
 
-    loan_page = Paginator(loans, 25).get_page(request.GET.get('page'))
-    draft_page = Paginator(drafts, 15).get_page(request.GET.get('draft_page'))
+    loan_page = Paginator(loans, 10).get_page(request.GET.get('page'))
+    draft_page = Paginator(drafts, 10).get_page(request.GET.get('draft_page'))
 
     accounts_count = ApplicantAccount.objects.filter(is_active=True).count()
     return render(request, 'applicant_portal/hub_online_intake.html', {

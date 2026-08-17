@@ -221,13 +221,17 @@ def dashboard(request):
         for stage in STAGE_LABELS
         if counts.get(stage, 0)
     ]
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, pipeline_rows)
     return render(request, 'collateral/dashboard.html', {
-        'pipeline_rows': pipeline_rows,
+        'pipeline_rows': page_obj,
+        'page_obj': page_obj,
         'pipeline_filters': pipeline_filters,
         'stage_filter': stage_filter,
         'query': q or '',
         'is_engineer': is_engineer,
         'is_loan_officer': is_loan_officer,
+        'querystring': page_querystring(request),
     })
 
 
@@ -251,7 +255,7 @@ def collateral_list_superadmin(request):
     status_filter = request.GET.get('status')
     if status_filter:
         qs = qs.filter(status__iexact=status_filter)
-    paginator = Paginator(qs, 15)
+    paginator = Paginator(qs, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'collateral/collateral_list_superadmin.html', {

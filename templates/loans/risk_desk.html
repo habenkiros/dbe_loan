@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Risk desk{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <section class="dash-hero">
+    <div>
+      <h1>Risk &amp; Compliance desk</h1>
+      <p>
+        Loan-related risk queues for <strong>{{ scope_label|default:"your scope" }}</strong>.
+        Advisory review — does not replace committee voting.
+      </p>
+    </div>
+    <div class="dash-hero-meta list-actions list-actions-lg">
+      {% url 'view_report_options' as rep_url %}
+      {% include "includes/list_action.html" with href=rep_url icon="report" label="Reports" tone="blue" only %}
+      {% url 'credit_intelligence_overview' as ci_url %}
+      {% include "includes/list_action.html" with href=ci_url icon="report" label="Portfolio insights" tone="green" only %}
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+    {% for key, label in queue_choices %}
+    <a href="?queue={{ key }}"
+       style="text-decoration:none;border:1px solid {% if queue == key %}#1a5c3a{% else %}#c9dbd1{% endif %};background:{% if queue == key %}#e8f5ee{% else %}#fff{% endif %};padding:0.4rem 0.7rem;border-radius:4px;font-size:0.9rem;color:#1a2e24;">
+      {{ label }} · <strong>
+        {% if key == 'alerts' %}{{ counts.alerts }}
+        {% elif key == 'weak_score' %}{{ counts.weak_score }}
+        {% elif key == 'es_flagged' %}{{ counts.es_flagged }}
+        {% elif key == 'thin_coverage' %}{{ counts.thin_coverage }}
+        {% elif key == 'low_dscr' %}{{ counts.low_dscr }}
+        {% elif key == 'unreviewed' %}{{ counts.unreviewed }}
+        {% else %}0{% endif %}
+      </strong>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if queue == 'alerts' %}
+  <section class="lw-panel">
+    <h3>Active alerts</h3>
+    {% if alerts %}
+    <table class="table table-striped">
+      <thead>
+        <tr><th>Severity</th><th>Alert</th><th>Detail</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr>
+          <td><span class="lw-badge {% if a.severity == 'high' %}lw-warn{% else %}lw-ok{% endif %}">{{ a.severity }}</span></td>
+          <td>{{ a.title }}</td>
+          <td>{{ a.body }}</td>
+          <td>
+            {% if a.action_url_name %}
+              {% if a.action_url_args|length == 2 %}
+                <a href="{% url a.action_url_name a.action_url_args.0 a.action_url_args.1 %}">{{ a.action_label }}</a>
+              {% elif a.action_url_args|length == 1 %}
+                <a href="{% url a.action_url_name a.action_url_args.0 %}">{{ a.action_label }}</a>
+              {% else %}
+                <a href="{% url a.action_url_name %}">{{ a.action_label }}</a>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="help">No open risk alerts in scope.</p>
+    {% endif %}
+  </section>
+  {% else %}
+  <section class="lw-panel">
+    <h3>Queue</h3>
+    {% if page_obj and page_obj.object_list %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Loan</th>
+          <th>Applicant</th>
+          <th>Branch</th>
+          <th>Score / band</th>
+          <th>E&amp;S</th>
+          <th>Coverage</th>
+          <th>Risk review</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lr in page_obj %}
+        <tr>
+          <td>{{ lr.loan_request_id }}</td>
+          <td>{{ lr.applicant_name }}</td>
+          <td>{{ lr.branch.name }}</td>
+          <td>
+            {% if lr.appraisal %}
+              {{ lr.appraisal.credit_score_total|default:"—" }}
+              · {{ lr.appraisal.credit_score_band|default:"—" }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if lr.appraisal %}
+              {{ lr.appraisal.es_risk_category|default:"—" }}
+              / {{ lr.appraisal.es_eligibility_decision|default:"—" }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if lr.appraisal and lr.appraisal.collateral_coverage_ratio != None %}
+              {{ lr.appraisal.collateral_coverage_ratio }}×
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if lr.risk_reviewed_at %}
+              <span class="lw-badge lw-ok">Reviewed</span>
+            {% else %}
+              <span class="lw-badge lw-warn">Open</span>
+            {% endif %}
+          </td>
+          <td><a href="{% url 'loan_request_detail' lr.id %}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages %}
+    <p class="help">
+      {% if page_obj.has_previous %}<a href="?queue={{ queue }}&page={{ page_obj.previous_page_number }}">← Prev</a>{% endif %}
+      Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+      {% if page_obj.has_next %}<a href="?queue={{ queue }}&page={{ page_obj.next_page_number }}">Next →</a>{% endif %}
+    </p>
+    {% endif %}
+    {% else %}
+    <p class="help">No loans in this queue.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

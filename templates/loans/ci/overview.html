@@ -34,12 +34,18 @@
     <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
       {% url 'view_loan_requests' as loans_url %}
       {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
+      {% if nav_show_approval_votes %}
       {% url 'view_loan_requests_manager' as queue_url %}
-      {% include "includes/list_action.html" with href=queue_url|add:'?queue=my_votes' icon="vote" label="Approval queue" tone="blue" only %}
+      {% include "includes/list_action.html" with href=queue_url|add:'?queue=my_votes' icon="vote" label="My votes" tone="blue" only %}
+      {% endif %}
+      {% if nav_show_post_approval %}
       {% url 'post_approval_queue' as pa_url %}
       {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
-      {% url 'branch_report_dashboard' as br_url %}
-      {% include "includes/list_action.html" with href=br_url icon="summary" label="Branch reports" tone="blue" only %}
+      {% endif %}
+      {% if nav_show_reports %}
+      {% url 'view_report_options' as br_url %}
+      {% include "includes/list_action.html" with href=br_url icon="summary" label="Reports" tone="blue" only %}
+      {% endif %}
     </div>
   </div>
   {% endif %}

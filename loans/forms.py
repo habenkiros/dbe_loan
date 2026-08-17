@@ -58,6 +58,17 @@ class CustomUserChangeForm(UserChangeForm):
         self.fields['role'].choices = ACTIVE_USER_ROLE_CHOICES
         self.fields['department'].queryset = Department.objects.filter(is_active=True).order_by('sort_order', 'name')
         self.fields['department'].required = False
+        self.fields['branch'].queryset = Branch.objects.none()
+        if 'district' in self.data:
+            try:
+                district_id = int(self.data.get('district'))
+                self.fields['branch'].queryset = Branch.objects.filter(district_id=district_id).order_by('name')
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.district_id:
+            self.fields['branch'].queryset = Branch.objects.filter(
+                district_id=self.instance.district_id,
+            ).order_by('name')
 
 
 class DistrictForm(forms.ModelForm):

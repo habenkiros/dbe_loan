@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Branch performance — Cooperative{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <p class="help" style="margin:0 0 0.75rem;">
+    <a href="{% url 'view_loan_requests_operation_manager' %}">← Cooperative queue</a>
+    · <a href="{% url 'view_report_options' %}">Reports hub</a>
+  </p>
+
+  <section class="dash-hero">
+    <div>
+      <h1>Branch performance</h1>
+      <p>
+        Intake aging and branch scorecards for <strong>{{ scope_label|default:"your scope" }}</strong>
+        (branch-originated loans).
+      </p>
+    </div>
+    <div class="dash-hero-meta list-actions list-actions-lg">
+      {% url 'view_loan_requests_operation_manager' as q_url %}
+      {% include "includes/list_action.html" with href=q_url icon="loan" label="Intake queue" tone="blue" only %}
+      {% url 'ci_manager' as ci_url %}
+      {% include "includes/list_action.html" with href=ci_url icon="report" label="CI Manager" tone="green" only %}
+    </div>
+  </section>
+
+  <form method="get" class="dash-quicklinks" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.65rem; align-items:end;">
+    {% if can_pick_geo %}
+    <div>
+      <label for="district_id"><strong>District</strong></label><br>
+      <select name="district_id" id="district_id" class="form-control">
+        <option value="">All in scope</option>
+        {% for d in districts %}
+        <option value="{{ d.id }}" {% if filters.district_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="branch_id"><strong>Branch</strong></label><br>
+      <select name="branch_id" id="branch_id" class="form-control">
+        <option value="">All in scope</option>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if filters.branch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="date_from"><strong>From</strong></label><br>
+      <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+    </div>
+    <div>
+      <label for="date_to"><strong>To</strong></label><br>
+      <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+    </div>
+    <div class="list-actions list-actions-lg">
+      {% include "includes/list_action_submit.html" with icon="filter" label="Apply" tone="blue" only %}
+    </div>
+  </form>
+
+  <section class="dash-kpis" style="margin-top:1rem;">
+    <article class="dash-kpi kpi-pending">
+      <p class="dash-kpi-label">Intake pending</p>
+      <p class="dash-kpi-value">{{ stats.intake_pending }}</p>
+    </article>
+    <article class="dash-kpi kpi-total">
+      <p class="dash-kpi-label">Overdue (≥3 days)</p>
+      <p class="dash-kpi-value">{{ stats.overdue_pending }}</p>
+    </article>
+    <article class="dash-kpi">
+      <p class="dash-kpi-label">Median days pending</p>
+      <p class="dash-kpi-value">{% if stats.median_pending_days != None %}{{ stats.median_pending_days }}{% else %}—{% endif %}</p>
+    </article>
+    <article class="dash-kpi kpi-approved">
+      <p class="dash-kpi-label">Intake approval rate</p>
+      <p class="dash-kpi-value">{{ stats.intake_approval_rate }}%</p>
+    </article>
+    <article class="dash-kpi">
+      <p class="dash-kpi-label">Branch-origin files</p>
+      <p class="dash-kpi-value">{{ stats.branch_origin_total }}</p>
+    </article>
+    <article class="dash-kpi">
+      <p class="dash-kpi-label">Weak score band</p>
+      <p class="dash-kpi-value">{{ stats.weak_band_count }}</p>
+    </article>
+  </section>
+
+  <section class="lw-panel" style="margin-top:1rem;">
+    <h3>Intake aging (pending)</h3>
+    <p class="help">
+      0–2 days: <strong>{{ stats.aging_buckets.0_2 }}</strong>
+      · 3–7 days: <strong>{{ stats.aging_buckets.3_7 }}</strong>
+      · 8+ days: <strong>{{ stats.aging_buckets.8_plus }}</strong>
+    </p>
+  </section>
+
+  <section class="lw-panel" style="margin-top:1rem;">
+    <h3>Branch scorecard</h3>
+    {% if stats.by_branch_performance %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Branch</th>
+          <th>District</th>
+          <th>Total</th>
+          <th>Intake pending</th>
+          <th>Intake approved</th>
+          <th>Committee pending</th>
+          <th>Disbursed</th>
+          <th>Weak band</th>
+          <th>Avg score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in stats.by_branch_performance %}
+        <tr>
+          <td>{{ row.branch__name|default:"—" }}</td>
+          <td>{{ row.branch__district__name|default:"—" }}</td>
+          <td>{{ row.total }}</td>
+          <td>{% if row.intake_pending %}<strong>{{ row.intake_pending }}</strong>{% else %}0{% endif %}</td>
+          <td>{{ row.intake_approved }}</td>
+          <td>{{ row.committee_pending }}</td>
+          <td>{{ row.disbursed }}</td>
+          <td>{{ row.weak_band }}</td>
+          <td>{% if row.avg_score != None %}{{ row.avg_score|floatformat:1 }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="help">No branch-originated loans in this filter.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var district = document.getElementById('district_id');
+  var branch = document.getElementById('branch_id');
+  if (!district || !branch) return;
+  var url = "{% url 'ajax_load_branches' %}";
+  var selectedBranch = "{{ filters.branch_id|default:''|escapejs }}";
+
+  function loadBranches(districtId, keepSelected) {
+    branch.innerHTML = '<option value="">All in scope</option>';
+    if (!districtId) return;
+    fetch(url + '?district=' + encodeURIComponent(districtId), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        (data || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          if (keepSelected && String(b.id) === String(selectedBranch)) opt.selected = true;
+          branch.appendChild(opt);
+        });
+      });
+  }
+
+  district.addEventListener('change', function () {
+    selectedBranch = '';
+    loadBranches(this.value, false);
+  });
+
+  if (district.value) loadBranches(district.value, true);
+})();
+</script>
+{% endblock %}

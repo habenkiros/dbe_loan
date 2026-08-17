@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Loan agreement — {{ loan_request.loan_request_id }}</title>
+  <style>
+    body { font-family: "Source Sans 3", "Segoe UI", sans-serif; color: #1a1a1a; max-width: 780px; margin: 1.5rem auto; padding: 0 1rem; }
+    h1 { color: #064420; font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .meta { font-size: 0.85rem; color: #444; margin-bottom: 1rem; }
+    .hash { font-size: 0.75rem; word-break: break-all; color: #555; }
+    .body { white-space: pre-wrap; font-size: 0.92rem; line-height: 1.45; border-top: 2px solid #064420; padding-top: 1rem; }
+    .slots { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; }
+    .slot { border: 1px solid #c5d4c9; border-radius: 6px; padding: 0.65rem 0.8rem; width: 220px; }
+    .slot img { max-width: 100%; height: 48px; object-fit: contain; display: block; margin: 0.35rem 0; }
+    .slot .role { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #064420; }
+    .nav { margin-bottom: 1rem; font-size: 0.9rem; }
+    @media print { .nav { display: none; } body { margin: 0; } }
+  </style>
+</head>
+<body>
+  {% if not is_pdf %}
+  <p class="nav">
+    <a href="{% url 'post_approval_detail' loan_request.id %}">← Closing pack</a>
+    · <a href="{% url 'post_approval_agreement_pdf' loan_request.id agreement.id %}">Download PDF</a>
+    · <a href="javascript:window.print()">Print</a>
+  </p>
+  {% endif %}
+  <h1>DECSI — Loan Agreement</h1>
+  <p class="meta">
+    {{ agreement.title }}<br>
+    {{ loan_request.applicant_name }} · {{ loan_request.loan_request_id }}
+    · {{ agreement.get_status_display }}
+    {% if agreement.generated_at %} · Generated {{ agreement.generated_at|date:"d M Y H:i" }}{% endif %}
+  </p>
+  <p class="hash">SHA-256 {{ agreement.content_hash }}</p>
+  <div class="body">{{ agreement.body_text }}</div>
+  <h2 style="color:#064420; font-size:1.05rem; margin-top:1.4rem;">Signatures</h2>
+  <div class="slots">
+    {% for slot in slots %}
+    <div class="slot">
+      <div class="role">{{ slot.label }}</div>
+      {% if slot.signed %}
+        <strong>{{ slot.signature.signer_name }}</strong>
+        {% if slot.signature.signer_id_number %}<br><small>ID {{ slot.signature.signer_id_number }}</small>{% endif %}
+        {% if slot.signature.signature_image %}
+          <img src="{{ slot.signature.signature_image.url }}" alt="Signature">
+        {% endif %}
+        <small>{{ slot.signature.signed_at|date:"d M Y H:i" }}
+          {% if slot.signature.ip_address %} · {{ slot.signature.ip_address }}{% endif %}
+        </small>
+      {% else %}
+        <em>Awaiting signature</em>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <p class="meta" style="margin-top:1.5rem;">
+    Electronic signature record — drawn mark, typed name, identity number, time and content hash.
+    Not a PKI certificate.
+  </p>
+</body>
+</html>

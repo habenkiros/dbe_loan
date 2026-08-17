@@ -125,6 +125,17 @@
         </tbody>
       </table>
     </div>
+    {% if admin_page and admin_page.paginator.num_pages > 1 %}
+    <p class="help">
+      {% if admin_page.has_previous %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}apage={{ admin_page.previous_page_number }}">Previous</a>
+      {% endif %}
+      Page {{ admin_page.number }} of {{ admin_page.paginator.num_pages }}
+      {% if admin_page.has_next %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}apage={{ admin_page.next_page_number }}">Next</a>
+      {% endif %}
+    </p>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -223,6 +234,7 @@
         </tbody>
       </table>
     </div>
+    {% include "includes/pagination.html" with page_obj=given_page %}
   </div>
 </div>
 {% endblock %}

@@ -5,11 +5,24 @@ from . import views
 from . import views_credit_intelligence as ci_views
 from . import views_agent
 from . import views_delegation
+from . import views_risk
+from . import views_cooperative
 from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
     path('', views.home, name='home'),
     path('classic-home/', views.classic_home, name='classic_home'),
+    path('risk/', views_risk.risk_desk, name='risk_desk'),
+    path(
+        'risk/loans/<int:loan_request_id>/review/',
+        views_risk.save_risk_review,
+        name='save_risk_review',
+    ),
+    path(
+        'cooperative/performance/',
+        views_cooperative.cooperative_performance,
+        name='cooperative_performance',
+    ),
     path('agent/', views_agent.agent_assist_console, name='agent_assist'),
     path('agent/chat/', views_agent.agent_chat_api, name='agent_chat_api'),
     path(
@@ -151,6 +164,41 @@ urlpatterns = [
         'loan_request/<int:loan_request_id>/post_approval/mark_disbursed/',
         views.post_approval_mark_disbursed,
         name='post_approval_mark_disbursed',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/collateral_flags/',
+        views.post_approval_collateral_flags,
+        name='post_approval_collateral_flags',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/collateral_legal/upload/',
+        views.post_approval_collateral_legal_upload,
+        name='post_approval_collateral_legal_upload',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/collateral_legal/<int:doc_id>/verify/',
+        views.post_approval_collateral_legal_verify,
+        name='post_approval_collateral_legal_verify',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/agreement/generate/',
+        views.post_approval_agreement_generate,
+        name='post_approval_agreement_generate',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/agreement/<int:agreement_id>/sign/',
+        views.post_approval_agreement_sign,
+        name='post_approval_agreement_sign',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/agreement/<int:agreement_id>/print/',
+        views.post_approval_agreement_print,
+        name='post_approval_agreement_print',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/agreement/<int:agreement_id>/pdf/',
+        views.post_approval_agreement_pdf,
+        name='post_approval_agreement_pdf',
     ),
     path('notifications/', views.loan_notifications_list, name='loan_notifications_list'),
     path(

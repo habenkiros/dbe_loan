@@ -61,6 +61,7 @@
     {% endfor %}
   </tbody>
 </table>
+{% include "includes/pagination.html" %}
 {% else %}
 <p>{% if selected_kind %}No notifications of this type.{% else %}No notifications yet.{% endif %}</p>
 {% endif %}

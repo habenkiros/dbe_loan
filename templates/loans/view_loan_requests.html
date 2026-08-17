@@ -4,12 +4,47 @@
 
 {% block content %}
 <h2>Loan requests</h2>
+{% if loan_list_filter_first %}
+<p class="help" style="margin:0 0 0.75rem;">
+  {% if user.role == 'credit_head' %}
+  Use <strong>branch</strong> or <strong>district</strong> to browse field files, or search to find HO credit loans. Nothing is listed until you filter.
+  {% elif user.role == 'district_manager' %}
+  Select a <strong>branch</strong> (or search) to list loans in your district — nothing is listed until you filter.
+  {% else %}
+  Showing loans assigned to you. Use the <strong>branch</strong> filter (or search) to browse other loans in your district.
+  {% endif %}
+</p>
+{% endif %}
 
 <form method="get" class="form-inline" style="display:flex; flex-wrap:wrap; gap:0.65rem; align-items:flex-end; margin-bottom:1.25rem;">
     <div class="form-group">
         <label for="id_q"><strong>Search</strong></label><br>
         <input type="text" id="id_q" name="q" placeholder="Name, ID, or phone" value="{{ query }}" class="form-control" style="width:220px;">
     </div>
+    {% if can_pick_district %}
+    <div class="form-group">
+        <label for="id_district"><strong>District</strong></label><br>
+        <select id="id_district" name="district" class="form-control" style="width:160px;">
+            <option value="">All / any</option>
+            {% for d in filter_districts %}
+            <option value="{{ d.id }}" {% if selected_district == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    {% if can_pick_branch %}
+    <div class="form-group">
+        <label for="id_branch"><strong>Branch</strong></label><br>
+        <select id="id_branch" name="branch" class="form-control" style="width:180px;">
+            <option value="">Select branch…</option>
+            {% for b in filter_branches %}
+            <option value="{{ b.id }}" {% if selected_branch == b.id|stringformat:"s" %}selected{% endif %}>
+              {% if b.district %}{{ b.district.name }} · {% endif %}{{ b.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
     <div class="form-group">
         <label for="id_status"><strong>Status</strong></label><br>
         <select id="id_status" name="status" class="form-control" style="width:150px;">
@@ -26,12 +61,19 @@
     <button type="submit" class="btn btn-blue">Filter</button>
 </form>
 
+{% if loan_list_needs_filter %}
+<p class="help">No browse filter applied yet.
+  {% if user.role == 'loan_officer' %}Your assigned loans (if any) appear below.{% else %}Apply a branch, district, or search to load loans.{% endif %}
+</p>
+{% endif %}
+
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Applicant</th>
+                <th>Branch</th>
                 <th>Requested</th>
                 <th>Approved</th>
                 <th>Status / stage</th>
@@ -52,6 +94,7 @@
                   {% if loan_request.phone_number %}<br><small>{{ loan_request.phone_number }}</small>{% endif %}
                   {% include "loans/_loan_cbs_highlights.html" %}
                 </td>
+                <td>{{ loan_request.branch.name|default:"—" }}</td>
                 <td>
                   <span class="lw-amt-req">{{ loan_request.amount_requested|floatformat:2 }}</span>
                 </td>
@@ -108,7 +151,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="9">No loan requests match your filters.</td></tr>
+            <tr><td colspan="10">{% if loan_list_needs_filter %}Apply a filter to browse loans.{% else %}No loan requests match your filters.{% endif %}</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -117,16 +160,50 @@
 <div class="pagination">
     <span class="step-links">
         {% if page_obj.has_previous %}
-            <a href="?page=1{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">First</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Previous</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_district %}&district={{ selected_district }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">Previous</a>
         {% endif %}
-        <span class="current">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-        </span>
+        <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Next</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET %}&{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}{% endif %}">Last</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_district %}&district={{ selected_district }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">Next</a>
         {% endif %}
     </span>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var district = document.getElementById('id_district');
+  var branch = document.getElementById('id_branch');
+  if (!district || !branch) return;
+  var url = "{% url 'ajax_load_branches' %}";
+  var selectedBranch = "{{ selected_branch|default:''|escapejs }}";
+
+  function loadBranches(districtId, keepSelected) {
+    branch.innerHTML = '<option value="">Select branch…</option>';
+    if (!districtId) return;
+    fetch(url + '?district=' + encodeURIComponent(districtId), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        (data || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          if (keepSelected && String(b.id) === String(selectedBranch)) opt.selected = true;
+          branch.appendChild(opt);
+        });
+      });
+  }
+
+  district.addEventListener('change', function () {
+    selectedBranch = '';
+    loadBranches(this.value, false);
+  });
+
+  if (district.value) loadBranches(district.value, true);
+})();
+</script>
 {% endblock %}

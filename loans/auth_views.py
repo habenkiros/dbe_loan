@@ -449,14 +449,16 @@ def _can_view_security_audit(user) -> bool:
 @user_passes_test(_can_view_security_audit)
 def security_audit_list(request):
     qs, meta = parse_audit_filters(request.GET)
-    limit = min(int(request.GET.get('limit') or 500), 5000)
-    events = list(qs[:limit])
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, qs)
     return render(request, 'security/audit_log_list.html', {
-        'events': events,
+        'events': page_obj,
+        'page_obj': page_obj,
         'filters': meta,
         'event_choices': SecurityAuditLog.EVT_CHOICES,
-        'result_count': len(events),
+        'result_count': page_obj.paginator.count,
         'export_query': request.GET.urlencode(),
+        'querystring': page_querystring(request),
     })
 
 

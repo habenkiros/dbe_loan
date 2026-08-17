@@ -128,6 +128,10 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
         blockers.append('Schedule principal does not match final approved amount — regenerate.')
     if not loan_request.schedule_confirmed_at:
         blockers.append('Confirm the repayment schedule.')
+    from loans.collateral_legal import collateral_legal_blockers
+    blockers.extend(collateral_legal_blockers(loan_request))
+    from loans.agreement_signing import agreement_blockers
+    blockers.extend(agreement_blockers(loan_request))
     return {
         'ok': not blockers and is_post_approval(loan_request),
         'blockers': blockers,

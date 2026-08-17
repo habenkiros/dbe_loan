@@ -99,8 +99,12 @@ def collateral_unlock_queue(request):
     ).select_related('loan_request', 'loan_request__branch', 'requested_by')
     if role == 'branch_manager' and getattr(request.user, 'branch_id', None):
         qs = qs.filter(loan_request__branch_id=request.user.branch_id)
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, qs.order_by('requested_at'))
     return render(request, 'collateral/unlock_queue.html', {
-        'requests': qs.order_by('requested_at'),
+        'requests': page_obj,
+        'page_obj': page_obj,
+        'querystring': page_querystring(request),
     })
 
 

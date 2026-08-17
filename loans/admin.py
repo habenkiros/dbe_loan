@@ -37,7 +37,7 @@ class LoanRequestAdmin(admin.ModelAdmin):
     list_filter = ('status', 'committee_status', 'branch', 'category', 'collateral', 'queue_approved')
     search_fields = ('loan_request_id', 'applicant_name', 'phone_number')
     readonly_fields = ('loan_request_id',)
-    list_per_page = 20
+    list_per_page = 10
     inlines = [LoanRequestDocumentInline]
 
     def has_add_permission(self, request):

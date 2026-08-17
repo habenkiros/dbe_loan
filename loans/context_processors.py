@@ -87,3 +87,12 @@ def agent_assistant(request):
         ).replace('999999999', '{id}'),
         'agent_chat_provider': resolve_llm_provider(),
     }
+
+
+def staff_nav(request):
+    """Role-based nav visibility (avoid duplicate dashboards / committee links)."""
+    from loans.nav import nav_flags_for
+
+    if not request.user.is_authenticated:
+        return nav_flags_for(None)
+    return nav_flags_for(request.user)

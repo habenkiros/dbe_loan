@@ -562,7 +562,7 @@ def engineering_workload_stats(qs: QuerySet) -> Dict[str, Any]:
     }
 
 
-def filter_choices_for_user(user) -> Dict[str, Any]:
+def filter_choices_for_user(user, district_id=None) -> Dict[str, Any]:
     from loans.models import Branch, District, LoanRequest
 
     role = getattr(user, 'role', None)
@@ -570,7 +570,10 @@ def filter_choices_for_user(user) -> Dict[str, Any]:
     branches = Branch.objects.none()
     if is_org_wide_reporter(user) or role == 'engineering_head':
         districts = District.objects.order_by('name')
-        branches = Branch.objects.select_related('district').order_by('district__name', 'name')
+        if district_id:
+            branches = Branch.objects.filter(district_id=district_id).order_by('name')
+        else:
+            branches = Branch.objects.none()
     elif role == 'district_manager' and getattr(user, 'district_id', None):
         districts = District.objects.filter(pk=user.district_id)
         branches = Branch.objects.filter(district_id=user.district_id).select_related('district').order_by('name')

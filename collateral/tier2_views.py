@@ -25,10 +25,14 @@ def engineering_qa_queue(request):
         return redirect('collateral:dashboard')
     requests_qs = engineering_pending_loans(request.user)
     can_act = role in ('engineer', 'engineering_head', 'admin', 'superadmin')
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, requests_qs)
     return render(request, 'collateral/engineering_qa_queue.html', {
-        'pending_loans': requests_qs,
+        'pending_loans': page_obj,
+        'page_obj': page_obj,
         'can_act_on_queue': can_act,
         'is_branch_manager_view': role == 'branch_manager',
+        'querystring': page_querystring(request),
     })
 
 

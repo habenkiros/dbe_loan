@@ -42,6 +42,7 @@ from loans.models import (
     CollateralType,
     CommitteeApprovalPolicy,
     CustomUser,
+    DelegationActionLog,
     District,
     DocumentAuthenticationPolicy,
     ES_CHECKLIST_STRUCTURE,
@@ -56,7 +57,15 @@ from loans.models import (
     LoanRequestDocument,
     QUALITATIVE_RATING_CHOICES_BY_FACTOR,
     Region,
+    StaffDelegation,
     Zone,
+)
+from loans.delegation import (
+    SCOPE_APPRAISAL,
+    SCOPE_ASSIGN_OFFICER,
+    SCOPE_COMMITTEE,
+    SCOPE_COOPERATIVE,
+    SCOPE_FINANCE,
 )
 from loans.qualitative_scoring import best_rating_for_factor, update_appraisal_qualitative_totals
 from loans.appraisal_scorecard import persist_credit_scorecard
@@ -101,11 +110,13 @@ class Command(BaseCommand):
 
         loans = self._seed_loans(geo, categories, collateral_types, users, catalog)
         self._seed_notifications(users, loans)
+        self._seed_delegations(users)
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Sample data ready.'))
         self.stdout.write(f'  Login password for demo users: {DEFAULT_PASSWORD}')
-        self.stdout.write('  Examples: bm.mekele / lo.mekele1 / eng.head / op.manager / ceo')
+        self.stdout.write('  Examples: bm.mekele / lo.mekele1 / eng.head / coop.manager / ceo / admin.sys')
+        self.stdout.write('  Delegation demo: acct.mekele acts for bm.mekele (Alem locked out until cover ends)')
         self.stdout.write(f'  Loans created/updated: {len(loans)}')
 
     # ------------------------------------------------------------------ geography
@@ -195,6 +206,8 @@ class Command(BaseCommand):
             ('Bank Statement (6 months)', 40, True, False),
             ('Proof of Income', 50, False, False),
             ('Collateral Title / Ownership Doc', 60, True, True),
+            ('Collateral Restriction (government)', 65, False, False),
+            ('Loan Collateral Power of Attorney', 66, False, False),
             ('Audited Financial Statements', 70, False, False),
             ('Marriage Certificate (if applicable)', 80, False, False),
         ]
@@ -340,6 +353,11 @@ class Command(BaseCommand):
             role='loan_officer', first_name='Sara', last_name='Mebrahtu',
             district=d['Mekelle District'], branch=b['Mekelle Main Branch'],
         )
+        users['lo1b'] = self._ensure_user(
+            'lo.mekele3', email='lo.mekele3@decsi.local', phone_number='0911000023',
+            role='loan_officer', first_name='Frehiwot', last_name='Gebreselassie',
+            district=d['Mekelle District'], branch=b['Mekelle Main Branch'],
+        )
         users['lo2'] = self._ensure_user(
             'lo.mekele2', email='lo.mekele2@decsi.local', phone_number='0911000021',
             role='loan_officer', first_name='Dawit', last_name='Abraha',
@@ -373,6 +391,7 @@ class Command(BaseCommand):
         users['op'] = self._ensure_user(
             'coop.manager', email='coop.manager@decsi.local', phone_number='0911000050',
             role='cooperative_manager', first_name='Mulugeta', last_name='Assefa',
+            district=d['Mekelle District'], branch=b['Mekelle Main Branch'],
         )
         # Alias for older seed references
         users['coop'] = users['op']
@@ -387,6 +406,10 @@ class Command(BaseCommand):
         users['fin'] = self._ensure_user(
             'fin.manager', email='fin.manager@decsi.local', phone_number='0911000051',
             role='finance_manager', first_name='Rahel', last_name='Gebremichael',
+        )
+        users['fin_asst'] = self._ensure_user(
+            'fin.assistant', email='fin.assistant@decsi.local', phone_number='0911000054',
+            role='accountant', first_name='Senait', last_name='Hailu',
         )
         users['ceo'] = self._ensure_user(
             'ceo', email='ceo@decsi.local', phone_number='0911000070',
@@ -457,6 +480,10 @@ class Command(BaseCommand):
             'vp_customer_service': Department.KEY_MANAGEMENT,
             'board_member': Department.KEY_BOARD,
         }
+        # Finance assistant sits in Finance dept (same sphere as finance manager)
+        if users.get('fin_asst'):
+            users['fin_asst'].department = depts[Department.KEY_FINANCE]
+            users['fin_asst'].save(update_fields=['department'])
         for u in users.values():
             key = role_dept.get(getattr(u, 'role', None))
             if key and getattr(u, 'department_id', None) != depts[key].id:
@@ -1295,3 +1322,155 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'  Notifications: {LoanNotification.objects.count()}'
         ))
+
+    def _seed_delegations(self, users):
+        """Realistic authority-cover scenarios for Mekelle / Adigrat demo staff."""
+        now = timezone.now()
+        admin = users.get('admin_sys') or users.get('admin')
+        bm = users.get('bm1')
+        acct = users.get('acct1')
+        lo_sara = users.get('lo1')
+        lo_fre = users.get('lo1b')
+        lo_helen = users.get('lo3')
+        eng_meron = users.get('eng2')
+        coop = users.get('op')
+        fin = users.get('fin')
+        fin_asst = users.get('fin_asst')
+        bm_adigrat = users.get('bm2')
+
+        # Clear prior seed rows so re-runs stay idempotent
+        StaffDelegation.objects.filter(reason__startswith='[SEED]').delete()
+        DelegationActionLog.objects.filter(detail__seed=True).delete()
+
+        def _make(**kwargs):
+            return StaffDelegation.objects.create(**kwargs)
+
+        created = []
+
+        # 1) Active cover — BM Alem on leave; Kidane (accountant) assigns officers.
+        #    Alem is locked out of the hub until ends_at.
+        if bm and acct and admin:
+            d = _make(
+                principal=bm,
+                delegate=acct,
+                scopes=[SCOPE_ASSIGN_OFFICER, SCOPE_COMMITTEE],
+                starts_at=now - timedelta(days=1),
+                ends_at=now + timedelta(days=6),
+                status=StaffDelegation.STATUS_APPROVED,
+                is_active=True,
+                reason='[SEED] Annual leave — family obligations in Adwa; Kidane covers officer assignment and branch committee votes',
+                created_by=bm,
+                reviewed_by=admin,
+                reviewed_at=now - timedelta(hours=20),
+            )
+            created.append(d)
+            DelegationActionLog.objects.create(
+                delegation=d,
+                actor=acct,
+                principal=bm,
+                action='seed_note',
+                detail={'seed': True, 'note': 'Demo: log in as acct.mekele to assign officers while bm.mekele is locked out.'},
+            )
+
+        # 2) Pending — Helen (Adigrat LO) asks Meron (engineer, same branch) to cover appraisal
+        if lo_helen and eng_meron:
+            created.append(_make(
+                principal=lo_helen,
+                delegate=eng_meron,
+                scopes=[SCOPE_APPRAISAL],
+                starts_at=now,
+                ends_at=now + timedelta(days=10),
+                status=StaffDelegation.STATUS_PENDING,
+                is_active=False,
+                reason='[SEED] Credit training in Mekelle HQ — Meron to continue document / appraisal work on my Adigrat files',
+                created_by=lo_helen,
+            ))
+
+        # 3) Pending — Finance Rahel proposes Senait for disbursement cover
+        if fin and fin_asst:
+            created.append(_make(
+                principal=fin,
+                delegate=fin_asst,
+                scopes=[SCOPE_FINANCE],
+                starts_at=now + timedelta(days=1),
+                ends_at=now + timedelta(days=8),
+                status=StaffDelegation.STATUS_PENDING,
+                is_active=False,
+                reason='[SEED] Audit fieldwork in Shire — Senait to clear ready disbursements in my absence',
+                created_by=fin,
+            ))
+
+        # 4) Active — Sara LO covers Frehiwot for a short field mission (Sara locked out briefly)
+        #    Skip locking second LO if we want lo.mekele1 for demos — use Frehiwot → Sara instead
+        #    so Sara stays loginable: Frehiwot on leave, Sara covers her appraisals.
+        if lo_sara and lo_fre and admin:
+            created.append(_make(
+                principal=lo_fre,
+                delegate=lo_sara,
+                scopes=[SCOPE_APPRAISAL],
+                starts_at=now - timedelta(hours=6),
+                ends_at=now + timedelta(days=4),
+                status=StaffDelegation.STATUS_APPROVED,
+                is_active=True,
+                reason='[SEED] Field verification — Hawzen / Wukro corridor; Sara continues appraisal on my Mekelle Main files',
+                created_by=lo_fre,
+                reviewed_by=admin,
+                reviewed_at=now - timedelta(hours=5),
+            ))
+
+        # 5) Ended (approved, window passed) — historical Adigrat BM cover
+        if bm_adigrat and lo_helen and admin:
+            created.append(_make(
+                principal=bm_adigrat,
+                delegate=lo_helen,
+                scopes=[SCOPE_ASSIGN_OFFICER],
+                starts_at=now - timedelta(days=20),
+                ends_at=now - timedelta(days=12),
+                status=StaffDelegation.STATUS_APPROVED,
+                is_active=True,
+                reason='[SEED] Medical leave (closed) — Helen temporarily assigned officers at Adigrat',
+                created_by=bm_adigrat,
+                reviewed_by=admin,
+                reviewed_at=now - timedelta(days=20),
+            ))
+
+        # 6) Rejected — coop request that admin declined
+        if coop and acct and admin:
+            created.append(_make(
+                principal=coop,
+                delegate=acct,
+                scopes=[SCOPE_COOPERATIVE],
+                starts_at=now - timedelta(days=3),
+                ends_at=now + timedelta(days=3),
+                status=StaffDelegation.STATUS_REJECTED,
+                is_active=False,
+                reason='[SEED] Workshop attendance — request declined; keep intake with Cooperative desk',
+                created_by=coop,
+                reviewed_by=admin,
+                reviewed_at=now - timedelta(days=2),
+                review_note='Overlap with Kidane’s BM assign cover — use another cover person.',
+            ))
+
+        # 7) Revoked — short DM cover pulled early
+        dm = users.get('dm1')
+        if dm and bm and admin:
+            created.append(_make(
+                principal=dm,
+                delegate=bm,
+                scopes=[SCOPE_ASSIGN_OFFICER, SCOPE_COMMITTEE],
+                starts_at=now - timedelta(days=8),
+                ends_at=now + timedelta(days=2),
+                status=StaffDelegation.STATUS_REVOKED,
+                is_active=False,
+                reason='[SEED] District conference travel — revoked when BM Alem started own leave cover',
+                created_by=dm,
+                reviewed_by=admin,
+                reviewed_at=now - timedelta(days=7),
+                revoked_at=now - timedelta(days=5),
+                revoked_by=admin,
+            ))
+
+        self.stdout.write(self.style.SUCCESS(f'  Delegations seeded: {len(created)}'))
+        self.stdout.write('    Active: Alem→Kidane (assign/committee), Frehiwot→Sara (appraisal)')
+        self.stdout.write('    Pending: Helen→Meron (appraisal), Rahel→Senait (finance)')
+        self.stdout.write('    Login as admin.sys to approve pending; acct.mekele to use BM cover')

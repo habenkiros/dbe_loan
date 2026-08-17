@@ -166,15 +166,48 @@ class OrgRolesRestructureTests(TestCase):
         self.assertEqual(loan.assigned_loan_officer_id, self.credit_lo.id)
 
     def test_district_lo_sees_district_loans(self):
-        from loans.views import _loan_requests_queryset_for_user
+        from loans.views import (
+            _loan_browse_queryset_for_user,
+            _loan_requests_queryset_for_user,
+        )
 
         assigned = self._loan(
             loan_request_id='LR-ORG-DLO',
             operation_manager_approval=True,
             assigned_loan_officer=self.dlo,
         )
-        qs = _loan_requests_queryset_for_user(self.dlo)
-        self.assertTrue(qs.filter(pk=assigned.pk).exists())
+        unassigned = self._loan(
+            loan_request_id='LR-ORG-DLO2',
+            operation_manager_approval=True,
+            assigned_loan_officer=None,
+        )
+        personal = _loan_requests_queryset_for_user(self.dlo)
+        self.assertTrue(personal.filter(pk=assigned.pk).exists())
+        self.assertFalse(personal.filter(pk=unassigned.pk).exists())
+
+        browse = _loan_browse_queryset_for_user(self.dlo, branch_id=str(self.branch.id))
+        self.assertTrue(browse.filter(pk=unassigned.pk).exists())
+
+    def test_credit_head_browses_branch_via_filter(self):
+        from loans.views import (
+            _loan_browse_queryset_for_user,
+            _loan_requests_queryset_for_user,
+        )
+
+        branch_loan = self._loan(loan_request_id='LR-ORG-BR', origin_level=LoanRequest.ORIGIN_BRANCH)
+        ho_loan = self._loan(
+            loan_request_id='LR-ORG-HO',
+            origin_level=LoanRequest.ORIGIN_HEAD_OFFICE,
+            assigned_loan_officer=self.credit_lo,
+        )
+        personal = _loan_requests_queryset_for_user(self.credit_head)
+        self.assertFalse(personal.filter(pk=branch_loan.pk).exists())
+        self.assertFalse(personal.filter(pk=ho_loan.pk).exists())
+
+        by_branch = _loan_browse_queryset_for_user(self.credit_head, branch_id=str(self.branch.id))
+        self.assertTrue(by_branch.filter(pk=branch_loan.pk).exists())
+        search_ho = _loan_browse_queryset_for_user(self.credit_head)
+        self.assertTrue(search_ho.filter(pk=ho_loan.pk).exists())
 
     def test_credit_committee_role_not_in_active_choices(self):
         from loans.forms import ACTIVE_USER_ROLE_CHOICES

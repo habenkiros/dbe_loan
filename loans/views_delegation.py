@@ -42,30 +42,39 @@ def manage_delegations(request):
             return redirect('manage_delegations')
 
     can_approve = user_can_approve_delegations(request.user)
-    given = list(
+    given_qs = (
         StaffDelegation.objects.filter(principal=principal)
         .select_related('delegate', 'reviewed_by', 'revoked_by')
-        .order_by('-created_at')[:40]
+        .order_by('-created_at')
     )
+    from loans.pagination import page_querystring, paginate
+    given_page = paginate(request, given_qs)
     admin_active = []
+    admin_page = None
     if can_approve:
-        admin_active = list(
+        admin_qs = (
             StaffDelegation.objects.filter(
                 status=StaffDelegation.STATUS_APPROVED,
                 is_active=True,
             )
             .select_related('principal', 'delegate', 'reviewed_by')
-            .order_by('-starts_at')[:100]
+            .order_by('-starts_at')
         )
+        admin_page = paginate(request, admin_qs, page_param='apage')
+        admin_active = list(admin_page)
     return render(request, 'loans/manage_delegations.html', {
         'form': form,
-        'given': given,
+        'given': given_page,
+        'given_page': given_page,
         'received': received_delegations(principal),
         'pending': list(pending_delegation_qs()) if can_approve else [],
         'admin_active': admin_active,
+        'admin_page': admin_page,
         'can_approve': can_approve,
         'scope_choices': SCOPE_CHOICES,
         'active_given': given_delegations(principal),
+        'querystring': page_querystring(request, 'apage'),
+        'admin_querystring': page_querystring(request),
     })
 
 

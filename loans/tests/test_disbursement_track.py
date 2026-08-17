@@ -64,6 +64,9 @@ class DisbursementTrackTests(TestCase):
             committee_final_amount=Decimal('100000'),
             committee_decided_at=timezone.now(),
             customer_number='1001',
+            require_collateral_restriction=False,
+            collateral_held_via_poa=False,
+            require_agreement_signatures=False,
         )
         self.appraisal = LoanAppraisal.objects.create(
             loan_request=self.loan,

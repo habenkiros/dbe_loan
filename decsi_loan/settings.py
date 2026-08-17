@@ -18,7 +18,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 
 DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['*']
+_allowed = os.getenv('ALLOWED_HOSTS', '*').strip()
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] if _allowed else ['*']
 
 # Application definition
 
@@ -64,6 +65,7 @@ TEMPLATES = [
                 'loans.context_processors.loan_notifications',
                 'loans.context_processors.staff_delegations',
                 'loans.context_processors.agent_assistant',
+                'loans.context_processors.staff_nav',
                 'collateral.context_processors.gebeta_maps',
             ],
         },
@@ -151,6 +153,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/hub/login/'
 LOGIN_REDIRECT_URL = '/hub/'
 LOGOUT_REDIRECT_URL = '/hub/login/'
+
+# Auth hardening (read from .env — see .env.example)
+LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv('LOGIN_MAX_FAILED_ATTEMPTS', '5') or '5')
+LOGIN_LOCKOUT_MINUTES = int(os.getenv('LOGIN_LOCKOUT_MINUTES', '15') or '15')
+MFA_REQUIRED = os.getenv('MFA_REQUIRED', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
+MFA_TOTP_ISSUER = os.getenv('MFA_TOTP_ISSUER', 'DECSI Loan Hub').strip() or 'DECSI Loan Hub'
+SESSION_IDLE_TIMEOUT = int(os.getenv('SESSION_IDLE_TIMEOUT', '1800') or '1800')
+SESSION_IDLE_WARNING_SECONDS = int(os.getenv('SESSION_IDLE_WARNING_SECONDS', '120') or '120')
+_session_age = os.getenv('SESSION_COOKIE_AGE', '').strip()
+if _session_age.isdigit():
+    SESSION_COOKIE_AGE = int(_session_age)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv(
+    'SESSION_EXPIRE_AT_BROWSER_CLOSE', 'True'
+).strip().lower() in ('1', 'true', 'yes', 'on')
 
 # Chapa payments (digital apply processing fee)
 # Get test keys from https://dashboard.chapa.co — leave blank to use mock checkout in dev.

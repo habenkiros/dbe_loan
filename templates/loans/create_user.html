@@ -1,4 +1,3 @@
-<!-- templates/loans/create_user.html -->
 {% extends "base.html" %}
 
 {% block title %}Create User{% endblock %}
@@ -10,27 +9,34 @@
     {{ form.as_p }}
     <button type="submit">Create User</button>
 </form>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#id_district').change(function() {
-            var url = '{% url "ajax_load_branches" %}';
-            var districtId = $(this).val();
+{% endblock %}
 
-            $.ajax({                       // Initialize the AJAX request
-                url: url,
-                data: {
-                    'district': districtId
-                },
-                success: function (data) {   // `data` is the return of the `load_branches` view function
-                    $('#id_branch').empty();
-                    $('#id_branch').append('<option value="">--- Select Branch ---</option>');
-                    $.each(data, function(key, value) {
-                        $('#id_branch').append('<option value="' + value.id + '">' + value.name + '</option>');
-                    });
-                }
-            });
+{% block extra_scripts %}
+<script>
+(function () {
+  var district = document.getElementById('id_district');
+  var branch = document.getElementById('id_branch');
+  if (!district || !branch) return;
+  var url = "{% url 'ajax_load_branches' %}";
+
+  district.addEventListener('change', function () {
+    var districtId = this.value;
+    branch.innerHTML = '<option value="">---------</option>';
+    if (!districtId) return;
+    fetch(url + '?district=' + encodeURIComponent(districtId), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        (data || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          branch.appendChild(opt);
         });
-    });
+      });
+  });
+})();
 </script>
 {% endblock %}

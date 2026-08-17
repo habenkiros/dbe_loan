@@ -1,4 +1,3 @@
-<!-- templates/loans/edit_user.html -->
 {% extends "base.html" %}
 
 {% block title %}Edit User{% endblock %}
@@ -24,4 +23,40 @@
 <p style="margin-top:1rem;font-size:0.9rem;color:#555;">
   MFA: {% if user.mfa_enabled %}<strong>enabled</strong>{% else %}not enrolled{% endif %}
 </p>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var district = document.getElementById('id_district');
+  var branch = document.getElementById('id_branch');
+  if (!district || !branch) return;
+  var url = "{% url 'ajax_load_branches' %}";
+  var selected = branch.value;
+
+  function fill(districtId, keep) {
+    branch.innerHTML = '<option value="">---------</option>';
+    if (!districtId) return;
+    fetch(url + '?district=' + encodeURIComponent(districtId), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        (data || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          if (keep && String(b.id) === String(selected)) opt.selected = true;
+          branch.appendChild(opt);
+        });
+      });
+  }
+
+  district.addEventListener('change', function () {
+    selected = '';
+    fill(this.value, false);
+  });
+})();
+</script>
 {% endblock %}

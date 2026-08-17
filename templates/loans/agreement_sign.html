@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Sign agreement — {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<style>
+.sig-page { max-width: 840px; }
+.sig-hero { border: 2px solid #064420; border-radius: 10px; padding: 1rem 1.15rem; margin: 0 0 1rem; background: #e8f4ec; }
+.sig-hero h1 { margin: 0 0 0.25rem; font-size: 1.35rem; }
+.pa-badge { display:inline-block; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.8rem; font-weight:600; background:#fff3cd; color:#856404; }
+.pa-ok { background:#d4edda; color:#155724; }
+.pa-bad { background:#f8d7da; color:#721c24; }
+.sig-slots { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.65rem 0 0; }
+.sig-slot { background:#fff; border:1px dashed #8aa48f; border-radius:6px; padding:0.45rem 0.65rem; font-size:0.82rem; min-width:9rem; }
+.sig-slot.done { border-style:solid; border-color:#0a6b2e; background:#fff; }
+.sig-slot img { display:block; height:32px; margin-top:0.2rem; }
+.agr-body { background:#fff; border:1px solid #d5ddd8; border-radius:8px; padding:1rem 1.15rem; max-height:18rem; overflow:auto; white-space:pre-wrap; font-size:0.88rem; line-height:1.45; }
+.hash { font-size:0.75rem; color:#555; word-break:break-all; }
+.pad-wrap { border: 2px solid #064420; border-radius: 10px; background:
+  repeating-linear-gradient(transparent, transparent 27px, #eef3f0 28px), #fff;
+  position: relative; touch-action: none; }
+.pad-wrap canvas { display:block; width:100%; height:200px; cursor:crosshair; }
+.pad-line { position:absolute; left:1.2rem; right:1.2rem; bottom:2.1rem; border-bottom:1px solid #888; pointer-events:none; }
+.pad-hint { position:absolute; left:1.2rem; bottom:0.55rem; font-size:0.75rem; color:#777; pointer-events:none; }
+.sign-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+@media (max-width: 640px) { .sign-grid { grid-template-columns:1fr; } }
+.decl { background:#fff; border:1px solid #d5ddd8; border-radius:8px; padding:0.75rem 0.9rem; margin:0.85rem 0; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="sig-page">
+  <p class="help">
+    <a href="{% url 'post_approval_detail' loan_request.id %}">← Post-approval closing pack</a>
+    · <a href="{% url 'post_approval_agreement_print' loan_request.id agreement.id %}">Print view</a>
+    · <a href="{% url 'post_approval_agreement_pdf' loan_request.id agreement.id %}">PDF</a>
+  </p>
+
+  <div class="sig-hero">
+    <h1>Digital signature ceremony</h1>
+    <p style="margin:0;">
+      <strong>{{ agreement.title }}</strong>
+      · <span class="pa-badge {% if agreement.status == 'fully_signed' %}pa-ok{% else %}pa-bad{% endif %}">
+        {{ agreement.get_status_display }}
+      </span>
+      · {{ loan_request.applicant_name }} · {{ loan_request.branch.name }}
+    </p>
+    <div class="sig-slots">
+      {% for slot in slots %}
+      <div class="sig-slot {% if slot.signed %}done{% endif %}">
+        {{ slot.label }}<br>
+        {% if slot.signed %}
+          <strong>{{ slot.signature.signer_name }}</strong>
+          {% if slot.signature.signature_image %}
+            <img src="{{ slot.signature.signature_image.url }}" alt="">
+          {% endif %}
+        {% else %}
+          Waiting
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2 style="font-size:1.05rem; margin-bottom:0.35rem;">Agreement text</h2>
+  <p class="hash">Content hash (SHA-256): <code>{{ agreement.content_hash }}</code></p>
+  <div class="agr-body">{{ agreement.body_text }}</div>
+
+  {% if can_sign and agreement.status != 'void' and agreement.status != 'fully_signed' %}
+  <form method="post" id="sig-form" style="margin-top:1.25rem;">
+    {% csrf_token %}
+    <h2 style="font-size:1.05rem;">Capture a signature</h2>
+    <div class="sign-grid">
+      <div>
+        <label><strong>Who is signing</strong></label>
+        <select name="role" id="sig-role" class="form-control" required>
+          {% for slot in slots %}
+            {% if not slot.signed %}
+            <option value="{{ slot.role }}">{{ slot.label }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label><strong>Full name (as on ID)</strong></label>
+        <input type="text" name="signer_name" id="sig-name" class="form-control"
+               required value="{{ loan_request.applicant_name }}">
+      </div>
+      <div>
+        <label><strong>Type the name again to confirm</strong></label>
+        <input type="text" name="typed_name" id="sig-typed" class="form-control"
+               required autocomplete="off" placeholder="Must match full name">
+      </div>
+      <div>
+        <label><strong>ID number</strong> <span id="id-req" style="color:#c62828;">*</span></label>
+        <input type="text" name="signer_id_number" id="sig-id" class="form-control"
+               value="{{ applicant_tin }}" placeholder="National ID / kebele ID / passport / staff ID">
+      </div>
+    </div>
+
+    <div class="decl">
+      <label style="display:flex; gap:0.5rem; align-items:flex-start;">
+        <input type="checkbox" name="declaration_accepted" value="1" id="sig-decl" required>
+        <span>
+          I have read the agreement above. I am the person named, I sign of my own free will,
+          and I intend to be legally bound. I understand this electronic signature (drawn mark,
+          typed name, ID, time and hash) is the audit record of my acceptance.
+        </span>
+      </label>
+    </div>
+
+    <label><strong>Draw signature</strong> — finger or stylus</label>
+    <div class="pad-wrap" id="pad-wrap">
+      <canvas id="sig-canvas" width="800" height="220" aria-label="Signature pad"></canvas>
+      <div class="pad-line"></div>
+      <div class="pad-hint">Sign above this line</div>
+    </div>
+    <input type="hidden" name="signature_data" id="signature_data">
+    <p style="margin-top:0.7rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <button type="button" class="btn btn-gray" id="sig-clear">Clear pad</button>
+      <button type="submit" class="btn btn-green" id="sig-submit">Save this signature</button>
+    </p>
+    <p class="help">The next required party can sign immediately after this one is saved.</p>
+  </form>
+  {% elif agreement.status == 'fully_signed' %}
+  <p style="margin-top:1rem;"><span class="pa-badge pa-ok">Fully signed</span>
+    <a href="{% url 'post_approval_detail' loan_request.id %}">Return to closing pack</a>
+    · <a href="{% url 'post_approval_agreement_pdf' loan_request.id agreement.id %}">Download PDF</a>
+  </p>
+  {% else %}
+  <p class="help">You can view this agreement but cannot capture signatures.</p>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  var canvas = document.getElementById('sig-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  var hasInk = false;
+  var last = null;
+  var applicantName = "{{ loan_request.applicant_name|escapejs }}";
+  var officerName = "{{ officer_name|escapejs }}";
+  var applicantTin = "{{ applicant_tin|escapejs }}";
+
+  function resize() {
+    var wrap = document.getElementById('pad-wrap');
+    var cssW = wrap.clientWidth;
+    var cssH = 200;
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2.4;
+    hasInk = false;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function pos(e) {
+    var r = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    last = pos(e);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    var p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+    hasInk = true;
+  }
+  function end() { drawing = false; last = null; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive: false});
+  canvas.addEventListener('touchmove', move, {passive: false});
+  canvas.addEventListener('touchend', end);
+
+  document.getElementById('sig-clear').addEventListener('click', function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasInk = false;
+  });
+
+  var roleEl = document.getElementById('sig-role');
+  var nameEl = document.getElementById('sig-name');
+  var typedEl = document.getElementById('sig-typed');
+  var idEl = document.getElementById('sig-id');
+  var idReq = document.getElementById('id-req');
+
+  function syncRole() {
+    var role = roleEl.value;
+    var needsId = (role === 'borrower' || role === 'guarantor');
+    idReq.style.display = needsId ? 'inline' : 'none';
+    idEl.required = needsId;
+    if (role === 'borrower') {
+      nameEl.value = applicantName;
+      idEl.value = applicantTin;
+    } else if (role === 'officer' || role === 'branch_manager') {
+      nameEl.value = officerName;
+      idEl.value = '';
+    } else {
+      nameEl.value = '';
+      idEl.value = '';
+    }
+    typedEl.value = '';
+  }
+  roleEl.addEventListener('change', syncRole);
+  if (roleEl.options.length) syncRole();
+
+  document.getElementById('sig-form').addEventListener('submit', function (e) {
+    if (!hasInk) {
+      e.preventDefault();
+      alert('Please draw a signature first.');
+      return;
+    }
+    var n1 = (nameEl.value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    var n2 = (typedEl.value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!n1 || n1 !== n2) {
+      e.preventDefault();
+      alert('Typed name must match the full name.');
+      return;
+    }
+    document.getElementById('signature_data').value = canvas.toDataURL('image/png');
+  });
+})();
+</script>
+{% endblock %}

@@ -134,3 +134,41 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var district = document.getElementById('district_id');
+  var branch = document.getElementById('branch_id');
+  if (!district || !branch) return;
+  var url = "{% url 'ajax_load_branches' %}";
+  var selectedBranch = "{{ filters.branch_id|default:''|escapejs }}";
+
+  function loadBranches(districtId, keepSelected) {
+    branch.innerHTML = '<option value="">All</option>';
+    if (!districtId) return;
+    fetch(url + '?district=' + encodeURIComponent(districtId), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        (data || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          if (keepSelected && String(b.id) === String(selectedBranch)) opt.selected = true;
+          branch.appendChild(opt);
+        });
+      });
+  }
+
+  district.addEventListener('change', function () {
+    selectedBranch = '';
+    loadBranches(this.value, false);
+  });
+
+  if (district.value) loadBranches(district.value, true);
+})();
+</script>
+{% endblock %}

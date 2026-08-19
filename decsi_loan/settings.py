@@ -44,10 +44,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # On-prem product license (Ed25519); blocks app when missing/expired past grace
+    'loans.license_middleware.LicenseEnforcementMiddleware',
     # After apps URLs: bare staff paths (/manage_users/ …) → /hub/…
     'loans.legacy_hub_redirect.StaffHubLegacyRedirectMiddleware',
     'loans.middleware.DelegationPrincipalLockoutMiddleware',
 ]
+
+# --- On-prem license (Seqela-signed; see docs/deployment/) ---
+LICENSE_KEY = os.getenv('LICENSE_KEY', '').strip()
+LICENSE_KEY_FILE = os.getenv('LICENSE_KEY_FILE', '').strip()
+LICENSE_GRACE_DAYS = int(os.getenv('LICENSE_GRACE_DAYS', '7') or 7)
+# LICENSE_ENFORCE: unset = enforce when DEBUG=False; set true/false to override
+LICENSE_ENFORCE = os.getenv('LICENSE_ENFORCE', '').strip()
 
 ROOT_URLCONF = 'decsi_loan.urls'
 
@@ -66,6 +75,7 @@ TEMPLATES = [
                 'loans.context_processors.staff_delegations',
                 'loans.context_processors.agent_assistant',
                 'loans.context_processors.staff_nav',
+                'loans.context_processors.product_license',
                 'collateral.context_processors.gebeta_maps',
             ],
         },

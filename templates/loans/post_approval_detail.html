@@ -167,8 +167,51 @@
                {% if agreement_signing.required %}checked{% endif %}>
         Require digital loan agreement signatures before disbursement
       </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="require_title_search" value="1"
+               {% if collateral_legal.require_title_search %}checked{% endif %}>
+        Require title / ownership search
+      </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="require_mortgage_registration" value="1"
+               {% if collateral_legal.require_mortgage_registration %}checked{% endif %}>
+        Require mortgage / restriction registration proof
+      </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="require_notary_stamp" value="1"
+               {% if collateral_legal.require_notary_stamp %}checked{% endif %}>
+        Require notary / stamp-duty receipt
+      </label>
+      <label style="display:block; margin:0.3rem 0;">
+        <input type="checkbox" name="own_contribution_required" value="1"
+               {% if loan_request.own_contribution_required %}checked{% endif %}>
+        Require borrower own-contribution / equity before first disbursement
+      </label>
       <button type="submit" class="btn btn-gray" style="font-size:0.85rem; margin-top:0.35rem;">Save requirements</button>
     </form>
+    {% endif %}
+
+    {% if can_manage_conditions and loan_request.disbursement_status != 'disbursed' %}
+    <div class="legal-card" style="margin-top:0.85rem;">
+      <h3>Additional legal papers</h3>
+      <form method="post" action="{% url 'post_approval_collateral_legal_upload' loan_request.id %}"
+            enctype="multipart/form-data" class="legal-form">
+        {% csrf_token %}
+        <label>Type</label>
+        <select name="kind" class="form-control">
+          <option value="title_search">Title / ownership search</option>
+          <option value="mortgage_registration">Mortgage / restriction registration</option>
+          <option value="notary_stamp">Notary / stamp-duty receipt</option>
+        </select>
+        <label>Reference number</label>
+        <input type="text" name="reference_number" class="form-control" required>
+        <label>Issuing office</label>
+        <input type="text" name="issuing_office" class="form-control" required>
+        <label>Scan / photo</label>
+        <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+        <p><button type="submit" class="btn btn-green" style="font-size:0.85rem;">Upload</button></p>
+      </form>
+    </div>
     {% endif %}
 
     <div class="legal-grid" style="margin-top:0.85rem;">
@@ -460,6 +503,45 @@
 
   <div class="pa-panel" style="border-color:#064420;">
     <h2 style="margin-top:0; font-size:1.15rem;">3. Disbursement</h2>
+    {% if loan_request.own_contribution_required %}
+    <p>
+      Own contribution:
+      {% if loan_request.own_contribution_verified_at %}
+        <span class="pa-badge pa-ok">Verified {{ loan_request.own_contribution_verified_at|date:"SHORT_DATETIME_FORMAT" }}</span>
+        {% if loan_request.own_contribution_amount %} · {{ loan_request.own_contribution_amount|floatformat:2 }}{% endif %}
+      {% else %}
+        <span class="pa-badge pa-bad">Required — not verified</span>
+      {% endif %}
+    </p>
+    {% if can_manage_conditions and not loan_request.own_contribution_verified_at %}
+    <form method="post" action="{% url 'post_approval_verify_equity' loan_request.id %}">
+      {% csrf_token %}
+      <label>Amount (optional)</label>
+      <input type="number" step="0.01" name="own_contribution_amount" class="form-control" style="max-width:12rem;">
+      <label>Evidence note</label>
+      <input type="text" name="own_contribution_note" class="form-control" placeholder="Receipt / date / source">
+      <p><button type="submit" class="btn btn-green" style="font-size:0.85rem;">Verify own contribution</button></p>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% if tranches %}
+    <p><strong>Tranches</strong></p>
+    <ul>
+      {% for t in tranches %}
+      <li>T{{ t.sequence }} · {{ t.amount|floatformat:2 }} · {{ t.get_status_display }}{% if t.note %} — {{ t.note }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if can_manage_conditions and loan_request.disbursement_status != 'disbursed' %}
+    <form method="post" action="{% url 'post_approval_add_tranche' loan_request.id %}" style="margin-bottom:0.75rem;">
+      {% csrf_token %}
+      <label>Add tranche amount</label>
+      <input type="number" step="0.01" name="amount" required class="form-control" style="max-width:12rem;">
+      <label>Note</label>
+      <input type="text" name="note" class="form-control" placeholder="e.g. civil works draw">
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Add tranche</button></p>
+    </form>
+    {% endif %}
     {% if loan_request.disbursement_status == 'disbursed' %}
     <p><span class="pa-badge pa-ok">Disbursed</span>
       {{ loan_request.disbursed_at|date:"SHORT_DATETIME_FORMAT" }}
@@ -475,7 +557,7 @@
       {% endif %}
     </p>
     {% endif %}
-    {% elif loan_request.disbursement_status == 'ready_for_disbursement' %}
+    {% elif loan_request.disbursement_status == 'ready_for_disbursement' or loan_request.disbursement_status == 'partially_disbursed' %}
     <p><span class="pa-badge pa-ok">Ready for disbursement</span>
       {% if loan_request.ready_for_disbursement_at %} since {{ loan_request.ready_for_disbursement_at|date:"SHORT_DATETIME_FORMAT" }}{% endif %}
     </p>

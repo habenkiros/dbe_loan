@@ -2110,6 +2110,7 @@ def post_approval_detail(request, loan_request_id):
     from .collateral_legal import closing_pack_summary
     from .disbursement import can_approve_finance_disbursement
     pack = closing_pack_summary(loan_request)
+    tranches = list(loan_request.disbursement_tranches.order_by('sequence', 'id'))
     return render(request, 'loans/post_approval_detail.html', {
         'loan_request': loan_request,
         'appraisal': appraisal,
@@ -2120,6 +2121,7 @@ def post_approval_detail(request, loan_request_id):
         'collateral_legal': pack['legal'],
         'agreement_signing': pack['agreement'],
         'final_amount': final_loan_amount(loan_request, appraisal),
+        'tranches': tranches,
         'can_manage_conditions': can_manage_conditions(request.user, loan_request),
         'can_confirm_schedule': can_confirm_schedule(request.user, loan_request),
         'can_mark_ready': can_mark_ready(request.user, loan_request),
@@ -2169,12 +2171,20 @@ def post_approval_collateral_flags(request, loan_request_id):
     loan_request.require_collateral_restriction = request.POST.get('require_collateral_restriction') == '1'
     loan_request.collateral_held_via_poa = request.POST.get('collateral_held_via_poa') == '1'
     loan_request.require_agreement_signatures = request.POST.get('require_agreement_signatures') == '1'
+    loan_request.require_title_search = request.POST.get('require_title_search') == '1'
+    loan_request.require_mortgage_registration = request.POST.get('require_mortgage_registration') == '1'
+    loan_request.require_notary_stamp = request.POST.get('require_notary_stamp') == '1'
+    loan_request.own_contribution_required = request.POST.get('own_contribution_required') == '1'
     loan_request.save(update_fields=[
         'require_collateral_restriction',
         'collateral_held_via_poa',
         'require_agreement_signatures',
+        'require_title_search',
+        'require_mortgage_registration',
+        'require_notary_stamp',
+        'own_contribution_required',
     ])
-    messages.success(request, 'Collateral legal and agreement signing requirements updated.')
+    messages.success(request, 'Closing requirements updated.')
     return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
 
@@ -2328,11 +2338,8 @@ def post_approval_collateral_legal_upload(request, loan_request_id):
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
     kind = (request.POST.get('kind') or '').strip()
-    if kind not in (
-        LoanCollateralLegalDocument.KIND_RESTRICTION,
-        LoanCollateralLegalDocument.KIND_POA,
-    ):
-        messages.warning(request, 'Select Collateral Restriction or Power of Attorney.')
+    if kind not in dict(LoanCollateralLegalDocument.KIND_CHOICES):
+        messages.warning(request, 'Select a valid legal document type.')
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
     upload = request.FILES.get('file')
@@ -2500,6 +2507,54 @@ def post_approval_mark_disbursed(request, loan_request_id):
             messages.error(request, err)
     else:
         messages.success(request, 'Loan marked as disbursed.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_verify_equity(request, loan_request_id):
+    from decimal import Decimal, InvalidOperation
+    from .disbursement import can_manage_conditions, verify_own_contribution
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot verify own-contribution on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    note = (request.POST.get('own_contribution_note') or '').strip()
+    raw = request.POST.get('own_contribution_amount') or ''
+    amount = None
+    try:
+        if raw.strip():
+            amount = Decimal(raw)
+    except (InvalidOperation, TypeError):
+        amount = None
+    verify_own_contribution(loan_request, request.user, amount=amount, note=note)
+    messages.success(request, 'Own-contribution verified.')
+    return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+
+@login_required
+@require_http_methods(['POST'])
+def post_approval_add_tranche(request, loan_request_id):
+    from decimal import Decimal, InvalidOperation
+    from .disbursement import add_disbursement_tranche, can_manage_conditions
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not can_manage_conditions(request.user, loan_request):
+        messages.warning(request, 'You cannot add tranches on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    raw = (request.POST.get('amount') or '').strip()
+    try:
+        amount = Decimal(raw)
+    except (InvalidOperation, TypeError):
+        messages.error(request, 'Enter a valid tranche amount.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    if amount <= 0:
+        messages.error(request, 'Tranche amount must be greater than zero.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    note = (request.POST.get('note') or '').strip()
+    add_disbursement_tranche(loan_request, amount, note=note)
+    messages.success(request, 'Tranche added.')
     return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
 

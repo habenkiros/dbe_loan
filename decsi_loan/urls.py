@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 
 from loans import auth_views as staff_auth
 from loans import help_views as hub_help
+from loans.license_middleware import license_status_view
 
 
 # Staff (branch / credit / ops) hub — not on the public root
@@ -69,6 +70,7 @@ _staff_auth_urlpatterns = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('license/', license_status_view, name='product_license_status'),
     # Public digital apply at domain root
     path('', include('applicant_portal.urls')),
     # Staff loan hub

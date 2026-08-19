@@ -16,6 +16,7 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Kind</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -24,6 +25,7 @@
             <tr>
                 <td>{{ collateral_type.id }}</td>
                 <td>{{ collateral_type.name }}</td>
+                <td>{{ collateral_type.get_kind_display|default:"(infer from name)" }}</td>
                 <td>
                     <div class="list-actions">
                     {% url 'edit_collateral_type' collateral_type.id as edit_url %}

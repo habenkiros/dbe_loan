@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Collections {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<p class="help"><a href="{% url 'collections_desk' %}">← Collections</a> · <a href="{% url 'monitoring_loan' loan_request.id %}">Monitoring</a></p>
+<h1>{{ loan_request.loan_request_id }}</h1>
+<p>{{ loan_request.applicant_name }} · {{ loan_request.get_arrears_status_display }}</p>
+
+<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Arrears status</h2>
+  <form method="post" action="{% url 'collections_set_arrears' loan_request.id %}">
+    {% csrf_token %}
+    <select name="arrears_status" class="form-control" style="max-width:16rem;">
+      {% for val, label in arrears_choices %}
+      <option value="{{ val }}" {% if loan_request.arrears_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <p><button type="submit" class="btn btn-gray">Save status</button></p>
+  </form>
+</div>
+
+<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Collection actions</h2>
+  <form method="post" action="{% url 'collections_add_action' loan_request.id %}">
+    {% csrf_token %}
+    <select name="kind" class="form-control" style="max-width:16rem;">
+      <option value="reminder">Reminder</option>
+      <option value="demand">Demand notice</option>
+      <option value="visit">Collection visit</option>
+      <option value="legal_referral">Legal referral</option>
+    </select>
+    <label>Notes</label>
+    <textarea name="notes" class="form-control" rows="2" required></textarea>
+    <p><button type="submit" class="btn btn-green">Record action</button></p>
+  </form>
+  {% for a in actions %}
+  <p><strong>{{ a.get_kind_display }}</strong> · {{ a.created_at|date:"Y-m-d H:i" }}{% if a.recorded_by %} · {{ a.recorded_by.username }}{% endif %}<br>{{ a.notes }}</p>
+  {% empty %}
+  <p class="help">No actions yet.</p>
+  {% endfor %}
+</div>
+
+<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Workout / reschedule</h2>
+  <p>Status: <strong>{{ loan_request.get_workout_status_display|default:"None" }}</strong>
+    {% if loan_request.workout_note %}<br>{{ loan_request.workout_note }}{% endif %}
+  </p>
+  <form method="post" action="{% url 'collections_workout' loan_request.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="request">
+    <label>Proposed amount</label>
+    <input type="number" step="0.01" name="workout_proposed_amount" class="form-control" style="max-width:12rem;">
+    <label>Proposed term (months)</label>
+    <input type="number" name="workout_proposed_term_months" class="form-control" style="max-width:8rem;">
+    <label>Proposal</label>
+    <textarea name="workout_note" class="form-control" rows="2" required></textarea>
+    <p><button type="submit" class="btn btn-gray">Submit request</button></p>
+  </form>
+  {% if can_decide and loan_request.workout_status == 'requested' %}
+  <form method="post" action="{% url 'collections_workout' loan_request.id %}" style="display:inline;">
+    {% csrf_token %}<input type="hidden" name="action" value="approve">
+    <button type="submit" class="btn btn-green">Approve</button>
+  </form>
+  <form method="post" action="{% url 'collections_workout' loan_request.id %}" style="display:inline;">
+    {% csrf_token %}<input type="hidden" name="action" value="reject">
+    <button type="submit" class="btn btn-gray">Reject</button>
+  </form>
+  <p class="help">Approval records the decision in the hub. CBS posting is not done here.</p>
+  {% endif %}
+</div>
+
+<div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Write-off / write-back</h2>
+  <p>Status: <strong>{{ loan_request.get_writeoff_status_display|default:"None" }}</strong></p>
+  <form method="post" action="{% url 'collections_writeoff' loan_request.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="request">
+    <label>Amount</label>
+    <input type="number" step="0.01" name="writeoff_amount" class="form-control" style="max-width:12rem;">
+    <label>Reason</label>
+    <textarea name="writeoff_note" class="form-control" rows="2" required></textarea>
+    <p><button type="submit" class="btn btn-gray">Request write-off</button></p>
+  </form>
+  {% if can_decide %}
+  {% if loan_request.writeoff_status == 'requested' %}
+  <form method="post" action="{% url 'collections_writeoff' loan_request.id %}">
+    {% csrf_token %}<input type="hidden" name="action" value="approve">
+    <button type="submit" class="btn btn-green">Approve write-off</button>
+  </form>
+  {% endif %}
+  {% if loan_request.writeoff_status == 'approved' %}
+  <form method="post" action="{% url 'collections_writeoff' loan_request.id %}">
+    {% csrf_token %}<input type="hidden" name="action" value="write_back">
+    <button type="submit" class="btn btn-gray">Write back</button>
+  </form>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

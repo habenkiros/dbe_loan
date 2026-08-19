@@ -8,11 +8,11 @@
 <h2>{{ collateral_label }}</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }}</p>
 <p class="list-actions" style="margin:0.75rem 0;">
-    {% if "building" in loan_request.collateral.name|lower or "house" in loan_request.collateral.name|lower %}
+    {% if loan_request.collateral.uses_building %}
     {% url 'collateral:building_list' loan_request.id as buildings_url %}
     {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
     {% endif %}
-    {% if "land" in loan_request.collateral.name|lower %}
+    {% if loan_request.collateral.uses_land %}
     {% url 'collateral:land_valuation' loan_request.id as land_url %}
     {% include "includes/list_action.html" with href=land_url icon="land" label="Land" tone="blue" only %}
     {% endif %}

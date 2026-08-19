@@ -34,6 +34,33 @@ def poa_satisfied(loan_request) -> bool:
     return has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_POA)
 
 
+def _optional_kind_satisfied(loan_request, required_flag: str, kind: str) -> bool:
+    if not getattr(loan_request, required_flag, False):
+        return True
+    return has_verified_doc(loan_request, kind)
+
+
+def title_search_satisfied(loan_request) -> bool:
+    from loans.models import LoanCollateralLegalDocument
+    return _optional_kind_satisfied(
+        loan_request, 'require_title_search', LoanCollateralLegalDocument.KIND_TITLE_SEARCH,
+    )
+
+
+def mortgage_registration_satisfied(loan_request) -> bool:
+    from loans.models import LoanCollateralLegalDocument
+    return _optional_kind_satisfied(
+        loan_request, 'require_mortgage_registration', LoanCollateralLegalDocument.KIND_MORTGAGE_REG,
+    )
+
+
+def notary_stamp_satisfied(loan_request) -> bool:
+    from loans.models import LoanCollateralLegalDocument
+    return _optional_kind_satisfied(
+        loan_request, 'require_notary_stamp', LoanCollateralLegalDocument.KIND_NOTARY_STAMP,
+    )
+
+
 def collateral_legal_blockers(loan_request) -> List[str]:
     blockers = []
     from loans.models import LoanCollateralLegalDocument
@@ -50,6 +77,15 @@ def collateral_legal_blockers(loan_request) -> List[str]:
                 'Loan Collateral Power of Attorney must be uploaded and verified '
                 '(collateral is held via POA).'
             )
+    if getattr(loan_request, 'require_title_search', False):
+        if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_TITLE_SEARCH):
+            blockers.append('Title / ownership search must be uploaded and verified before disbursement.')
+    if getattr(loan_request, 'require_mortgage_registration', False):
+        if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_MORTGAGE_REG):
+            blockers.append('Mortgage / restriction registration proof must be verified before disbursement.')
+    if getattr(loan_request, 'require_notary_stamp', False):
+        if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_NOTARY_STAMP):
+            blockers.append('Notary / stamp-duty receipt must be verified before disbursement.')
     return blockers
 
 
@@ -79,17 +115,35 @@ def collateral_legal_summary(loan_request) -> dict:
     )
     restriction_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_RESTRICTION]
     poa_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_POA]
+    title_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_TITLE_SEARCH]
+    mort_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_MORTGAGE_REG]
+    notary_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_NOTARY_STAMP]
     require_restriction = bool(getattr(loan_request, 'require_collateral_restriction', True))
     via_poa = bool(getattr(loan_request, 'collateral_held_via_poa', False))
+    require_title = bool(getattr(loan_request, 'require_title_search', False))
+    require_mort = bool(getattr(loan_request, 'require_mortgage_registration', False))
+    require_notary = bool(getattr(loan_request, 'require_notary_stamp', False))
     return {
         'require_restriction': require_restriction,
         'via_poa': via_poa,
+        'require_title_search': require_title,
+        'require_mortgage_registration': require_mort,
+        'require_notary_stamp': require_notary,
         'restriction_ok': restriction_satisfied(loan_request),
         'poa_ok': poa_satisfied(loan_request),
+        'title_ok': title_search_satisfied(loan_request),
+        'mortgage_ok': mortgage_registration_satisfied(loan_request),
+        'notary_ok': notary_stamp_satisfied(loan_request),
         'restriction_state': _doc_state(restriction_docs, require_restriction),
         'poa_state': _doc_state(poa_docs, via_poa, not_used=not via_poa),
+        'title_state': _doc_state(title_docs, require_title),
+        'mortgage_state': _doc_state(mort_docs, require_mort),
+        'notary_state': _doc_state(notary_docs, require_notary),
         'restriction_docs': restriction_docs,
         'poa_docs': poa_docs,
+        'title_docs': title_docs,
+        'mortgage_docs': mort_docs,
+        'notary_docs': notary_docs,
         'latest_restriction': restriction_docs[0] if restriction_docs else None,
         'latest_poa': poa_docs[0] if poa_docs else None,
         'all_docs': docs,
@@ -149,6 +203,33 @@ def closing_pack_summary(loan_request) -> dict:
             'label': poa_label,
         },
         {
+            'key': 'title',
+            'title': 'Title search',
+            'ok': legal['title_ok'],
+            'required': legal['require_title_search'],
+            'label': 'Verified' if legal['title_ok'] and legal['require_title_search'] else (
+                'Not required' if not legal['require_title_search'] else 'Open'
+            ),
+        },
+        {
+            'key': 'mortgage',
+            'title': 'Mortgage registration',
+            'ok': legal['mortgage_ok'],
+            'required': legal['require_mortgage_registration'],
+            'label': 'Verified' if legal['mortgage_ok'] and legal['require_mortgage_registration'] else (
+                'Not required' if not legal['require_mortgage_registration'] else 'Open'
+            ),
+        },
+        {
+            'key': 'notary',
+            'title': 'Notary / stamp',
+            'ok': legal['notary_ok'],
+            'required': legal['require_notary_stamp'],
+            'label': 'Verified' if legal['notary_ok'] and legal['require_notary_stamp'] else (
+                'Not required' if not legal['require_notary_stamp'] else 'Open'
+            ),
+        },
+        {
             'key': 'agreement',
             'title': 'Digital signatures',
             'ok': agr['ok'],
@@ -186,6 +267,16 @@ def validate_legal_upload(kind: str, data: dict) -> Optional[str]:
             return 'Enter the POA grantor (collateral owner).'
         if len((data.get('attorney_name') or '').strip()) < 2:
             return 'Enter the attorney-in-fact named in the POA (usually the borrower).'
+        return None
+    if kind in (
+        LoanCollateralLegalDocument.KIND_TITLE_SEARCH,
+        LoanCollateralLegalDocument.KIND_MORTGAGE_REG,
+        LoanCollateralLegalDocument.KIND_NOTARY_STAMP,
+    ):
+        if len(ref) < 2:
+            return 'Enter the document reference number.'
+        if len(office) < 2:
+            return 'Enter the issuing office.'
         return None
     return 'Unknown document type.'
 

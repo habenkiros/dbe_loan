@@ -103,6 +103,16 @@
                     Post-approval
                 </a>
                 {% endif %}
+                {% if nav_show_book_ops %}
+                <a href="{% url 'monitoring_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Monitoring
+                </a>
+                <a href="{% url 'collections_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Collections
+                </a>
+                {% endif %}
                 {% if user.role == 'credit_head' %}
                 <a href="{% url 'manage_approval_committees' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="users" only %}
@@ -129,6 +139,22 @@
                     {% include "includes/nav_icon.html" with icon="report" only %}
                     Branch performance
                 </a>
+                {% if nav_show_post_approval %}
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
+                {% endif %}
+                {% if nav_show_book_ops %}
+                <a href="{% url 'monitoring_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Monitoring
+                </a>
+                <a href="{% url 'collections_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Collections
+                </a>
+                {% endif %}
                 {% if nav_show_approval_votes %}
                 <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="approval" only %}
@@ -159,6 +185,16 @@
                     Post-approval
                 </a>
                 {% endif %}
+                {% if nav_show_book_ops %}
+                <a href="{% url 'monitoring_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Monitoring
+                </a>
+                <a href="{% url 'collections_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Collections
+                </a>
+                {% endif %}
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
@@ -171,6 +207,16 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Risk desk
                 </a>
+                {% if nav_show_book_ops %}
+                <a href="{% url 'monitoring_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Monitoring
+                </a>
+                <a href="{% url 'collections_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Collections
+                </a>
+                {% endif %}
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
@@ -191,10 +237,20 @@
                     My votes
                 </a>
                 {% endif %}
-                {% if user.role == 'accountant' or user.role == 'district_manager' %}
+                {% if nav_show_post_approval %}
                 <a href="{% url 'post_approval_queue' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Post-approval
+                </a>
+                {% endif %}
+                {% if nav_show_book_ops %}
+                <a href="{% url 'monitoring_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Monitoring
+                </a>
+                <a href="{% url 'collections_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Collections
                 </a>
                 {% endif %}
                 {% if nav_show_reports %}
@@ -394,6 +450,12 @@
         <div class="lw-delegation-banner lw-delegation-pending" role="status">
           <strong>{{ pending_delegation_count }} delegation request{{ pending_delegation_count|pluralize }} awaiting approval</strong>
           · <a href="{% url 'manage_delegations' %}">Review</a>
+        </div>
+        {% endif %}
+        {% if product_license_warn and product_license %}
+        <div class="lw-delegation-banner lw-delegation-pending" role="status">
+          <strong>Product license:</strong> {{ product_license.message }}
+          · <a href="{% url 'product_license_status' %}">Details</a>
         </div>
         {% endif %}
         {% if active_delegations_received %}

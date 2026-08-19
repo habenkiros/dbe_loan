@@ -52,18 +52,18 @@
                 <td>{% if lr.collateral_submitted_at %}✓ {{ lr.collateral_submitted_at|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                 <td>
                     <div class="list-actions">
-                    {% with ct=lr.collateral.name|lower %}
-                    {% if "building" in ct or "house" in ct or "construction" in ct %}
+                    {% if lr.collateral.uses_building %}
                     {% url 'collateral:building_list' lr.id as buildings_url %}
                     {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
-                    {% elif "land" in ct %}
+                    {% endif %}
+                    {% if lr.collateral.uses_land %}
                     {% url 'collateral:land_valuation' lr.id as land_url %}
                     {% include "includes/list_action.html" with href=land_url icon="land" label="Land" tone="blue" only %}
-                    {% elif "vehicle" in ct or "machinery" in ct or "equipment" in ct or "other" in ct %}
+                    {% endif %}
+                    {% if lr.collateral.uses_movable %}
                     {% url 'collateral:other_collateral_list' lr.id as other_url %}
                     {% include "includes/list_action.html" with href=other_url icon="vehicle" label="Vehicle / other" tone="blue" only %}
                     {% endif %}
-                    {% endwith %}
                     {% url 'collateral:summary' lr.id as sum_url %}
                     {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="green" only %}
                     {% url 'loan_request_detail' lr.id as detail_url %}

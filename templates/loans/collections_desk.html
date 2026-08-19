@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Collections{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <h1>Collections</h1>
+  <p class="help">Hub case file — arrears, actions, workout, write-off. Money posting stays in CBS. <a href="{% url 'monitoring_desk' %}">Monitoring</a></p>
+  <p>
+    <a href="?">Past due / NPL</a>
+    · <a href="?all=1">All booked</a>
+  </p>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Loan</th><th>Applicant</th><th>Arrears</th><th>Workout</th><th>Write-off</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for lr in page_obj %}
+      <tr>
+        <td>{{ lr.loan_request_id }}</td>
+        <td>{{ lr.applicant_name }}</td>
+        <td>{{ lr.get_arrears_status_display }}</td>
+        <td>{{ lr.get_workout_status_display|default:"—" }}</td>
+        <td>{{ lr.get_writeoff_status_display|default:"—" }}</td>
+        <td><a href="{% url 'collections_loan' lr.id %}">Open</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">No loans in this queue.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "includes/pagination.html" %}
+</div>
+{% endblock %}

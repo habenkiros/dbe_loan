@@ -622,44 +622,16 @@ def reimport_sheet1_from_documents(
     )
 
 def compute_collateral_totals(loan_request: LoanRequest) -> Dict[str, Decimal]:
-    from collateral.models import Building, BuildingValuation, LandValuation, OtherCollateralItem
+    from loans.collateral_kind import compute_engine_totals
 
-    buildings = Building.objects.filter(loan_request=loan_request)
-    total_buildings = Decimal('0')
-    for building in buildings:
-        rows = BuildingValuation.objects.filter(building=building)
-        total_buildings += sum((r.total or Decimal('0')) for r in rows)
-    try:
-        land = LandValuation.objects.get(loan_request=loan_request)
-        land_value = land.total_value or Decimal('0')
-    except LandValuation.DoesNotExist:
-        land_value = Decimal('0')
-    other_items = OtherCollateralItem.objects.filter(loan_request=loan_request)
-    total_other = sum((item.estimated_value or Decimal('0')) for item in other_items)
-    ct = (loan_request.collateral.name or '').lower()
-    if 'building' in ct or 'house' in ct or 'construction' in ct:
-        grand_total = total_buildings
-        immovable = total_buildings
-        moveable = Decimal('0')
-    elif 'land' in ct:
-        grand_total = land_value
-        immovable = land_value
-        moveable = Decimal('0')
-    elif any(x in ct for x in ('vehicle', 'machinery', 'equipment', 'other')):
-        grand_total = total_other
-        immovable = Decimal('0')
-        moveable = total_other
-    else:
-        grand_total = total_buildings + land_value + total_other
-        immovable = total_buildings + land_value
-        moveable = total_other
+    totals = compute_engine_totals(loan_request)
     return {
-        'total_buildings': total_buildings,
-        'land_value': land_value,
-        'total_other': total_other,
-        'grand_total': grand_total,
-        'collateral_immovable_value': immovable,
-        'collateral_moveable_value': moveable,
+        'total_buildings': totals['total_buildings'],
+        'land_value': totals['land_value'],
+        'total_other': totals['total_other'],
+        'grand_total': totals['grand_total'],
+        'collateral_immovable_value': totals['collateral_immovable_value'],
+        'collateral_moveable_value': totals['collateral_moveable_value'],
     }
 
 

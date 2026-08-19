@@ -107,6 +107,7 @@ def nav_flags_for(user) -> Dict[str, Any]:
     empty = {
         'nav_show_approval_votes': False,
         'nav_show_post_approval': False,
+        'nav_show_book_ops': False,
         'nav_show_reports': False,
         'nav_show_portfolio_dashboard': False,
         'nav_role': '',
@@ -124,6 +125,7 @@ def nav_flags_for(user) -> Dict[str, Any]:
     return {
         'nav_show_approval_votes': show_votes,
         'nav_show_post_approval': is_admin or role in POST_APPROVAL_ROLES,
+        'nav_show_book_ops': is_admin or role in POST_APPROVAL_ROLES or role in ('risk_compliance', 'ceo'),
         'nav_show_reports': is_admin or role in REPORTS_ROLES,
         'nav_show_portfolio_dashboard': show_portfolio_dash,
         'nav_role': role,

@@ -132,6 +132,9 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
     blockers.extend(collateral_legal_blockers(loan_request))
     from loans.agreement_signing import agreement_blockers
     blockers.extend(agreement_blockers(loan_request))
+    if getattr(loan_request, 'own_contribution_required', False):
+        if not loan_request.own_contribution_verified_at:
+            blockers.append('Borrower own-contribution / equity must be verified before disbursement.')
     return {
         'ok': not blockers and is_post_approval(loan_request),
         'blockers': blockers,
@@ -207,7 +210,9 @@ def can_mark_disbursed(user, loan_request) -> bool:
     """Assigned loan officer / BM confirms disbursement after Finance approval."""
     if not is_post_approval(loan_request):
         return False
-    if loan_request.disbursement_status != loan_request.DISBURSE_READY:
+    if loan_request.disbursement_status not in (
+        loan_request.DISBURSE_READY, loan_request.DISBURSE_PARTIAL,
+    ):
         return False
     if not loan_request.finance_disbursement_approval:
         return False
@@ -331,6 +336,48 @@ def mark_ready_for_disbursement(loan_request, user, *, notes: str = '') -> Tuple
     return True, []
 
 
+def next_pending_tranche(loan_request):
+    from loans.models import LoanDisbursementTranche
+
+    return (
+        LoanDisbursementTranche.objects.filter(
+            loan_request=loan_request,
+            status=LoanDisbursementTranche.STATUS_PENDING,
+        )
+        .order_by('sequence', 'id')
+        .first()
+    )
+
+
+def verify_own_contribution(loan_request, user, *, amount=None, note='') -> None:
+    loan_request.own_contribution_verified_at = timezone.now()
+    loan_request.own_contribution_verified_by = user
+    if amount is not None:
+        loan_request.own_contribution_amount = amount
+    if note:
+        loan_request.own_contribution_note = note.strip()
+    loan_request.save(update_fields=[
+        'own_contribution_verified_at',
+        'own_contribution_verified_by',
+        'own_contribution_amount',
+        'own_contribution_note',
+    ])
+
+
+def add_disbursement_tranche(loan_request, amount, *, note='', sequence=None):
+    from loans.models import LoanDisbursementTranche
+
+    if sequence is None:
+        last = loan_request.disbursement_tranches.order_by('-sequence').first()
+        sequence = (last.sequence + 1) if last else 1
+    return LoanDisbursementTranche.objects.create(
+        loan_request=loan_request,
+        sequence=sequence,
+        amount=amount,
+        note=note or '',
+    )
+
+
 def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[str]]:
     """
     Confirm disbursement. When DECSI_CBS_BOOK_ON_DISBURSE is on, books in CBS first
@@ -338,13 +385,20 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
     """
     from django.conf import settings
 
-    if loan_request.disbursement_status != loan_request.DISBURSE_READY:
+    if loan_request.disbursement_status not in (
+        loan_request.DISBURSE_READY,
+        loan_request.DISBURSE_PARTIAL,
+    ):
         return False, ['Loan must be marked ready for disbursement first.']
     if not loan_request.finance_disbursement_approval:
         return False, ['Finance department must approve disbursement before confirmation.']
 
     booking_note = ''
-    if getattr(settings, 'DECSI_CBS_BOOK_ON_DISBURSE', True):
+    book_cbs = (
+        getattr(settings, 'DECSI_CBS_BOOK_ON_DISBURSE', True)
+        and loan_request.disbursement_status == loan_request.DISBURSE_READY
+    )
+    if book_cbs:
         from loans.portfolio_ledger import get_ledger_adapter
         from loans.services.cbs_client import fetch_customer_outstanding
 
@@ -375,6 +429,27 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
             f'CBS {result.status}: ref={result.booking_ref or "—"} '
             f'account={result.loan_account or "—"} ({result.provider})'
         )
+
+    next_t = next_pending_tranche(loan_request)
+    if next_t:
+        next_t.status = next_t.STATUS_DISBURSED
+        next_t.disbursed_at = timezone.now()
+        next_t.disbursed_by = user
+        next_t.save(update_fields=['status', 'disbursed_at', 'disbursed_by'])
+        if next_pending_tranche(loan_request):
+            loan_request.disbursement_status = loan_request.DISBURSE_PARTIAL
+            note_parts = [p for p in (notes.strip() if notes else '', booking_note, f'Tranche {next_t.sequence} released') if p]
+            if note_parts:
+                loan_request.disbursement_notes = (
+                    (loan_request.disbursement_notes + '\n' if loan_request.disbursement_notes else '')
+                    + '\n'.join(note_parts)
+                )
+            loan_request.save(update_fields=[
+                'disbursement_status', 'disbursement_notes',
+                'cbs_booking_status', 'cbs_booking_ref', 'cbs_loan_account', 'cbs_booked_at',
+                'cbs_outstanding_at_booking',
+            ])
+            return True, []
 
     loan_request.disbursement_status = loan_request.DISBURSE_DISBURSED
     loan_request.disbursed_at = timezone.now()

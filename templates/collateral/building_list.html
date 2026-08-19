@@ -10,11 +10,11 @@
 <p class="list-actions" style="margin:0.75rem 0;">
     {% url 'collateral:building_add' loan_request.id as add_url %}
     {% include "includes/list_action.html" with href=add_url icon="add" label="Add building" tone="green" only %}
-    {% if "land" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_land %}
     {% url 'collateral:land_valuation' loan_request.id as land_url %}
     {% include "includes/list_action.html" with href=land_url icon="land" label="Land" tone="blue" only %}
     {% endif %}
-    {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_movable %}
     {% url 'collateral:other_collateral_list' loan_request.id as other_url %}
     {% include "includes/list_action.html" with href=other_url icon="vehicle" label="Other (vehicle, machinery)" tone="blue" only %}
     {% endif %}

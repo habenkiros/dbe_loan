@@ -185,15 +185,19 @@ class Command(BaseCommand):
 
     def _seed_collateral_types(self):
         names = [
-            'Building / House',
-            'Land',
-            'Vehicle',
-            'Machinery / Equipment',
-            'Other Movable',
+            ('Building / House', CollateralType.KIND_BUILDING),
+            ('Land', CollateralType.KIND_LAND),
+            ('Vehicle', CollateralType.KIND_MOVABLE),
+            ('Machinery / Equipment', CollateralType.KIND_MOVABLE),
+            ('Other Movable', CollateralType.KIND_MOVABLE),
+            ('Building + Land', CollateralType.KIND_MIXED),
         ]
         out = {}
-        for name in names:
-            ct, _ = CollateralType.objects.get_or_create(name=name)
+        for name, kind in names:
+            ct, created = CollateralType.objects.get_or_create(name=name, defaults={'kind': kind})
+            if not created and not ct.kind:
+                ct.kind = kind
+                ct.save(update_fields=['kind'])
             out[name] = ct
         self.stdout.write(self.style.SUCCESS(f'  Collateral types: {len(out)}'))
         return out

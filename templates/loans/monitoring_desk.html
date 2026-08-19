@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Monitoring{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <h1>Follow-up &amp; monitoring</h1>
+  <p class="help">Disbursed loans — covenants, visits, watchlist. <a href="{% url 'collections_desk' %}">Collections</a></p>
+  <p>
+    <a href="?">All booked</a>
+    · <a href="?watch=1">Watchlist only</a>
+  </p>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Loan</th><th>Applicant</th><th>Branch</th><th>Watchlist</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for lr in page_obj %}
+      <tr>
+        <td>{{ lr.loan_request_id }}</td>
+        <td>{{ lr.applicant_name }}</td>
+        <td>{{ lr.branch.name }}</td>
+        <td>{% if lr.watchlist %}<span class="lw-badge lw-warn">Watch</span>{% else %}—{% endif %}</td>
+        <td><a href="{% url 'monitoring_loan' lr.id %}">Open</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No disbursed loans in your scope.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "includes/pagination.html" %}
+</div>
+{% endblock %}

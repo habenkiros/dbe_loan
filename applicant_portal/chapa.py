@@ -8,12 +8,15 @@ Docs: https://developer.chapa.co/docs
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from decimal import Decimal
 from typing import Any, Dict, Optional, Tuple
 
 import requests
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.urls import reverse
 from django.utils import timezone
 
@@ -21,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 CHAPA_INIT_URL = 'https://api.chapa.co/v1/transaction/initialize'
 CHAPA_VERIFY_URL = 'https://api.chapa.co/v1/transaction/verify/{tx_ref}'
+# Chapa customization.title max 16; description: letters, numbers, hyphen, underscore, space, dots.
+_CHAPA_DESC_RE = re.compile(r'[^A-Za-z0-9 _.\-]+')
+_BAD_EMAIL_TLDS = ('.local', '.test', '.invalid', '.localhost', '.example')
 
 
 def chapa_secret_key() -> str:
@@ -44,10 +50,104 @@ def _site_url() -> str:
     return (getattr(settings, 'SITE_URL', '') or 'http://localhost:8000').rstrip('/')
 
 
+def checkout_base_url(request=None) -> str:
+    """Origin the browser is actually using — not the LAN IP baked into SITE_URL.
+
+    Chapa redirects the customer to return_url. If that is 10.x:8443 while they
+    applied on localhost:8000, they land on an IP (and lose the portal session).
+    """
+    if request is not None:
+        host = (request.get_host() or '').strip()
+        if host.startswith('127.0.0.1'):
+            host = 'localhost' + host[9:]
+        forwarded = (request.META.get('HTTP_X_FORWARDED_PROTO') or '').split(',')[0].strip()
+        if forwarded in ('http', 'https'):
+            scheme = forwarded
+        else:
+            scheme = 'https' if request.is_secure() else 'http'
+        if host:
+            return f'{scheme}://{host}'.rstrip('/')
+    return _site_url()
+
+
+def payment_return_url(application, tx_ref: str, *, request=None) -> str:
+    path = reverse(
+        'applicant_portal:apply_payment_return',
+        args=[application.public_id],
+    )
+    return f'{checkout_base_url(request)}{path}?tx_ref={tx_ref}'
+
+
+def payment_callback_url(*, request=None) -> str:
+    path = reverse('applicant_portal:chapa_webhook')
+    return f'{checkout_base_url(request)}{path}'
+
+
 def make_tx_ref(application) -> str:
     # Chapa prefers unique transaction references (max ~50).
     short = application.public_id.hex[:12]
     return f'DA-{short}-{uuid.uuid4().hex[:8]}'.upper()
+
+
+def _chapa_email(application) -> str:
+    """Chapa requires a real-looking email; .local and empty values fail validation."""
+    candidates = [
+        getattr(application, 'email', '') or '',
+        getattr(getattr(application, 'applicant', None), 'email', '') or '',
+    ]
+    for raw in candidates:
+        email = (raw or '').strip()
+        if not email:
+            continue
+        try:
+            validate_email(email)
+        except ValidationError:
+            continue
+        host = email.rsplit('@', 1)[-1].lower()
+        if any(host.endswith(tld) for tld in _BAD_EMAIL_TLDS) or '.' not in host:
+            continue
+        return email
+    token = application.applicant.public_id.hex[:12]
+    return f'da{token}@decsi.com'
+
+
+def _chapa_plain(value: str, *, max_len: int, fallback: str) -> str:
+    cleaned = _CHAPA_DESC_RE.sub(' ', value or '')
+    cleaned = ' '.join(cleaned.split())[:max_len].strip()
+    return cleaned or fallback[:max_len]
+
+
+def build_initialize_payload(application, *, tx_ref: str, return_url: str, callback_url: str) -> dict:
+    amount = application.processing_fee_amount
+    phone = (application.phone_number or application.applicant.phone_number or '').strip()
+    name = (application.applicant_name or application.applicant.full_name or 'Applicant').strip()
+    parts = name.split(None, 1)
+    first = _chapa_plain(parts[0] if parts else 'Applicant', max_len=50, fallback='Applicant')
+    last = _chapa_plain(parts[1] if len(parts) > 1 else 'Digital', max_len=50, fallback='Digital')
+    phone_digits = re.sub(r'\D', '', phone)
+    if phone_digits.startswith('251') and len(phone_digits) >= 12:
+        phone_digits = '0' + phone_digits[3:]
+    elif len(phone_digits) == 9:
+        phone_digits = '0' + phone_digits
+    return {
+        'amount': f'{Decimal(amount):.2f}',
+        'currency': getattr(settings, 'CHAPA_CURRENCY', 'ETB') or 'ETB',
+        'email': _chapa_email(application),
+        'first_name': first,
+        'last_name': last,
+        'phone_number': phone_digits[:10],
+        'tx_ref': tx_ref,
+        'callback_url': callback_url,
+        'return_url': return_url,
+        'customization': {
+            'title': 'DECSI apply fee',  # 15 chars; Chapa max 16
+            'description': _chapa_plain(f'Processing fee {tx_ref}', max_len=50, fallback='Processing fee'),
+        },
+        'meta': {
+            'application_id': str(application.public_id),
+            'hide_receipt': True,
+        },
+    }
 
 
 def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Optional[str]]:
@@ -65,13 +165,8 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
         return True, 'Already paid.', None
 
     tx_ref = make_tx_ref(application)
-    return_path = reverse(
-        'applicant_portal:apply_payment_return',
-        args=[application.public_id],
-    )
-    callback_path = reverse('applicant_portal:chapa_webhook')
-    return_url = f'{_site_url()}{return_path}?tx_ref={tx_ref}'
-    callback_url = f'{_site_url()}{callback_path}'
+    return_url = payment_return_url(application, tx_ref, request=request)
+    callback_url = payment_callback_url(request=request)
 
     application.chapa_tx_ref = tx_ref
     application.payment_method = 'chapa'
@@ -79,7 +174,7 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
     application.payment_reference = tx_ref[:64]
 
     if not chapa_live_enabled():
-        mock_url = f'{_site_url()}{return_path}?tx_ref={tx_ref}&status=success&mock=1'
+        mock_url = f'{return_url}&status=success&mock=1'
         application.chapa_checkout_url = mock_url
         application.save(update_fields=[
             'chapa_tx_ref', 'chapa_checkout_url', 'payment_method',
@@ -87,35 +182,12 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
         ])
         return True, 'Mock checkout ready (Chapa not configured).', mock_url
 
-    phone = (application.phone_number or application.applicant.phone_number or '').strip()
-    name = (application.applicant_name or application.applicant.full_name or 'Applicant').strip()
-    parts = name.split(None, 1)
-    first = parts[0][:50] if parts else 'Applicant'
-    last = parts[1][:50] if len(parts) > 1 else 'Digital'
-    email = (application.email or application.applicant.email or '').strip()
-    if not email:
-        # Chapa requires email; use a stable synthetic inbox per account.
-        email = f'applicant+{application.applicant.public_id.hex[:12]}@apply.local'
-
-    payload = {
-        'amount': f'{Decimal(amount):.2f}',
-        'currency': getattr(settings, 'CHAPA_CURRENCY', 'ETB') or 'ETB',
-        'email': email,
-        'first_name': first,
-        'last_name': last,
-        'phone_number': phone[:15] if phone else '',
-        'tx_ref': tx_ref,
-        'callback_url': callback_url,
-        'return_url': return_url,
-        'customization': {
-            'title': 'Digital apply fee',
-            'description': f'Processing fee · {tx_ref}',
-        },
-        'meta': {
-            'application_id': str(application.public_id),
-            'queue_ready': False,
-        },
-    }
+    payload = build_initialize_payload(
+        application,
+        tx_ref=tx_ref,
+        return_url=return_url,
+        callback_url=callback_url,
+    )
     headers = {
         'Authorization': f'Bearer {chapa_secret_key()}',
         'Content-Type': 'application/json',
@@ -152,6 +224,48 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
         'payment_status', 'payment_reference', 'updated_at',
     ])
     return True, 'Redirecting to Chapa…', checkout
+
+
+def inline_checkout_config(application, *, request=None) -> Optional[dict]:
+    """Config for Chapa Inline.js so the applicant stays on Digital Apply."""
+    if not chapa_live_enabled() or not chapa_public_key():
+        return None
+    if not application.chapa_tx_ref:
+        return None
+    tx_ref = application.chapa_tx_ref
+    payload = build_initialize_payload(
+        application,
+        tx_ref=tx_ref,
+        return_url=payment_return_url(application, tx_ref, request=request),
+        callback_url=payment_callback_url(request=request),
+    )
+    return {
+        'publicKey': chapa_public_key(),
+        'amount': payload['amount'],
+        'currency': payload['currency'],
+        'email': payload['email'],
+        'firstName': payload['first_name'],
+        'lastName': payload['last_name'],
+        'phoneNumber': payload.get('phone_number') or '',
+        'txRef': tx_ref,
+        'callbackUrl': payload['callback_url'],
+        'returnUrl': payload['return_url'],
+        'checkoutUrl': (application.chapa_checkout_url or '')[:500],
+    }
+
+
+def tx_ref_from_request(request, application=None) -> str:
+    """Chapa return/callback may send tx_ref or trx_ref."""
+    get = getattr(request, 'GET', {})
+    post = getattr(request, 'POST', {})
+    raw = (
+        get.get('tx_ref')
+        or get.get('trx_ref')
+        or post.get('tx_ref')
+        or post.get('trx_ref')
+        or ''
+    )
+    return (raw or getattr(application, 'chapa_tx_ref', '') or '').strip()
 
 
 def verify_transaction(tx_ref: str) -> Tuple[bool, Dict[str, Any]]:

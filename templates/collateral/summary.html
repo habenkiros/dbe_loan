@@ -12,17 +12,17 @@
 <h2>Collateral summary</h2>
 <p>Loan: <strong>{{ loan_request.loan_request_id }}</strong> – {{ loan_request.applicant_name }} &nbsp; (Collateral type: {{ loan_request.collateral.name }})</p>
 <p class="list-actions" style="margin:0.75rem 0;">
-    {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_building %}
     {% url 'collateral:building_list' loan_request.id as buildings_url %}
     {% include "includes/list_action.html" with href=buildings_url icon="building" label="Buildings" tone="blue" only %}
     {% endif %}
-    {% if "land" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_land %}
     {% url 'collateral:land_field_visit' loan_request.id as land_visit_url %}
     {% include "includes/list_action.html" with href=land_visit_url icon="open" label="Land field visit" tone="green" only %}
     {% url 'collateral:land_valuation' loan_request.id as land_url %}
     {% include "includes/list_action.html" with href=land_url icon="land" label="Land desktop" tone="blue" only %}
     {% endif %}
-    {% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_movable %}
     {% url 'collateral:other_collateral_list' loan_request.id as other_url %}
     {% include "includes/list_action.html" with href=other_url icon="vehicle" label=loan_request.collateral.name tone="blue" only %}
     {% endif %}
@@ -169,7 +169,7 @@
 {% endfor %}
 {% endif %}
 
-{% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
+{% if loan_request.collateral.uses_building %}
 <div class="table-container">
     <table>
         <thead>
@@ -202,11 +202,11 @@
 <p><strong>Total (buildings): {{ total_buildings|floatformat:2 }}</strong></p>
 {% endif %}
 
-{% if "land" in collateral_type_lower %}
+{% if loan_request.collateral.uses_land %}
 <p><strong>Land value: {{ land_value|floatformat:2 }}</strong></p>
 {% endif %}
 
-{% if "vehicle" in collateral_type_lower or "machinery" in collateral_type_lower or "equipment" in collateral_type_lower or "other" in collateral_type_lower %}
+{% if loan_request.collateral.uses_movable %}
 {% if other_items %}
 <div class="table-container">
     <table>
@@ -260,7 +260,7 @@
 <p class="help">Engineering returned this collateral for correction. Fix the issues above, then use <strong>Resubmit collateral</strong>.</p>
 {% else %}
 <p class="help">All collateral data is saved as you edit. Use the sticky bar at the top to submit when ready.</p>
-    {% if "building" in collateral_type_lower or "house" in collateral_type_lower or "construction" in collateral_type_lower %}
+    {% if loan_request.collateral.uses_building %}
     <p><strong>At least {{ min_images_per_building }} images per building are required</strong> before you can submit.
     {% if buildings_below_image_min %}
     <span class="error">Add more images for: {% for b in buildings_below_image_min %}<a href="{% url 'collateral:field_visit_step' b.id 3 %}">{{ b.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</span>

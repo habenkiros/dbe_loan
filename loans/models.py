@@ -141,10 +141,45 @@ class LoanCategoryDocumentRequirement(models.Model):
 
 
 class CollateralType(models.Model):
+    KIND_BUILDING = 'building'
+    KIND_LAND = 'land'
+    KIND_MOVABLE = 'movable'
+    KIND_MIXED = 'mixed'
+    KIND_CHOICES = [
+        (KIND_BUILDING, 'Building / house (BOQ)'),
+        (KIND_LAND, 'Land (size × price)'),
+        (KIND_MOVABLE, 'Vehicle / machinery / other movable'),
+        (KIND_MIXED, 'Mixed (sum engines that apply)'),
+    ]
+
     name = models.CharField(max_length=255, unique=True)
+    kind = models.CharField(
+        max_length=20,
+        choices=KIND_CHOICES,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Which estimation engine(s) this type uses. Blank infers from the name. Mixed sums building + land + movable that have data.',
+    )
 
     def __str__(self):
         return self.name
+
+    def resolved_kind(self) -> str:
+        from loans.collateral_kind import resolve_type_kind
+        return resolve_type_kind(self)
+
+    def uses_building(self) -> bool:
+        from loans.collateral_kind import uses_building
+        return uses_building(self)
+
+    def uses_land(self) -> bool:
+        from loans.collateral_kind import uses_land
+        return uses_land(self)
+
+    def uses_movable(self) -> bool:
+        from loans.collateral_kind import uses_movable
+        return uses_movable(self)
 
 
 class LoanApplicationDocumentType(models.Model):
@@ -597,6 +632,34 @@ class LoanRequest(models.Model):
         default=True,
         help_text='Loan agreement must be digitally signed before disbursement.',
     )
+    require_title_search = models.BooleanField(
+        default=False,
+        help_text='Title / ownership search paper must be uploaded and verified before disbursement.',
+    )
+    require_mortgage_registration = models.BooleanField(
+        default=False,
+        help_text='Mortgage / restriction registration proof must be verified before disbursement.',
+    )
+    require_notary_stamp = models.BooleanField(
+        default=False,
+        help_text='Notary / stamp-duty receipt must be verified before disbursement.',
+    )
+    own_contribution_required = models.BooleanField(
+        default=False,
+        help_text='Borrower own-contribution / equity must be verified before first disbursement.',
+    )
+    own_contribution_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+    )
+    own_contribution_verified_at = models.DateTimeField(null=True, blank=True)
+    own_contribution_verified_by = models.ForeignKey(
+        'CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_own_contribution_verified',
+    )
+    own_contribution_note = models.TextField(blank=True)
     ORIGIN_BRANCH = 'branch'
     ORIGIN_HEAD_OFFICE = 'head_office'
     ORIGIN_CHOICES = [
@@ -796,7 +859,7 @@ class LoanRequest(models.Model):
         related_name='loan_requests_returned_to_officer',
     )
 
-    # Risk & Compliance desk review (advisory — does not gate committee by itself)
+    # Risk & Compliance desk review (gates committee when policy requires it)
     risk_reviewed_at = models.DateTimeField(null=True, blank=True)
     risk_reviewed_by = models.ForeignKey(
         CustomUser,
@@ -816,12 +879,14 @@ class LoanRequest(models.Model):
     DISBURSE_AWAITING_CONDITIONS = 'awaiting_conditions'
     DISBURSE_SCHEDULE_CONFIRMED = 'schedule_confirmed'
     DISBURSE_READY = 'ready_for_disbursement'
+    DISBURSE_PARTIAL = 'partially_disbursed'
     DISBURSE_DISBURSED = 'disbursed'
     DISBURSE_STATUS_CHOICES = [
         (DISBURSE_NONE, 'Not started'),
         (DISBURSE_AWAITING_CONDITIONS, 'Awaiting conditions'),
         (DISBURSE_SCHEDULE_CONFIRMED, 'Schedule confirmed'),
         (DISBURSE_READY, 'Ready for disbursement'),
+        (DISBURSE_PARTIAL, 'Partially disbursed'),
         (DISBURSE_DISBURSED, 'Disbursed'),
     ]
     disbursement_status = models.CharField(
@@ -882,6 +947,84 @@ class LoanRequest(models.Model):
     cbs_outstanding_at_booking = models.DecimalField(
         max_digits=20, decimal_places=2, null=True, blank=True,
         help_text='Customer outstanding snapshot from CBS at booking time (ETB).',
+    )
+
+    # Post-book monitoring / collections (hub case file; CBS still posts money)
+    watchlist = models.BooleanField(default=False, db_index=True)
+    watchlist_reason = models.CharField(max_length=400, blank=True)
+    watchlist_at = models.DateTimeField(null=True, blank=True)
+    watchlist_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_watchlisted',
+    )
+    ARREARS_CURRENT = 'current'
+    ARREARS_30 = 'dpd_30'
+    ARREARS_60 = 'dpd_60'
+    ARREARS_90 = 'dpd_90'
+    ARREARS_NPL = 'npl'
+    ARREARS_CHOICES = [
+        (ARREARS_CURRENT, 'Current'),
+        (ARREARS_30, '1–30 days past due'),
+        (ARREARS_60, '31–60 days past due'),
+        (ARREARS_90, '61–90 days past due'),
+        (ARREARS_NPL, 'NPL / 90+ days'),
+    ]
+    arrears_status = models.CharField(
+        max_length=20,
+        choices=ARREARS_CHOICES,
+        default=ARREARS_CURRENT,
+        blank=True,
+        db_index=True,
+    )
+    WORKOUT_NONE = ''
+    WORKOUT_REQUESTED = 'requested'
+    WORKOUT_APPROVED = 'approved'
+    WORKOUT_REJECTED = 'rejected'
+    WORKOUT_CHOICES = [
+        (WORKOUT_NONE, 'None'),
+        (WORKOUT_REQUESTED, 'Reschedule requested'),
+        (WORKOUT_APPROVED, 'Reschedule approved'),
+        (WORKOUT_REJECTED, 'Reschedule rejected'),
+    ]
+    workout_status = models.CharField(
+        max_length=20, choices=WORKOUT_CHOICES, default=WORKOUT_NONE, blank=True, db_index=True,
+    )
+    workout_proposed_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    workout_proposed_term_months = models.PositiveIntegerField(null=True, blank=True)
+    workout_note = models.TextField(blank=True)
+    workout_decided_at = models.DateTimeField(null=True, blank=True)
+    workout_decided_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_workout_decided',
+    )
+    WRITEOFF_NONE = ''
+    WRITEOFF_REQUESTED = 'requested'
+    WRITEOFF_APPROVED = 'approved'
+    WRITEOFF_WRITTEN_BACK = 'written_back'
+    WRITEOFF_CHOICES = [
+        (WRITEOFF_NONE, 'None'),
+        (WRITEOFF_REQUESTED, 'Write-off requested'),
+        (WRITEOFF_APPROVED, 'Written off'),
+        (WRITEOFF_WRITTEN_BACK, 'Written back'),
+    ]
+    writeoff_status = models.CharField(
+        max_length=20, choices=WRITEOFF_CHOICES, default=WRITEOFF_NONE, blank=True, db_index=True,
+    )
+    writeoff_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    writeoff_note = models.TextField(blank=True)
+    writeoff_decided_at = models.DateTimeField(null=True, blank=True)
+    writeoff_decided_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loans_writeoff_decided',
     )
 
     # def save(self, *args, **kwargs):
@@ -1947,6 +2090,10 @@ class LoanAnalysisPolicyConfig(models.Model):
     hard_bureau_inquiries_count = models.PositiveIntegerField(default=3)
     hard_block_incomplete_sheets = models.BooleanField(default=True)
     require_sheets_complete_before_finish = models.BooleanField(default=True)
+    require_risk_review_before_committee = models.BooleanField(
+        default=True,
+        help_text='Loan officer cannot submit to committee until Risk & Compliance has signed off.',
+    )
 
     class Meta:
         verbose_name = 'Loan analysis policy'
@@ -2495,9 +2642,15 @@ class LoanCollateralLegalDocument(models.Model):
 
     KIND_RESTRICTION = 'collateral_restriction'
     KIND_POA = 'power_of_attorney'
+    KIND_TITLE_SEARCH = 'title_search'
+    KIND_MORTGAGE_REG = 'mortgage_registration'
+    KIND_NOTARY_STAMP = 'notary_stamp'
     KIND_CHOICES = [
         (KIND_RESTRICTION, 'Collateral Restriction (government)'),
         (KIND_POA, 'Loan Collateral Power of Attorney'),
+        (KIND_TITLE_SEARCH, 'Title / ownership search'),
+        (KIND_MORTGAGE_REG, 'Mortgage / restriction registration'),
+        (KIND_NOTARY_STAMP, 'Notary / stamp-duty receipt'),
     ]
 
     STATUS_UPLOADED = 'uploaded'
@@ -2903,4 +3056,91 @@ class DelegationActionLog(models.Model):
 
     def __str__(self):
         return f'{self.action} by {self.actor_id} as {self.principal_id}'
+
+
+class LoanDisbursementTranche(models.Model):
+    """Optional additional drawdowns after committee approval. Schedule stays on full amount."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_DISBURSED = 'disbursed'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_DISBURSED, 'Disbursed'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='disbursement_tranches',
+    )
+    sequence = models.PositiveSmallIntegerField(default=1)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    note = models.CharField(max_length=400, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    disbursed_at = models.DateTimeField(null=True, blank=True)
+    disbursed_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tranches_disbursed',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['loan_request', 'sequence', 'id']
+        unique_together = [('loan_request', 'sequence')]
+
+    def __str__(self):
+        return f'Tranche {self.sequence} {self.loan_request.loan_request_id} {self.amount}'
+
+
+class LoanMonitoringVisit(models.Model):
+    """Post-disbursement follow-up visit."""
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='monitoring_visits',
+    )
+    visited_at = models.DateField()
+    notes = models.TextField()
+    gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='monitoring_visits_recorded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-visited_at', '-id']
+
+    def __str__(self):
+        return f'Visit {self.loan_request.loan_request_id} {self.visited_at}'
+
+
+class LoanCollectionAction(models.Model):
+    """Collections case-file action (reminder, demand, visit, legal). Money posting stays in CBS."""
+
+    KIND_REMINDER = 'reminder'
+    KIND_DEMAND = 'demand'
+    KIND_VISIT = 'visit'
+    KIND_LEGAL = 'legal_referral'
+    KIND_CHOICES = [
+        (KIND_REMINDER, 'Reminder'),
+        (KIND_DEMAND, 'Demand notice'),
+        (KIND_VISIT, 'Collection visit'),
+        (KIND_LEGAL, 'Legal referral'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='collection_actions',
+    )
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, db_index=True)
+    notes = models.TextField()
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='collection_actions_recorded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.kind} {self.loan_request.loan_request_id}'
 

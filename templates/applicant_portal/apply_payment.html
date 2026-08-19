@@ -1,5 +1,14 @@
 {% extends "applicant_portal/base.html" %}
 {% block title %}Processing fee{% endblock %}
+{% block extra_head %}
+{% if chapa_inline %}
+<script src="https://js.chapa.co/v1/inline.js"></script>
+<style>
+  #chapa-inline-form { margin: 1rem 0 0.5rem; min-height: 8rem; }
+  .chapa-stay { background: #e8f4ec; border: 1px solid #0a6b2e; border-radius: 8px; padding: 0.85rem 1rem; margin: 0.75rem 0; }
+</style>
+{% endif %}
+{% endblock %}
 {% block content %}
 {% include "applicant_portal/_steps.html" with step=3 %}
 <div class="ap-card">
@@ -21,21 +30,87 @@
     <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:apply_submit' application.public_id %}">Continue to submit</a>
   </div>
   {% else %}
-  {% if pending %}
-  <p class="ap-help">Payment started{% if application.chapa_tx_ref %} ({{ application.chapa_tx_ref }}){% endif %}. Finish on Chapa, then verify.</p>
+  {% if chapa_inline %}
+  <div class="chapa-stay">
+    Pay here on Digital Apply. After a successful payment you are taken to submit —
+    you should not see a Chapa receipt page or a different host.
+  </div>
+  <div id="chapa-inline-form"></div>
+  {{ chapa_inline|json_script:"chapa-inline-config" }}
+  <p class="ap-help" id="chapa-inline-status">Loading payment form…</p>
+  {% elif pending %}
+  <p class="ap-help">Payment started{% if application.chapa_tx_ref %} ({{ application.chapa_tx_ref }}){% endif %}. Finish, then verify if needed.</p>
   {% endif %}
   <form method="post">
     {% csrf_token %}
     <div class="ap-btn-row">
+      {% if not chapa_inline %}
       <button class="ap-btn ap-btn-primary" type="submit" name="action" value="pay">
         {% if chapa_live %}Pay with Chapa{% else %}Pay now (Chapa mock){% endif %}
       </button>
-      {% if pending %}
-      <button class="ap-btn ap-btn-ghost" type="submit" name="action" value="verify">Verify payment</button>
       {% endif %}
+      {% if pending %}
+      <button class="ap-btn ap-btn-ghost" type="submit" name="action" value="verify">I already paid — verify</button>
+      {% endif %}
+      {% if not chapa_inline %}
       <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:apply_documents' application.public_id %}">Back to documents</a>
+      {% endif %}
     </div>
   </form>
+  {% if chapa_inline %}
+  <p class="ap-help">
+    <a href="{% url 'applicant_portal:apply_documents' application.public_id %}">Back to documents</a>
+  </p>
+  {% endif %}
   {% endif %}
 </div>
+{% endblock %}
+{% block extra_js %}
+{% if chapa_inline %}
+<script>
+(function () {
+  var cfgEl = document.getElementById('chapa-inline-config');
+  var statusEl = document.getElementById('chapa-inline-status');
+  if (!cfgEl || typeof ChapaCheckout === 'undefined') {
+    if (statusEl) statusEl.textContent = 'Payment form could not load. Use “I already paid — verify” after paying, or try again.';
+    return;
+  }
+  var cfg = JSON.parse(cfgEl.textContent);
+  var returnUrl = cfg.returnUrl;
+  try {
+    var chapa = new ChapaCheckout({
+      publicKey: cfg.publicKey,
+      amount: cfg.amount,
+      currency: cfg.currency || 'ETB',
+      email: cfg.email,
+      firstName: cfg.firstName,
+      lastName: cfg.lastName,
+      phoneNumber: cfg.phoneNumber,
+      txRef: cfg.txRef,
+      availablePaymentMethods: ['telebirr', 'cbebirr', 'ebirr', 'mpesa', 'chapa'],
+      callbackUrl: cfg.callbackUrl,
+      returnUrl: returnUrl,
+      customizations: {
+        buttonText: 'Pay processing fee',
+        successMessage: 'Payment received. Returning to your application…',
+        styles: '.chapa-pay-button{background-color:#0a6b2e;color:#fff;border:0;border-radius:8px;padding:0.7rem 1.1rem;font-weight:600;}'
+      },
+      onSuccessfulPayment: function () {
+        window.location.replace(returnUrl);
+      },
+      onPaymentFailure: function () {
+        if (statusEl) statusEl.textContent = 'Payment did not complete. You can try again on this page.';
+      },
+      onClose: function () {
+        if (statusEl) statusEl.textContent = 'If you finished paying, tap “I already paid — verify”.';
+      }
+    });
+    chapa.initialize('chapa-inline-form');
+    if (statusEl) statusEl.textContent = '';
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Payment form error. Refresh this page and try again.';
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}

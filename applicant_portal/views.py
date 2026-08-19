@@ -445,6 +445,7 @@ def apply_payment(request, public_id):
         apply_verified_payment,
         chapa_live_enabled,
         initialize_checkout,
+        inline_checkout_config,
         verify_transaction,
     )
     from applicant_portal.notify import notify_applicant
@@ -481,6 +482,9 @@ def apply_payment(request, public_id):
                 messages.error(request, msg)
                 return redirect('applicant_portal:apply_payment', public_id=app.public_id)
             if checkout:
+                if chapa_live_enabled():
+                    messages.success(request, 'Enter your payment details below. You will stay on this page.')
+                    return redirect('applicant_portal:apply_payment', public_id=app.public_id)
                 return redirect(checkout)
             messages.info(request, msg)
             return redirect('applicant_portal:apply_payment', public_id=app.public_id)
@@ -509,6 +513,7 @@ def apply_payment(request, public_id):
         'paid': app.payment_satisfied(),
         'pending': app.payment_status == OnlineApplication.PAY_PENDING,
         'chapa_live': chapa_live_enabled(),
+        'chapa_inline': inline_checkout_config(app, request=request) if not app.payment_satisfied() else None,
         'step': 3,
     })
 
@@ -516,7 +521,11 @@ def apply_payment(request, public_id):
 @applicant_login_required
 def apply_payment_return(request, public_id):
     """Chapa return_url (and mock checkout landing)."""
-    from applicant_portal.chapa import apply_verified_payment, verify_transaction
+    from applicant_portal.chapa import (
+        apply_verified_payment,
+        tx_ref_from_request,
+        verify_transaction,
+    )
     from applicant_portal.notify import notify_applicant
 
     closed = _portal_or_closed(request)
@@ -527,7 +536,7 @@ def apply_payment_return(request, public_id):
         messages.success(request, 'Fee already recorded.')
         return redirect('applicant_portal:apply_submit', public_id=app.public_id)
 
-    tx_ref = (request.GET.get('tx_ref') or app.chapa_tx_ref or '').strip()
+    tx_ref = tx_ref_from_request(request, app)
     status = (request.GET.get('status') or '').lower()
     if not tx_ref:
         messages.error(request, 'Missing payment reference.')
@@ -564,31 +573,29 @@ def apply_payment_return(request, public_id):
 def chapa_webhook(request):
     """Chapa callback (server-to-server). Requires matching tx_ref."""
     from django.http import HttpResponse, HttpResponseBadRequest
-    from applicant_portal.chapa import apply_verified_payment, verify_transaction
+    from applicant_portal.chapa import apply_verified_payment, tx_ref_from_request, verify_transaction
     from applicant_portal.notify import notify_applicant
 
-    if request.method == 'GET':
-        # Chapa sometimes hits GET health; acknowledge.
+    tx_ref = tx_ref_from_request(request)
+    if request.method == 'GET' and not tx_ref:
         return HttpResponse('ok')
 
-    # Payload may be JSON or form
     payload = {}
-    if request.content_type and 'application/json' in request.content_type:
-        import json
-        try:
-            payload = json.loads(request.body.decode('utf-8') or '{}')
-        except Exception:
-            payload = {}
-    else:
-        payload = request.POST.dict()
+    if request.method == 'POST':
+        if request.content_type and 'application/json' in request.content_type:
+            import json
+            try:
+                payload = json.loads(request.body.decode('utf-8') or '{}')
+            except Exception:
+                payload = {}
+        else:
+            payload = request.POST.dict()
+        data = payload.get('data') if isinstance(payload.get('data'), dict) else payload
+        tx_ref = (
+            tx_ref
+            or (data.get('tx_ref') or data.get('trx_ref') or payload.get('tx_ref') or '')
+        ).strip()
 
-    data = payload.get('data') if isinstance(payload.get('data'), dict) else payload
-    tx_ref = (
-        data.get('tx_ref')
-        or data.get('trx_ref')
-        or payload.get('tx_ref')
-        or ''
-    ).strip()
     if not tx_ref:
         return HttpResponseBadRequest('missing tx_ref')
 

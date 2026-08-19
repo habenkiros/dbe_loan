@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>License required — AI-powered Credit Intelligence</title>
+  <style>
+    :root { --green:#0b5c3b; --ink:#14241c; --bg:#f3f7f4; --card:#fff; --warn:#8a4b08; }
+    body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:linear-gradient(160deg,#e8f2ec,#f7faf8 45%,#eef2f0); color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .card { max-width:560px; width:100%; background:var(--card); border-radius:16px; padding:28px 28px 24px; box-shadow:0 12px 40px rgba(11,92,59,.12); border:1px solid #d7e5dc; }
+    .brand { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--green); font-weight:700; margin-bottom:8px; }
+    h1 { margin:0 0 10px; font-size:1.55rem; color:var(--green); }
+    p { line-height:1.5; margin:0 0 12px; }
+    .msg { background:#fff7ed; border:1px solid #f0d2a8; color:var(--warn); padding:12px 14px; border-radius:10px; margin:16px 0; }
+    a.btn { display:inline-block; background:var(--green); color:#fff; text-decoration:none; padding:10px 16px; border-radius:8px; font-weight:600; }
+    .foot { margin-top:18px; font-size:13px; color:#5a6b62; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">Seqela · On-premises license</div>
+    <h1>Product license inactive</h1>
+    <p>This on-premises deployment of <strong>AI-powered Credit Intelligence</strong> requires a valid Seqela license key.</p>
+    <div class="msg">{{ license_status.message }}</div>
+    <p>Ask your Seqela account manager for a renewal key, then set <code>LICENSE_KEY</code> in <code>.env</code> (or update <code>deploy/license/license.key</code>) and restart the web service.</p>
+    <p><a class="btn" href="{{ license_url }}">View license status</a></p>
+    <p class="foot">Dedebit / DECSI IT · Seqela Technologies support</p>
+  </div>
+</body>
+</html>

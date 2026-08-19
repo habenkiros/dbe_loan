@@ -20,3 +20,4 @@ deploy/https/.env.https
 .vscode/
 *.swp
 .DS_Store
+deploy/license/private_key.pem

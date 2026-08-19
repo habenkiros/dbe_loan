@@ -10,6 +10,9 @@ from django.utils import timezone
 from collateral.policy import get_collateral_policy
 
 
+from loans.collateral_kind import KIND_MIXED, engines_for_loan, resolve_loan_kind
+
+
 def _collateral_type_lower(loan_request) -> str:
     return (getattr(loan_request.collateral, 'name', '') or '').lower()
 
@@ -356,8 +359,12 @@ def get_loan_collateral_readiness(loan_request) -> Dict[str, Any]:
 
     ct = _collateral_type_lower(loan_request)
     locked = collateral_is_locked(loan_request)
+    engines = engines_for_loan(loan_request)
+    kind = resolve_loan_kind(loan_request)
     result: Dict[str, Any] = {
         'collateral_type': ct,
+        'engines': engines,
+        'kind': kind,
         'locked': locked,
         'buildings': [],
         'land': None,
@@ -366,7 +373,7 @@ def get_loan_collateral_readiness(loan_request) -> Dict[str, Any]:
         'applies': False,
     }
 
-    if any(x in ct for x in ('building', 'house', 'construction')):
+    if engines['building']:
         result['applies'] = True
         buildings = list(Building.objects.filter(loan_request=loan_request).select_related('city'))
         for b in buildings:
@@ -375,7 +382,7 @@ def get_loan_collateral_readiness(loan_request) -> Dict[str, Any]:
         if not buildings or not all(i['readiness']['ready'] for i in result['buildings']):
             result['all_ready'] = False
 
-    if 'land' in ct:
+    if engines['land']:
         result['applies'] = True
         land = LandValuation.objects.filter(loan_request=loan_request).first()
         if land:
@@ -386,14 +393,21 @@ def get_loan_collateral_readiness(loan_request) -> Dict[str, Any]:
         else:
             result['all_ready'] = False
 
-    if any(x in ct for x in ('vehicle', 'machinery', 'equipment', 'other')):
-        result['applies'] = True
+    if engines['movable']:
         items = list(OtherCollateralItem.objects.filter(loan_request=loan_request))
         for item in items:
             r = get_other_item_readiness(item)
             result['other_items'].append({'item': item, 'readiness': r})
-        if not items or not all(i['readiness']['ready'] for i in result['other_items']):
-            result['all_ready'] = False
+        # Mixed: movable is optional unless items exist. Pure movable: required.
+        if kind == KIND_MIXED:
+            if items:
+                result['applies'] = True
+                if not all(i['readiness']['ready'] for i in result['other_items']):
+                    result['all_ready'] = False
+        else:
+            result['applies'] = True
+            if not items or not all(i['readiness']['ready'] for i in result['other_items']):
+                result['all_ready'] = False
 
     if not result['applies']:
         result['all_ready'] = True

@@ -682,6 +682,12 @@ def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
             errors.append('Sheet 6 recommendation must be Approve or Escalate to send to committee.')
     if not get_levels_for_loan(loan_request):
         errors.append('No approval committee levels are configured (Settings → Approval committees).')
+    from loans.appraisal_policy import get_loan_analysis_policy
+    policy = get_loan_analysis_policy()
+    if getattr(policy, 'require_risk_review_before_committee', False) and not loan_request.risk_reviewed_at:
+        errors.append(
+            'Risk & Compliance must sign off before this loan can go to committee.'
+        )
     if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
         errors.append('This loan is already in the approval committee workflow.')
     if loan_request.committee_status == loan_request.COMMITTEE_APPROVED:

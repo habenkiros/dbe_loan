@@ -7,6 +7,7 @@ from . import views_agent
 from . import views_delegation
 from . import views_risk
 from . import views_cooperative
+from . import views_book
 from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
@@ -17,6 +18,53 @@ urlpatterns = [
         'risk/loans/<int:loan_request_id>/review/',
         views_risk.save_risk_review,
         name='save_risk_review',
+    ),
+    path('monitoring/', views_book.monitoring_desk, name='monitoring_desk'),
+    path(
+        'monitoring/<int:loan_request_id>/',
+        views_book.monitoring_loan,
+        name='monitoring_loan',
+    ),
+    path(
+        'monitoring/<int:loan_request_id>/visit/',
+        views_book.monitoring_add_visit,
+        name='monitoring_add_visit',
+    ),
+    path(
+        'monitoring/<int:loan_request_id>/covenant/<int:condition_id>/',
+        views_book.monitoring_covenant_toggle,
+        name='monitoring_covenant_toggle',
+    ),
+    path(
+        'monitoring/<int:loan_request_id>/watchlist/',
+        views_book.monitoring_watchlist,
+        name='monitoring_watchlist',
+    ),
+    path('collections/', views_book.collections_desk, name='collections_desk'),
+    path(
+        'collections/<int:loan_request_id>/',
+        views_book.collections_loan,
+        name='collections_loan',
+    ),
+    path(
+        'collections/<int:loan_request_id>/action/',
+        views_book.collections_add_action,
+        name='collections_add_action',
+    ),
+    path(
+        'collections/<int:loan_request_id>/arrears/',
+        views_book.collections_set_arrears,
+        name='collections_set_arrears',
+    ),
+    path(
+        'collections/<int:loan_request_id>/workout/',
+        views_book.collections_workout,
+        name='collections_workout',
+    ),
+    path(
+        'collections/<int:loan_request_id>/writeoff/',
+        views_book.collections_writeoff,
+        name='collections_writeoff',
     ),
     path(
         'cooperative/performance/',
@@ -164,6 +212,16 @@ urlpatterns = [
         'loan_request/<int:loan_request_id>/post_approval/mark_disbursed/',
         views.post_approval_mark_disbursed,
         name='post_approval_mark_disbursed',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/verify_equity/',
+        views.post_approval_verify_equity,
+        name='post_approval_verify_equity',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/post_approval/add_tranche/',
+        views.post_approval_add_tranche,
+        name='post_approval_add_tranche',
     ),
     path(
         'loan_request/<int:loan_request_id>/post_approval/collateral_flags/',

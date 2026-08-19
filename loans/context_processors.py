@@ -96,3 +96,24 @@ def staff_nav(request):
     if not request.user.is_authenticated:
         return nav_flags_for(None)
     return nav_flags_for(request.user)
+
+
+def product_license(request):
+    """Expose license status for hub banners (days remaining / grace)."""
+    status = getattr(request, 'license_status', None)
+    if status is None:
+        try:
+            from loans.licensing import get_license_status
+            status = get_license_status()
+        except Exception:
+            return {}
+    warn = False
+    if status.present and status.valid and status.days_remaining is not None:
+        warn = status.days_remaining <= 30
+    if status.grace:
+        warn = True
+    return {
+        'product_license': status,
+        'product_license_warn': warn,
+    }
+

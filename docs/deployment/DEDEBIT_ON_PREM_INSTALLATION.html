@@ -1,0 +1,395 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dedebit On-Prem Installation — Seqela</title>
+<style>body{font-family:Georgia,serif;max-width:820px;margin:40px auto;padding:0 20px;line-height:1.45;color:#14241c}
+h1,h2,h3{color:#0b5c3b;font-family:system-ui,sans-serif} code,pre{background:#eef5f1;border-radius:6px}
+pre{padding:12px;overflow:auto} table{border-collapse:collapse;width:100%} th,td{border:1px solid #cfe0d6;padding:8px;text-align:left}
+th{background:#e7f2ec} .meta{background:#0b5c3b;color:#fff;padding:18px 20px;border-radius:12px;margin-bottom:24px}
+.meta h1{color:#fff;margin:0 0 6px;font-size:1.4rem}.meta p{margin:0;opacity:.92}</style></head><body>
+<div class="meta"><h1>Dedebit (DECSI) — On-Premises Installation</h1>
+<p>AI-powered Credit Intelligence · Seqela Technologies · 7-day evaluation license in this pack</p></div>
+<h1>Dedebit (DECSI) — On-Premises Installation Guide</h1>
+<p><strong>Audience:</strong> Dedebit Credit and Savings Institution (DECSI) technical / infrastructure team  </p>
+<p><strong>Product:</strong> AI-powered Credit Intelligence (Loan Hub + Digital Apply + collateral + market)  </p>
+<p><strong>Vendor:</strong> Seqela Technologies  </p>
+<p><strong>Deploy model:</strong> On-premises (your data centre / private cloud)  </p>
+<p><strong>Licensing:</strong> Signed <strong>license key</strong> with an <strong>expiry date</strong> (renewed by Seqela)</p>
+<p>This pack is what IT needs to install, license, smoke-test, and hand over to operations.</p>
+<p>Related end-user manuals (admin / staff / customers) live under <code>docs/user_manual/</code> and inside the app at <code>/hub/help/</code>.</p>
+<hr>
+<h2>1. What you receive from Seqela</h2>
+<table><tr>
+<th>Item</th>
+<th>Purpose</th>
+</tr>
+<tr>
+<td>Application release (Git tag / zip / Docker images)</td>
+<td>The software</td>
+</tr>
+<tr>
+<td>This installation guide</td>
+<td>Step-by-step bring-up</td>
+</tr>
+<tr>
+<td>**`LICENSE_KEY`** (string starting with `SEQLA1.`)</td>
+<td>Activates the product until the embedded expiry date</td>
+</tr>
+<tr>
+<td>Optional: user manuals PDF</td>
+<td>Training / ops</td>
+</tr>
+</table>
+<p><strong>Current evaluation key (this pack):</strong> <strong>7 days</strong> (expires <strong>2026-08-26</strong>). After commercial agreement, Seqela will issue the <strong>Year‑1</strong> license key for production.</p>
+<p>You do <strong>not</strong> receive Seqela’s private signing key. Only Seqela can issue or extend license keys.</p>
+<hr>
+<h2>2. Minimum server requirements</h2>
+<table><tr>
+<th>Resource</th>
+<th>Minimum (pilot)</th>
+<th>Recommended</th>
+</tr>
+<tr>
+<td>CPU</td>
+<td>2 vCPU</td>
+<td>4 vCPU</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>4 GB</td>
+<td>8 GB</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>40 GB SSD free</td>
+<td>100 GB+ (document media grows)</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Ubuntu 22.04 LTS or RHEL 8/9 (x86_64)</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Software</td>
+<td>Docker Engine **24+**, Docker Compose **v2**, Git</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>LAN to staff PCs; static IP or DNS name</td>
+<td>NTP synchronized (required for MFA)</td>
+</tr>
+</table>
+<p><strong>Ports</strong></p>
+<table><tr>
+<th>Port</th>
+<th>Use</th>
+</tr>
+<tr>
+<td>8000/tcp</td>
+<td>Application HTTP (or map via reverse proxy)</td>
+</tr>
+<tr>
+<td>5432/tcp</td>
+<td>PostgreSQL — **localhost / Docker network only**</td>
+</tr>
+<tr>
+<td>8443/tcp</td>
+<td>Optional HTTPS overlay for field tablets</td>
+</tr>
+</table>
+<hr>
+<h2>3. License key model (important)</h2>
+<h3>3.1 How it works</h3>
+<p>1. Seqela issues a signed key for <strong>Dedebit / DECSI</strong> with:</p>
+<p>   - Organization name and code  </p>
+<p>   - <strong>Issue date</strong> and <strong>expiry date</strong>  </p>
+<p>   - Feature flags (hub, Digital Apply, market, collateral, …)</p>
+<p>2. Dedebit IT places the key in <code>.env</code> as <code>LICENSE_KEY=...</code> (or in <code>deploy/license/license.key</code>).</p>
+<p>3. The app verifies the signature <strong>offline</strong> (no phone-home) using Seqela’s public key baked into the product.</p>
+<p>4. While the key is valid, the product runs normally.</p>
+<p>5. Hub shows a <strong>warning banner</strong> when ≤ 30 days remain.</p>
+<p>6. After expiry, a short <strong>grace period</strong> (default <strong>7 days</strong>) still allows login so IT can install a renewal key.</p>
+<p>7. After grace, the product <strong>locks</strong> until a new key is installed (status page <code>/license/</code> stays reachable).</p>
+<h3>3.2 Install the license</h3>
+<pre>
+# Option A — .env
+echo &#x27;LICENSE_KEY=SEQLA1.xxxxx.yyyyy&#x27; &gt;&gt; /opt/decsi_loan/.env
+
+# Option B — file (one line, no quotes)
+mkdir -p /opt/decsi_loan/deploy/license
+nano /opt/decsi_loan/deploy/license/license.key
+</pre>
+<p>Recommended production settings:</p>
+<pre>
+LICENSE_ENFORCE=True
+LICENSE_GRACE_DAYS=7
+</pre>
+<p>Check status:</p>
+<pre>
+docker compose exec web python manage.py check_license
+# or open https://&lt;host&gt;/license/
+</pre>
+<h3>3.3 Renew before expiry</h3>
+<p>1. Contact Seqela with your <code>org_code</code> (e.g. <code>DECSI</code>) and desired new expiry date.  </p>
+<p>2. Receive a new <code>SEQLA1.…</code> string.  </p>
+<p>3. Replace <code>LICENSE_KEY</code> (or <code>license.key</code>).  </p>
+<p>4. <code>docker compose restart web</code>  </p>
+<p>5. Confirm <code>/license/</code> shows <strong>Valid</strong> and the new expiry.</p>
+<p><strong>Do not</strong> edit the middle of the key — any change invalidates the signature.</p>
+<hr>
+<h2>4. Installation steps (Docker Compose — required path)</h2>
+<h3>Step 1 — Prepare host</h3>
+<pre>
+sudo apt update
+sudo apt install -y git ca-certificates curl
+# Install Docker Engine 24+ and Compose v2 per Docker docs for your OS
+docker --version
+docker compose version
+timedatectl status   # NTP should be active
+</pre>
+<h3>Step 2 — Obtain the release</h3>
+<pre>
+sudo mkdir -p /opt
+cd /opt
+# Use the URL / media Seqela provides, for example:
+# git clone &lt;seqela-release-url&gt; decsi_loan
+# or: unzip Dedebit_Loan_Hub_Release_YYYYMMDD.zip -d decsi_loan
+cd decsi_loan
+</pre>
+<h3>Step 3 — Environment file</h3>
+<pre>
+cp .env.example .env
+nano .env
+</pre>
+<p><strong>Minimum required values:</strong></p>
+<pre>
+SECRET_KEY=&lt;long-random-string&gt;
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,&lt;server-ip-or-hostname&gt;
+SITE_URL=http://&lt;server-ip-or-hostname&gt;:8000
+
+DB_NAME=decsiloandb
+DB_USER=decsiloandbuser
+DB_PASSWORD=&lt;strong-password&gt;
+DB_HOST=db
+DB_PORT=5432
+
+LICENSE_KEY=&lt;paste-SEQLA1-key-from-Seqela&gt;
+LICENSE_ENFORCE=True
+LICENSE_GRACE_DAYS=7
+
+LOGIN_MAX_FAILED_ATTEMPTS=5
+LOGIN_LOCKOUT_MINUTES=15
+MFA_REQUIRED=True
+MFA_TOTP_ISSUER=DECSI Loan Hub
+SESSION_IDLE_TIMEOUT=1800
+
+DECSI_CUSTOMER_FALLBACK_MOCK=True
+DECSI_CBS_USE_MOCK_LEDGER=True
+CHAPA_FORCE_MOCK=True
+</pre>
+<p>Generate <code>SECRET_KEY</code> (any machine with Python):</p>
+<pre>
+python3 -c &quot;import secrets; print(secrets.token_urlsafe(50))&quot;
+</pre>
+<h3>Step 4 — Build and start</h3>
+<pre>
+cd /opt/decsi_loan
+docker compose up --build -d
+docker compose ps
+docker compose logs -f web
+</pre>
+<p>Wait until <code>db</code> is healthy and <code>web</code> is Up.</p>
+<h3>Step 5 — Migrate and create superuser</h3>
+<pre>
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py check_license
+</pre>
+<h3>Step 6 — Open the surfaces</h3>
+<table><tr>
+<th>Surface</th>
+<th>URL</th>
+</tr>
+<tr>
+<td>License status</td>
+<td>`http://&lt;host&gt;:8000/license/`</td>
+</tr>
+<tr>
+<td>Digital Apply</td>
+<td>`http://&lt;host&gt;:8000/`</td>
+</tr>
+<tr>
+<td>Staff hub</td>
+<td>`http://&lt;host&gt;:8000/hub/login/`</td>
+</tr>
+<tr>
+<td>Django Admin</td>
+<td>`http://&lt;host&gt;:8000/admin/`</td>
+</tr>
+<tr>
+<td>In-app Help</td>
+<td>`http://&lt;host&gt;:8000/hub/help/`</td>
+</tr>
+</table>
+<h3>Step 7 — Post-install configuration (functional go-live)</h3>
+<p>As superuser in the hub <strong>Settings</strong> (see Admin user manual):</p>
+<p>1. Districts → Branches → geography  </p>
+<p>2. Staff users + roles + branch/district  </p>
+<p>3. Loan categories + document packs  </p>
+<p>4. Approval committees  </p>
+<p>5. Collateral / estimation mode  </p>
+<p>6. Digital Apply open/fee/security  </p>
+<p>7. MFA enrollment for privileged accounts  </p>
+<p>8. SMTP for password reset (if used)</p>
+<p>Optional CSV imports:</p>
+<pre>
+docker compose exec web python manage.py import_zones &lt;file&gt;
+docker compose exec web python manage.py import_branches &lt;file&gt;
+docker compose exec web python manage.py import_loan_categories &lt;file&gt;
+docker compose exec web python manage.py import_users &lt;file&gt;
+</pre>
+<hr>
+<h2>5. HTTPS for field tablets (optional)</h2>
+<p>Camera / GPS often require HTTPS:</p>
+<pre>
+./scripts/gen_field_https_certs.sh &lt;lan-ip&gt;
+docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d
+</pre>
+<p>Use <code>https://&lt;lan-ip&gt;:8443</code> and update <code>SITE_URL</code> / <code>CSRF_TRUSTED_ORIGINS</code> accordingly.</p>
+<hr>
+<h2>6. Smoke test checklist (IT acceptance)</h2>
+<table><tr>
+<th>#</th>
+<th>Test</th>
+<th>Expected</th>
+</tr>
+<tr>
+<td>1</td>
+<td>`docker compose ps`</td>
+<td>`web` Up, `db` healthy</td>
+</tr>
+<tr>
+<td>2</td>
+<td>`/license/`</td>
+<td>Valid · correct org · future expiry</td>
+</tr>
+<tr>
+<td>3</td>
+<td>`/hub/login/`</td>
+<td>Login form (not license blocked page)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Superuser login</td>
+<td>Hub home</td>
+</tr>
+<tr>
+<td>5</td>
+<td>`/`</td>
+<td>Digital Apply landing</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Create staff loan</td>
+<td>Queue ID issued</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Upload document</td>
+<td>Stored under media</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Digital Apply mock fee → submit</td>
+<td>Appears in Online loan intake</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Restart</td>
+<td>`docker compose restart` — data persists</td>
+</tr>
+</table>
+<hr>
+<h2>7. Backup and update</h2>
+<p><strong>Backup</strong></p>
+<pre>
+docker compose exec -T db pg_dump -U &quot;$DB_USER&quot; &quot;$DB_NAME&quot; &gt; backup_$(date +%F).sql
+# Also back up Docker media volume and a secure offline copy of `.env` + license.key
+</pre>
+<p><strong>Update</strong></p>
+<pre>
+cd /opt/decsi_loan
+# apply new release (git pull / unzip)
+docker compose up -d --build
+docker compose exec web python manage.py migrate
+</pre>
+<p>License keys survive updates if <code>.env</code> / <code>license.key</code> are preserved.</p>
+<hr>
+<h2>8. Troubleshooting</h2>
+<table><tr>
+<th>Symptom</th>
+<th>Action</th>
+</tr>
+<tr>
+<td>Page says “Product license inactive”</td>
+<td>Check `LICENSE_KEY`, expiry, then `check_license`</td>
+</tr>
+<tr>
+<td>`DisallowedHost`</td>
+<td>Add host to `ALLOWED_HOSTS`</td>
+</tr>
+<tr>
+<td>MFA codes fail</td>
+<td>Fix server NTP / timezone</td>
+</tr>
+<tr>
+<td>DB connection errors</td>
+<td>Confirm `DB_HOST=db`, password, `docker compose logs db`</td>
+</tr>
+<tr>
+<td>Need renewal</td>
+<td>Email Seqela with org code + desired expiry</td>
+</tr>
+</table>
+<hr>
+<h2>9. Support contacts</h2>
+<table><tr>
+<th>Role</th>
+<th>Contact</th>
+</tr>
+<tr>
+<td>Seqela product / license renewal</td>
+<td>Your Seqela account manager (request renewal key with desired expiry)</td>
+</tr>
+<tr>
+<td>DECSI IT operations</td>
+<td>Local Dedebit technical team</td>
+</tr>
+</table>
+<hr>
+<h2>Document control</h2>
+<table><tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+<tr>
+<td>Customer</td>
+<td>Dedebit Credit and Savings Institution (DECSI)</td>
+</tr>
+<tr>
+<td>Product</td>
+<td>AI-powered Credit Intelligence / Loan Hub</td>
+</tr>
+<tr>
+<td>Install</td>
+<td>Docker Compose on-premises</td>
+</tr>
+<tr>
+<td>License</td>
+<td>`SEQLA1` Ed25519-signed key with expiry + grace</td>
+</tr>
+<tr>
+<td>Companion</td>
+<td>`docs/user_manual/06_installation_it.md`, user manuals PDF</td>
+</tr>
+</table>
+</body></html>

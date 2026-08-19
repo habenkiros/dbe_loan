@@ -86,6 +86,25 @@ Firewall: allow staff → 8000 (or 8443); do **not** expose PostgreSQL to the in
 | SMTP (optional but needed for staff password reset) | Host, port, user, password |
 | Chapa keys (optional) | Only if Digital Apply live payments |
 | CBS / party API (optional) | Keep mock flags until DECSI core banking access is ready |
+| **`LICENSE_KEY`** | Seqela-signed on-prem key with expiry (required when `DEBUG=False`) |
+
+---
+
+## 2.7 On-premises product license
+
+The product is **license-key based** for on-premises deployments (Dedebit / DECSI and other banks).
+
+1. Seqela issues a `SEQLA1.…` key with an **expiry date**.  
+2. Set `LICENSE_KEY` in `.env` or place it in `deploy/license/license.key`.  
+3. With `DEBUG=False`, a missing/invalid/expired (past grace) key **blocks** the app.  
+4. Status page always available: `/license/`  
+5. Default grace after expiry: `LICENSE_GRACE_DAYS=7`.
+
+Full Dedebit handoff guide: [DEDEBIT_ON_PREM_INSTALLATION.md](../deployment/DEDEBIT_ON_PREM_INSTALLATION.md).
+
+```bash
+docker compose exec web python manage.py check_license
+```
 
 ---
 

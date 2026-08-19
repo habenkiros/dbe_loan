@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>License status — AI-powered Credit Intelligence</title>
+  <style>
+    :root { --green:#0b5c3b; --ink:#14241c; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:#f3f7f4; color:var(--ink); padding:28px 16px; }
+    .wrap { max-width:720px; margin:0 auto; background:#fff; border:1px solid #d7e5dc; border-radius:14px; padding:24px; }
+    h1 { color:var(--green); margin-top:0; }
+    table { width:100%; border-collapse:collapse; margin:16px 0; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e6eee9; vertical-align:top; }
+    th { width:34%; color:#456; font-weight:600; }
+    .ok { color:#0b5c3b; font-weight:700; }
+    .bad { color:#9b1c1c; font-weight:700; }
+    .warn { color:#8a4b08; font-weight:700; }
+    code { background:#eef5f1; padding:2px 6px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>License status</h1>
+    <p>{{ license_status.message }}</p>
+    <table>
+      <tr><th>Enforcement</th><td>{% if license_status.enforced %}On{% else %}Off (lab / DEBUG){% endif %}</td></tr>
+      <tr><th>Key present</th><td>{% if license_status.present %}Yes{% else %}No{% endif %}</td></tr>
+      <tr><th>Status</th><td>
+        {% if license_status.valid %}<span class="ok">Valid</span>
+        {% elif license_status.grace %}<span class="warn">Expired — grace period</span>
+        {% else %}<span class="bad">Inactive</span>{% endif %}
+      </td></tr>
+      <tr><th>Organization</th><td>{{ license_status.org|default:"—" }} {% if license_status.org_code %}({{ license_status.org_code }}){% endif %}</td></tr>
+      <tr><th>Issued</th><td>{{ license_status.issued_on|default:"—" }}</td></tr>
+      <tr><th>Expires</th><td>{{ license_status.expires_on|default:"—" }}</td></tr>
+      <tr><th>Days remaining</th><td>{% if license_status.days_remaining is not None %}{{ license_status.days_remaining }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Features</th><td>{% if license_status.features %}{{ license_status.features|join:", " }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Note</th><td>{{ license_status.note|default:"—" }}</td></tr>
+    </table>
+    <p>Install path: set <code>LICENSE_KEY</code> in <code>.env</code> or place the key in <code>deploy/license/license.key</code>, then <code>docker compose restart web</code>.</p>
+    <p><a href="/hub/login/">Staff login</a> · <a href="/">Digital Apply</a></p>
+  </div>
+</body>
+</html>

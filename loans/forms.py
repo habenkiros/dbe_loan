@@ -108,7 +108,7 @@ class LoanCategoryForm(forms.ModelForm):
 class CollateralTypeForm(forms.ModelForm):
     class Meta:
         model = CollateralType
-        fields = ['name']
+        fields = ['name', 'kind']
 
 
 class LoanApplicationDocumentTypeForm(forms.ModelForm):

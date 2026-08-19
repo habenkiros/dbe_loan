@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from applicant_portal.models import (
@@ -145,6 +145,7 @@ class ApplicantPortalFlowTests(TestCase):
             self.assertEqual(normalized, expected, msg=raw)
             validate_phone_format(normalized)
 
+    @override_settings(CHAPA_SECRET_KEY='', CHAPA_PUBLIC_KEY='', CHAPA_FORCE_MOCK=True)
     def test_full_submit_creates_loan_and_queue_id(self):
         self._register()
         start = self.client.post(reverse('applicant_portal:apply_start'))
@@ -498,3 +499,47 @@ class ApplicantPortalFlowTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         app.refresh_from_db()
         self.assertEqual(app.status, OnlineApplication.STATUS_CANCELLED)
+
+    def test_chapa_payload_meets_gateway_rules(self):
+        from applicant_portal.chapa import build_initialize_payload
+
+        self._register(phone='0911555666', customer_number='1001556')
+        account = ApplicantAccount.objects.get(phone_number='0911555666')
+        account.email = 'not-an-email'
+        account.save(update_fields=['email'])
+        app = OnlineApplication.objects.create(
+            applicant=account,
+            applicant_name='Sara Applicant',
+            phone_number='0911555666',
+            customer_number='1001556',
+            category=self.category,
+            branch=self.branch,
+            amount_requested=Decimal('10000'),
+            reason='test',
+            email='',
+            processing_fee_amount=Decimal('25'),
+        )
+        payload = build_initialize_payload(
+            app,
+            tx_ref='DA-ABC123-DEF45678',
+            return_url='http://localhost/return',
+            callback_url='http://localhost/webhook',
+        )
+        self.assertTrue(payload['email'].endswith('@decsi.com'))
+        self.assertLessEqual(len(payload['customization']['title']), 16)
+        desc = payload['customization']['description']
+        self.assertRegex(desc, r'^[A-Za-z0-9 _.\-]+$')
+        self.assertNotIn('·', desc)
+        self.assertTrue(payload['meta'].get('hide_receipt'))
+        self.assertIn('localhost', payload['return_url'])
+
+    def test_checkout_base_url_uses_browser_host_not_site_url_ip(self):
+        from django.test import RequestFactory, override_settings
+        from applicant_portal.chapa import checkout_base_url
+
+        factory = RequestFactory()
+        req = factory.get('/pay/')
+        req.META['HTTP_HOST'] = 'localhost:8000'
+        with override_settings(SITE_URL='https://10.234.118.168:8443'):
+            self.assertEqual(checkout_base_url(req), 'http://localhost:8000')
+            self.assertEqual(checkout_base_url(None), 'https://10.234.118.168:8443')

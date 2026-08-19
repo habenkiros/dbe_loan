@@ -11,6 +11,8 @@ from django.db.models import Q, Count
 from django.utils import timezone
 from loans.models import LoanRequest, Region
 from loans.collateral_config import get_collateral_estimation_mode, allows_engineering_team
+from loans.collateral_kind import engines_for_loan
+from loans.services.appraisal_prefill import compute_collateral_totals
 from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
     Building, BuildingValuation, BuildingImage, LandValuation, LandValuationImage,
@@ -272,7 +274,7 @@ def building_list(request, loan_request_id):
     """List buildings for a loan request; add building."""
     loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
     buildings = Building.objects.filter(loan_request=loan_request).select_related('city')
-    ct = (loan_request.collateral.name or '').lower()
+    engines = engines_for_loan(loan_request)
     building_rows = []
     for b in buildings:
         building_rows.append({'building': b, 'readiness': get_building_readiness(b)})
@@ -280,7 +282,8 @@ def building_list(request, loan_request_id):
         'loan_request': loan_request,
         'buildings': buildings,
         'building_rows': building_rows,
-        'collateral_type_lower': ct,
+        'engines': engines,
+        'collateral_type_lower': (loan_request.collateral.name or '').lower(),
         'locked': collateral_is_locked(loan_request),
     })
 
@@ -1235,6 +1238,7 @@ def summary(request, loan_request_id):
         pk=loan_request_id,
     )
     ct = (loan_request.collateral.name or '').lower()
+    engines = engines_for_loan(loan_request)
     buildings = Building.objects.filter(loan_request=loan_request).prefetch_related(
         'buildingvaluation_set__sub_work', 'buildingvaluation_set__sub_sub_work'
     )
@@ -1250,16 +1254,11 @@ def summary(request, loan_request_id):
         land_value = Decimal('0')
     other_items = OtherCollateralItem.objects.filter(loan_request=loan_request)
     total_other = sum(item.estimated_value or Decimal('0') for item in other_items)
-    total_buildings = sum(bt['total'] for bt in building_totals)
-    # Grand total only for the collateral type this loan has
-    if 'building' in ct or 'house' in ct or 'construction' in ct:
-        grand_total = total_buildings
-    elif 'land' in ct:
-        grand_total = land_value
-    elif any(x in ct for x in ('vehicle', 'machinery', 'equipment', 'other')):
-        grand_total = total_other
-    else:
-        grand_total = total_buildings + land_value + total_other
+    totals = compute_collateral_totals(loan_request)
+    total_buildings = totals['total_buildings']
+    land_value = totals['land_value']
+    total_other = totals['total_other']
+    grand_total = totals['grand_total']
     # For building collateral: require at least 5 images per building before submit
     policy_ctx = _policy_template_context()
     min_bldg = policy_ctx['min_images_per_building']
@@ -1312,6 +1311,7 @@ def summary(request, loan_request_id):
     return render(request, 'collateral/summary.html', {
         'loan_request': loan_request,
         'collateral_type_lower': ct,
+        'engines': engines,
         'building_totals': building_totals,
         'land_value': land_value,
         'other_items': other_items,

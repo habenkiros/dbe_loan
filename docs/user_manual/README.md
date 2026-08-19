@@ -8,8 +8,9 @@ Practical guides for **DECSI Loan Hub** (*AI-powered Credit Intelligence*), **Di
 | [Staff](02_staff.md) | Branch / HO / eng / finance / committee | Hub → **Help** |
 | [Customers](03_customers.md) | Borrowers applying online | Digital Apply → **Help** (`/help/`) |
 | [Market partners](04_market_partners.md) | Dealers & price reporters | Market → **Help** (`/market-portal/help/`) |
-| [Screenshots](05_screenshots.md) | UI captures used in this pack | Hub / Digital Apply Help |
 | [IT installation](06_installation_it.md) | DECSI IT — install & minimum requirements | Hub → **Help** |
+
+Screenshots sit **inside** each manual next to the relevant step. Capture/refresh notes: [05_screenshots.md](05_screenshots.md) (not a separate Help chapter).
 
 **Printable pack:**
 - [HTML](DECSI_Loan_Hub_User_Manuals.html)  
@@ -40,8 +41,9 @@ Legacy: `/staff/` → hub; `/applicant-portal/` → Digital Apply.
 Customer (Digital Apply)          Staff hub                     Admin
 Register → Apply → Fee            Intake → Docs → Appraisal     Users & geography
 → Submit → Notices / status       → Collateral → Committee      Document packs
-→ Schedule (when approved)        → Post-approval → Disburse    Digital Apply settings
-                                  Delegations (cover)           Approve delegations
+→ Schedule (when approved)        → Post-approval closing pack  Digital Apply settings
+→ Branch visit to sign (if asked)   (restriction / POA / e-sign) Approve delegations
+                                  → Disburse                    Delegations
 
 Market (Seqela Market): Area → Product & price → price bands
 ```
@@ -59,7 +61,11 @@ Market (Seqela Market): Area → Product & price → price bands
 | **Processing fee** | Application fee (ETB) |
 | **Cooperative queue** | Branch intake gate |
 | **Approval queue** | Committee voting |
-| **Post-approval** | Conditions → schedule → ready |
+| **Post-approval** | Conditions → schedule → closing pack → ready |
+| **Closing pack** | Restriction, POA (if used), optional title/mortgage/notary, digital agreement |
+| **Collateral restriction** | Government paper on pledged collateral (verified before disburse) |
+| **Power of Attorney (POA)** | When collateral is held via POA — deed verified before disburse |
+| **Digital agreement** | Tablet/pad e-signature of loan agreement (audit trail) |
 | **Agentic Assist** | Staff AI helper (cannot approve/disburse) |
 | **Delegation** | Temporary cover of staff powers (admin-approved) |
 | **Source channel** | Online (Digital Apply) vs staff/branch entry |

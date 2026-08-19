@@ -6,6 +6,8 @@ from typing import List, Optional
 
 from django.utils import timezone
 
+from loans.process_policy import requirement_on
+
 
 def has_verified_doc(loan_request, kind: str) -> bool:
     from loans.models import LoanCollateralLegalDocument
@@ -18,7 +20,7 @@ def has_verified_doc(loan_request, kind: str) -> bool:
 
 def restriction_satisfied(loan_request) -> bool:
     """True if restriction not required, or a verified government paper exists."""
-    if not getattr(loan_request, 'require_collateral_restriction', True):
+    if not requirement_on(loan_request, 'require_collateral_restriction'):
         return True
     from loans.models import LoanCollateralLegalDocument
 
@@ -35,7 +37,7 @@ def poa_satisfied(loan_request) -> bool:
 
 
 def _optional_kind_satisfied(loan_request, required_flag: str, kind: str) -> bool:
-    if not getattr(loan_request, required_flag, False):
+    if not requirement_on(loan_request, required_flag):
         return True
     return has_verified_doc(loan_request, kind)
 
@@ -65,7 +67,7 @@ def collateral_legal_blockers(loan_request) -> List[str]:
     blockers = []
     from loans.models import LoanCollateralLegalDocument
 
-    if getattr(loan_request, 'require_collateral_restriction', True):
+    if requirement_on(loan_request, 'require_collateral_restriction'):
         if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_RESTRICTION):
             blockers.append(
                 'Government Collateral Restriction paper must be uploaded and verified '
@@ -77,13 +79,13 @@ def collateral_legal_blockers(loan_request) -> List[str]:
                 'Loan Collateral Power of Attorney must be uploaded and verified '
                 '(collateral is held via POA).'
             )
-    if getattr(loan_request, 'require_title_search', False):
+    if requirement_on(loan_request, 'require_title_search'):
         if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_TITLE_SEARCH):
             blockers.append('Title / ownership search must be uploaded and verified before disbursement.')
-    if getattr(loan_request, 'require_mortgage_registration', False):
+    if requirement_on(loan_request, 'require_mortgage_registration'):
         if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_MORTGAGE_REG):
             blockers.append('Mortgage / restriction registration proof must be verified before disbursement.')
-    if getattr(loan_request, 'require_notary_stamp', False):
+    if requirement_on(loan_request, 'require_notary_stamp'):
         if not has_verified_doc(loan_request, LoanCollateralLegalDocument.KIND_NOTARY_STAMP):
             blockers.append('Notary / stamp-duty receipt must be verified before disbursement.')
     return blockers
@@ -118,11 +120,11 @@ def collateral_legal_summary(loan_request) -> dict:
     title_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_TITLE_SEARCH]
     mort_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_MORTGAGE_REG]
     notary_docs = [d for d in docs if d.kind == LoanCollateralLegalDocument.KIND_NOTARY_STAMP]
-    require_restriction = bool(getattr(loan_request, 'require_collateral_restriction', True))
+    require_restriction = requirement_on(loan_request, 'require_collateral_restriction')
     via_poa = bool(getattr(loan_request, 'collateral_held_via_poa', False))
-    require_title = bool(getattr(loan_request, 'require_title_search', False))
-    require_mort = bool(getattr(loan_request, 'require_mortgage_registration', False))
-    require_notary = bool(getattr(loan_request, 'require_notary_stamp', False))
+    require_title = requirement_on(loan_request, 'require_title_search')
+    require_mort = requirement_on(loan_request, 'require_mortgage_registration')
+    require_notary = requirement_on(loan_request, 'require_notary_stamp')
     return {
         'require_restriction': require_restriction,
         'via_poa': via_poa,

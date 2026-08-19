@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Set
 
+from loans.book_ops import user_can_access_book_ops
+
 # Fallback list used only when committee membership cannot be read from the DB.
 COMMITTEE_VOTER_ROLES: Set[str] = {
     'branch_manager',
@@ -125,7 +127,7 @@ def nav_flags_for(user) -> Dict[str, Any]:
     return {
         'nav_show_approval_votes': show_votes,
         'nav_show_post_approval': is_admin or role in POST_APPROVAL_ROLES,
-        'nav_show_book_ops': is_admin or role in POST_APPROVAL_ROLES or role in ('risk_compliance', 'ceo'),
+        'nav_show_book_ops': user_can_access_book_ops(user),
         'nav_show_reports': is_admin or role in REPORTS_ROLES,
         'nav_show_portfolio_dashboard': show_portfolio_dash,
         'nav_role': role,

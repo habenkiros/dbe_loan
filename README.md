@@ -540,7 +540,7 @@ docker compose exec web python manage.py test
 | `docs/user_manual/02_staff.md` | Staff hub guide |
 | `docs/user_manual/03_customers.md` | Digital Apply customer guide |
 | `docs/user_manual/04_market_partners.md` | Seqela Market guide |
-| `docs/user_manual/05_screenshots.md` | Embedded UI screenshots |
+| `docs/user_manual/05_screenshots.md` | How to refresh PNG captures (figures live in each chapter) |
 | `docs/user_manual/06_installation_it.md` | IT installation & minimum requirements |
 | `docs/user_manual/DECSI_Loan_Hub_User_Manuals.html` | Printable combined manuals (HTML) |
 | `docs/user_manual/DECSI_Loan_Hub_User_Manuals.pdf` | Combined manuals (PDF) |

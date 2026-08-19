@@ -84,6 +84,46 @@ a:hover { color: var(--accent); }
   gap: 0.75rem;
 }
 
+.ap-top-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ap-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  cursor: pointer;
+  color: #e8f6ee;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+}
+
+.ap-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ap-theme-toggle svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ap-theme-icon-sun { display: none; }
+html[data-theme="dark"] .ap-theme-icon-moon { display: none; }
+html[data-theme="dark"] .ap-theme-icon-sun { display: inline-flex; }
+
 .ap-brand {
   display: flex;
   align-items: center;
@@ -1184,6 +1224,11 @@ textarea { resize: vertical; min-height: 4.5rem; }
   }
 }
 
+@media (min-width: 721px) {
+  .ap-nav { margin-left: auto; }
+  .ap-top-tools { margin-left: 0.45rem; }
+}
+
 /* ——— Phone nav ——— */
 @media (max-width: 720px) {
   .ap-nav-toggle { display: inline-flex; }
@@ -1255,4 +1300,93 @@ textarea { resize: vertical; min-height: 4.5rem; }
   .ap-brand-mark { display: none; }
   .ap-wrap { padding-left: 0; padding-right: 0; width: calc(100% - 1.5rem); }
   .ap-card { padding: 1rem 0.95rem; }
+}
+
+/* ——— Dark theme (virtual portal) ——— */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e4eee8;
+  --muted: #9bb0a4;
+  --bg0: #082116;
+  --bg1: #0e1712;
+  --card: #15231c;
+  --accent: #3d9a5c;
+  --accent-deep: #8fd4a6;
+  --accent-hover: #2aaa58;
+  --line: #2c4638;
+  --soft: #1a2c22;
+  --ok: #6dca8a;
+  --warn: #e08080;
+  --gold: #d4a84a;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 28px 64px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse 90% 55% at 8% -12%, rgba(45, 160, 85, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 100% 0%, rgba(20, 80, 40, 0.18), transparent 50%),
+    linear-gradient(180deg, #121c16 0%, var(--bg1) 100%);
+}
+
+html[data-theme="dark"] .ap-input,
+html[data-theme="dark"] input[type=text],
+html[data-theme="dark"] input[type=password],
+html[data-theme="dark"] input[type=email],
+html[data-theme="dark"] input[type=number],
+html[data-theme="dark"] input[type=tel],
+html[data-theme="dark"] input[type=file],
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #101c16;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .ap-btn-light {
+  background: var(--card);
+  color: var(--accent-deep);
+}
+
+html[data-theme="dark"] .ap-steps li.is-done {
+  background: #163224;
+  border-color: #2d6a45;
+  color: #b8ecc8;
+}
+
+html[data-theme="dark"] .ap-status-chip.tone-progress,
+html[data-theme="dark"] .ap-status-chip.tone-ok,
+html[data-theme="dark"] .ap-status-chip.tone-done {
+  background: #163224;
+  border-color: #2d6a45;
+  color: #b8ecc8;
+}
+
+html[data-theme="dark"] .ap-status-chip.tone-warn {
+  background: #3a1c1c;
+  border-color: #7a3a3a;
+  color: #f0c4c4;
+}
+
+html[data-theme="dark"] .ap-messages li.success,
+html[data-theme="dark"] .ap-messages li.info {
+  background: #163224;
+  border-color: #2d6a45;
+  color: #b8ecc8;
+}
+
+html[data-theme="dark"] .ap-messages li.error,
+html[data-theme="dark"] .ap-messages li.warning {
+  background: #3a1c1c;
+  border-color: #7a3a3a;
+  color: #f0c4c4;
+}
+
+html[data-theme="dark"] .ap-timeline li::before {
+  background: var(--card);
+}
+
+html[data-theme="dark"] .ap-fact-request {
+  background: #3a3018 !important;
+  border-color: #7a6430 !important;
 }

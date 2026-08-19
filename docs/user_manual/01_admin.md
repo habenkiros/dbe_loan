@@ -69,7 +69,9 @@ Open the **Settings** dropdown in the hub navigation (superuser). Configure in r
 
 > **Screenshot (H-19):** Digital Apply settings — open/close portal, fee, and security controls.
 >
-> **Screenshot (H-20):** Document pack — required and optional docs for one loan category.
+> ![H-19 — Digital Apply settings](screenshots/H-19_digital_apply_settings.png)
+>
+> **Screenshot (H-20):** Document pack — required and optional docs for one loan category (capture on your site if not yet filed).
 
 ```text
 1. Districts → Branches → Departments (if HO)
@@ -185,6 +187,8 @@ Scopes that can be delegated (only powers the principal already holds):
 Admins see a banner when requests await approval.
 
 > **Screenshot (H-23):** Delegations — pending approval list and Approve / Reject actions.
+>
+> ![H-23 — Delegations](screenshots/H-23_delegations.png)
 
 ---
 
@@ -243,6 +247,15 @@ Coordinate with branch managers if intake is stuck.
 3. **Approve** or **Reject**.  
 4. Confirm the delegate sees “Acting by delegation” after approval.
 
+### 4.8 Post-approval closing pack (awareness)
+
+Closing requirements are set **per loan** on the post-approval workspace (not a global Settings switch):
+
+- Government **Collateral Restriction**, optional **Power of Attorney**, title / mortgage / notary papers  
+- **Digital loan agreement** signatures (borrower + officer; optional guarantor / BM)  
+
+These gate finance readiness. Train branch staff using the [Staff manual §4.7](02_staff.md). Prefer hub post-approval UIs over raw Django Admin edits for legal documents and agreements.
+
 ---
 
 ## 5. Django Admin (`/admin/`)
@@ -253,6 +266,7 @@ Common admin areas:
 
 - Loan requests, categories, document requirements  
 - Committees and votes  
+- Post-approval legal papers / agreements (prefer hub closing pack UI)  
 - Applicant portal settings, accounts, online applications, applicant notices  
 - Market actors, observations, price bands (Seqela Market)  
 - Staff delegations (if registered)  
@@ -301,8 +315,7 @@ Coordinate with DevOps before changing production secrets.
 
 - [Staff user manual](02_staff.md)  
 - [Customer user manual](03_customers.md)  
-- [Market partners](04_market_partners.md)  
-- [Screenshots](05_screenshots.md)  
-- [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)  
+- [Market partners](04_market_partners.md)
+- [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)
 - In-app: `/hub/help/`
 

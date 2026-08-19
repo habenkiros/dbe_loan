@@ -8,6 +8,7 @@ from . import views_delegation
 from . import views_risk
 from . import views_cooperative
 from . import views_book
+from . import views_policy
 from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
@@ -301,6 +302,11 @@ urlpatterns = [
         name='delete_approval_committee_level',
     ),
     path('manage_loan_application_document_types/', views.manage_loan_application_document_types, name='manage_loan_application_document_types'),
+    path(
+        'manage_process_policy/',
+        views_policy.manage_process_policy,
+        name='manage_process_policy',
+    ),
     path(
         'manage_applicant_portal/',
         applicant_hub_views.manage_applicant_portal_settings,

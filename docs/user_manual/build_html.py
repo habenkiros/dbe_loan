@@ -430,7 +430,6 @@ def main() -> None:
       <span class="chip">Digital Apply</span>
       <span class="chip">Market</span>
       <span class="chip">IT install</span>
-      <span class="chip">Screenshots</span>
     </div>
     <p class="hint">Print or Save as PDF (Ctrl/Cmd+P). Navigation links are hidden when printing.</p>
   </div>

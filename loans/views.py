@@ -2109,6 +2109,7 @@ def post_approval_detail(request, loan_request_id):
 
     from .collateral_legal import closing_pack_summary
     from .disbursement import can_approve_finance_disbursement
+    from .process_policy import closing_locks, requirement_on, tranches_enabled
     pack = closing_pack_summary(loan_request)
     tranches = list(loan_request.disbursement_tranches.order_by('sequence', 'id'))
     return render(request, 'loans/post_approval_detail.html', {
@@ -2122,6 +2123,9 @@ def post_approval_detail(request, loan_request_id):
         'agreement_signing': pack['agreement'],
         'final_amount': final_loan_amount(loan_request, appraisal),
         'tranches': tranches,
+        'closing_locks': closing_locks(),
+        'own_contribution_required': requirement_on(loan_request, 'own_contribution_required'),
+        'tranches_enabled': tranches_enabled(),
         'can_manage_conditions': can_manage_conditions(request.user, loan_request),
         'can_confirm_schedule': can_confirm_schedule(request.user, loan_request),
         'can_mark_ready': can_mark_ready(request.user, loan_request),
@@ -2175,6 +2179,10 @@ def post_approval_collateral_flags(request, loan_request_id):
     loan_request.require_mortgage_registration = request.POST.get('require_mortgage_registration') == '1'
     loan_request.require_notary_stamp = request.POST.get('require_notary_stamp') == '1'
     loan_request.own_contribution_required = request.POST.get('own_contribution_required') == '1'
+    from loans.process_policy import LOAN_TO_POLICY_FLAG, policy_forces
+    for attr in LOAN_TO_POLICY_FLAG:
+        if policy_forces(attr):
+            setattr(loan_request, attr, True)
     loan_request.save(update_fields=[
         'require_collateral_restriction',
         'collateral_held_via_poa',
@@ -2542,6 +2550,10 @@ def post_approval_add_tranche(request, loan_request_id):
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
     if not can_manage_conditions(request.user, loan_request):
         messages.warning(request, 'You cannot add tranches on this loan.')
+        return redirect('post_approval_detail', loan_request_id=loan_request_id)
+    from loans.process_policy import tranches_enabled
+    if not tranches_enabled():
+        messages.warning(request, 'Staged disbursement is turned off in Settings → Process policy.')
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
     raw = (request.POST.get('amount') or '').strip()
     try:

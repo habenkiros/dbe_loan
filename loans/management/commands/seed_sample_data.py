@@ -52,6 +52,7 @@ from loans.models import (
     LoanAppraisal,
     LoanCategory,
     LoanNotification,
+    LoanProcessPolicyConfig,
     LoanRequest,
     LoanRequestBasicInfo,
     LoanRequestDocument,
@@ -239,7 +240,16 @@ class Command(BaseCommand):
             cfg.mode = CollateralEstimationConfig.MODE_BOTH
             cfg.save(update_fields=['mode'])
 
+        from loans.process_policy import default_book_ops_roles, default_workout_decide_roles
+
         LoanAnalysisPolicyConfig.objects.get_or_create(pk=1)
+        LoanProcessPolicyConfig.objects.get_or_create(
+            pk=1,
+            defaults={
+                'book_ops_roles': default_book_ops_roles(),
+                'workout_decide_roles': default_workout_decide_roles(),
+            },
+        )
         DocumentAuthenticationPolicy.objects.get_or_create(pk=1)
         CommitteeApprovalPolicy.objects.get_or_create(pk=1)
         LatestLoanRequestID.objects.get_or_create(pk=1, defaults={'latest_id': 1000})

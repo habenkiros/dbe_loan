@@ -156,7 +156,7 @@ Open the application from **My applications** or the status page.
 
 On **My applications** you may see a **Notices** list (payment, loan requested + Queue ID, branch intake, credit approved/declined). Use **mark all read** when available.
 
-> **Screenshot (C-14):** Notices — in-portal messages about your application.
+> **Screenshot (C-14):** Notices — in-portal messages about your application (shown on My applications; see C-04 above).
 
 ### While drafting
 
@@ -208,6 +208,10 @@ After **credit approval** (or disbursement), open **Repayment schedule** from th
 >
 > ![C-13 — Repayment schedule](screenshots/C-13_apply_schedule.png)
 
+### Loan agreement at the branch
+
+Before funds are released, the branch may ask you to **sign the loan agreement** on a DECSI tablet or PC (draw your signature, confirm your name and ID). This is part of DECSI’s closing process together with collateral legal papers. You do **not** sign that agreement inside Digital Apply today — visit the branch when invited, and bring a valid ID.
+
 ---
 
 ## 6. What happens after you submit?
@@ -218,7 +222,7 @@ You do **not** complete appraisal or collateral online. DECSI staff:
 2. Verify documents and run internal checks.  
 3. Complete credit appraisal and collateral valuation as required.  
 4. Send the file through credit committee.  
-5. Complete post-approval conditions, build the **repayment schedule**, and disburse if approved.  
+5. Complete post-approval: conditions, **repayment schedule**, collateral legal papers, and **loan agreement signatures**, then disburse if approved.  
 
 Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page and **Notices** update as the loan moves forward.
 
@@ -230,7 +234,8 @@ Processing time depends on product, collateral, completeness of documents, and c
 - Choose the branch that normally serves you.  
 - Upload **all required** documents before paying the fee.  
 - Keep payment confirmation and **Queue ID** screenshots.  
-- Respond quickly if the branch asks for clearer documents or a site visit.  
+- Respond quickly if the branch asks for clearer documents, a site visit, or **agreement signing**.  
+- Bring a valid ID when invited to sign at the branch.  
 - Do not share your password or OTP with anyone claiming to be DECSI support in unofficial channels.
 
 ---
@@ -261,7 +266,6 @@ Processing time depends on product, collateral, completeness of documents, and c
 
 ## 10. Related manuals
 
-- [Staff user manual](02_staff.md) — how DECSI processes your file after submit  
-- [Admin user manual](01_admin.md) — for DECSI administrators only  
-- [Screenshots](05_screenshots.md)  
+- [Staff user manual](02_staff.md) — how DECSI processes your file after submit
+- [Admin user manual](01_admin.md) — for DECSI administrators only
 - [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)

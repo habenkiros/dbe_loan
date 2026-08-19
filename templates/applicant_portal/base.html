@@ -5,6 +5,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#064420">
+  <script>
+  (function () {
+    try {
+      var t = localStorage.getItem('decsi-hub-theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+      if (t === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#082116');
+    } catch (e) {}
+  })();
+  </script>
   <meta name="description" content="Digital loan apply — register, upload documents, pay your fee, and track your application online.">
   <title>{% block title %}Apply{% endblock %} · AI-powered Credit Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,9 +35,6 @@
           </span>
           <img class="ap-brand-seqela" src="{% static 'logo_green.png' %}" alt="Seqela">
         </a>
-        <button type="button" class="ap-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="ap-main-nav">
-          <span></span><span></span><span></span>
-        </button>
         <nav class="ap-nav" id="ap-main-nav" aria-label="Main">
           <a href="{% url 'applicant_portal:help_index' %}">Help</a>
           {% if request.session.applicant_portal_account_id %}
@@ -40,6 +47,22 @@
             <a class="ap-nav-cta" href="{% url 'applicant_portal:register' %}">Register</a>
           {% endif %}
         </nav>
+        <div class="ap-top-tools">
+          <button type="button" class="ap-theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Use dark theme" title="Dark theme">
+            <span class="ap-theme-icon-moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21 14.3A9 9 0 1 1 9.7 3 7 7 0 0 0 21 14.3z"/></svg>
+            </span>
+            <span class="ap-theme-icon-sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+              </svg>
+            </span>
+          </button>
+          <button type="button" class="ap-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="ap-main-nav">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
       </div>
     </header>
     <main class="ap-wrap {% block wrap_class %}{% endblock %}">
@@ -68,6 +91,7 @@
       </div>
     </footer>
   </div>
+  <script src="{% static 'js/hub_theme.js' %}"></script>
   <script src="{% static 'js/portal.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </body>

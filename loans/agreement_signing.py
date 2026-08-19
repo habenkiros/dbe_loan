@@ -16,6 +16,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
+from loans.process_policy import requirement_on
+
 
 def hash_body(body_text: str) -> str:
     return hashlib.sha256((body_text or '').encode('utf-8')).hexdigest()
@@ -135,7 +137,7 @@ def build_loan_agreement_body(loan_request) -> str:
 
 
 def agreements_satisfied(loan_request) -> bool:
-    if not getattr(loan_request, 'require_agreement_signatures', True):
+    if not requirement_on(loan_request, 'require_agreement_signatures'):
         return True
     from loans.models import LoanAgreement
 
@@ -147,7 +149,7 @@ def agreements_satisfied(loan_request) -> bool:
 
 
 def agreement_blockers(loan_request) -> List[str]:
-    if not getattr(loan_request, 'require_agreement_signatures', True):
+    if not requirement_on(loan_request, 'require_agreement_signatures'):
         return []
     from loans.models import LoanAgreement
 
@@ -232,7 +234,7 @@ def agreement_summary(loan_request) -> dict:
     slots = signature_slots(latest_loan) if latest_loan else []
     signed_count = sum(1 for s in slots if s['signed'])
     return {
-        'required': bool(getattr(loan_request, 'require_agreement_signatures', True)),
+        'required': requirement_on(loan_request, 'require_agreement_signatures'),
         'ok': agreements_satisfied(loan_request),
         'agreements': agreements,
         'latest_loan': latest_loan,

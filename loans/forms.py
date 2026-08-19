@@ -111,6 +111,65 @@ class CollateralTypeForm(forms.ModelForm):
         fields = ['name', 'kind']
 
 
+PROCESS_ROLE_CHOICES = [
+    c for c in CustomUser.ROLE_CHOICES if c[0] != 'credit_committee'
+]
+
+
+class ProcessPolicyForm(forms.Form):
+    """Settings → Process policy (superuser)."""
+
+    require_risk_review_before_committee = forms.BooleanField(
+        required=False,
+        label='Require Risk & Compliance sign-off before committee',
+        help_text='When on, the officer cannot submit to committee until Risk clears the file.',
+    )
+    book_ops_roles = forms.MultipleChoiceField(
+        required=True,
+        choices=PROCESS_ROLE_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        label='Monitoring and Collections roles',
+    )
+    workout_decide_roles = forms.MultipleChoiceField(
+        required=True,
+        choices=PROCESS_ROLE_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        label='Workout / write-off decision roles',
+    )
+    require_collateral_restriction = forms.BooleanField(
+        required=False,
+        label='Require government Collateral Restriction before disbursement',
+        help_text='Applies to every loan. Officers cannot turn this off on the file.',
+    )
+    require_agreement_signatures = forms.BooleanField(
+        required=False,
+        label='Require digital loan agreement signatures before disbursement',
+        help_text='Applies to every loan. Officers cannot turn this off on the file.',
+    )
+    require_title_search = forms.BooleanField(
+        required=False,
+        label='Require title / ownership search before disbursement',
+    )
+    require_mortgage_registration = forms.BooleanField(
+        required=False,
+        label='Require mortgage / restriction registration proof before disbursement',
+    )
+    require_notary_stamp = forms.BooleanField(
+        required=False,
+        label='Require notary / stamp-duty receipt before disbursement',
+    )
+    require_own_contribution = forms.BooleanField(
+        required=False,
+        label='Require borrower own-contribution / equity before first disbursement',
+        help_text='Officers still enter and verify the amount on post-approval.',
+    )
+    enable_disbursement_tranches = forms.BooleanField(
+        required=False,
+        label='Allow staged (tranche) disbursement',
+        help_text='When on, officers can add draw amounts on post-approval. When off, one disbursement only.',
+    )
+
+
 class LoanApplicationDocumentTypeForm(forms.ModelForm):
     """Superadmin: document type + per-type authentication rules."""
     class Meta:

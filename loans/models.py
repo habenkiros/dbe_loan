@@ -2103,6 +2103,56 @@ class LoanAnalysisPolicyConfig(models.Model):
         return 'Loan analysis policy'
 
 
+class LoanProcessPolicyConfig(models.Model):
+    """Singleton: who may use Monitoring / Collections and who may decide workout."""
+
+    book_ops_roles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Staff roles that may open Monitoring and Collections.',
+    )
+    workout_decide_roles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Staff roles that may approve or reject workout and write-off.',
+    )
+    require_collateral_restriction = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: government Collateral Restriction must be verified before disbursement.',
+    )
+    require_agreement_signatures = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: digital loan agreement signatures required before disbursement.',
+    )
+    require_title_search = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: title / ownership search required before disbursement.',
+    )
+    require_mortgage_registration = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: mortgage / restriction registration proof required before disbursement.',
+    )
+    require_notary_stamp = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: notary / stamp-duty receipt required before disbursement.',
+    )
+    require_own_contribution = models.BooleanField(
+        default=False,
+        help_text='Bank-wide: borrower own-contribution / equity required before first disbursement.',
+    )
+    enable_disbursement_tranches = models.BooleanField(
+        default=True,
+        help_text='Allow staged (tranche) disbursement on post-approval.',
+    )
+
+    class Meta:
+        verbose_name = 'Loan process policy'
+        verbose_name_plural = 'Loan process policy'
+
+    def __str__(self):
+        return 'Loan process policy'
+
+
 class DocumentAuthenticationPolicy(models.Model):
     """Singleton: upload validation rules."""
     allowed_extensions = models.CharField(max_length=255, default='pdf,jpg,jpeg,png,doc,docx')

@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from django.db.models import Q
 from django.utils import timezone
 
+from loans.process_policy import requirement_on
+
 
 def is_post_approval(loan_request) -> bool:
     return loan_request.committee_status == loan_request.COMMITTEE_APPROVED
@@ -132,7 +134,7 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
     blockers.extend(collateral_legal_blockers(loan_request))
     from loans.agreement_signing import agreement_blockers
     blockers.extend(agreement_blockers(loan_request))
-    if getattr(loan_request, 'own_contribution_required', False):
+    if requirement_on(loan_request, 'own_contribution_required'):
         if not loan_request.own_contribution_verified_at:
             blockers.append('Borrower own-contribution / equity must be verified before disbursement.')
     return {

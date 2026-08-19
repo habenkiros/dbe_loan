@@ -401,8 +401,9 @@
         <li><span class="ix">02</span> A day in the life: today vs with the Hub</li>
         <li><span class="ix">03</span> Problems → solutions → bank benefits (detail)</li>
         <li><span class="ix">04</span> Full feature deep-dive (appraisal, docs, collateral, committee)</li>
-        <li><span class="ix">05</span> Controls, roles, CBS integration &amp; compliance</li>
-        <li><span class="ix">06</span> Proof, ROI, roadmap &amp; decision path</li>
+        <li><span class="ix">05</span> Digital Apply, post-approval, intelligence &amp; market</li>
+        <li><span class="ix">06</span> Controls, roles, CBS integration &amp; compliance</li>
+        <li><span class="ix">07</span> Proof, ROI, roadmap &amp; decision path</li>
       </ol>
     </div>
   </div>
@@ -458,10 +459,11 @@
         <h3>AI-powered Credit Intelligence — proposed</h3>
         <ul>
           <li>Secured MSME &amp; corporate facilities</li>
-          <li>Cashflow / DSCR appraisal methodology</li>
-          <li>GPS collateral valuation &amp; evidence packs</li>
-          <li>Officer → manager → committee workflow</li>
-          <li>Policy gates, E&amp;S, and audit governance</li>
+          <li>Cashflow / DSCR appraisal + 5-pillar scorecard</li>
+          <li>Digital Apply + GPS collateral evidence packs</li>
+          <li>Agentic Assist, Credit Intelligence, Seqela Market</li>
+          <li>Committees → closing pack → Finance disbursement</li>
+          <li>MFA, delegations, Risk Desk &amp; audit governance</li>
         </ul>
       </div>
     </div>
@@ -798,27 +800,45 @@
     <p class="sub" style="margin-top:0.9rem;">Designed for reconstructability: if audit asks “why was this approved?”, the answer is in the system — not in someone’s drawer.</p>
   </div>
 
-  <!-- 17 Feature catalog -->
+  <!-- 17 New factory modules -->
   <div class="slide" data-slide="17">
+    <span class="confidential">Confidential</span>
+    <h2>Modules F–J — Beyond Origination</h2>
+    <p class="sub" style="margin-bottom:0.55rem;">Built in the new credit factory — ready to configure on top of DECSI’s live queue system.</p>
+    <div class="grid-3">
+      <div class="card"><span class="tag">Customers</span><strong>Digital Apply</strong><p>Register, apply, upload docs, pay/waive fee, Queue ID, notices, schedule after approval.</p></div>
+      <div class="card"><span class="tag">Post-approval</span><strong>Closing → Finance</strong><p>Conditions, legal collateral pack, e-signatures, Finance disbursement queue, optional CBS booking.</p></div>
+      <div class="card"><span class="tag">Staff AI</span><strong>Agentic Assist</strong><p>Copilot with hard rails — checklist coach, draft bootstrap; cannot approve or disburse.</p></div>
+      <div class="card"><span class="tag">Management</span><strong>Credit Intelligence</strong><p>Portfolio KPIs, officer workspaces, collateral analytics, scoped Q&amp;A.</p></div>
+      <div class="card"><span class="tag">Risk &amp; IT</span><strong>MFA · Delegations · Risk Desk</strong><p>TOTP, audit export, admin-approved cover, pre-committee risk gate.</p></div>
+      <div class="card"><span class="tag">Market · Book</span><strong>Seqela Market + book ops</strong><p>Dealer/co-op price bands; monitoring, collections, covenants after disbursement.</p></div>
+    </div>
+  </div>
+
+  <!-- 18 Feature catalog -->
+  <div class="slide" data-slide="18">
     <span class="confidential">Confidential</span>
     <h2>Complete Capability Catalog</h2>
     <table class="feature-table">
       <thead><tr><th>Area</th><th>What DECSI gets</th></tr></thead>
       <tbody>
-        <tr><td class="f">Intake</td><td>Loan requests, officer assignment, customer #, product &amp; collateral type, status tracking across branches</td></tr>
-        <tr><td class="f">Documents</td><td>Configurable types, OCR eng+amh, identity match, integrity checks, verify/reject workflow</td></tr>
-        <tr><td class="f">Appraisal</td><td>MSME + corporate 7-step cashflow; 10-factor qualitative; DSCR; E&amp;S 21 items; scorecard; assist; amortization</td></tr>
-        <tr><td class="f">Collateral</td><td>Building BOQ catalog, land, movable; GPS rules; offline PWA; maps; coverage ratio; evidence pack</td></tr>
-        <tr><td class="f">Governance</td><td>Lock/unlock, engineering QA pipeline, audit log, policy config (photos, GPS, coverage)</td></tr>
-        <tr><td class="f">Approvals</td><td>Ops/finance queues; 4-level committee; branch overrides; notifications</td></tr>
-        <tr><td class="f">Admin</td><td>Geography, branches, users, loan categories, bulk CSV imports, analysis policy</td></tr>
-        <tr><td class="f">Tech</td><td>Django + PostgreSQL + Docker; on-prem/private cloud; optional REST API; CBS customer API</td></tr>
+        <tr><td class="f">Intake</td><td>Queue (live today) + Digital Apply + online intake with auto-assign</td></tr>
+        <tr><td class="f">Documents</td><td>Per-product packs, OCR eng+amh + extraction, identity match, verify/reject</td></tr>
+        <tr><td class="f">Appraisal</td><td>MSME + corporate 7-step; 5-pillar scorecard; DSCR; E&amp;S; Assist; Excel/PDF export</td></tr>
+        <tr><td class="f">Collateral</td><td>BOQ building, land, movable; GPS PWA; Gebeta maps; evidence pack; engineering QA</td></tr>
+        <tr><td class="f">Market</td><td>Seqela Market — dealer/co-op quotes → area price bands</td></tr>
+        <tr><td class="f">Governance</td><td>MFA, delegations, Risk Desk, lock/audit, on-prem license, in-app help</td></tr>
+        <tr><td class="f">Approvals</td><td>Ops/finance queues; multi-level committee; notifications; return-to-officer</td></tr>
+        <tr><td class="f">Post-approval</td><td>Closing pack, e-signatures, Finance disbursement, partial disburse, book ops</td></tr>
+        <tr><td class="f">Intelligence</td><td>Credit Intelligence dashboards; Agentic Assist (hard rails)</td></tr>
+        <tr><td class="f">Admin</td><td>Geography, branches, users, Digital Apply settings, bulk CSV, analysis policy</td></tr>
+        <tr><td class="f">Tech</td><td>Django + PostgreSQL + Docker; on-prem; CBS customer API; optional REST</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- 18 DECSI proof -->
-  <div class="slide" data-slide="18">
+  <!-- 19 DECSI proof -->
+  <div class="slide" data-slide="19">
     <span class="confidential">Confidential</span>
     <h2>Proven at Scale — DECSI Reference</h2>
     <p class="sub" style="margin-bottom:0.55rem;">Dedebit Credit and Savings Institution · Mekelle · Branch → District → HO</p>
@@ -838,8 +858,8 @@
     <p class="sub">Same operational DNA — tuned to DECSI products, policy, hierarchy, and CBS.</p>
   </div>
 
-  <!-- 19 ROI -->
-  <div class="slide" data-slide="19">
+  <!-- 20 ROI -->
+  <div class="slide" data-slide="20">
     <span class="confidential">Confidential</span>
     <h2>Business Case — Why Leadership Says Yes</h2>
     <div class="grid-2">

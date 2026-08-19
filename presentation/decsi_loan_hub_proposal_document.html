@@ -298,7 +298,10 @@ figcaption{
         <span class="badge">Cashflow MSME</span>
         <span class="badge">GPS collateral</span>
         <span class="badge">Multi-level committees</span>
-        <span class="badge">Offline field tablet</span>
+        <span class="badge">Digital Apply</span>
+        <span class="badge">Agentic Assist</span>
+        <span class="badge">Post-approval → Finance</span>
+        <span class="badge">MFA &amp; delegations</span>
         <span class="badge">Working UI screenshots</span>
       </div>
       <div class="meta">
@@ -333,15 +336,16 @@ figcaption{
     <li><span class="n">10.</span><span class="t">Module C — Scorecard, gates &amp; analysis assist</span></li>
     <li><span class="n">11.</span><span class="t">Module D — GPS collateral &amp; evidence packs</span></li>
     <li><span class="n">12.</span><span class="t">Module E — Committees &amp; approval queues</span></li>
-    <li><span class="n">13.</span><span class="t">Roles, administration &amp; reporting</span></li>
-    <li><span class="n">14.</span><span class="t">Core banking integration &amp; security</span></li>
-    <li><span class="n">15.</span><span class="t">Complete capability catalog</span></li>
-    <li><span class="n">16.</span><span class="t">Problem → solution → benefit matrix</span></li>
-    <li><span class="n">17.</span><span class="t">Impact &amp; operating results at DECSI</span></li>
-    <li><span class="n">18.</span><span class="t">Business case, ROI &amp; cost of inaction</span></li>
-    <li><span class="n">19.</span><span class="t">Implementation roadmap (~1 month to pilot)</span></li>
-    <li><span class="n">20.</span><span class="t">Engagement model, financials &amp; next phase (documents + committee)</span></li>
-    <li><span class="n">21.</span><span class="t">Appendix — screenshot index &amp; glossary</span></li>
+    <li><span class="n">13.</span><span class="t">Modules F–J — Digital Apply, post-approval, intelligence &amp; market</span></li>
+    <li><span class="n">14.</span><span class="t">Roles, administration &amp; reporting</span></li>
+    <li><span class="n">15.</span><span class="t">Core banking integration &amp; security</span></li>
+    <li><span class="n">16.</span><span class="t">Complete capability catalog</span></li>
+    <li><span class="n">17.</span><span class="t">Problem → solution → benefit matrix</span></li>
+    <li><span class="n">18.</span><span class="t">Impact &amp; operating results at DECSI</span></li>
+    <li><span class="n">19.</span><span class="t">Business case, ROI &amp; cost of inaction</span></li>
+    <li><span class="n">20.</span><span class="t">Implementation roadmap (~1 month to pilot)</span></li>
+    <li><span class="n">21.</span><span class="t">Engagement model, financials &amp; next phase (documents + committee)</span></li>
+    <li><span class="n">22.</span><span class="t">Appendix — screenshot index &amp; glossary</span></li>
   </ul>
   <h3>Document control</h3>
   <table>
@@ -580,7 +584,7 @@ figcaption{
   <div class="two">
     <div class="box green"><h4>Sheet 4 — E&amp;S</h4><p>21 checklist items in 5 sections; risk Low/Medium/High; eligibility PASS / PASS WITH ACTION POINTS / REJECT; sign-off trail.</p></div>
     <div class="box green"><h4>Sheet 5 — Collateral worksheet</h4><p>Prefills from field valuation; coverage ratio visible before decision.</p></div>
-    <div class="box green"><h4>Sheet 6 — Summary &amp; decision</h4><p>4-pillar scorecard, strengths/weaknesses, recommendation, recommended amount (drives committee routing).</p></div>
+    <div class="box green"><h4>Sheet 6 — Summary &amp; decision</h4><p>5-pillar scorecard, strengths/weaknesses, recommendation, recommended amount (drives committee routing).</p></div>
     <div class="box green"><h4>Sheet 7 — Amortization</h4><p>Generate repayment schedule for committee and CBS booking.</p></div>
   </div>
 <figure class="shot">
@@ -671,13 +675,14 @@ figcaption{
 <section class="screen pagebreak">
   <h2>8. Module C — Scorecard, Gates &amp; Analysis Assist</h2>
   <p><strong>Problem solved:</strong> Subjective “gut feel” decisions and files that reach committee before policy is met.</p>
-  <h3>8.1 Explainable 4-pillar score (/100)</h3>
+  <h3>8.1 Explainable 5-pillar score (/100)</h3>
   <table>
     <tr><th>Pillar</th><th>Weight</th><th>What it measures</th></tr>
-    <tr><td>Qualitative / character</td><td>25</td><td>Sheet 2 business &amp; character quality</td></tr>
-    <tr><td>Financial / cashflow</td><td>35</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Qualitative / character</td><td>20</td><td>Sheet 2 business &amp; character quality (governance in corporate mode)</td></tr>
+    <tr><td>Financial / cashflow</td><td>30</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Banking &amp; bureau conduct</td><td>20</td><td>CBS turnover, transaction behaviour, bureau flags from Sheet 2 refresh</td></tr>
     <tr><td>Environmental &amp; social</td><td>15</td><td>Risk category &amp; eligibility outcome</td></tr>
-    <tr><td>Collateral coverage</td><td>25</td><td>Coverage vs ask (e.g. ≥1.5× full points)</td></tr>
+    <tr><td>Collateral coverage</td><td>15</td><td>Coverage vs ask (policy minimums configurable)</td></tr>
   </table>
   <p>Bands: <strong>Strong ≥80</strong> · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40.</p>
   <h3>8.2 Hard policy gates (bank-configurable)</h3>
@@ -790,7 +795,71 @@ figcaption{
 </section>
 
 <section class="screen pagebreak">
-  <h2>11. Roles, Administration &amp; Reporting</h2>
+  <h2>11. Modules F–J — Customer Channel, Intelligence &amp; Post-Approval</h2>
+  <p>The modules below are part of the <strong>new credit factory</strong> in this proposal — built and ready to configure. They extend the queue system already live at DECSI (built free) into a full lending lifecycle: apply → assess → approve → close → disburse → monitor.</p>
+  <h3>11.1 Module F — Digital Apply &amp; online intake</h3>
+  <p><strong>Problem solved:</strong> Customers must visit a branch to start a file; officers re-key the same KYC; first packs arrive incomplete.</p>
+  <ul>
+    <li><strong>Customer portal</strong> — Register with DECSI customer number, guided apply, document upload, Chapa fee payment (or DECSI-waived fee), Queue ID, status notices</li>
+    <li><strong>After approval</strong> — Repayment schedule view for the customer; optional processing-fee collection on approved loans only</li>
+    <li><strong>Staff online intake</strong> — Digital Apply submissions land in an officer queue with auto-assign rules; same file continues into documents and appraisal</li>
+    <li><strong>Admin control</strong> — Open/close Digital Apply, product eligibility, fee policy, and branding from the hub</li>
+  </ul>
+  <h3>11.2 Module G — Post-approval, closing pack &amp; Finance disbursement</h3>
+  <p><strong>Problem solved:</strong> Approval is not disbursement — conditions, legal collateral steps, and finance release happen in parallel spreadsheets and paper.</p>
+  <ul>
+    <li><strong>Conditions checklist</strong> — Officer and finance clear post-approval conditions before release</li>
+    <li><strong>Closing pack</strong> — Government collateral restriction, POA, title search, mortgage registration, notary/stamp verification gates</li>
+    <li><strong>Digital agreement e-signatures</strong> — Tablet signature pad with content-hash binding for borrower, officer, and branch manager roles</li>
+    <li><strong>Schedule confirm → ready → disbursed</strong> — Finance disbursement queue; optional CBS booking handoff; partial disbursement and own-contribution verification where configured</li>
+  </ul>
+  <h3>11.3 Module H — Agentic Assist &amp; Credit Intelligence</h3>
+  <p><strong>Problem solved:</strong> Officers spend hours on checklist chasing and narrative drafting; management lacks portfolio-level visibility.</p>
+  <div class="two">
+    <div class="box gold"><h4>Agentic Assist (hard rails)</h4>
+      <ul>
+        <li>Floating copilot + dedicated agent workspace in the hub</li>
+        <li>Story/bootstrap loan draft, document checklist coach, read-only appraisal guidance</li>
+        <li>Full run audit trail — <strong>cannot</strong> approve, submit committee, disburse, or estimate collateral</li>
+      </ul>
+    </div>
+    <div class="box green"><h4>Credit Intelligence</h4>
+      <ul>
+        <li>Overview KPIs and officer/manager workspaces</li>
+        <li>Portfolio &amp; collateral analytics dashboards</li>
+        <li>Scoped CI assistant Q&amp;A on institution data — decision support, not auto-approve</li>
+      </ul>
+    </div>
+  </div>
+  <h3>11.4 Module I — Risk desk, MFA &amp; staff delegations</h3>
+  <ul>
+    <li><strong>Risk Desk</strong> — Queues for weak score, E&amp;S issues, thin coverage, low DSCR; optional block on committee submit until risk sign-off</li>
+    <li><strong>MFA</strong> — TOTP setup/verify, login lockout, security audit log export</li>
+    <li><strong>Staff delegations</strong> — Admin-approved, scoped cover for committee vote, cooperative intake, appraisal/docs, finance disbursement, assign officer — without password sharing</li>
+    <li><strong>On-prem license</strong> — Ed25519 product license enforcement; no phone-home; institution-controlled deployment</li>
+  </ul>
+  <h3>11.5 Module J — Seqela Market &amp; post-disbursement book ops</h3>
+  <div class="two">
+    <div class="box green"><h4>Seqela Market</h4>
+      <p>Dealer and cooperative reporter portal at <code>/market-portal/</code> — local price observations recomputed into area price bands for collateral and credit inputs.</p>
+    </div>
+    <div class="box green"><h4>Book operations (post-disbursement)</h4>
+      <p>Monitoring desk, collections desk, covenant tracking, watchlist, arrears DPD, workout/reschedule, and write-off — same dossier, after disbursement.</p>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="screenshots/print/17-notifications.png" alt="In-app notifications for queue events and customer notices" />
+    <figcaption>Figure 26 — In-app notifications: queue events, committee actions, and customer-facing notices (Digital Apply status updates).</figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="screenshots/print/18-engineering-qa.png" alt="Engineering QA pipeline for collateral valuation" />
+    <figcaption>Figure 27 — Engineering QA pipeline — dual control before collateral values feed committee and closing pack.</figcaption>
+  </figure>
+  <div class="callout"><strong>Credit philosophy:</strong> AI accelerates staff work with hard rails — humans and committees still decide. No auto-approve, no silent disburse.</div>
+</section>
+
+<section class="screen pagebreak">
+  <h2>12. Roles, Administration &amp; Reporting</h2>
   <p>Sixteen role types out of the box — renamed and scoped to DECSI’s Branch → District/Region → Head Office model.</p>
   <table>
     <tr><th>Role family</th><th>Typical use</th></tr>
@@ -828,7 +897,7 @@ figcaption{
 </section>
 
 <section class="screen pagebreak">
-  <h2>12. Core Banking Integration &amp; Security</h2>
+  <h2>13. Core Banking Integration &amp; Security</h2>
   <p>AI-powered Credit Intelligence is the <strong>credit factory</strong>. Core banking remains the system of record for accounts and disbursement. There is no Temenos-class rip-and-replace.</p>
   <div class="three">
     <div class="box green"><h4>Customer lookup</h4><p>Customer number → party API → name, phone, TIN, address, gender, status (Temenos-style aliases supported).</p></div>
@@ -848,30 +917,38 @@ figcaption{
     <li>Evidence pack / dossier export (PDF/JSON/ZIP)</li>
     <li>E&amp;S screening with eligibility decisions</li>
     <li>NBE credit-report / bureau flags on file</li>
+    <li>MFA (TOTP), login lockout, security audit export</li>
+    <li>Staff delegations — admin-approved scoped cover</li>
+    <li>On-prem Ed25519 product license — no phone-home</li>
+    <li>Digital agreement e-signatures with content-hash binding</li>
+    <li>Closing pack gates before disbursement</li>
+    <li>Agentic Assist — audited runs; no approve/disburse tools</li>
     <li>Aligned to NBE credit governance expectations</li>
   </ul>
   <h3>Technology</h3>
-  <p>Python / Django, PostgreSQL, Docker — on-premises or private cloud with bank-controlled data residency. Optional REST API for future channel integrations. Tesseract OCR (<code>eng+amh</code>). Leaflet maps for collateral.</p>
+  <p>Python / Django, PostgreSQL, Docker — on-premises deployment with institution-controlled data residency. Optional REST API for future channel integrations. Tesseract OCR (<code>eng+amh</code>). Gebeta Maps for Ethiopia geocoding with OpenStreetMap fallback. On-prem Ed25519 license enforcement.</p>
 </section>
 
 <section class="screen pagebreak">
-  <h2>13. Complete Capability Catalog</h2>
+  <h2>14. Complete Capability Catalog</h2>
   <table>
     <tr><th>Area</th><th>What DECSI gets</th></tr>
     <tr><td>Intake</td><td>Staff loan requests, officer assignment, customer #, products — <strong>plus Digital Apply</strong> (customer self-service) and <strong>online intake</strong> with auto-assign</td></tr>
-    <tr><td>Documents</td><td>Configurable types, OCR eng+amh, identity match, integrity checks, verify/reject workflow</td></tr>
-    <tr><td>Appraisal</td><td>MSME + corporate 7-step cashflow; qualitative; DSCR; E&amp;S 21 items; scorecard; Assist; amortization</td></tr>
-    <tr><td>Collateral</td><td>Building BOQ catalog, land, movable; GPS rules; offline PWA; maps; coverage; evidence pack</td></tr>
-    <tr><td>Seqela Market (new)</td><td>Dealer/cooperative local price quotes; area price bands for collateral and credit</td></tr>
-    <tr><td>Governance</td><td>Lock/unlock, engineering QA, audit log, policy config, <strong>MFA</strong>, <strong>staff delegations</strong> (admin-approved cover)</td></tr>
-    <tr><td>Approvals</td><td>Cooperative intake; ops/finance queues; multi-level committee; return-to-officer; notifications</td></tr>
-    <tr><td>Post-approval (new)</td><td>Conditions checklist, schedule confirm, mark ready, Finance disbursement queue</td></tr>
-    <tr><td>Intelligence (new)</td><td>Credit Intelligence KPIs and workspaces; Agentic Assist (cannot approve or disburse)</td></tr>
-    <tr><td>Customer (new)</td><td>Digital Apply: register, apply, fee, Queue ID, notices, repayment schedule after approval</td></tr>
+    <tr><td>Documents</td><td>Per-product document packs, OCR eng+amh with extraction into appraisal, identity match, integrity checks, verify/reject workflow</td></tr>
+    <tr><td>Appraisal</td><td>MSME + corporate 7-step cashflow; 5-pillar scorecard; qualitative; DSCR; E&amp;S 21 items; Assist; Excel/PDF export; amortization</td></tr>
+    <tr><td>Collateral</td><td>Building BOQ, land, movable, mixed routing; GPS rules; offline PWA; Gebeta maps + OSM fallback; coverage; evidence pack</td></tr>
+    <tr><td>Seqela Market</td><td>Dealer/cooperative local price quotes; area price bands for collateral and credit</td></tr>
+    <tr><td>Governance</td><td>Lock/unlock, engineering QA, audit log, policy config, <strong>MFA</strong>, <strong>staff delegations</strong>, on-prem license, in-app help manuals</td></tr>
+    <tr><td>Risk</td><td>Risk Desk queues; optional committee-submit gate; bureau flags on file</td></tr>
+    <tr><td>Approvals</td><td>Cooperative intake; ops/finance queues; multi-level committee (tie-breaker, roster overrides); return-to-officer; notifications</td></tr>
+    <tr><td>Post-approval</td><td>Conditions checklist, closing pack (restriction, POA, title, mortgage, notary), e-signatures, schedule confirm, Finance disbursement queue, partial disburse</td></tr>
+    <tr><td>Intelligence</td><td>Credit Intelligence KPIs and workspaces; Agentic Assist (cannot approve or disburse)</td></tr>
+    <tr><td>Customer</td><td>Digital Apply: register, apply, fee, Queue ID, notices, repayment schedule after approval</td></tr>
+    <tr><td>Book ops</td><td>Monitoring, collections, covenants, watchlist, arrears DPD, workout/reschedule, write-off</td></tr>
     <tr><td>Admin</td><td>Geography, branches, users, categories, Digital Apply settings, bulk CSV, analysis policy</td></tr>
     <tr><td>Tech</td><td>Django + PostgreSQL + Docker; CBS customer API; optional REST; on-premises at DECSI</td></tr>
   </table>
-  <h2>14. Problem → Solution → Benefit Matrix</h2>
+  <h2>15. Problem → Solution → Benefit Matrix</h2>
   <table>
     <tr><th>Problem</th><th>Hub response</th><th>Benefit</th></tr>
     <tr><td>Slow multi-level approvals</td><td>Digital queues, notifications, amount routing, return-with-notes</td><td>Weeks → days</td></tr>
@@ -884,11 +961,15 @@ figcaption{
     <tr><td>Customers wait at the branch to start a file</td><td>Digital Apply: register, apply, fee, Queue ID from home</td><td>Fewer visits; cleaner first packs</td></tr>
     <tr><td>No local market prices for collateral</td><td>Seqela Market quotes → area price bands</td><td>Better valuation inputs</td></tr>
     <tr><td>Staff leave stops the queue</td><td>Admin-approved delegations</td><td>Cover without sharing passwords</td></tr>
+    <tr><td>Approval is not disbursement</td><td>Closing pack, e-signatures, Finance disbursement queue</td><td>Controlled release; fewer legal surprises</td></tr>
+    <tr><td>Officers lose time on checklists</td><td>Agentic Assist with hard rails</td><td>Faster file prep; full audit trail</td></tr>
+    <tr><td>Weak files reach committee</td><td>Risk Desk gate + 5-pillar scorecard</td><td>Better portfolio quality</td></tr>
+    <tr><td>No portfolio visibility</td><td>Credit Intelligence dashboards</td><td>Management by exception</td></tr>
   </table>
 </section>
 
 <section class="screen pagebreak">
-  <h2>15. Impact — Current Queue System Built Free, Live DECSI Data</h2>
+  <h2>16. Impact — Current Queue System Built Free, Live DECSI Data</h2>
   <p>Seqela <strong>developed the current live system for DECSI at no charge</strong>. What is in production today is <strong>queue management, user management, branch management, loan type management, and collateral type management</strong>. The figures below are operating results from that system — not forecasts, and not the new credit factory described in this proposal.</p>
   <div class="kpi">
     <div><div class="v">53,901</div><div class="l">Applications processed</div></div>
@@ -899,7 +980,7 @@ figcaption{
   <p>Full lending lifecycle (applications → approval → rejection → disbursement): ETB 29.56B requested · 1,762 customers rejected (ETB 1.37B) · ~76% of approved amount subsequently disbursed · amount approval rate 57.59% · customer approval rate 47.12%.<br>
   Expected operational benefits: 50–70% wait-time reduction, weeks-to-days multi-level approvals, 95%+ document completeness.<br>
   <strong>Reference:</strong> Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978.</p>
-  <h2>16. Business Case, ROI &amp; Cost of Inaction</h2>
+  <h2>17. Business Case, ROI &amp; Cost of Inaction</h2>
   <div class="two">
     <div class="box green"><h4>Revenue &amp; growth</h4><ul><li>Faster turnaround → higher MSME conversion</li><li>More files per officer without proportional headcount</li><li>Competitive edge vs paper/Excel banks</li></ul></div>
     <div class="box green"><h4>Cost &amp; risk</h4><ul><li>Less courier, printing, rework, overtime</li><li>Fewer weak approvals via DSCR/E&amp;S/coverage gates</li><li>Lower audit cost via digital dossiers</li></ul></div>
@@ -942,7 +1023,7 @@ figcaption{
 </section>
 
 <section class="screen pagebreak">
-  <h2>17. Implementation Roadmap — Pilot in ~1 Month After Requirements</h2>
+  <h2>18. Implementation Roadmap — Pilot in ~1 Month After Requirements</h2>
   <p class="callout" style="margin-top:0;"><strong>Clock starts when requirements arrive:</strong> the new credit factory is already built and ready to configure. Queue and admin are already live at DECSI (built free). Once DECSI delivers policy, products, hierarchy, pilot scope, and CBS contacts, we configure and start the first wave in about <strong>one month</strong> — not six months to first go-live.</p>
   <table>
     <tr><th>Phase</th><th>Timing</th><th>Focus</th></tr>
@@ -953,7 +1034,7 @@ figcaption{
   </table>
   <p><strong>Configured for DECSI:</strong> branding, role hierarchy, loan products, appraisal modes, committee thresholds, collateral unit-price catalog, CBS hooks, policy gates (DSCR, E&amp;S, coverage).</p>
   <p><strong>Pilot success metrics (agreed upfront):</strong> cycle time, document completeness %, committee return rate, collateral coverage adequacy, audit retrieval time.</p>
-  <h2>18. Engagement Model, Financials &amp; Next Phase</h2>
+  <h2>19. Engagement Model, Financials &amp; Next Phase</h2>
   <h3>Commercial envelope (see Financial Proposal SEQ/DECSI/FIN/2026-08)</h3>
   <table>
     <tr><th>Item</th><th>Amount</th></tr>
@@ -987,12 +1068,12 @@ figcaption{
 </section>
 
 <section class="screen pagebreak">
-  <h2>19. Closing</h2>
+  <h2>20. Closing</h2>
   <p>Seqela is ready to help DECSI scale disciplined, high-quality institutional credit origination network-wide — preserving credit standards while compressing cycle times and strengthening audit readiness.</p>
   <p><strong>DECSI’s live queue system already proved the volume (53,901 files · ETB 17.03B approved).<br>This proposal deploys the credit factory that volume now needs — network-wide, one methodology.</strong></p>
   <p>The screenshots in this proposal are the working new system, ready to configure — not mockups. A walkthrough can be arranged immediately for Credit, IT, and Risk leadership.</p>
 
-  <h2>20. Appendix A — Screenshot Index</h2>
+  <h2>21. Appendix A — Screenshot Index</h2>
   <table>
     <tr><th>Fig</th><th>File</th><th>Shows</th></tr>
     <tr><td>1</td><td>system_flow.png</td><td>End-to-end lifecycle diagram</td></tr>
@@ -1008,7 +1089,8 @@ figcaption{
     <tr><td>19</td><td>12-evidence-pack.png</td><td>Collateral evidence pack</td></tr>
     <tr><td>20</td><td>13-collateral-policy.png</td><td>Collateral policy config</td></tr>
     <tr><td>21–25</td><td>committee / ops screens</td><td>Submit, queue, vote, pack, ops</td></tr>
-    <tr><td>26–29</td><td>admin / reports / checklist</td><td>Users, branches, reports, field checklist</td></tr>
+    <tr><td>26–27</td><td>17-notifications, 18-engineering-qa</td><td>Notices; engineering QA pipeline</td></tr>
+    <tr><td>28–31</td><td>admin / reports / checklist</td><td>Users, branches, reports, field checklist</td></tr>
   </table>
 
   <h2>Appendix B — Glossary</h2>
@@ -1018,6 +1100,9 @@ figcaption{
     <tr><td>E&amp;S</td><td>Environmental &amp; Social assessment</td></tr>
     <tr><td>CBS</td><td>Core Banking System</td></tr>
     <tr><td>BOQ</td><td>Bill of Quantities — construction valuation breakdown</td></tr>
+    <tr><td>Agentic Assist</td><td>AI copilot with hard rails — accelerates intake/appraisal prep; cannot approve or disburse</td></tr>
+    <tr><td>Closing pack</td><td>Legal collateral steps (restriction, POA, title, mortgage, notary) before Finance release</td></tr>
+    <tr><td>Risk Desk</td><td>Pre-committee risk review queue; optional submit gate</td></tr>
     <tr><td>PWA</td><td>Progressive Web App — offline-capable field client</td></tr>
     <tr><td>NBE</td><td>National Bank of Ethiopia</td></tr>
   </table>

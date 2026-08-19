@@ -373,7 +373,7 @@
 </style>
 </head>
 <body>
-<nav class="nav-print" aria-label="Chapters"><a href="#ch-0">Overview</a> <a href="#ch-1">Admin</a> <a href="#ch-2">Staff</a> <a href="#ch-3">Customers</a> <a href="#ch-4">Market partners</a> <a href="#ch-5">Screenshots</a> <a href="#ch-6">IT installation</a></nav>
+<nav class="nav-print" aria-label="Chapters"><a href="#ch-0">Overview</a> <a href="#ch-1">Admin</a> <a href="#ch-2">Staff</a> <a href="#ch-3">Customers</a> <a href="#ch-4">Market partners</a> <a href="#ch-5">IT installation</a></nav>
 <header class="cover">
   <div class="cover-inner">
     <p class="eyebrow">DECSI · Seqela Technologies</p>
@@ -389,7 +389,6 @@
       <span class="chip">Digital Apply</span>
       <span class="chip">Market</span>
       <span class="chip">IT install</span>
-      <span class="chip">Screenshots</span>
     </div>
     <p class="hint">Print or Save as PDF (Ctrl/Cmd+P). Navigation links are hidden when printing.</p>
   </div>
@@ -397,7 +396,7 @@
 <nav class="toc" aria-label="Table of contents">
   <h2>Contents</h2>
   <div class="toc-grid">
-    <a href="#ch-0"><span class="num">01</span> Overview</a><a href="#ch-1"><span class="num">02</span> Admin</a><a href="#ch-2"><span class="num">03</span> Staff</a><a href="#ch-3"><span class="num">04</span> Customers</a><a href="#ch-4"><span class="num">05</span> Market partners</a><a href="#ch-5"><span class="num">06</span> Screenshots</a><a href="#ch-6"><span class="num">07</span> IT installation</a>
+    <a href="#ch-0"><span class="num">01</span> Overview</a><a href="#ch-1"><span class="num">02</span> Admin</a><a href="#ch-2"><span class="num">03</span> Staff</a><a href="#ch-3"><span class="num">04</span> Customers</a><a href="#ch-4"><span class="num">05</span> Market partners</a><a href="#ch-5"><span class="num">06</span> IT installation</a>
   </div>
 </nav>
 <section class="chapter" id="ch-0">
@@ -411,10 +410,10 @@
 <tr><td><a href="02_staff.md">Staff</a></td><td>Branch / HO / eng / finance / committee</td><td>Hub → <strong>Help</strong></td></tr>
 <tr><td><a href="03_customers.md">Customers</a></td><td>Borrowers applying online</td><td>Digital Apply → <strong>Help</strong> (<code>/help/</code>)</td></tr>
 <tr><td><a href="04_market_partners.md">Market partners</a></td><td>Dealers &amp; price reporters</td><td>Market → <strong>Help</strong> (<code>/market-portal/help/</code>)</td></tr>
-<tr><td><a href="05_screenshots.md">Screenshots</a></td><td>UI captures used in this pack</td><td>Hub / Digital Apply Help</td></tr>
 <tr><td><a href="06_installation_it.md">IT installation</a></td><td>DECSI IT — install &amp; minimum requirements</td><td>Hub → <strong>Help</strong></td></tr>
 </tbody>
 </table>
+<p>Screenshots sit <strong>inside</strong> each manual next to the relevant step. Capture/refresh notes: <a href="05_screenshots.md">05_screenshots.md</a> (not a separate Help chapter).</p>
 <p><strong>Printable pack:</strong></p>
 <ul>
 <li><a href="DECSI_Loan_Hub_User_Manuals.html">HTML</a>  </li>
@@ -438,8 +437,9 @@ docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
 <pre class="lang-text"><code>Customer (Digital Apply)          Staff hub                     Admin
 Register → Apply → Fee            Intake → Docs → Appraisal     Users &amp; geography
 → Submit → Notices / status       → Collateral → Committee      Document packs
-→ Schedule (when approved)        → Post-approval → Disburse    Digital Apply settings
-                                  Delegations (cover)           Approve delegations
+→ Schedule (when approved)        → Post-approval closing pack  Digital Apply settings
+→ Branch visit to sign (if asked)   (restriction / POA / e-sign) Approve delegations
+                                  → Disburse                    Delegations
 
 Market (Seqela Market): Area → Product &amp; price → price bands</code></pre>
 <hr>
@@ -454,7 +454,11 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td><strong>Processing fee</strong></td><td>Application fee (ETB)</td></tr>
 <tr><td><strong>Cooperative queue</strong></td><td>Branch intake gate</td></tr>
 <tr><td><strong>Approval queue</strong></td><td>Committee voting</td></tr>
-<tr><td><strong>Post-approval</strong></td><td>Conditions → schedule → ready</td></tr>
+<tr><td><strong>Post-approval</strong></td><td>Conditions → schedule → closing pack → ready</td></tr>
+<tr><td><strong>Closing pack</strong></td><td>Restriction, POA (if used), optional title/mortgage/notary, digital agreement</td></tr>
+<tr><td><strong>Collateral restriction</strong></td><td>Government paper on pledged collateral (verified before disburse)</td></tr>
+<tr><td><strong>Power of Attorney (POA)</strong></td><td>When collateral is held via POA — deed verified before disburse</td></tr>
+<tr><td><strong>Digital agreement</strong></td><td>Tablet/pad e-signature of loan agreement (audit trail)</td></tr>
 <tr><td><strong>Agentic Assist</strong></td><td>Staff AI helper (cannot approve/disburse)</td></tr>
 <tr><td><strong>Delegation</strong></td><td>Temporary cover of staff powers (admin-approved)</td></tr>
 <tr><td><strong>Source channel</strong></td><td>Online (Digital Apply) vs staff/branch entry</td></tr>
@@ -519,7 +523,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <hr>
 <h2>3. Hub Settings (configuration checklist)</h2>
 <p>Open the <strong>Settings</strong> dropdown in the hub navigation (superuser). Configure in roughly this order for a new branch or institution go-live:</p>
-<blockquote class="manual-shot"><strong>Screenshot (H-19):</strong> Digital Apply settings — open/close portal, fee, and security controls.<br><br><strong>Screenshot (H-20):</strong> Document pack — required and optional docs for one loan category.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (H-19):</strong> Digital Apply settings — open/close portal, fee, and security controls.<br><br><figure class="manual-figure"><img src="screenshots/H-19_digital_apply_settings.png" alt="H-19 — Digital Apply settings"/><figcaption>H-19 — Digital Apply settings</figcaption></figure><br><br><strong>Screenshot (H-20):</strong> Document pack — required and optional docs for one loan category (capture on your site if not yet filed).</blockquote>
 <pre class="lang-text"><code>1. Districts → Branches → Departments (if HO)
 2. Area: Regions → Zones → Cities (Woredas)
 3. Users (assign role, branch/district, optional department)
@@ -623,7 +627,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Assign loan officer  </li>
 </ul>
 <p>Admins see a banner when requests await approval.</p>
-<blockquote class="manual-shot"><strong>Screenshot (H-23):</strong> Delegations — pending approval list and Approve / Reject actions.</blockquote>
+<blockquote class="manual-shot"><strong>Screenshot (H-23):</strong> Delegations — pending approval list and Approve / Reject actions.<br><br><figure class="manual-figure"><img src="screenshots/H-23_delegations.png" alt="H-23 — Delegations"/><figcaption>H-23 — Delegations</figcaption></figure></blockquote>
 <hr>
 <h2>4. Day-to-day admin tasks</h2>
 <h3>4.1 Open or close Digital Apply</h3>
@@ -677,6 +681,13 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li><strong>Approve</strong> or <strong>Reject</strong>.  </li>
 <li>Confirm the delegate sees “Acting by delegation” after approval.</li>
 </ol>
+<h3>4.8 Post-approval closing pack (awareness)</h3>
+<p>Closing requirements are set <strong>per loan</strong> on the post-approval workspace (not a global Settings switch):</p>
+<ul>
+<li>Government <strong>Collateral Restriction</strong>, optional <strong>Power of Attorney</strong>, title / mortgage / notary papers  </li>
+<li><strong>Digital loan agreement</strong> signatures (borrower + officer; optional guarantor / BM)  </li>
+</ul>
+<p>These gate finance readiness. Train branch staff using the <a href="02_staff.md">Staff manual §4.7</a>. Prefer hub post-approval UIs over raw Django Admin edits for legal documents and agreements.</p>
 <hr>
 <h2>5. Django Admin (<code>/admin/</code>)</h2>
 <p>Use Django Admin for advanced data maintenance (models, flags, one-off corrections). Prefer hub <strong>Settings</strong> UIs for routine configuration so audits and validation stay consistent.</p>
@@ -684,6 +695,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <ul>
 <li>Loan requests, categories, document requirements  </li>
 <li>Committees and votes  </li>
+<li>Post-approval legal papers / agreements (prefer hub closing pack UI)  </li>
 <li>Applicant portal settings, accounts, online applications, applicant notices  </li>
 <li>Market actors, observations, price bands (Seqela Market)  </li>
 <li>Staff delegations (if registered)  </li>
@@ -728,9 +740,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <ul>
 <li><a href="02_staff.md">Staff user manual</a>  </li>
 <li><a href="03_customers.md">Customer user manual</a>  </li>
-<li><a href="04_market_partners.md">Market partners</a>  </li>
-<li><a href="05_screenshots.md">Screenshots</a>  </li>
-<li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a>  </li>
+<li><a href="04_market_partners.md">Market partners</a></li>
+<li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
 <li>In-app: <code>/hub/help/</code></li>
 </ul>
 </section><section class="chapter" id="ch-2">
@@ -781,7 +792,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
     → Appraisal (steps 1–7)
     → Collateral (+ optional engineering QA)
     → Submit to committee → Vote
-    → Post-approval (conditions → schedule → ready)
+    → Post-approval (conditions → schedule → closing pack → ready)
     → Finance disbursement → Disbursed</code></pre>
 <p>Keep the <strong>Queue ID</strong> (for example <code>HK-000000001</code>) in emails, calls, and notes.</p>
 <h3>Sources of loans</h3>
@@ -862,17 +873,19 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <h3>3.6 Post-approval workers</h3>
 <p>After committee <strong>Approved</strong>:</p>
 <ol>
-<li>Open <strong>Post-approval</strong> queue / detail.</li>
-<li>Clear <strong>conditions</strong>.</li>
-<li>Confirm <strong>repayment schedule</strong>.</li>
-<li>Mark <strong>ready</strong> for disbursement when complete.</li>
+<li>Open <strong>Post-approval</strong> queue / detail (<code>/hub/post_approval/</code> or the loan’s post-approval page).  </li>
+<li>Clear <strong>conditions</strong> (required ones need a short evidence note).  </li>
+<li>Confirm <strong>repayment schedule</strong> (customer can then see it in Digital Apply).  </li>
+<li>Complete the <strong>closing pack</strong> (see §4.7): government restriction, optional POA / title / mortgage / notary papers, and <strong>digital loan agreement</strong> signatures.  </li>
+<li>Mark <strong>ready</strong> for disbursement when blockers are clear.  </li>
 </ol>
 <p>Disbursement track statuses include: Not started → Awaiting conditions → Schedule confirmed → Ready → Disbursed.</p>
+<p>Finance cannot finish disbursement while closing-pack blockers remain (restriction, POA when used, required signatures, etc.).</p>
 <h3>3.7 Finance Manager</h3>
 <ol>
-<li>Open <strong>Disbursement queue</strong>.</li>
-<li>Verify readiness and any CBS / ledger checks your site uses.</li>
-<li>Approve disbursement steps and ensure the loan is marked <strong>Disbursed</strong> when funds are released.</li>
+<li>Open <strong>Disbursement queue</strong>.  </li>
+<li>Verify readiness — including closing-pack / agreement blockers on the loan.  </li>
+<li>Approve disbursement steps and ensure the loan is marked <strong>Disbursed</strong> when funds are released.  </li>
 </ol>
 <h3>3.8 Engineering Head / Engineer</h3>
 <table>
@@ -940,7 +953,41 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>On <strong>Returned to loan officer</strong>, LO corrects and resubmits (customer status stays “in progress”).  </li>
 <li>On <strong>Approved</strong>, move to post-approval and confirm schedule so the customer can view it online; on <strong>Declined</strong>, close per policy.</li>
 </ol>
-<h3>4.7 Notifications and reports</h3>
+<h3>4.7 Closing pack (legal papers + digital agreement)</h3>
+<p>Work this from the loan’s <strong>Post-approval</strong> detail after committee approval. Officers / branch managers who can manage conditions can set flags and capture signatures.</p>
+<p>#### A. Closing requirements (flags)</p>
+<p>Toggle what this loan needs before disbursement:</p>
+<table>
+<thead><tr><th>Flag</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Require collateral restriction</strong></td><td>Government Collateral Restriction paper must be uploaded and <strong>verified</strong> (default on)</td></tr>
+<tr><td><strong>Collateral held via POA</strong></td><td>Loan Collateral Power of Attorney required and must be verified</td></tr>
+<tr><td><strong>Require agreement signatures</strong></td><td>Generate and fully sign the digital loan agreement (default on)</td></tr>
+<tr><td><strong>Title search / mortgage registration / notary stamp</strong></td><td>Optional papers when policy requires them</td></tr>
+<tr><td><strong>Own contribution</strong></td><td>Equity / own-contribution checks when used on the file</td></tr>
+</tbody>
+</table>
+<p>Save <strong>Closing requirements</strong> after changing flags.</p>
+<p>#### B. Upload and verify legal papers</p>
+<ol>
+<li>Upload each required paper with <strong>reference number</strong>, <strong>issuing office</strong>, and file scan.  </li>
+<li>For <strong>POA</strong>, also enter <strong>grantor</strong> (collateral owner) and <strong>attorney-in-fact</strong> (usually the borrower).  </li>
+<li>A supervisor / authorized user <strong>verifies</strong> or <strong>rejects</strong> (rejection needs a short reason).  </li>
+<li>Statuses: missing → uploaded (pending) → verified | rejected.  </li>
+</ol>
+<p>Until required papers are <strong>verified</strong>, disbursement stays blocked.</p>
+<p>#### C. Digital loan agreement (electronic signature)</p>
+<ol>
+<li><strong>Generate</strong> the agreement from post-approval (optionally require guarantor and/or branch manager slots).  </li>
+<li>Open the <strong>sign</strong> page (tablet-friendly pad).  </li>
+<li>Capture signatures for required roles — typically <strong>borrower</strong> + <strong>loan officer</strong>; optionally guarantor and branch manager.  </li>
+<li>Each capture records drawn signature, typed name, ID number, declaration, time, IP, and content hash (audit evidence — not PKI).  </li>
+<li>When all slots are signed, agreement status becomes <strong>Fully signed</strong>.  </li>
+<li><strong>Print</strong> / <strong>PDF</strong> from the agreement actions if the branch needs a paper copy.</li>
+</ol>
+<p>Changing agreement text after someone has signed voids prior signatures — regenerate and re-sign if terms change.</p>
+<blockquote class="manual-shot"><strong>Screenshot (H-24):</strong> Post-approval closing pack — restriction, POA, and digital signature progress (capture when documenting your site).</blockquote>
+<h3>4.8 Notifications and reports</h3>
 <ul>
 <li><strong>Notifications</strong> — assignments, returns, queue events, <strong>online intake</strong> submissions.  </li>
 <li><strong>Reports / Dashboard</strong> — scoped to your branch or district.  </li>
@@ -967,6 +1014,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tbody>
 <tr><td>Committee</td><td>Not submitted, Pending, Approved, Declined, Returned to loan officer</td></tr>
 <tr><td>Disbursement</td><td>Not started, Awaiting conditions, Schedule confirmed, Ready, Disbursed</td></tr>
+<tr><td>Closing pack papers</td><td>Missing → Uploaded (pending) → Verified / Rejected; POA “Not used” when flag off</td></tr>
+<tr><td>Digital agreement</td><td>Not generated → Partially signed → Fully signed (or Not required)</td></tr>
 <tr><td>Delegation</td><td>Pending → Approved / Rejected; Revoked</td></tr>
 <tr><td>Source channel</td><td>Online (Digital Apply) vs staff/branch entry</td></tr>
 <tr><td>Customer-visible pipeline</td><td>Submitted → Branch intake → Loan processing → Credit decision → Disbursement prep → Disbursed (+ repayment schedule when approved)</td></tr>
@@ -985,6 +1034,9 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <tr><td>Online application missing</td><td>Confirm customer <strong>submitted</strong> (not draft); check Notifications / Online loan intake</td></tr>
 <tr><td>Cannot act for colleague</td><td>Delegation must be <strong>Approved</strong> and inside the date window</td></tr>
 <tr><td>Customer has no schedule</td><td>Complete post-approval amortization after committee <strong>Approved</strong></td></tr>
+<tr><td>Finance blocked / not ready</td><td>Check closing pack: restriction verified, POA verified if used, agreement fully signed</td></tr>
+<tr><td>Agreement signatures incomplete</td><td>Open sign page; capture missing roles (borrower / officer / optional guarantor / BM)</td></tr>
+<tr><td>Legal paper rejected</td><td>Re-upload with correct reference / office (and POA grantor fields)</td></tr>
 </tbody>
 </table>
 <hr>
@@ -993,7 +1045,6 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li><a href="01_admin.md">Admin user manual</a>  </li>
 <li><a href="03_customers.md">Customer user manual</a>  </li>
 <li><a href="04_market_partners.md">Market partners</a>  </li>
-<li><a href="05_screenshots.md">Screenshots</a>  </li>
 <li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
 </ul>
 </section><section class="chapter" id="ch-3">
@@ -1144,6 +1195,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Confirm final figures with your branch at disbursement if anything differs.</li>
 </ul>
 <blockquote class="manual-shot"><strong>Screenshot (C-13):</strong> Repayment schedule — installment table after credit approval.<br><br><figure class="manual-figure"><img src="screenshots/C-13_apply_schedule.png" alt="C-13 — Repayment schedule"/><figcaption>C-13 — Repayment schedule</figcaption></figure></blockquote>
+<h3>Loan agreement at the branch</h3>
+<p>Before funds are released, the branch may ask you to <strong>sign the loan agreement</strong> on a DECSI tablet or PC (draw your signature, confirm your name and ID). This is part of DECSI’s closing process together with collateral legal papers. You do <strong>not</strong> sign that agreement inside Digital Apply today — visit the branch when invited, and bring a valid ID.</p>
 <hr>
 <h2>6. What happens after you submit?</h2>
 <p>You do <strong>not</strong> complete appraisal or collateral online. DECSI staff:</p>
@@ -1152,7 +1205,7 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Verify documents and run internal checks.  </li>
 <li>Complete credit appraisal and collateral valuation as required.  </li>
 <li>Send the file through credit committee.  </li>
-<li>Complete post-approval conditions, build the <strong>repayment schedule</strong>, and disburse if approved.  </li>
+<li>Complete post-approval: conditions, <strong>repayment schedule</strong>, collateral legal papers, and <strong>loan agreement signatures</strong>, then disburse if approved.  </li>
 </ol>
 <p>Processing time depends on product, collateral, completeness of documents, and committee schedules. Your status page and <strong>Notices</strong> update as the loan moves forward.</p>
 <hr>
@@ -1162,7 +1215,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <li>Choose the branch that normally serves you.  </li>
 <li>Upload <strong>all required</strong> documents before paying the fee.  </li>
 <li>Keep payment confirmation and <strong>Queue ID</strong> screenshots.  </li>
-<li>Respond quickly if the branch asks for clearer documents or a site visit.  </li>
+<li>Respond quickly if the branch asks for clearer documents, a site visit, or <strong>agreement signing</strong>.  </li>
+<li>Bring a valid ID when invited to sign at the branch.  </li>
 <li>Do not share your password or OTP with anyone claiming to be DECSI support in unofficial channels.</li>
 </ul>
 <hr>
@@ -1191,9 +1245,8 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 <hr>
 <h2>10. Related manuals</h2>
 <ul>
-<li><a href="02_staff.md">Staff user manual</a> — how DECSI processes your file after submit  </li>
-<li><a href="01_admin.md">Admin user manual</a> — for DECSI administrators only  </li>
-<li><a href="05_screenshots.md">Screenshots</a>  </li>
+<li><a href="02_staff.md">Staff user manual</a> — how DECSI processes your file after submit</li>
+<li><a href="01_admin.md">Admin user manual</a> — for DECSI administrators only</li>
 <li><a href="README.md">Manual index</a> · <a href="DECSI_Loan_Hub_User_Manuals.html">Printable HTML pack</a></li>
 </ul>
 </section><section class="chapter" id="ch-4">
@@ -1318,65 +1371,6 @@ Market (Seqela Market): Area → Product &amp; price → price bands</code></pre
 </ul>
 </section><section class="chapter" id="ch-5">
 <div class="chapter-label">Chapter 06</div>
-<h1>Screenshots</h1>
-<p>Real UI captures from DECSI Loan Hub used in this manual pack. Files live in <code>docs/user_manual/screenshots/</code>.</p>
-<h2>Digital Apply (customers / virtual loan requests)</h2>
-<figure class="manual-figure"><img src="screenshots/C-01_landing.png" alt="C-01 — Digital Apply landing"/><figcaption>C-01 — Digital Apply landing</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-02_register.png" alt="C-02 — Create account / register"/><figcaption>C-02 — Create account / register</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-03_login.png" alt="C-03 — Customer sign-in"/><figcaption>C-03 — Customer sign-in</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-04_home_applications.png" alt="C-04 — My applications (Notices + Queue ID)"/><figcaption>C-04 — My applications (Notices + Queue ID)</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-05_apply_details.png" alt="C-05 — Apply · Details"/><figcaption>C-05 — Apply · Details</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-06_apply_documents.png" alt="C-06 — Apply · Documents"/><figcaption>C-06 — Apply · Documents</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-07_apply_payment.png" alt="C-07 — Apply · Processing fee"/><figcaption>C-07 — Apply · Processing fee</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-08_apply_submit.png" alt="C-08 — Apply · Review &amp; submit"/><figcaption>C-08 — Apply · Review &amp; submit</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-09_apply_status.png" alt="C-09 — Status / loan processing"/><figcaption>C-09 — Status / loan processing</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-11_help.png" alt="C-11 — Digital Apply Help"/><figcaption>C-11 — Digital Apply Help</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/C-13_apply_schedule.png" alt="C-13 — Repayment schedule"/><figcaption>C-13 — Repayment schedule</figcaption></figure>
-<h2>Staff hub</h2>
-<figure class="manual-figure"><img src="screenshots/H-01_hub_login.png" alt="H-01 — Staff hub login"/><figcaption>H-01 — Staff hub login</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-04_hub_home.png" alt="H-04 — Hub home"/><figcaption>H-04 — Hub home</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-06_help.png" alt="H-06 — Staff Help"/><figcaption>H-06 — Staff Help</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-07_loan_requests.png" alt="H-07 — Loan requests"/><figcaption>H-07 — Loan requests</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-08_create_loan.png" alt="H-08 — Register / create loan request"/><figcaption>H-08 — Register / create loan request</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-09_loan_detail.png" alt="H-09 — Loan request detail (online)"/><figcaption>H-09 — Loan request detail (online)</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-15_approval_queue.png" alt="H-15 — Approval queue"/><figcaption>H-15 — Approval queue</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-18_online_intake.png" alt="H-18 — Online / Digital Apply intake"/><figcaption>H-18 — Online / Digital Apply intake</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-19_digital_apply_settings.png" alt="H-19 — Digital Apply settings"/><figcaption>H-19 — Digital Apply settings</figcaption></figure>
-<figure class="manual-figure"><img src="screenshots/H-23_delegations.png" alt="H-23 — Delegations"/><figcaption>H-23 — Delegations</figcaption></figure>
-<h2>Seqela Market</h2>
-<figure class="manual-figure"><img src="screenshots/M-01_market.png" alt="M-01 — Market portal (share a local price)"/><figcaption>M-01 — Market portal (share a local price)</figcaption></figure>
-<h2>How to refresh captures</h2>
-<p>With the app running on port 8000 and Google Chrome installed:</p>
-<pre class="lang-bash"><code># Full pack (admin + applicant):
-node docs/user_manual/capture_manual_shots.js
-
-# Staff create/detail + wizard fixups (branch manager + applicant):
-node docs/user_manual/capture_manual_shots_fixup.js
-
-docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
-<table>
-<thead><tr><th>ID</th><th>URL / note</th><th>File</th></tr></thead>
-<tbody>
-<tr><td>C-01</td><td><code>/</code></td><td><code>C-01_landing.png</code></td></tr>
-<tr><td>C-02</td><td><code>/register/</code></td><td><code>C-02_register.png</code></td></tr>
-<tr><td>C-03</td><td><code>/login/</code></td><td><code>C-03_login.png</code></td></tr>
-<tr><td>C-04</td><td><code>/home/</code> (signed in)</td><td><code>C-04_home_applications.png</code></td></tr>
-<tr><td>C-05…C-08</td><td>Apply wizard steps</td><td><code>C-05_apply_details.png</code> … <code>C-08_apply_submit.png</code></td></tr>
-<tr><td>C-09</td><td>Status after submit</td><td><code>C-09_apply_status.png</code></td></tr>
-<tr><td>C-11</td><td><code>/help/</code></td><td><code>C-11_help.png</code></td></tr>
-<tr><td>C-13</td><td><code>/apply/&lt;id&gt;/schedule/</code></td><td><code>C-13_apply_schedule.png</code></td></tr>
-<tr><td>H-01</td><td><code>/hub/login/</code></td><td><code>H-01_hub_login.png</code></td></tr>
-<tr><td>H-04</td><td><code>/hub/</code></td><td><code>H-04_hub_home.png</code></td></tr>
-<tr><td>H-07</td><td><code>/hub/view_loan_requests/</code></td><td><code>H-07_loan_requests.png</code></td></tr>
-<tr><td>H-08</td><td><code>/hub/create_loan_request/</code> (BM / credit)</td><td><code>H-08_create_loan.png</code></td></tr>
-<tr><td>H-09</td><td><code>/hub/loan_request_detail/&lt;id&gt;/</code></td><td><code>H-09_loan_detail.png</code></td></tr>
-<tr><td>H-18</td><td><code>/hub/online_loan_intake/</code></td><td><code>H-18_online_intake.png</code></td></tr>
-<tr><td>H-23</td><td><code>/hub/delegations/</code></td><td><code>H-23_delegations.png</code></td></tr>
-<tr><td>M-01</td><td><code>/market-portal/</code></td><td><code>M-01_market.png</code></td></tr>
-</tbody>
-</table>
-</section><section class="chapter" id="ch-6">
-<div class="chapter-label">Chapter 07</div>
 <h1>DECSI Loan Hub — Installation Manual for IT Staff</h1>
 <p><strong>Audience:</strong> DECSI IT / infrastructure staff installing or upgrading the Loan Hub.  </p>
 <p><strong>Goal:</strong> Bring up a working stack with the <strong>minimum requirements</strong>, then harden for pilot / production.</p>
@@ -1460,8 +1454,21 @@ docker compose exec web python docs/user_manual/build_pdf.py</code></pre>
 <tr><td>SMTP (optional but needed for staff password reset)</td><td>Host, port, user, password</td></tr>
 <tr><td>Chapa keys (optional)</td><td>Only if Digital Apply live payments</td></tr>
 <tr><td>CBS / party API (optional)</td><td>Keep mock flags until DECSI core banking access is ready</td></tr>
+<tr><td><strong><code>LICENSE_KEY</code></strong></td><td>Seqela-signed on-prem key with expiry (required when <code>DEBUG=False</code>)</td></tr>
 </tbody>
 </table>
+<hr>
+<h2>2.7 On-premises product license</h2>
+<p>The product is <strong>license-key based</strong> for on-premises deployments (Dedebit / DECSI and other banks).</p>
+<ol>
+<li>Seqela issues a <code>SEQLA1.…</code> key with an <strong>expiry date</strong>.  </li>
+<li>Set <code>LICENSE_KEY</code> in <code>.env</code> or place it in <code>deploy/license/license.key</code>.  </li>
+<li>With <code>DEBUG=False</code>, a missing/invalid/expired (past grace) key <strong>blocks</strong> the app.  </li>
+<li>Status page always available: <code>/license/</code>  </li>
+<li>Default grace after expiry: <code>LICENSE_GRACE_DAYS=7</code>.</li>
+</ol>
+<p>Full Dedebit handoff guide: <a href="../deployment/DEDEBIT_ON_PREM_INSTALLATION.md">DEDEBIT_ON_PREM_INSTALLATION.md</a>.</p>
+<pre class="lang-bash"><code>docker compose exec web python manage.py check_license</code></pre>
 <hr>
 <h2>3. Pre-install checklist</h2>
 <ul>

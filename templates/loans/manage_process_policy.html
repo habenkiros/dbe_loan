@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Process policy{% endblock %}
+{% block extra_head %}
+{% include "includes/hub_settings_ui.html" %}
+<style>
+  .da-role-grid { grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .da-role-grid { grid-template-columns: 1fr 1fr; } }
+  .da-role-grid .da-check label { font-weight: 600; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="da-settings">
+  <div class="da-hero">
+    <div class="da-hero-main">
+      <h1>Process policy</h1>
+      <p>
+        Bank-wide gates for committee, closing papers, own contribution, tranches,
+        and who may open Monitoring / Collections. Superusers always keep access.
+      </p>
+    </div>
+    <div class="da-stat-grid">
+      <div class="da-stat">
+        <span class="label">Risk before committee</span>
+        <span class="value">
+          {% if analysis.require_risk_review_before_committee %}
+          <span class="da-pill da-pill-on">Required</span>
+          {% else %}
+          <span class="da-pill da-pill-off">Off</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Monitoring / Collections roles</span>
+        <span class="value">{{ process.book_ops_roles|length }}</span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Own contribution</span>
+        <span class="value">
+          {% if process.require_own_contribution %}
+          <span class="da-pill da-pill-on">Required</span>
+          {% else %}
+          <span class="da-pill da-pill-off">Per loan</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="da-stat">
+        <span class="label">Tranches</span>
+        <span class="value">
+          {% if process.enable_disbursement_tranches %}
+          <span class="da-pill da-pill-on">On</span>
+          {% else %}
+          <span class="da-pill da-pill-off">Off</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <section class="da-panel">
+      <h2><span>1</span> Committee gate</h2>
+      <div class="da-checks">
+        <div class="da-check">
+          {{ form.require_risk_review_before_committee }}
+          <div>
+            <label for="{{ form.require_risk_review_before_committee.id_for_label }}">{{ form.require_risk_review_before_committee.label }}</label>
+            {% if form.require_risk_review_before_committee.help_text %}
+            <span class="help">{{ form.require_risk_review_before_committee.help_text }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>2</span> Who sees Monitoring and Collections</h2>
+      <p class="help" style="margin-top:0;">Tick staff roles. Each user still only sees loans in their usual branch / district / assigned-officer scope.</p>
+      {{ form.book_ops_roles.errors }}
+      <div class="da-checks da-role-grid">
+        {% for checkbox in form.book_ops_roles %}
+        <div class="da-check">{{ checkbox }}</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>3</span> Who may approve workout and write-off</h2>
+      <p class="help" style="margin-top:0;">These roles must also be allowed on Monitoring / Collections above. Approval is a hub case file — CBS still posts the money.</p>
+      {{ form.workout_decide_roles.errors }}
+      <div class="da-checks da-role-grid">
+        {% for checkbox in form.workout_decide_roles %}
+        <div class="da-check">{{ checkbox }}</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="da-panel">
+      <h2><span>4</span> Closing and disbursement (every loan)</h2>
+      <p class="help" style="margin-top:0;">
+        When a box is ticked here, every post-approval file must meet it. Officers can still
+        add extra requirements on one loan; they cannot turn a bank rule off.
+        Power of Attorney stays a per-file fact (this collateral is held via POA).
+      </p>
+      <div class="da-checks">
+        {% for field in form %}
+          {% if field.name == 'require_collateral_restriction' or field.name == 'require_agreement_signatures' or field.name == 'require_title_search' or field.name == 'require_mortgage_registration' or field.name == 'require_notary_stamp' or field.name == 'require_own_contribution' or field.name == 'enable_disbursement_tranches' %}
+        <div class="da-check">
+          {{ field }}
+          <div>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+          </div>
+        </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="da-actions">
+      <button type="submit" class="btn btn-green">Save process policy</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

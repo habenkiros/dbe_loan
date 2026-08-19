@@ -7,13 +7,7 @@ from typing import List
 from django.utils import timezone
 
 from loans.credit_intelligence import scoped_loans
-
-
-POST_BOOK_ROLES = {
-    'branch_manager', 'loan_officer', 'credit_loan_officer', 'credit_head',
-    'district_manager', 'accountant', 'cooperative_manager', 'operation_manager',
-    'finance_manager', 'risk_compliance', 'ceo', 'admin', 'superadmin',
-}
+from loans.process_policy import book_ops_roles, workout_decide_roles
 
 
 def user_can_access_book_ops(user) -> bool:
@@ -21,15 +15,13 @@ def user_can_access_book_ops(user) -> bool:
         return False
     if getattr(user, 'is_superuser', False):
         return True
-    return getattr(user, 'role', None) in POST_BOOK_ROLES
+    return getattr(user, 'role', None) in book_ops_roles()
 
 
 def user_can_decide_workout(user) -> bool:
-    role = getattr(user, 'role', None)
-    return bool(
-        getattr(user, 'is_superuser', False)
-        or role in ('credit_head', 'admin', 'superadmin', 'finance_manager', 'ceo')
-    )
+    if getattr(user, 'is_superuser', False):
+        return True
+    return getattr(user, 'role', None) in workout_decide_roles()
 
 
 def disbursed_loans_qs(user):

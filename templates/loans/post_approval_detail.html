@@ -154,8 +154,10 @@
       {% csrf_token %}
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="require_collateral_restriction" value="1"
-               {% if collateral_legal.require_restriction %}checked{% endif %}>
+               {% if collateral_legal.require_restriction %}checked{% endif %}
+               {% if closing_locks.require_collateral_restriction %}disabled{% endif %}>
         Require government Collateral Restriction before disbursement
+        {% if closing_locks.require_collateral_restriction %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="collateral_held_via_poa" value="1"
@@ -164,28 +166,38 @@
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="require_agreement_signatures" value="1"
-               {% if agreement_signing.required %}checked{% endif %}>
+               {% if agreement_signing.required %}checked{% endif %}
+               {% if closing_locks.require_agreement_signatures %}disabled{% endif %}>
         Require digital loan agreement signatures before disbursement
+        {% if closing_locks.require_agreement_signatures %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="require_title_search" value="1"
-               {% if collateral_legal.require_title_search %}checked{% endif %}>
+               {% if collateral_legal.require_title_search %}checked{% endif %}
+               {% if closing_locks.require_title_search %}disabled{% endif %}>
         Require title / ownership search
+        {% if closing_locks.require_title_search %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="require_mortgage_registration" value="1"
-               {% if collateral_legal.require_mortgage_registration %}checked{% endif %}>
+               {% if collateral_legal.require_mortgage_registration %}checked{% endif %}
+               {% if closing_locks.require_mortgage_registration %}disabled{% endif %}>
         Require mortgage / restriction registration proof
+        {% if closing_locks.require_mortgage_registration %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="require_notary_stamp" value="1"
-               {% if collateral_legal.require_notary_stamp %}checked{% endif %}>
+               {% if collateral_legal.require_notary_stamp %}checked{% endif %}
+               {% if closing_locks.require_notary_stamp %}disabled{% endif %}>
         Require notary / stamp-duty receipt
+        {% if closing_locks.require_notary_stamp %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <label style="display:block; margin:0.3rem 0;">
         <input type="checkbox" name="own_contribution_required" value="1"
-               {% if loan_request.own_contribution_required %}checked{% endif %}>
+               {% if own_contribution_required %}checked{% endif %}
+               {% if closing_locks.own_contribution_required %}disabled{% endif %}>
         Require borrower own-contribution / equity before first disbursement
+        {% if closing_locks.own_contribution_required %}<span class="help">(bank policy)</span>{% endif %}
       </label>
       <button type="submit" class="btn btn-gray" style="font-size:0.85rem; margin-top:0.35rem;">Save requirements</button>
     </form>
@@ -503,7 +515,7 @@
 
   <div class="pa-panel" style="border-color:#064420;">
     <h2 style="margin-top:0; font-size:1.15rem;">3. Disbursement</h2>
-    {% if loan_request.own_contribution_required %}
+    {% if own_contribution_required %}
     <p>
       Own contribution:
       {% if loan_request.own_contribution_verified_at %}
@@ -532,7 +544,7 @@
       {% endfor %}
     </ul>
     {% endif %}
-    {% if can_manage_conditions and loan_request.disbursement_status != 'disbursed' %}
+    {% if can_manage_conditions and loan_request.disbursement_status != 'disbursed' and tranches_enabled %}
     <form method="post" action="{% url 'post_approval_add_tranche' loan_request.id %}" style="margin-bottom:0.75rem;">
       {% csrf_token %}
       <label>Add tranche amount</label>

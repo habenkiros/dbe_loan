@@ -201,6 +201,17 @@ class ClosingAndTrancheTests(_Base):
         loan.refresh_from_db()
         self.assertEqual(loan.disbursement_status, loan.DISBURSE_DISBURSED)
 
+    def test_bank_policy_requires_own_contribution_without_loan_tick(self):
+        from loans.process_policy import get_or_create_process_policy
+
+        policy = get_or_create_process_policy()
+        policy.require_own_contribution = True
+        policy.save(update_fields=['require_own_contribution'])
+        loan = self._approved_loan()
+        self.assertFalse(loan.own_contribution_required)
+        readiness = disbursement_readiness(loan)
+        self.assertTrue(any('own-contribution' in b.lower() or 'Own' in b for b in readiness['blockers']))
+
 
 class BookOpsTests(_Base):
     def setUp(self):
@@ -254,3 +265,44 @@ class BookOpsTests(_Base):
         client.post(reverse('collections_workout', args=[self.loan.id]), {'action': 'approve'})
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.workout_status, LoanRequest.WORKOUT_APPROVED)
+
+
+class ProcessPolicyAdminTests(_Base):
+    def setUp(self):
+        super().setUp()
+        self.admin = User.objects.create_superuser(
+            username='gap_sa', password='pass', phone_number='0911000499',
+        )
+
+    def test_superadmin_saves_roles_and_risk_gate(self):
+        client = Client()
+        client.login(username='gap_sa', password='pass')
+        resp = client.get(reverse('manage_process_policy'))
+        self.assertEqual(resp.status_code, 200)
+        resp = client.post(reverse('manage_process_policy'), {
+            'require_risk_review_before_committee': 'on',
+            'book_ops_roles': ['credit_head', 'finance_manager'],
+            'workout_decide_roles': ['credit_head'],
+            'require_own_contribution': 'on',
+            'enable_disbursement_tranches': 'on',
+        })
+        self.assertEqual(resp.status_code, 302)
+        from loans.book_ops import user_can_access_book_ops, user_can_decide_workout
+        from loans.models import LoanAnalysisPolicyConfig, LoanProcessPolicyConfig
+        self.assertTrue(LoanAnalysisPolicyConfig.objects.first().require_risk_review_before_committee)
+        policy = LoanProcessPolicyConfig.objects.first()
+        self.assertEqual(set(policy.book_ops_roles), {'credit_head', 'finance_manager'})
+        self.assertFalse(user_can_access_book_ops(self.officer))
+        self.assertTrue(user_can_access_book_ops(self.credit_head))
+        self.assertTrue(user_can_access_book_ops(self.admin))
+        self.assertFalse(user_can_decide_workout(self.officer))
+        self.assertTrue(user_can_decide_workout(self.credit_head))
+        self.assertTrue(policy.require_own_contribution)
+        self.assertTrue(policy.enable_disbursement_tranches)
+
+    def test_officer_cannot_open_settings(self):
+        client = Client()
+        client.login(username='gap_lo', password='pass')
+        resp = client.get(reverse('manage_process_policy'))
+        self.assertEqual(resp.status_code, 302)
+

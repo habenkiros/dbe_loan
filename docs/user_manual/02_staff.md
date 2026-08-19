@@ -64,7 +64,7 @@ Create / receive request
     → Appraisal (steps 1–7)
     → Collateral (+ optional engineering QA)
     → Submit to committee → Vote
-    → Post-approval (conditions → schedule → ready)
+    → Post-approval (conditions → schedule → closing pack → ready)
     → Finance disbursement → Disbursed
 ```
 
@@ -159,18 +159,21 @@ Committee statuses you will see: Not submitted → Pending → Approved / Declin
 
 After committee **Approved**:
 
-1. Open **Post-approval** queue / detail.
-2. Clear **conditions**.
-3. Confirm **repayment schedule**.
-4. Mark **ready** for disbursement when complete.
+1. Open **Post-approval** queue / detail (`/hub/post_approval/` or the loan’s post-approval page).  
+2. Clear **conditions** (required ones need a short evidence note).  
+3. Confirm **repayment schedule** (customer can then see it in Digital Apply).  
+4. Complete the **closing pack** (see §4.7): government restriction, optional POA / title / mortgage / notary papers, and **digital loan agreement** signatures.  
+5. Mark **ready** for disbursement when blockers are clear.  
 
 Disbursement track statuses include: Not started → Awaiting conditions → Schedule confirmed → Ready → Disbursed.
 
+Finance cannot finish disbursement while closing-pack blockers remain (restriction, POA when used, required signatures, etc.).
+
 ### 3.7 Finance Manager
 
-1. Open **Disbursement queue**.
-2. Verify readiness and any CBS / ledger checks your site uses.
-3. Approve disbursement steps and ensure the loan is marked **Disbursed** when funds are released.
+1. Open **Disbursement queue**.  
+2. Verify readiness — including closing-pack / agreement blockers on the loan.  
+3. Approve disbursement steps and ensure the loan is marked **Disbursed** when funds are released.  
 
 ### 3.8 Engineering Head / Engineer
 
@@ -255,7 +258,51 @@ Customers also get in-portal **Notices** when you accept intake or when credit i
 3. On **Returned to loan officer**, LO corrects and resubmits (customer status stays “in progress”).  
 4. On **Approved**, move to post-approval and confirm schedule so the customer can view it online; on **Declined**, close per policy.
 
-### 4.7 Notifications and reports
+> **Screenshot (H-15):** Approval queue — vote on loans in your committee scope.
+>
+> ![H-15 — Approval queue](screenshots/H-15_approval_queue.png)
+
+### 4.7 Closing pack (legal papers + digital agreement)
+
+Work this from the loan’s **Post-approval** detail after committee approval. Officers / branch managers who can manage conditions can set flags and capture signatures.
+
+#### A. Closing requirements (flags)
+
+Toggle what this loan needs before disbursement:
+
+| Flag | Meaning |
+|------|---------|
+| **Require collateral restriction** | Government Collateral Restriction paper must be uploaded and **verified** (default on) |
+| **Collateral held via POA** | Loan Collateral Power of Attorney required and must be verified |
+| **Require agreement signatures** | Generate and fully sign the digital loan agreement (default on) |
+| **Title search / mortgage registration / notary stamp** | Optional papers when policy requires them |
+| **Own contribution** | Equity / own-contribution checks when used on the file |
+
+Save **Closing requirements** after changing flags.
+
+#### B. Upload and verify legal papers
+
+1. Upload each required paper with **reference number**, **issuing office**, and file scan.  
+2. For **POA**, also enter **grantor** (collateral owner) and **attorney-in-fact** (usually the borrower).  
+3. A supervisor / authorized user **verifies** or **rejects** (rejection needs a short reason).  
+4. Statuses: missing → uploaded (pending) → verified | rejected.  
+
+Until required papers are **verified**, disbursement stays blocked.
+
+#### C. Digital loan agreement (electronic signature)
+
+1. **Generate** the agreement from post-approval (optionally require guarantor and/or branch manager slots).  
+2. Open the **sign** page (tablet-friendly pad).  
+3. Capture signatures for required roles — typically **borrower** + **loan officer**; optionally guarantor and branch manager.  
+4. Each capture records drawn signature, typed name, ID number, declaration, time, IP, and content hash (audit evidence — not PKI).  
+5. When all slots are signed, agreement status becomes **Fully signed**.  
+6. **Print** / **PDF** from the agreement actions if the branch needs a paper copy.
+
+Changing agreement text after someone has signed voids prior signatures — regenerate and re-sign if terms change.
+
+> **Screenshot (H-24):** Post-approval closing pack — restriction, POA, and digital signature progress (capture when documenting your site).
+
+### 4.8 Notifications and reports
 
 - **Notifications** — assignments, returns, queue events, **online intake** submissions.  
 - **Reports / Dashboard** — scoped to your branch or district.  
@@ -289,6 +336,8 @@ Floating chat and `/hub/agent/` help staff draft and look up information.
 |------|---------------------|
 | Committee | Not submitted, Pending, Approved, Declined, Returned to loan officer |
 | Disbursement | Not started, Awaiting conditions, Schedule confirmed, Ready, Disbursed |
+| Closing pack papers | Missing → Uploaded (pending) → Verified / Rejected; POA “Not used” when flag off |
+| Digital agreement | Not generated → Partially signed → Fully signed (or Not required) |
 | Delegation | Pending → Approved / Rejected; Revoked |
 | Source channel | Online (Digital Apply) vs staff/branch entry |
 | Customer-visible pipeline | Submitted → Branch intake → Loan processing → Credit decision → Disbursement prep → Disbursed (+ repayment schedule when approved) |
@@ -307,6 +356,9 @@ Floating chat and `/hub/agent/` help staff draft and look up information.
 | Online application missing | Confirm customer **submitted** (not draft); check Notifications / Online loan intake |
 | Cannot act for colleague | Delegation must be **Approved** and inside the date window |
 | Customer has no schedule | Complete post-approval amortization after committee **Approved** |
+| Finance blocked / not ready | Check closing pack: restriction verified, POA verified if used, agreement fully signed |
+| Agreement signatures incomplete | Open sign page; capture missing roles (borrower / officer / optional guarantor / BM) |
+| Legal paper rejected | Re-upload with correct reference / office (and POA grantor fields) |
 
 ---
 
@@ -315,5 +367,4 @@ Floating chat and `/hub/agent/` help staff draft and look up information.
 - [Admin user manual](01_admin.md)  
 - [Customer user manual](03_customers.md)  
 - [Market partners](04_market_partners.md)  
-- [Screenshots](05_screenshots.md)  
 - [Manual index](README.md) · [Printable HTML pack](DECSI_Loan_Hub_User_Manuals.html)

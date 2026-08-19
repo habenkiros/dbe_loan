@@ -17,13 +17,11 @@ CHAPTERS: List[Tuple[str, str]] = [
     ('02_staff.md', 'Staff'),
     ('03_customers.md', 'Customers'),
     ('04_market_partners.md', 'Market partners'),
-    ('05_screenshots.md', 'Screenshots'),
     ('06_installation_it.md', 'IT installation'),
 ]
 
 PUBLIC_CHAPTERS = {
     '03_customers.md',
-    '05_screenshots.md',
 }
 MARKET_CHAPTERS = {
     '04_market_partners.md',

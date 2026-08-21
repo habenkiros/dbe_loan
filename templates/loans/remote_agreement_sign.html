@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign loan agreement · DECSI</title>
+  <link rel="stylesheet" href="{% static 'css/loan_workbench.css' %}">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 1.5rem auto; padding: 0 1rem; color: #0e2418; }
+    .hero { background: #e8f4ec; border: 2px solid #064420; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .body { white-space: pre-wrap; background: #fff; border: 1px solid #d5ddd8; border-radius: 8px; padding: 1rem; max-height: 14rem; overflow: auto; font-size: 0.88rem; }
+    label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+    input[type=text] { width: 100%; padding: 0.5rem; border: 1px solid #c9dbd1; border-radius: 6px; }
+    .btn { display: inline-block; margin-top: 1rem; background: #064420; color: #fff; border: 0; padding: 0.55rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .err { background: #f8d7da; color: #721c24; padding: 0.65rem 0.85rem; border-radius: 6px; margin-bottom: 0.75rem; }
+    .ok { background: #d4edda; color: #155724; padding: 0.65rem 0.85rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1 style="margin:0 0 0.35rem;font-size:1.25rem;">Remote agreement signature</h1>
+    <p style="margin:0;">{{ agreement.title }} · {{ loan_request.loan_request_id }}</p>
+    <p style="margin:0.35rem 0 0;font-size:0.9rem;">Signer role: <strong>{{ challenge.get_role_display }}</strong> · {{ challenge.signer_name }}</p>
+  </div>
+
+  {% if error %}
+  <div class="err">{{ error }}</div>
+  {% endif %}
+  {% if done %}
+  <div class="ok">Signature recorded. You can close this page.</div>
+  {% else %}
+  <div class="body">{{ agreement.body_text|truncatechars:4000 }}</div>
+  <p style="font-size:0.75rem;color:#555;word-break:break-all;">Content hash: {{ agreement.content_hash }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="otp">6-digit OTP from SMS</label>
+    <input id="otp" type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code">
+    <label style="font-weight:500;display:flex;gap:0.5rem;align-items:flex-start;margin-top:1rem;">
+      <input type="checkbox" name="declaration_accepted" value="1" required style="margin-top:0.25rem;">
+      <span>I have read the agreement. I am {{ challenge.signer_name }}, I sign of my own free will, and I intend to be legally bound. This remote OTP acceptance is bound to the content hash above (not a PKI qualified e-sign).</span>
+    </label>
+    <button type="submit" class="btn">Confirm signature</button>
+  </form>
+  {% endif %}
+</body>
+</html>

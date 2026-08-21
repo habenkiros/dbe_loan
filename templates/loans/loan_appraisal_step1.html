@@ -65,6 +65,30 @@
         Empty fields fill automatically. Differing values appear below for confirmation (banking wins when accepted).
         {% if not loan_request.customer_number %}Without a live API, mock profiles work for any customer number except MISSING.{% endif %}
       </p>
+      {% if banking_profile %}
+      {% with src=banking_profile.data_source %}
+      <p style="margin:0.65rem 0 0;">
+        {% if src.code == 'live' %}
+        <span class="src-badge src-banking">{{ src.label|default:"Live core banking" }}</span>
+        {% elif src.code == 'fallback' %}
+        <span class="src-badge" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">{{ src.label|default:"Mock — live failed" }}</span>
+        {% else %}
+        <span class="src-badge" style="background:#f3f4f6;color:#374151;border-color:#d1d5db;">{{ src.label|default:"Demo / mock data" }}</span>
+        {% endif %}
+        {% if banking_profile.provider %}<span class="help" style="margin-left:0.35rem;">provider: {{ banking_profile.provider }}</span>{% endif %}
+      </p>
+      {% endwith %}
+      {% elif loan_request.customer_profile_snapshot.data_source_label %}
+      <p style="margin:0.65rem 0 0;">
+        {% if loan_request.customer_profile_snapshot.data_source_code == 'live' %}
+        <span class="src-badge src-banking">{{ loan_request.customer_profile_snapshot.data_source_label }}</span>
+        {% elif loan_request.customer_profile_snapshot.data_source_code == 'fallback' %}
+        <span class="src-badge" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">{{ loan_request.customer_profile_snapshot.data_source_label }}</span>
+        {% else %}
+        <span class="src-badge" style="background:#f3f4f6;color:#374151;border-color:#d1d5db;">{{ loan_request.customer_profile_snapshot.data_source_label }}</span>
+        {% endif %}
+      </p>
+      {% endif %}
     </div>
 
     {% if banking_conflicts %}

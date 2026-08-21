@@ -14,6 +14,10 @@ const JOBS = [
     pdf: 'DECSI_System_Flow_Assessment.pdf',
   },
   {
+    html: 'system_flow_assessment_internal.html',
+    pdf: 'System_Flow_Assessment_Internal.pdf',
+  },
+  {
     html: 'functionality_uat.html',
     pdf: 'Functionality_UAT_Results.pdf',
   },

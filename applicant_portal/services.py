@@ -85,6 +85,11 @@ def mark_fee_paid(
         'payment_status', 'payment_method', 'payment_reference', 'payment_paid_at',
         'status', 'updated_at',
     ])
+    from django.conf import settings
+    if getattr(settings, 'DECSI_AUTO_QUEUE_ON_PAID', True) and not application.loan_request_id:
+        ok, _ = can_submit(application)
+        if ok:
+            submit_online_application(application)
 
 
 @transaction.atomic
@@ -170,6 +175,12 @@ def submit_online_application(application) -> object:
             run_automated_document_checks(doc)
         except Exception:
             pass
+
+    try:
+        from loans.services.document_extraction_defaults import sync_sheet1_from_documents
+        sync_sheet1_from_documents(loan, only_empty=True)
+    except Exception:
+        pass
 
     application.loan_request = loan
     application.queue_id = loan.loan_request_id

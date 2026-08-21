@@ -86,9 +86,9 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 .pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
 .usage{height:12px;border-radius:999px;overflow:hidden;display:flex;background:#e4ece7;margin:6px 0 4px;}
 .usage i{display:block;height:100%;}
-.usage .a{width:70.8%;background:#0b6b3a;}
-.usage .b{width:6.8%;background:#185fa5;}
-.usage .c{width:12.4%;background:#c4a035;}
+.usage .a{width:71.5%;background:#0b6b3a;}
+.usage .b{width:7.1%;background:#185fa5;}
+.usage .c{width:12.6%;background:#c4a035;}
 .hbar-row{display:grid;grid-template-columns:42mm 1fr 14mm;gap:6px;align-items:center;margin:3px 0;}
 .hbar-row .lbl{font-size:7.6pt;color:var(--gd);}
 .hbar-row .track{height:8px;background:#e4ece7;border-radius:999px;overflow:hidden;}
@@ -134,15 +134,15 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
     </div>
     <div class="cover-body">
       <div class="pillars">
-        <div class="pillar"><strong>90.5% flow completeness</strong><span>Mean of 12 stage scores (0–100). 1,086 / 1,200 completeness points.</span></div>
+        <div class="pillar"><strong>91.2% flow completeness</strong><span>Mean of 12 stage scores (0–100). 1,094 / 1,200 completeness points (was 90.5% / 1,086 on 20 Aug).</span></div>
         <div class="pillar"><strong>9 / 12 fully implemented</strong><span>Application through appraisal, authorization, workflow, and analytics.</span></div>
         <div class="pillar"><strong>1 config · 2 partial</strong><span>Disbursement mock until CBS. Legal admin and dedicated fraud still partial.</span></div>
-        <div class="pillar"><strong>250 / 250 tests</strong><span>Clean gate after 20 Aug 2026 fixes. docker compose exec web python manage.py test</span></div>
+        <div class="pillar"><strong>276 / 276 tests</strong><span>Clean gate on 21 Aug 2026 re-run. docker compose exec web python manage.py test</span></div>
       </div>
       <div class="meta">
         <div><div class="l">Source canvas</div><div class="v">system-flow-assessment.canvas.tsx</div></div>
         <div><div class="l">Diagram</div><div class="v">presentation/system_flow.png</div></div>
-        <div><div class="l">Date</div><div class="v">20 August 2026</div></div>
+        <div><div class="l">Date</div><div class="v">21 August 2026</div></div>
         <div><div class="l">Classification</div><div class="v">Seqela internal — do not send as-is</div></div>
       </div>
     </div>
@@ -152,21 +152,22 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 <section class="screen pagebreak">
 <h2>1. Overall</h2>
 <div class="exec">
-  <strong>The credit factory is built.</strong> Weighted completeness is 90.5% across the 12 flowchart boxes.
-  Nine stages are fully implemented in product code. Disbursement to core banking is coded but
-  mock-by-default until <span class="mono">DECSI_BASE_URL</span> is set. Two boxes are only partial:
+  <strong>The credit factory is built.</strong> Weighted completeness is 91.2% across the 12 flowchart boxes
+  (was 90.5% on 20 Aug).
+  Nine stages are fully implemented in product code. Disbursement to core banking is coded, with a Finance
+  CBS payload preview, but still mock-by-default until <span class="mono">DECSI_BASE_URL</span> is set. Two boxes are only partial:
   standalone legal administration, and a dedicated fraud-detection product.
 </div>
 <div class="kpi">
-  <div><div class="v">90.5%</div><div class="l">Flow completeness</div></div>
+  <div><div class="v">91.2%</div><div class="l">Flow completeness</div></div>
   <div><div class="v">9/12</div><div class="l">Fully implemented</div></div>
   <div><div class="v">2</div><div class="l">Partial stages</div></div>
-  <div><div class="v">250/250</div><div class="l">Automated tests passed</div></div>
+  <div><div class="v">276/276</div><div class="l">Automated tests passed</div></div>
 </div>
 
 <h3>Coverage of the 12-box flow</h3>
 <div class="usage" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
-<p class="small">Green = fully implemented scores (854) · Blue = CBS pending (82) · Gold = partial (150) · 1,086 / 1,200 points · 90.5% of flowchart scope.</p>
+<p class="small">Green = fully implemented scores (858) · Blue = CBS pending (85) · Gold = partial (151) · 1,094 / 1,200 points · 91.2% of flowchart scope.</p>
 
 <h3>Stage verdict mix</h3>
 <div class="mix">
@@ -174,22 +175,22 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
   <div><div class="v" style="color:var(--info)">1</div><div class="small">Live CBS pending</div></div>
   <div><div class="v" style="color:var(--warn)">2</div><div class="small">Partial</div></div>
 </div>
-<p class="small">Count of flowchart boxes · n = 12 · Source: code review 20 Aug 2026.</p>
+<p class="small">Count of flowchart boxes · n = 12 · Source: code review 21 Aug 2026.</p>
 
 <h3>Completeness by stage (%)</h3>
-<div class="hbar-row"><span class="lbl">1. Application</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
-<div class="hbar-row"><span class="lbl">2. Documents</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
+<div class="hbar-row"><span class="lbl">1. Application</span><span class="track"><i style="width:96%"></i></span><span class="pct">96</span></div>
+<div class="hbar-row"><span class="lbl">2. Documents</span><span class="track"><i style="width:96%"></i></span><span class="pct">96</span></div>
 <div class="hbar-row"><span class="lbl">3. Queue number</span><span class="track"><i style="width:100%"></i></span><span class="pct">100</span></div>
 <div class="hbar-row"><span class="lbl">4. GPS</span><span class="track"><i style="width:92%"></i></span><span class="pct">92</span></div>
 <div class="hbar-row"><span class="lbl">5. Estimation</span><span class="track"><i style="width:98%"></i></span><span class="pct">98</span></div>
-<div class="hbar-row"><span class="lbl">6. Appraisal</span><span class="track"><i style="width:97%"></i></span><span class="pct">97</span></div>
+<div class="hbar-row"><span class="lbl">6. Appraisal</span><span class="track"><i style="width:98%"></i></span><span class="pct">98</span></div>
 <div class="hbar-row"><span class="lbl">7. Authorization</span><span class="track"><i style="width:93%"></i></span><span class="pct">93</span></div>
 <div class="hbar-row"><span class="lbl">8. Legal prohibition</span><span class="track"><i class="part" style="width:68%"></i></span><span class="pct">68</span></div>
-<div class="hbar-row"><span class="lbl">9. Processing</span><span class="track"><i style="width:94%"></i></span><span class="pct">94</span></div>
-<div class="hbar-row"><span class="lbl">10. Disbursement</span><span class="track"><i class="cfg" style="width:82%"></i></span><span class="pct">82</span></div>
+<div class="hbar-row"><span class="lbl">9. Processing</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
+<div class="hbar-row"><span class="lbl">10. Disbursement</span><span class="track"><i class="cfg" style="width:85%"></i></span><span class="pct">85</span></div>
 <div class="hbar-row"><span class="lbl">11. Reports</span><span class="track"><i style="width:90%"></i></span><span class="pct">90</span></div>
-<div class="hbar-row"><span class="lbl">12. Security</span><span class="track"><i class="part" style="width:82%"></i></span><span class="pct">82</span></div>
-<p class="small">Score 0–100 per flowchart box · mean 90.5% (dashed target on canvas). Gold = partial · blue = config.</p>
+<div class="hbar-row"><span class="lbl">12. Security</span><span class="track"><i class="part" style="width:83%"></i></span><span class="pct">83</span></div>
+<p class="small">Score 0–100 per flowchart box · mean 91.2%. Gold = partial · blue = config. Re-assessed 21 Aug 2026.</p>
 </section>
 
 <section class="screen pagebreak">
@@ -212,18 +213,18 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
       <td class="n">1</td>
       <td>Application<br><span class="small">Applying for loan; getting information</span></td>
       <td><span class="st st-ok">Fully implemented</span></td>
-      <td class="n">95</td>
-      <td>Staff create at /hub/create_loan_request/ plus Digital Apply at /apply/new/ (customer lookup, loan types, online intake)</td>
-      <td class="mono">LoanRequest, OnlineApplication, LoanCategory; submit_online_application</td>
-      <td>CBS customer lookup falls back to mock when DECSI_BASE_URL is unset</td>
+      <td class="n">96</td>
+      <td>Staff create plus Digital Apply. Mock vs live source labelled; silent mock refused when live CBS URL is set; Chapa callback gated to public HTTPS</td>
+      <td class="mono">profile_data_source; callback_url_is_public_https; email_health</td>
+      <td>CBS customer lookup still uses demo mock when DECSI_BASE_URL is unset</td>
     </tr>
     <tr>
       <td class="n">2</td>
       <td>Documents<br><span class="small">Necessary documents; get approval</span></td>
       <td><span class="st st-ok">Fully implemented</span></td>
-      <td class="n">95</td>
-      <td>Per–loan-type checklist, Eng+Amh OCR, integrity/identity checks, officer verify/reject</td>
-      <td class="mono">LoanRequestDocument.auth_status; document_auth.py; /hub/loan_request/&lt;id&gt;/documents/</td>
+      <td class="n">96</td>
+      <td>Per–loan-type checklist, Eng+Amh OCR, integrity/identity checks, officer verify/reject, default extraction maps that fill appraisal Sheet 1</td>
+      <td class="mono">document_auth.py; document_extraction_defaults.py; sync_sheet1_from_documents</td>
       <td>LLM and external ID checks are optional hooks, not always on</td>
     </tr>
     <tr>
@@ -257,9 +258,9 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
       <td class="n">6</td>
       <td>Loan Appraisal<br><span class="small">Financial, business, approval</span></td>
       <td><span class="st st-ok">Fully implemented</span></td>
-      <td class="n">97</td>
-      <td>7-step MSME and corporate wizard: character, cashflow/ratios, E&amp;S, collateral, recommendation, optional schedule</td>
-      <td class="mono">APPRAISAL_STEPS; /hub/loan_request/&lt;id&gt;/appraisal/step/&lt;n&gt;/</td>
+      <td class="n">98</td>
+      <td>7-step MSME and corporate wizard. Sheet 1 labelled Mock vs Live and prefilled from documents</td>
+      <td class="mono">APPRAISAL_STEPS; apply_document_extractions; loan_appraisal_step1.html</td>
       <td>Sheet 7 (repayment schedule) is optional by design</td>
     </tr>
   </tbody>
@@ -302,18 +303,18 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
       <td class="n">9</td>
       <td>Processing Workflow<br><span class="small">Status tracking; integration &amp; verification</span></td>
       <td><span class="st st-ok">Fully implemented</span></td>
-      <td class="n">94</td>
-      <td>Role queues, committee status, document verify, process policy, risk desk, notifications</td>
-      <td class="mono">committee_status / disbursement_status; process_policy.py; /hub/view_loan_requests/</td>
+      <td class="n">95</td>
+      <td>Role queues, committee status, document verify, process policy, risk desk, notifications, remote SMS OTP agreement signing, delegation document access</td>
+      <td class="mono">remote_sign.py; /sign/agreement/&lt;token&gt;/; StaffDelegation</td>
       <td>Workflow is Django state machines, not a BPMN engine</td>
     </tr>
     <tr>
       <td class="n">10</td>
       <td>Disbursement<br><span class="small">Disbursing to core banking</span></td>
       <td><span class="st st-go">Code complete, live CBS pending</span></td>
-      <td class="n">82</td>
-      <td>Post-approval → Finance → confirm → book. Live Temenos client exists; mock ledger is the default</td>
-      <td class="mono">loans/disbursement.py; cbs_client.py; DECSI_CBS_BOOK_ON_DISBURSE</td>
+      <td class="n">85</td>
+      <td>Post-approval → Finance → confirm → book. Finance sees CBS payload preview and a customer-number gate. Live Temenos client exists; mock ledger is still the default</td>
+      <td class="mono">finance_ready_to_book; cbs_client.build_disbursement_payload</td>
       <td>Live booking needs DECSI_BASE_URL; DECSI_CBS_USE_MOCK_LEDGER defaults to True</td>
     </tr>
     <tr>
@@ -329,9 +330,9 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
       <td class="n">12</td>
       <td>Security and Compliance<br><span class="small">RBAC; authorization; fraud detection</span></td>
       <td><span class="st st-part">Partially implemented</span></td>
-      <td class="n">82</td>
-      <td>20+ roles, MFA, lockout, audit log, committee bands, password min-length 10, nosniff/DENY headers, document “suspicious” verdicts, watchlist, risk desk</td>
-      <td class="mono">CustomUser.ROLE_CHOICES; EnforceMfaMiddleware; SecurityAuditLog; /hub/security/audit/</td>
+      <td class="n">83</td>
+      <td>20+ roles, MFA, lockout, audit log, committee bands, password min-length 10, nosniff/DENY headers, document “suspicious” verdicts, watchlist, risk desk, delegation document access</td>
+      <td class="mono">CustomUser.ROLE_CHOICES; EnforceMfaMiddleware; SecurityAuditLog; StaffDelegation</td>
       <td>No dedicated fraud/AML case engine or transaction-fraud model — document auth + watchlist only</td>
     </tr>
   </tbody>
@@ -372,7 +373,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
   </p>
 </div>
 <div class="box warn">
-  <h4>12. Fraud detection is document-level, not a fraud product · 82%</h4>
+  <h4>12. Fraud detection is document-level, not a fraud product · 83%</h4>
   <p style="margin:0;">
     Role-based access, committee authorization bands, TOTP MFA, session lockout, password minimum length 10,
     nosniff / X-Frame-Options DENY, and SecurityAuditLog are implemented. What the flowchart calls fraud detection
@@ -381,12 +382,13 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
   </p>
 </div>
 <div class="box info">
-  <h4>10. Core banking disbursement is mock until DECSI_BASE_URL · 82%</h4>
+  <h4>10. Core banking disbursement is mock until DECSI_BASE_URL · 85%</h4>
   <p style="margin:0;">
     The path post-approval → Finance approval → officer confirm → CBS book is fully coded
-    (<span class="mono">cbs_client.py</span>, <span class="mono">portfolio_ledger.py</span>, tests).
+    (<span class="mono">finance_ready_to_book</span>, <span class="mono">cbs_client.py</span>, tests).
+    Finance now sees a CBS payload preview and is blocked without a customer number.
     Default settings use <span class="mono">DECSI_CBS_USE_MOCK_LEDGER=True</span>. Live Temenos booking requires
-    <span class="mono">DECSI_BASE_URL</span>. Customer lookup at application time has the same mock fallback.
+    <span class="mono">DECSI_BASE_URL</span>. Customer lookup refuses silent mock when a live URL is set.
   </p>
 </div>
 <div class="box gold">
@@ -400,44 +402,43 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 
 <h2>5. Automated test run</h2>
 <div class="callout ok">
-  <strong>Clean gate: 250 / 250 passed.</strong>
-  Re-run in the web container on 20 Aug 2026 after the seven failures/errors were fixed.
-  <span class="mono">python manage.py test</span> discovers the <span class="mono">loans.tests</span> package
-  (empty <span class="mono">loans/tests.py</span> stub removed).
+  <strong>Clean gate: 276 / 276 passed.</strong>
+  Re-run in the web container on 21 Aug 2026 after the feature update (remote OTP, document extraction,
+  finance ready-to-book, Chapa HTTPS gate). One Nominatim geocode warning (network unreachable) did not fail any test.
 </div>
 <div class="kpi">
-  <div><div class="v">250</div><div class="l">Tests run</div></div>
-  <div><div class="v">250</div><div class="l">Passed</div></div>
+  <div><div class="v">276</div><div class="l">Tests run</div></div>
+  <div><div class="v">276</div><div class="l">Passed</div></div>
   <div><div class="v">0</div><div class="l">Failed</div></div>
-  <div><div class="v">35.2s</div><div class="l">Duration</div></div>
+  <div><div class="v">90.9s</div><div class="l">Duration</div></div>
 </div>
 <table>
   <thead>
     <tr>
-      <th>Previous issue</th>
-      <th>Resolution</th>
+      <th>What changed since 20 Aug</th>
+      <th>Effect on this assessment</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Offline SW test still expected cache v8; help-text assertion stale</td>
-      <td>Test matches current collateral-field-vN cache and sync/retry bar</td>
+      <td>Remote SMS OTP agreement signing (<span class="mono">/sign/agreement/&lt;token&gt;/</span>)</td>
+      <td>Stage 9 stronger (closing pack); stage 10 still mock CBS</td>
     </tr>
     <tr>
-      <td>Appraisal lock POST hit /loan_request/… and got HTTP 301</td>
-      <td>Legacy hub redirect is 302; test posts via reverse() to /hub/…</td>
+      <td>Document extraction defaults fill appraisal Sheet 1; Mock vs Live labels</td>
+      <td>Stages 1, 2, 6 scored up; live CBS still required for real party data</td>
     </tr>
     <tr>
-      <td>Credit LO HO create used customer number C-1 (too short)</td>
-      <td>Test uses mock customer 2000050041; create path returns 302</td>
+      <td>Finance ready-to-book + CBS payload preview; no silent mock when live URL set</td>
+      <td>Stage 10 82 → 85; still config until <span class="mono">DECSI_BASE_URL</span> in the target env</td>
     </tr>
     <tr>
-      <td>Security tests: missing _env_bool, nosniff header, password min length</td>
-      <td>settings.py now has the helper, always-on headers, PASSWORD_MIN_LENGTH=10</td>
+      <td>New tests: <span class="mono">test_decsi_short_list</span>, <span class="mono">test_document_extraction_and_api_labels</span></td>
+      <td>Suite 250 → 276, all passing</td>
     </tr>
   </tbody>
 </table>
-<p class="small">Pass rate 100% (250/250) · docker compose exec web python manage.py test</p>
+<p class="small">Pass rate 100% (276/276) · docker compose exec web python manage.py test</p>
 </section>
 
 <section class="screen pagebreak">
@@ -446,7 +447,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
   <li>Add a Legal Administration queue and role so stage 8 sits between committee approval and Finance, matching the diagram.</li>
   <li>Point <span class="mono">DECSI_BASE_URL</span> at core banking and turn off mock ledger in the target environment so stage 10 is a live disbursement.</li>
   <li>If the diagram’s “Fraud Detection” is a contractual requirement, specify the product (document-only vs AML/transaction) — current coverage is origination fraud controls only.</li>
-  <li>Automated tests are a clean gate (250/250). Remaining work is process design (legal desk, fraud product) and CBS go-live, not test repair.</li>
+  <li>Automated tests are a clean gate (276/276). Remaining work is process design (legal desk, fraud product) and CBS go-live, not test repair.</li>
 </ol>
 
 <div class="callout">
@@ -460,7 +461,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 </figure>
 
 <div class="footer">
-  Export of Cursor canvas system-flow-assessment.canvas.tsx · 20 August 2026 · Seqela internal.<br>
+  Export of Cursor canvas system-flow-assessment.canvas.tsx · 21 August 2026 · Seqela internal.<br>
   Client-facing pack (no scores / file paths): DECSI_System_Flow_Assessment.pdf
 </div>
 </section>

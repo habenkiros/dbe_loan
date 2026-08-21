@@ -170,6 +170,9 @@ def fetch_account_transactions(
             return live, 'live'
         if not getattr(settings, 'DECSI_CUSTOMER_FALLBACK_MOCK', True):
             return [], 'empty'
+        if not (customer_number or '').strip():
+            return [], 'empty'
+        return mock_fetch_account_transactions(customer_number, months=months), 'mock_fallback'
     if not (customer_number or '').strip():
         return [], 'empty'
     return mock_fetch_account_transactions(customer_number, months=months), 'mock'

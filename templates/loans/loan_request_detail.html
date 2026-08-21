@@ -204,7 +204,7 @@
 {% endif %}
 {% endif %}
 {% endif %}
-{% if user.role == 'branch_manager' %}
+{% if can_upload_documents %}
 <p><a href="{% url 'upload_loan_request_documents' loan_request.id %}" class="btn btn-blue">Upload / manage documents</a></p>
 {% endif %}
 {% else %}

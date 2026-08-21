@@ -121,6 +121,41 @@
     </p>
     <p class="help">The next required party can sign immediately after this one is saved.</p>
   </form>
+
+  <div class="lw-panel" style="margin-top:1.25rem;border-color:#1e40af;">
+    <h3 style="margin-top:0;color:#1e40af;">Or send remote OTP link</h3>
+    <p class="help">Borrower / guarantor receives an SMS code and opens a public link (no staff login). Binds the same content hash as branch pad signing.</p>
+    <form method="post" class="sign-grid" style="margin-top:0.5rem;">
+      {% csrf_token %}
+      <input type="hidden" name="send_remote_otp" value="1">
+      <div>
+        <label>Role</label>
+        <select name="role" required>
+          {% for slot in slots %}
+          {% if not slot.signed %}
+          <option value="{{ slot.role }}">{{ slot.label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Signer full name</label>
+        <input type="text" name="signer_name" class="form-control" required value="{{ loan_request.applicant_name }}">
+      </div>
+      <div>
+        <label>Mobile (OTP SMS)</label>
+        <input type="text" name="signer_phone" class="form-control" required
+               value="{{ loan_request.phone_number|default:'' }}" placeholder="09xxxxxxxx">
+      </div>
+      <div>
+        <label>ID number</label>
+        <input type="text" name="signer_id_number" class="form-control" value="{{ applicant_tin }}">
+      </div>
+      <div style="grid-column:1/-1;">
+        <button type="submit" class="btn btn-blue">Send OTP + sign link</button>
+      </div>
+    </form>
+  </div>
   {% elif agreement.status == 'fully_signed' %}
   <p style="margin-top:1rem;"><span class="pa-badge pa-ok">Fully signed</span>
     <a href="{% url 'post_approval_detail' loan_request.id %}">Return to closing pack</a>

@@ -219,6 +219,9 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@decsi.local')
+# After Chapa marks fee paid, create LoanRequest + branch queue when docs are complete.
+DECSI_AUTO_QUEUE_ON_PAID = os.getenv('DECSI_AUTO_QUEUE_ON_PAID', 'True').lower() in ('1', 'true', 'yes')
 
 # Document OCR (Tesseract language packs: eng, amh, or eng+amh)
 DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
@@ -227,7 +230,16 @@ DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
 DECSI_BASE_URL = os.getenv('DECSI_BASE_URL', '').rstrip('/')
 DECSI_CUSTOMER_TIMEOUT = int(os.getenv('DECSI_CUSTOMER_TIMEOUT', '8'))
 DECSI_CUSTOMER_FORCE_MOCK = os.getenv('DECSI_CUSTOMER_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
-DECSI_CUSTOMER_FALLBACK_MOCK = os.getenv('DECSI_CUSTOMER_FALLBACK_MOCK', 'True').lower() in ('1', 'true', 'yes')
+# Silent mock fallback after live failure:
+# - explicit True/False from env wins
+# - otherwise: allow fallback only when no DECSI_BASE_URL (pure demo); refuse silent fallback when live URL is set
+_fallback_raw = os.getenv('DECSI_CUSTOMER_FALLBACK_MOCK', '').strip().lower()
+if _fallback_raw in ('1', 'true', 'yes'):
+    DECSI_CUSTOMER_FALLBACK_MOCK = True
+elif _fallback_raw in ('0', 'false', 'no'):
+    DECSI_CUSTOMER_FALLBACK_MOCK = False
+else:
+    DECSI_CUSTOMER_FALLBACK_MOCK = not bool(os.getenv('DECSI_BASE_URL', '').strip())
 DECSI_CUSTOMER_DETAIL_PATH = os.getenv(
     'DECSI_CUSTOMER_DETAIL_PATH',
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets',

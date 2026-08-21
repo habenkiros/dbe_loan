@@ -1,18 +1,18 @@
 {
-  "ran_at": "2026-08-21T05:10:48.266Z",
+  "ran_at": "2026-08-21T19:42:39.287Z",
   "base": "http://127.0.0.1:8000",
   "created_loan": {
-    "id": "29",
-    "queue": "HK-000002005"
+    "id": "30",
+    "queue": "HK-000002006"
   },
   "summary": {
-    "checks": 52,
-    "passed": 52,
+    "checks": 59,
+    "passed": 59,
     "failed": 0
   },
   "by_stage": {
     "1": {
-      "pass": 7,
+      "pass": 8,
       "fail": 0,
       "checks": [
         {
@@ -53,9 +53,15 @@
         },
         {
           "stage": 1,
+          "check": "Customer source is labelled (mock vs live)",
+          "result": "PASS",
+          "evidence": "source UI on create form"
+        },
+        {
+          "stage": 1,
           "check": "BM can submit a new loan request",
           "result": "PASS",
-          "evidence": "http://127.0.0.1:8000/hub/loan_request/29/documents/ queue=HK-000002005"
+          "evidence": "http://127.0.0.1:8000/hub/loan_request/30/documents/ queue=HK-000002006"
         }
       ]
     },
@@ -85,13 +91,13 @@
           "stage": 3,
           "check": "Queue number HK-… is issued on create",
           "result": "PASS",
-          "evidence": "HK-000002005"
+          "evidence": "HK-000002006"
         },
         {
           "stage": 3,
           "check": "Loan list shows queue IDs",
           "result": "PASS",
-          "evidence": "200 sample=HK-000002005"
+          "evidence": "200 sample=HK-000002006"
         }
       ]
     },
@@ -150,7 +156,7 @@
       ]
     },
     "6": {
-      "pass": 8,
+      "pass": 9,
       "fail": 0,
       "checks": [
         {
@@ -164,6 +170,12 @@
           "check": "Appraisal step 1 loads",
           "result": "PASS",
           "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/1/"
+        },
+        {
+          "stage": 6,
+          "check": "Sheet 1 shows banking / document source labelling",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Sara Mebrahtu\nLOAN OFFICER\nNotifications\nHelp\nLogout\nHome\nLoan requests\nCollateral\nMy vote"
         },
         {
           "stage": 6,
@@ -259,7 +271,7 @@
           "stage": 8,
           "check": "Post-approval screen loads (legal papers live here)",
           "result": "PASS",
-          "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests/"
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/22/post_approval/"
         },
         {
           "stage": 8,
@@ -270,7 +282,7 @@
       ]
     },
     "9": {
-      "pass": 3,
+      "pass": 6,
       "fail": 0,
       "checks": [
         {
@@ -287,6 +299,24 @@
         },
         {
           "stage": 9,
+          "check": "Agreement / remote OTP closing is reachable from post-approval",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock"
+        },
+        {
+          "stage": 9,
+          "check": "Agreement sign page offers remote OTP",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/22/post_approval/agreement/2/sign/"
+        },
+        {
+          "stage": 9,
+          "check": "Public remote-sign URL exists (invalid token is rejected)",
+          "result": "PASS",
+          "evidence": "404 http://127.0.0.1:8000/sign/agreement/not-a-real-token/"
+        },
+        {
+          "stage": 9,
           "check": "Finance queue is a processing status track",
           "result": "PASS",
           "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDi"
@@ -294,7 +324,7 @@
       ]
     },
     "10": {
-      "pass": 3,
+      "pass": 5,
       "fail": 0,
       "checks": [
         {
@@ -314,6 +344,18 @@
           "check": "Finance disbursement queue loads",
           "result": "PASS",
           "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests_finance_manager/"
+        },
+        {
+          "stage": 10,
+          "check": "Finance approval / CBS preview page loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/update_finance_manager_approval/22/"
+        },
+        {
+          "stage": 10,
+          "check": "CBS booking payload or ready-to-book blockers are visible",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDisbursement queue\nMy votes\nPost-approval\n"
         }
       ]
     },
@@ -441,15 +483,21 @@
     },
     {
       "stage": 1,
+      "check": "Customer source is labelled (mock vs live)",
+      "result": "PASS",
+      "evidence": "source UI on create form"
+    },
+    {
+      "stage": 1,
       "check": "BM can submit a new loan request",
       "result": "PASS",
-      "evidence": "http://127.0.0.1:8000/hub/loan_request/29/documents/ queue=HK-000002005"
+      "evidence": "http://127.0.0.1:8000/hub/loan_request/30/documents/ queue=HK-000002006"
     },
     {
       "stage": 3,
       "check": "Queue number HK-… is issued on create",
       "result": "PASS",
-      "evidence": "HK-000002005"
+      "evidence": "HK-000002006"
     },
     {
       "stage": 2,
@@ -467,7 +515,7 @@
       "stage": 3,
       "check": "Loan list shows queue IDs",
       "result": "PASS",
-      "evidence": "200 sample=HK-000002005"
+      "evidence": "200 sample=HK-000002006"
     },
     {
       "stage": 6,
@@ -510,6 +558,12 @@
       "check": "Appraisal step 1 loads",
       "result": "PASS",
       "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/1/"
+    },
+    {
+      "stage": 6,
+      "check": "Sheet 1 shows banking / document source labelling",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Sara Mebrahtu\nLOAN OFFICER\nNotifications\nHelp\nLogout\nHome\nLoan requests\nCollateral\nMy vote"
     },
     {
       "stage": 6,
@@ -617,7 +671,7 @@
       "stage": 8,
       "check": "Post-approval screen loads (legal papers live here)",
       "result": "PASS",
-      "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests/"
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/22/post_approval/"
     },
     {
       "stage": 8,
@@ -630,6 +684,24 @@
       "check": "Disbursement / post-approval track is on the same file",
       "result": "PASS",
       "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock"
+    },
+    {
+      "stage": 9,
+      "check": "Agreement / remote OTP closing is reachable from post-approval",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock"
+    },
+    {
+      "stage": 9,
+      "check": "Agreement sign page offers remote OTP",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/22/post_approval/agreement/2/sign/"
+    },
+    {
+      "stage": 9,
+      "check": "Public remote-sign URL exists (invalid token is rejected)",
+      "result": "PASS",
+      "evidence": "404 http://127.0.0.1:8000/sign/agreement/not-a-real-token/"
     },
     {
       "stage": 10,
@@ -648,6 +720,18 @@
       "check": "Finance queue is a processing status track",
       "result": "PASS",
       "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDi"
+    },
+    {
+      "stage": 10,
+      "check": "Finance approval / CBS preview page loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/update_finance_manager_approval/22/"
+    },
+    {
+      "stage": 10,
+      "check": "CBS booking payload or ready-to-book blockers are visible",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDisbursement queue\nMy votes\nPost-approval\n"
     },
     {
       "stage": 12,

@@ -809,6 +809,9 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
             )
             report_content = report_content or {}
             report_content['extracted_text_preview'] = doc_text[:12000]
+            from loans.services.document_extraction_defaults import ensure_document_type_extraction_defaults
+            ensure_document_type_extraction_defaults(document.document_type)
+            document.document_type.refresh_from_db()
             mappings = parse_extraction_mappings(document.document_type.content_extraction_mappings)
             if mappings:
                 report_content['extracted_fields'] = extract_fields_from_text(mappings, doc_text)

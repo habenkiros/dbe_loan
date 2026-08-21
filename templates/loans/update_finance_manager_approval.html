@@ -12,6 +12,36 @@
   Approving here allows the assigned loan officer to confirm funds released.
 </div>
 
+{% if ready_to_book %}
+<div class="lw-panel" style="margin-bottom:1rem;{% if ready_to_book.ok %}border-color:#0a6b2e;{% else %}border-color:#c45c26;{% endif %}">
+  <h3 style="margin-top:0;">Ready to book checklist</h3>
+  {% if ready_to_book.ok %}
+  <p class="help" style="color:#0a6b2e;"><strong>All checks passed</strong> — safe to approve for CBS booking / disbursement confirm.</p>
+  {% else %}
+  <p class="help" style="color:#9a3412;"><strong>Blocked</strong> — clear these before approving:</p>
+  <ul>
+    {% for b in ready_to_book.blockers %}
+    <li>{{ b }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="help" style="margin:0.5rem 0 0;">
+    Customer number:
+    <strong>{% if ready_to_book.customer_number %}{{ ready_to_book.customer_number }}{% else %}— missing{% endif %}</strong>
+    · Status: {{ loan_request.get_disbursement_status_display }}
+  </p>
+  {% if ready_to_book.cbs_payload_pretty %}
+  <details style="margin-top:0.75rem;">
+    <summary style="cursor:pointer;font-weight:600;">CBS book preview</summary>
+    <pre style="background:#f6f8f7;border:1px solid #d5ddd8;padding:0.75rem;overflow:auto;font-size:0.8rem;margin-top:0.5rem;">{{ ready_to_book.cbs_payload_pretty }}</pre>
+  </details>
+  {% endif %}
+  <p style="margin:0.75rem 0 0;">
+    <a class="btn btn-gray" href="{% url 'post_approval_detail' loan_request.id %}">Open post-approval pack</a>
+  </p>
+</div>
+{% endif %}
+
 <form method="post">
     {% csrf_token %}
     <table>
@@ -49,7 +79,7 @@
             </td>
         </tr>
     </table>
-    <button type="submit">Save Changes</button>
+    <button type="submit" class="btn btn-green"{% if ready_to_book and not ready_to_book.ok and not loan_request.finance_disbursement_approval %} title="Checklist incomplete — approving will be blocked"{% endif %}>Save Changes</button>
 </form>
 
 <a href="{% url 'view_loan_requests_finance_manager' %}">Back to Finance disbursement queue</a>

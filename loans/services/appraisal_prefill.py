@@ -19,6 +19,10 @@ from loans.models import (
 
 
 # Sheet 1 (LoanRequestBasicInfo) + Sheet 2 (LoanAppraisal) fields officers may auto-fill.
+LOAN_EXTRACT_FIELDS = {
+    'applicant_name', 'phone_number',
+}
+
 BASIC_INFO_EXTRACT_FIELDS = {
     'tin_number', 'gender', 'age', 'marital_status', 'education_level', 'home_address',
     'spouse_name', 'spouse_occupation', 'father_name', 'grandfather_name',
@@ -504,7 +508,11 @@ def _ensure_document_text(doc: LoanRequestDocument) -> str:
 
 
 def extract_fields_for_document(doc: LoanRequestDocument) -> Dict[str, str]:
+    from loans.services.document_extraction_defaults import ensure_document_type_extraction_defaults
+
     doc_type = doc.document_type
+    ensure_document_type_extraction_defaults(doc_type)
+    doc_type.refresh_from_db()
     mappings = parse_extraction_mappings(doc_type.content_extraction_mappings)
     if not mappings:
         checks = doc.automated_checks or {}
@@ -550,6 +558,34 @@ def apply_document_extractions(
             'document_id': doc.id,
         }
         for field, raw in fields.items():
+            if field in LOAN_EXTRACT_FIELDS:
+                value = (raw or '').strip()
+                if not value:
+                    continue
+                current = getattr(loan_request, field, None)
+                force = field in accept or f'loan.{field}' in accept
+                if (
+                    only_empty
+                    and current not in (None, '')
+                    and _norm_compare(current) != _norm_compare(value)
+                    and not force
+                ):
+                    conflicts.append({
+                        'target': 'loan',
+                        'field': field,
+                        'label': field.replace('_', ' ').title(),
+                        'current': str(current),
+                        'proposed': str(value)[:255],
+                        'document_type': doc.document_type.name,
+                        'document_id': doc.id,
+                    })
+                    continue
+                if force or current in (None, '') or not only_empty:
+                    if _norm_compare(current) != _norm_compare(value):
+                        setattr(loan_request, field, value[:255])
+                        loan_request.save(update_fields=[field])
+                        applied[field] = value[:80]
+                continue
             if field in BASIC_INFO_EXTRACT_FIELDS:
                 value = _coerce_basic_info_value(field, raw)
                 if value is None or value == '':
@@ -610,6 +646,10 @@ def reimport_sheet1_from_documents(
     accept_fields: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Explicit Sheet 1 re-import from uploaded documents only (empty fields by default)."""
+    from loans.services.document_extraction_defaults import ensure_document_type_extraction_defaults
+
+    for doc in loan_request.application_documents.select_related('document_type'):
+        ensure_document_type_extraction_defaults(doc.document_type)
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     appraisal, _ = LoanAppraisal.objects.get_or_create(loan_request=loan_request)
     return apply_document_extractions(

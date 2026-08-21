@@ -217,7 +217,7 @@ class Command(BaseCommand):
             ('Marriage Certificate (if applicable)', 80, False, False),
         ]
         for name, order, required, ocr in docs:
-            LoanApplicationDocumentType.objects.get_or_create(
+            dt, created = LoanApplicationDocumentType.objects.get_or_create(
                 name=name,
                 defaults={
                     'order': order,
@@ -227,6 +227,8 @@ class Command(BaseCommand):
                     'max_file_size_mb': 10,
                 },
             )
+            from loans.services.document_extraction_defaults import ensure_document_type_extraction_defaults
+            ensure_document_type_extraction_defaults(dt)
         self.stdout.write(self.style.SUCCESS(
             f'  Document types: {LoanApplicationDocumentType.objects.count()}'
         ))

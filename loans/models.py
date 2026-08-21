@@ -2898,9 +2898,11 @@ class LoanAgreementSignature(models.Model):
     """One digital (drawn) signature on an agreement, with audit metadata."""
 
     METHOD_DRAWN_HASH = 'drawn_hash'
+    METHOD_REMOTE_OTP = 'remote_otp'
     METHOD_PKI_QUALIFIED = 'pki_qualified'
     METHOD_CHOICES = [
         (METHOD_DRAWN_HASH, 'Drawn mark + content hash (branch e-sign)'),
+        (METHOD_REMOTE_OTP, 'Remote OTP acceptance (SMS link)'),
         (METHOD_PKI_QUALIFIED, 'PKI / qualified e-sign (reserved)'),
     ]
 
@@ -2946,7 +2948,8 @@ class LoanAgreementSignature(models.Model):
     )
     signature_image = models.ImageField(
         upload_to='agreement_signatures/%Y/%m/',
-        help_text='PNG captured from signature pad.',
+        blank=True,
+        help_text='PNG from signature pad (drawn_hash). Optional for remote_otp.',
     )
     signature_method = models.CharField(
         max_length=24,
@@ -2954,7 +2957,8 @@ class LoanAgreementSignature(models.Model):
         default=METHOD_DRAWN_HASH,
         db_index=True,
         help_text=(
-            'drawn_hash = pad image + SHA-256 content binding (current). '
+            'drawn_hash = pad image + SHA-256 content binding (branch). '
+            'remote_otp = SMS OTP + content hash (remote). '
             'pki_qualified = reserved for future CA/TSP qualified e-sign.'
         ),
     )
@@ -2996,6 +3000,40 @@ class LoanAgreementSignature(models.Model):
 
     def __str__(self):
         return f'{self.get_role_display()} — {self.signer_name} @ {self.signed_at}'
+
+
+class LoanAgreementRemoteChallenge(models.Model):
+    """One-time remote OTP challenge for agreement signing outside the branch pad."""
+
+    agreement = models.ForeignKey(
+        LoanAgreement,
+        on_delete=models.CASCADE,
+        related_name='remote_challenges',
+    )
+    role = models.CharField(max_length=24, choices=LoanAgreementSignature.ROLE_CHOICES, db_index=True)
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    otp_hash = models.CharField(max_length=128)
+    signer_name = models.CharField(max_length=255)
+    signer_phone = models.CharField(max_length=30)
+    signer_id_number = models.CharField(max_length=80, blank=True)
+    content_hash = models.CharField(max_length=64, help_text='Agreement content hash when OTP was issued.')
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='agreement_remote_challenges',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    request_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Remote OTP {self.role} · {self.token[:8]}…'
 
 
 class CbsBookingAttempt(models.Model):

@@ -24,6 +24,22 @@ def _digits_only(value: str) -> str:
     return ''.join(ch for ch in str(value or '') if ch.isdigit())
 
 
+def profile_data_source(profile: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    """UI badge metadata for customer / banking profile origin."""
+    if not profile:
+        return {'code': 'none', 'label': 'No profile', 'tone': 'muted'}
+    provider = (profile.get('provider') or '').strip().lower()
+    if provider in ('decsi_party', 'decsi_cbs', 'live'):
+        return {'code': 'live', 'label': 'Live core banking', 'tone': 'ok'}
+    if provider in ('mock_fallback',) or profile.get('live_attempted'):
+        return {
+            'code': 'fallback',
+            'label': 'Mock — live API failed',
+            'tone': 'warn',
+        }
+    return {'code': 'mock', 'label': 'Demo / mock data', 'tone': 'muted'}
+
+
 def compact_customer_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, str]:
     """Keep only staff-important party fields (no email)."""
     if not profile:
@@ -59,6 +75,15 @@ def compact_customer_profile(profile: Optional[Dict[str, Any]]) -> Dict[str, str
         if not s or s.upper() in ('NULL', 'NONE', 'N/A'):
             continue
         out[key] = s[:500]
+    ds = profile.get('data_source')
+    if isinstance(ds, dict) and ds.get('label'):
+        out['data_source_label'] = str(ds['label'])[:120]
+        if ds.get('code'):
+            out['data_source_code'] = str(ds['code'])[:40]
+    elif profile.get('provider') or profile.get('live_attempted'):
+        meta = profile_data_source(profile)
+        out['data_source_label'] = meta['label']
+        out['data_source_code'] = meta['code']
     return out
 
 
@@ -357,10 +382,21 @@ def fetch_customer_by_number(customer_number: str) -> Optional[Dict[str, Any]]:
     if base and not force_mock:
         profile = live_fetch_customer_by_number(customer_number)
         if profile:
+            profile['data_source'] = profile_data_source(profile)
             return profile
         if not getattr(settings, 'DECSI_CUSTOMER_FALLBACK_MOCK', True):
             return None
-    return mock_fetch_customer_by_number(customer_number)
+        mock = mock_fetch_customer_by_number(customer_number)
+        if mock:
+            mock['provider'] = 'mock_fallback'
+            mock['live_attempted'] = True
+            mock['data_source'] = profile_data_source(mock)
+        return mock
+    mock = mock_fetch_customer_by_number(customer_number)
+    if mock:
+        mock.setdefault('provider', 'mock')
+        mock['data_source'] = profile_data_source(mock)
+    return mock
 
 
 def portal_customer_lookup(

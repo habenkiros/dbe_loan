@@ -246,6 +246,12 @@ def create_loan_request(request):
                 if addr and not loan_request.declared_address_text:
                     loan_request.declared_address_text = addr[:2000]
                     loan_request.declared_address_source = 'home'
+                if (profile.get('provider') or '') == 'mock_fallback':
+                    messages.warning(
+                        request,
+                        'Live core banking lookup failed — demo mock profile was used. '
+                        'Verify the customer number before proceeding.',
+                    )
             elif customer_api_is_live():
                 form.add_error(
                     'customer_number',
@@ -328,10 +334,15 @@ def ajax_staff_lookup_customer(request):
         }, status=404)
 
     compact = compact_customer_profile(profile)
+    from loans.services.customer import profile_data_source
+    src = profile_data_source(profile)
     return JsonResponse({
         'ok': True,
-        'live': customer_api_is_live(),
-        'message': 'Customer loaded from core banking.' if customer_api_is_live() else 'Customer loaded (demo / mock).',
+        'live': customer_api_is_live() and src.get('code') == 'live',
+        'data_source': src,
+        'message': src.get('label') or (
+            'Customer loaded from core banking.' if customer_api_is_live() else 'Customer loaded (demo / mock).'
+        ),
         'profile': {
             'customer_number': profile.get('customer_number') or cn,
             'name': profile.get('name') or '',
@@ -352,16 +363,27 @@ def ajax_staff_lookup_customer(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.role == 'branch_manager' or _user_is_credit_staff(u))
+@user_passes_test(
+    lambda u: (
+        getattr(u, 'role', None) == 'branch_manager'
+        or _user_is_credit_staff(u)
+        or _user_can_work_loan_documents(u)
+    )
+)
 def upload_loan_request_documents(request, loan_request_id):
     """Upload or view application documents for a loan request."""
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _user_can_upload_loan_documents(request.user, loan_request):
+        messages.warning(request, 'You can only manage documents for loans you cover.')
+        return redirect('view_loan_requests')
     if request.user.role == 'branch_manager' and loan_request.branch_id != request.user.branch_id:
         messages.warning(request, 'You can only manage documents for loans in your branch.')
         return redirect('view_loan_requests')
     if _user_is_credit_staff(request.user) and loan_request.origin_level != LoanRequest.ORIGIN_HEAD_OFFICE:
-        messages.warning(request, 'Credit staff can only manage head-office Credit loans.')
-        return redirect('view_loan_requests')
+        # Appraisal delegates / LOs may still upload when covering the loan
+        if not _user_covers_loan_documents(request.user, loan_request):
+            messages.warning(request, 'Credit staff can only manage head-office Credit loans.')
+            return redirect('view_loan_requests')
     existing = loan_request.application_documents.select_related(
         'document_type', 'uploaded_by',
     ).order_by('-uploaded_at')
@@ -423,9 +445,19 @@ def upload_loan_request_documents(request, loan_request_id):
                 )
                 run_automated_document_checks(doc)
                 notify_document_uploaded(doc)
-                if doc_type.content_extraction_mappings.strip():
-                    from .services.appraisal_prefill import sync_appraisal_from_sources
-                    sync_appraisal_from_sources(loan_request, only_empty=True, include_collateral=False)
+                try:
+                    from .services.document_extraction_defaults import sync_sheet1_from_documents
+                    report = sync_sheet1_from_documents(loan_request, only_empty=True)
+                    filled = []
+                    for d in (report.get('documents') or []):
+                        filled.extend((d.get('fields') or {}).keys())
+                    if filled:
+                        messages.info(
+                            request,
+                            'Sheet 1 updated from document text: ' + ', '.join(sorted(set(filled))[:12]),
+                        )
+                except Exception:
+                    pass
                 uploaded += 1
                 if replaced:
                     messages.info(request, f'"{doc_type.name}" replaced the previous upload.')
@@ -527,9 +559,14 @@ def update_operation_manager_approval(request, loan_request_id):
 @user_passes_test(_user_is_finance_manager)
 def update_finance_manager_approval(request, loan_request_id):
     """Finance disbursement approval (not intake queue)."""
-    from .disbursement import can_approve_finance_disbursement, set_finance_disbursement_approval
+    from .disbursement import (
+        can_approve_finance_disbursement,
+        finance_ready_to_book,
+        set_finance_disbursement_approval,
+    )
 
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    book = finance_ready_to_book(loan_request)
     if request.method == 'POST':
         approved = request.POST.get('finance_disbursement_approval') == 'True'
         if approved and not can_approve_finance_disbursement(request.user, loan_request):
@@ -541,6 +578,15 @@ def update_finance_manager_approval(request, loan_request_id):
                     'Loan must be committee-approved and marked ready for disbursement first.',
                 )
             return redirect('view_loan_requests_finance_manager')
+        if approved and not book['ok']:
+            messages.warning(
+                request,
+                'Ready-to-book checklist incomplete: ' + '; '.join(book['blockers'][:5]),
+            )
+            return render(request, 'loans/update_finance_manager_approval.html', {
+                'loan_request': loan_request,
+                'ready_to_book': book,
+            })
         set_finance_disbursement_approval(loan_request, request.user, approved=approved)
         if approved:
             messages.success(
@@ -550,7 +596,10 @@ def update_finance_manager_approval(request, loan_request_id):
         else:
             messages.success(request, 'Finance disbursement approval cleared.')
         return redirect('view_loan_requests_finance_manager')
-    return render(request, 'loans/update_finance_manager_approval.html', {'loan_request': loan_request})
+    return render(request, 'loans/update_finance_manager_approval.html', {
+        'loan_request': loan_request,
+        'ready_to_book': book,
+    })
 
 
 def _is_assigned_officer_or_engineer(user, loan_request):
@@ -562,6 +611,54 @@ def _is_assigned_officer_or_engineer(user, loan_request):
     return False
 
 
+def _user_covers_loan_documents(user, loan_request) -> bool:
+    """Assigned LO/engineer or appraisal delegate covering the assigned officer."""
+    if _is_assigned_officer_or_engineer(user, loan_request):
+        return True
+    from loans.delegation import can_access_loan_as_officer
+    ok, _principal = can_access_loan_as_officer(user, loan_request)
+    return bool(ok)
+
+
+def _user_can_work_loan_documents(user) -> bool:
+    """Decorator gate: native LO/engineer roles or anyone with appraisal delegation."""
+    if getattr(user, 'role', None) in ('loan_officer', 'credit_loan_officer', 'engineer'):
+        return True
+    from loans.delegation import SCOPE_APPRAISAL, principals_for
+    return bool(principals_for(user, SCOPE_APPRAISAL))
+
+
+def _get_loan_for_document_worker(user, loan_request_id):
+    """Loan accessible as assigned LO/engineer or appraisal delegate."""
+    from django.http import Http404
+    from loans.delegation import can_access_loan_as_officer, log_delegation_action
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not _user_covers_loan_documents(user, loan_request):
+        raise Http404('No loan request found matching the query')
+    ok, principal = can_access_loan_as_officer(user, loan_request)
+    if ok and principal and principal.id != user.id:
+        log_delegation_action(
+            actor=user,
+            principal=principal,
+            action='document_access',
+            loan_request=loan_request,
+            detail={'path': 'document_worker'},
+        )
+    return loan_request
+
+
+def _user_can_upload_loan_documents(user, loan_request) -> bool:
+    """BM / credit / assigned LO / appraisal delegate / assigned engineer."""
+    if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
+        return True
+    if getattr(user, 'role', None) == 'branch_manager' and user.branch_id == loan_request.branch_id:
+        return True
+    if _user_is_credit_staff(user) and loan_request.origin_level == LoanRequest.ORIGIN_HEAD_OFFICE:
+        return True
+    return _user_covers_loan_documents(user, loan_request)
+
+
 def _user_can_access_loan_documents(user, loan_request) -> bool:
     if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('superadmin', 'admin'):
         return True
@@ -569,7 +666,7 @@ def _user_can_access_loan_documents(user, loan_request) -> bool:
         return True
     if _user_is_credit_staff(user) and loan_request.origin_level == LoanRequest.ORIGIN_HEAD_OFFICE:
         return True
-    if _is_assigned_officer_or_engineer(user, loan_request):
+    if _user_covers_loan_documents(user, loan_request):
         return True
     if _user_is_cooperative_manager(user) or getattr(user, 'role', None) == 'finance_manager':
         return True
@@ -707,18 +804,25 @@ def loan_request_detail(request, loan_request_id):
     uploaded_type_ids = {_doc.document_type_id for _doc in application_documents}
     pending_document_requests = loan_request.document_requests.select_related('document_type', 'requested_by').all()
     requested_type_ids = set(pending_document_requests.values_list('document_type_id', flat=True))
-    can_request_documents = _is_assigned_officer_or_engineer(user, loan_request)
+    can_request_documents = _user_covers_loan_documents(user, loan_request)
+    can_upload_documents = _user_can_upload_loan_documents(user, loan_request)
     document_types_missing = [dt for dt in document_types if dt.id not in uploaded_type_ids] if document_types else []
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
     lock_state = get_appraisal_lock_state(loan_request)
     committee_submit = officer_can_submit_to_committee(loan_request) if (
         user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id
     ) else None
+    # Appraisal delegates covering the assigned LO can also finish → committee when unlocked
+    if committee_submit is None and _user_covers_loan_documents(user, loan_request):
+        from loans.delegation import can_access_loan_as_officer
+        ok, _ = can_access_loan_as_officer(user, loan_request)
+        if ok:
+            committee_submit = officer_can_submit_to_committee(loan_request)
     committee_tally = get_committee_tally(loan_request, current_user=user)
     from .services.document_auth import loan_documents_collateral_readiness
 
     doc_readiness = loan_documents_collateral_readiness(loan_request)
-    can_authenticate_documents = _is_assigned_officer_or_engineer(user, loan_request)
+    can_authenticate_documents = _user_covers_loan_documents(user, loan_request)
     collateral_readiness = None
     collateral_totals = None
     collateral_blockers = []
@@ -754,6 +858,7 @@ def loan_request_detail(request, loan_request_id):
         'pending_document_requests': pending_document_requests,
         'can_request_documents': can_request_documents,
         'can_authenticate_documents': can_authenticate_documents,
+        'can_upload_documents': can_upload_documents,
         'document_types_missing': document_types_missing,
         'requested_type_ids': requested_type_ids,
         'doc_readiness': doc_readiness,
@@ -775,15 +880,12 @@ def loan_request_detail(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'engineer'])
+@user_passes_test(_user_can_work_loan_documents)
 def request_loan_document(request, loan_request_id):
-    """Assigned loan officer or engineer requests a document type (branch manager can then upload)."""
+    """Assigned LO/engineer or appraisal delegate requests a document type."""
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-    if request.user.role == 'loan_officer':
-        loan_request = _get_loan_for_officer(request.user, loan_request_id)
-    else:
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
+    loan_request = _get_loan_for_document_worker(request.user, loan_request_id)
     doc_type_id = request.POST.get('document_type_id')
     if not doc_type_id:
         messages.warning(request, 'Please select a document type.')
@@ -810,20 +912,20 @@ def request_loan_document(request, loan_request_id):
     from .services.document_notifications import notify_document_requested
 
     notify_document_requested(loan_request, doc_type, request.user)
-    messages.success(request, f'Request for "{doc_type.name}" recorded. Branch manager will be notified to upload it.')
+    messages.success(
+        request,
+        f'Request for "{doc_type.name}" recorded. Branch manager or covering officer can upload it.',
+    )
     return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'engineer'])
+@user_passes_test(_user_can_work_loan_documents)
 def proceed_to_collateral(request, loan_request_id):
-    """Assigned loan officer or engineer marks documents reviewed and proceeds to collateral estimation."""
+    """Assigned LO/engineer or appraisal delegate marks documents reviewed → collateral."""
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-    if request.user.role == 'loan_officer':
-        loan_request = _get_loan_for_officer(request.user, loan_request_id)
-    else:
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
+    loan_request = _get_loan_for_document_worker(request.user, loan_request_id)
     from .services.document_auth import loan_documents_collateral_readiness
 
     readiness = loan_documents_collateral_readiness(loan_request)
@@ -858,15 +960,12 @@ def proceed_to_collateral(request, loan_request_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.role in ['loan_officer', 'engineer'])
+@user_passes_test(_user_can_work_loan_documents)
 def authenticate_loan_document(request, loan_request_id, document_id):
-    """Loan officer / engineer: verify or reject document authenticity."""
+    """LO / engineer / appraisal delegate: verify or reject document authenticity."""
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
-    if request.user.role == 'loan_officer':
-        loan_request = _get_loan_for_officer(request.user, loan_request_id)
-    else:
-        loan_request = get_object_or_404(LoanRequest, pk=loan_request_id, assigned_engineer=request.user)
+    loan_request = _get_loan_for_document_worker(request.user, loan_request_id)
     doc = get_object_or_404(LoanRequestDocument, pk=document_id, loan_request=loan_request)
     action = request.POST.get('auth_action', '').strip()
     notes = request.POST.get('auth_notes', '').strip()
@@ -901,13 +1000,18 @@ def authenticate_loan_document(request, loan_request_id, document_id):
     elif action == 'requeue':
         try:
             from .services.document_auth import run_automated_document_checks
+            from .services.document_extraction_defaults import sync_sheet1_from_documents
             run_automated_document_checks(doc)
             doc.refresh_from_db()
+            sync_sheet1_from_documents(loan_request, only_empty=True)
             if doc.auth_status == LRD.AUTH_NEEDS_REVIEW:
                 notify_document_needs_review(doc)
             else:
                 notify_document_uploaded(doc)
-            messages.info(request, f'Automated checks re-run for "{doc.document_type.name}".')
+            messages.info(
+                request,
+                f'Automated checks re-run for "{doc.document_type.name}" and Sheet 1 re-synced from documents.',
+            )
         except Exception as exc:
             messages.error(request, f'Could not re-run checks: {exc}')
     else:
@@ -1161,11 +1265,21 @@ def loan_appraisal_step(request, loan_request_id, step):
             if banking.get('error'):
                 messages.warning(request, banking['error'])
             elif banking.get('applied'):
+                provider = banking.get('provider') or 'banking'
+                src_note = {
+                    'decsi_party': 'live',
+                    'mock_fallback': 'mock — live failed',
+                    'mock': 'demo mock',
+                }.get(provider, provider)
                 messages.success(
                     request,
-                    f'Core banking filled {len(banking["applied"])} field(s)'
-                    f' ({banking.get("provider") or "banking"}).',
+                    f'Core banking filled {len(banking["applied"])} field(s) ({src_note}).',
                 )
+                if provider == 'mock_fallback':
+                    messages.warning(
+                        request,
+                        'Live API failed; Sheet 1 was filled from mock data. Confirm values before appraisal.',
+                    )
             if banking.get('conflicts'):
                 messages.info(
                     request,
@@ -2280,6 +2394,35 @@ def post_approval_agreement_sign(request, loan_request_id, agreement_id):
         if not can_sign:
             messages.warning(request, 'You cannot capture signatures on this loan.')
             return redirect('post_approval_detail', loan_request_id=loan_request_id)
+
+        if request.POST.get('send_remote_otp') == '1':
+            from django.conf import settings as dj_settings
+            from .remote_sign import issue_remote_sign_challenge
+            try:
+                challenge, code, path = issue_remote_sign_challenge(
+                    agreement,
+                    role=(request.POST.get('role') or '').strip(),
+                    signer_name=(request.POST.get('signer_name') or '').strip(),
+                    signer_phone=(request.POST.get('signer_phone') or '').strip(),
+                    signer_id_number=(request.POST.get('signer_id_number') or '').strip(),
+                    created_by=request.user,
+                    request=request,
+                )
+                abs_url = request.build_absolute_uri(path)
+                messages.success(
+                    request,
+                    f'Remote sign OTP sent to {challenge.signer_phone}. Link: {abs_url}',
+                )
+                if getattr(dj_settings, 'DEBUG', False):
+                    messages.info(request, f'DEBUG OTP (tests only): {code}')
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            return redirect(
+                'post_approval_agreement_sign',
+                loan_request_id=loan_request_id,
+                agreement_id=agreement.pk,
+            )
+
         role = (request.POST.get('role') or '').strip()
         signer_name = (request.POST.get('signer_name') or '').strip()
         data_url = request.POST.get('signature_data') or ''
@@ -2340,6 +2483,45 @@ def post_approval_agreement_sign(request, loan_request_id, agreement_id):
         'ROLE_OFFICER': LoanAgreementSignature.ROLE_OFFICER,
         'ROLE_BRANCH_MANAGER': LoanAgreementSignature.ROLE_BRANCH_MANAGER,
         'role_choices': LoanAgreementSignature.ROLE_CHOICES,
+    })
+
+
+@require_http_methods(['GET', 'POST'])
+def remote_agreement_sign(request, token):
+    """Public (no login) remote OTP acceptance for a loan agreement."""
+    from .models import LoanAgreementRemoteChallenge
+    from .remote_sign import complete_remote_sign
+
+    challenge = get_object_or_404(
+        LoanAgreementRemoteChallenge.objects.select_related(
+            'agreement', 'agreement__loan_request',
+        ),
+        token=token,
+    )
+    agreement = challenge.agreement
+    loan_request = agreement.loan_request
+    error = ''
+    done = bool(challenge.consumed_at)
+
+    if request.method == 'POST' and not done:
+        try:
+            complete_remote_sign(
+                challenge,
+                otp=request.POST.get('otp') or '',
+                declaration_accepted=request.POST.get('declaration_accepted') == '1',
+                request=request,
+            )
+            done = True
+            challenge.refresh_from_db()
+        except ValueError as exc:
+            error = str(exc)
+
+    return render(request, 'loans/remote_agreement_sign.html', {
+        'challenge': challenge,
+        'agreement': agreement,
+        'loan_request': loan_request,
+        'error': error,
+        'done': done,
     })
 
 

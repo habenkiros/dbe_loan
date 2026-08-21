@@ -83,6 +83,19 @@ def payment_callback_url(*, request=None) -> str:
     return f'{checkout_base_url(request)}{path}'
 
 
+def callback_url_is_public_https(url: str) -> bool:
+    """Live Chapa requires a publicly reachable HTTPS callback (not localhost)."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse((url or '').strip())
+    if parsed.scheme != 'https':
+        return False
+    host = (parsed.hostname or '').lower()
+    if not host or host in ('localhost', '127.0.0.1', '::1') or host.endswith('.local'):
+        return False
+    return True
+
+
 def make_tx_ref(application) -> str:
     # Chapa prefers unique transaction references (max ~50).
     short = application.public_id.hex[:12]
@@ -181,6 +194,19 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
             'payment_status', 'payment_reference', 'updated_at',
         ])
         return True, 'Mock checkout ready (Chapa not configured).', mock_url
+
+    if not callback_url_is_public_https(callback_url):
+        return False, (
+            'Live Chapa requires a public HTTPS callback URL. '
+            'Set SITE_URL=https://your-domain (or open Digital Apply via HTTPS) '
+            'and ensure /payments/chapa/webhook/ is reachable. '
+            f'Current callback: {callback_url}'
+        ), None
+    if not callback_url_is_public_https(return_url.split('?')[0]):
+        return False, (
+            'Live Chapa return URL must be HTTPS (not localhost). '
+            f'Current return base is not public HTTPS.'
+        ), None
 
     payload = build_initialize_payload(
         application,
@@ -303,30 +329,51 @@ def verify_transaction(tx_ref: str) -> Tuple[bool, Dict[str, Any]]:
 
 
 def apply_verified_payment(application, tx_ref: str = '', chapa_data: Optional[dict] = None) -> bool:
-    """Mark application paid when verification succeeds. Idempotent."""
+    """Mark application paid when verification succeeds. Idempotent.
+
+    When DECSI_AUTO_QUEUE_ON_PAID is True (default) and the application is
+    ready, also creates the branch LoanRequest so paid → queue without a
+    separate Submit click.
+    """
+    from django.conf import settings
     from applicant_portal.models import OnlineApplication
 
-    if application.payment_status == OnlineApplication.PAY_PAID:
-        return True
+    already = application.payment_status == OnlineApplication.PAY_PAID
+    if not already:
+        data = (chapa_data or {}).get('data') or {}
+        ref = (
+            data.get('reference')
+            or data.get('tx_ref')
+            or tx_ref
+            or application.chapa_tx_ref
+            or ''
+        )
+        application.payment_status = OnlineApplication.PAY_PAID
+        application.payment_method = 'chapa'
+        application.payment_reference = str(ref)[:64]
+        application.payment_paid_at = timezone.now()
+        if tx_ref and not application.chapa_tx_ref:
+            application.chapa_tx_ref = tx_ref[:64]
+        if application.status in (OnlineApplication.STATUS_DOCUMENTS, OnlineApplication.STATUS_DRAFT):
+            application.status = OnlineApplication.STATUS_PAYMENT
+        application.save(update_fields=[
+            'payment_status', 'payment_method', 'payment_reference', 'payment_paid_at',
+            'chapa_tx_ref', 'status', 'updated_at',
+        ])
 
-    data = (chapa_data or {}).get('data') or {}
-    ref = (
-        data.get('reference')
-        or data.get('tx_ref')
-        or tx_ref
-        or application.chapa_tx_ref
-        or ''
-    )
-    application.payment_status = OnlineApplication.PAY_PAID
-    application.payment_method = 'chapa'
-    application.payment_reference = str(ref)[:64]
-    application.payment_paid_at = timezone.now()
-    if tx_ref and not application.chapa_tx_ref:
-        application.chapa_tx_ref = tx_ref[:64]
-    if application.status in (OnlineApplication.STATUS_DOCUMENTS, OnlineApplication.STATUS_DRAFT):
-        application.status = OnlineApplication.STATUS_PAYMENT
-    application.save(update_fields=[
-        'payment_status', 'payment_method', 'payment_reference', 'payment_paid_at',
-        'chapa_tx_ref', 'status', 'updated_at',
-    ])
+    auto = getattr(settings, 'DECSI_AUTO_QUEUE_ON_PAID', True)
+    if auto and not application.loan_request_id:
+        try:
+            from applicant_portal.services import can_submit, submit_online_application
+            ok, _reason = can_submit(application)
+            if ok:
+                submit_online_application(application)
+                logger.info(
+                    'Auto-queued Digital Apply %s after payment',
+                    application.public_id,
+                )
+        except Exception:
+            logger.exception(
+                'Auto-queue after payment failed for %s', application.public_id,
+            )
     return True

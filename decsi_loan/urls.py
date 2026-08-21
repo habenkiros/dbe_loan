@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 
 from loans import auth_views as staff_auth
 from loans import help_views as hub_help
+from loans import views as loan_views
 from loans.license_middleware import license_status_view
 
 
@@ -79,6 +80,12 @@ urlpatterns = [
     ),
     # Public digital apply at domain root
     path('', include('applicant_portal.urls')),
+    # Public remote OTP agreement signing (no staff login)
+    path(
+        'sign/agreement/<str:token>/',
+        loan_views.remote_agreement_sign,
+        name='remote_agreement_sign',
+    ),
     # Staff loan hub
     path('hub/', include(_staff_auth_urlpatterns)),
     # Legacy shortcuts

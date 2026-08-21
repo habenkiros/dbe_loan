@@ -40,7 +40,8 @@
     </div>
 
     <div id="staff-profile-card" class="lw-panel" style="display:none;margin:0.75rem 0;background:#f3f8f5;border:1px solid #c9dbd1;box-shadow:none;">
-      <strong style="color:#064420;">Customer record (core banking)</strong>
+      <strong style="color:#064420;">Customer record</strong>
+      <span id="sp-source-badge" class="lw-badge lw-muted" style="margin-left:0.5rem;display:none;"></span>
       <div class="lw-facts" style="margin-top:0.5rem;">
         <span class="lbl">Name</span><span id="sp-name">—</span>
         <span class="lbl">Phone</span><span id="sp-phone">—</span>
@@ -115,12 +116,12 @@
   var card = document.getElementById('staff-profile-card');
   if (!btn || !cn) return;
 
-  function setStatus(msg, ok) {
+  function setStatus(msg, ok, warn) {
     statusEl.textContent = msg || '';
-    statusEl.style.color = ok ? '#0a6b2e' : '#9b2c2c';
+    statusEl.style.color = warn ? '#9a3412' : (ok ? '#0a6b2e' : '#9b2c2c');
   }
 
-  function showProfile(p) {
+  function showProfile(p, dataSource) {
     document.getElementById('sp-name').textContent = p.name || '—';
     document.getElementById('sp-phone').textContent = p.phone_number || '—';
     document.getElementById('sp-status').textContent =
@@ -130,6 +131,15 @@
       [p.gender, p.age ? ('age ' + p.age) : '', p.date_of_birth].filter(Boolean).join(' · ') || '—';
     document.getElementById('sp-geo').textContent =
       [p.city, p.branch_code ? ('AO ' + p.branch_code) : ''].filter(Boolean).join(' · ') || '—';
+    var badge = document.getElementById('sp-source-badge');
+    if (badge && dataSource && dataSource.label) {
+      badge.style.display = 'inline-block';
+      badge.textContent = dataSource.label;
+      badge.className = 'lw-badge ' + (
+        dataSource.code === 'live' ? 'lw-ok' :
+        dataSource.code === 'fallback' ? 'lw-warn' : 'lw-muted'
+      );
+    }
     card.style.display = 'block';
   }
 
@@ -172,8 +182,8 @@
           card.style.display = 'none';
           return;
         }
-        setStatus(res.j.message || 'Customer found.', true);
-        showProfile(res.j.profile || {});
+        setStatus(res.j.message || 'Customer found.', true, (res.j.data_source || {}).code === 'fallback');
+        showProfile(res.j.profile || {}, res.j.data_source || {});
         fillForm(res.j.profile || {});
       })
       .catch(function () {

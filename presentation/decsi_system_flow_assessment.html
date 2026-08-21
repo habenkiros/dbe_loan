@@ -110,7 +110,7 @@ figure.shot{margin:8px 0 10px;border:1px solid var(--line);border-radius:8px;ove
 figure.shot img{display:block;width:100%;height:auto;max-height:118mm;object-fit:contain;background:#f7faf8;}
 figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg);border-top:1px solid var(--line);}
 .bar{height:10px;background:#e4ece7;border-radius:999px;overflow:hidden;margin:8px 0 4px;}
-.bar>i{display:block;height:100%;width:90%;background:var(--g);}
+.bar>i{display:block;height:100%;width:91%;background:var(--g);}
 .small{font-size:8.7pt;color:var(--muted);}
 .footer{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
 .print-bar{position:sticky;top:0;z-index:20;background:#064528;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:9pt;}
@@ -156,7 +156,7 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
       <div class="meta">
         <div><div class="l">Document</div><div class="v">System process flow assessment</div></div>
         <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08</div></div>
-        <div><div class="l">Date</div><div class="v">20 August 2026</div></div>
+        <div><div class="l">Date</div><div class="v">21 August 2026</div></div>
         <div><div class="l">Classification</div><div class="v">Confidential — DECSI management &amp; IT</div></div>
         <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
         <div><div class="l">Basis</div><div class="v">DECSI system process flow (12 stages)</div></div>
@@ -192,11 +192,14 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
 <div class="exec">
   <strong>Headline.</strong> The Credit Factory is aligned with DECSI’s process.
   Nine stages are fully implemented. Disbursement to core banking is implemented
-  in the product and is enabled when DECSI’s CBS connection is configured at go-live.
+  in the product (Finance sees a booking preview) and is enabled when DECSI’s
+  CBS connection is configured at go-live.
   Two items remain if the diagram is to be matched one-for-one: a dedicated
   <em>legal administration</em> queue after authorization, and a dedicated
   <em>fraud detection</em> product beyond the document, watchlist, and risk controls
   already in the system.
+  This pack was re-assessed on 21 August 2026 after remote agreement signing,
+  document-to-appraisal fill, and Finance booking preview were added.
 </div>
 
 <div class="kpi">
@@ -206,14 +209,14 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
   <div><div class="v">2</div><div class="l">Partial — process completion</div></div>
 </div>
 <div class="bar" aria-hidden="true"><i></i></div>
-<p class="small">Overall process coverage of the enhanced factory against the 12-stage flow: approximately 90%.</p>
+<p class="small">Overall process coverage of the enhanced factory against the 12-stage flow: approximately 91%.</p>
 
 <h2>2. How the assessment was done</h2>
 <ul>
   <li>Each box on DECSI’s system process flow was mapped to the corresponding Credit Factory module, screens, and controls.</li>
   <li>Status is <strong>Ready</strong> when the stage exists end-to-end in the product; <strong>Ready at go-live</strong> when the product is built and a live DECSI connection (core banking) is required to operate it in production; <strong>Partial</strong> when the intent is covered in another step, not as the standalone stage drawn on the flow.</li>
   <li>This is a product-and-process assessment for management and IT. It is not a priced proposal and it is not a branch UAT sign-off.</li>
-  <li>Quality gate: the Credit Factory automated test suite passed <strong>250 of 250</strong> tests on 20 August 2026 (including application create, appraisal lock, security headers, password policy, and GPS/offline field retry).</li>
+  <li>Quality gate: the Credit Factory automated test suite passed <strong>276 of 276</strong> tests on 21 August 2026 (including remote OTP signing, document extraction into appraisal, finance CBS preview, application create, and GPS/offline field retry).</li>
 </ul>
 
 </div>
@@ -267,13 +270,13 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
       <td class="n">1</td>
       <td><strong>Application</strong><br><span class="small">Applying for loan; getting information</span></td>
       <td><span class="st st-ok">Ready</span></td>
-      <td>Branch / credit staff capture the file. Customers can also apply through Digital Apply. Customer information and loan type are recorded at intake.</td>
+      <td>Branch / credit staff capture the file. Customers can also apply through Digital Apply. Customer information and loan type are recorded at intake. The system shows whether customer data came from live core banking or a demo lookup.</td>
     </tr>
     <tr>
       <td class="n">2</td>
       <td><strong>Documents</strong><br><span class="small">Necessary documents; approval</span></td>
       <td><span class="st st-ok">Ready</span></td>
-      <td>Checklist by loan type, upload, English and Amharic document reading, and officer verify / reject before the file proceeds.</td>
+      <td>Checklist by loan type, upload, English and Amharic document reading, and officer verify / reject before the file proceeds. Extracted document fields can fill the appraisal customer sheet.</td>
     </tr>
     <tr>
       <td class="n">3</td>
@@ -297,7 +300,7 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
       <td class="n">6</td>
       <td><strong>Loan appraisal</strong><br><span class="small">Financial, business, approval</span></td>
       <td><span class="st st-ok">Ready</span></td>
-      <td>Seven-step MSME and corporate appraisal: character, cash flow, environment &amp; social, collateral, recommendation, and optional repayment schedule.</td>
+      <td>Seven-step MSME and corporate appraisal: character, cash flow, environment &amp; social, collateral, recommendation, and optional repayment schedule. Sheet 1 shows the source of banking and document data.</td>
     </tr>
     <tr>
       <td class="n">7</td>
@@ -315,13 +318,13 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
       <td class="n">9</td>
       <td><strong>Processing workflow</strong><br><span class="small">Status tracking; integration &amp; verification</span></td>
       <td><span class="st st-ok">Ready</span></td>
-      <td>Role queues, status on every file, document verification, process policy gates, and notifications as the file moves.</td>
+      <td>Role queues, status on every file, document verification, process policy gates, notifications, and remote SMS one-time-code signing of the loan agreement when the borrower is not in branch.</td>
     </tr>
     <tr>
       <td class="n">10</td>
       <td><strong>Disbursement</strong><br><span class="small">Disbursing to core banking</span></td>
       <td><span class="st st-go">Ready at go-live</span></td>
-      <td>Post-approval → Finance → confirm → book. The product is built to disburse into DECSI’s core banking system. The live CBS link is configured at deployment.</td>
+      <td>Post-approval → Finance → confirm → book. Finance sees a core-banking booking preview and cannot approve without a customer number. The product is built to disburse into DECSI’s core banking system. The live CBS link is configured at deployment.</td>
     </tr>
     <tr>
       <td class="n">11</td>
@@ -443,7 +446,7 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
   </div>
   <div class="box gold">
     <h4>4. Walk the twelve stages (UAT)</h4>
-    <p class="small" style="margin:0;">Run a sample MSME file through the flow with Credit, Engineering, Cooperative, Finance, and IT, using this document as the checklist.</p>
+    <p class="small" style="margin:0;">A sample MSME file was walked through the running hub on 21 August 2026 (all 12 stages opened; 59 of 59 scripted checks passed). Repeat with Credit, Engineering, Cooperative, Finance, and IT on DECSI’s own environment as the go-live checklist.</p>
   </div>
 </div>
 
@@ -458,7 +461,7 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
   <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
   <div><div class="l">For</div><div class="v">DECSI management, Credit, IT, Risk</div></div>
   <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
-  <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08 · 20 August 2026</div></div>
+  <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08 · 21 August 2026</div></div>
 </div>
 <p class="small" style="margin-top:10px;">This document is a process-alignment assessment. It is not a financial proposal.</p>
 

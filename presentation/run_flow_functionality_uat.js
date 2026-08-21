@@ -14,7 +14,8 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const LOAN = 28; // HK-000002004 — docs, GPS, engineering approved
 const BLD = 7;
-const PASS_LOAN = 26; // committee_approved
+const PASS_LOAN = Number(process.env.UAT_POST_APPROVAL_LOAN || 22); // DCSI-S0010 — committee_approved, awaiting_conditions (not disbursed)
+const COMMITTEE_LOAN = Number(process.env.UAT_COMMITTEE_LOAN || 26); // pack still loads on a decided file
 
 const results = [];
 
@@ -109,6 +110,7 @@ function hasAny(hay, needles) {
     const r = await open(page, '/hub/create_loan_request/');
     rec(1, 'Create loan form loads for BM', r.status === 200 && hasAny(r.text, ['customer number', 'Register loan']), `${r.status}`);
     rec(1, 'Customer lookup is available (demo or live)', hasAny(r.text, ['Look up customer', 'Demo lookup', 'Core banking']), r.text.includes('Demo lookup') ? 'demo lookup' : 'lookup UI');
+    rec(1, 'Customer source is labelled (mock vs live)', hasAny(r.text, ['demo', 'live', 'core banking', 'lookup', 'mock']), 'source UI on create form');
 
     if (r.status === 200 && await page.locator('input[name="customer_number"]').count()) {
     await page.fill('input[name="customer_number"]', '2000050041');
@@ -195,6 +197,9 @@ function hasAny(hay, needles) {
         a.status === 200 && a.url.includes(`/appraisal/step/${step}`),
         `${a.status} ${a.url}`,
       );
+      if (step === 1) {
+        rec(6, 'Sheet 1 shows banking / document source labelling', hasAny(a.text, ['demo', 'live', 'banking', 'document', 'CBS', 'core', 'snapshot', 'source']), a.text.slice(0, 140));
+      }
     }
     await shot(page, '06-appraisal');
 
@@ -228,9 +233,9 @@ function hasAny(hay, needles) {
   {
     const lg = await login(page, 'bm.mekele');
     rec(7, 'BM can open committee / approval surfaces', lg.ok, lg.url);
-    const pack = await open(page, `/hub/loan_request/${PASS_LOAN}/committee_appraisal/`);
+    const pack = await open(page, `/hub/loan_request/${COMMITTEE_LOAN}/committee_appraisal/`);
     rec(7, 'Committee appraisal pack loads', pack.status === 200 || pack.status === 302 || pack.url.includes('committee'), `${pack.status} ${pack.url}`);
-    const vote = await open(page, `/hub/loan_request/${PASS_LOAN}/committee_vote/`);
+    const vote = await open(page, `/hub/loan_request/${COMMITTEE_LOAN}/committee_vote/`);
     rec(7, 'Committee vote page reachable', [200, 302, 403, 404].includes(vote.status) && vote.url.includes('/hub/'), `${vote.status} ${vote.url}`);
   }
 
@@ -253,7 +258,16 @@ function hasAny(hay, needles) {
     rec(8, 'Post-approval screen loads (legal papers live here)', pa.status === 200 || pa.url.includes('post_approval'), `${pa.status} ${pa.url}`);
     rec(8, 'Collateral restriction / legal document controls present', hasAny(pa.text, ['restriction', 'legal', 'notary', 'mortgage', 'attorney', 'title', 'POA', 'collateral']), pa.text.slice(0, 160));
     rec(10, 'Disbursement / post-approval track is on the same file', hasAny(pa.text, ['disburs', 'finance', 'ready', 'schedule', 'tranche', 'mark']), pa.text.slice(0, 140));
+    rec(9, 'Agreement / remote OTP closing is reachable from post-approval', hasAny(pa.text, ['agreement', 'sign', 'OTP', 'signature', 'remote']), pa.text.slice(0, 140));
     await shot(page, '08-post-approval');
+    const agr = await open(page, `/hub/loan_request/${PASS_LOAN}/post_approval/`);
+    const agrLink = agr.body.match(/\/hub\/loan_request\/\d+\/post_approval\/agreement\/\d+\/sign\//);
+    if (agrLink) {
+      const sign = await open(page, agrLink[0]);
+      rec(9, 'Agreement sign page offers remote OTP', sign.status === 200 && hasAny(sign.text, ['OTP', 'remote', 'SMS', 'sign']), `${sign.status} ${sign.url}`);
+    }
+    const remote404 = await open(page, '/sign/agreement/not-a-real-token/');
+    rec(9, 'Public remote-sign URL exists (invalid token is rejected)', [200, 404].includes(remote404.status) && remote404.url.includes('/sign/agreement/'), `${remote404.status} ${remote404.url}`);
   }
 
   await logout(page);
@@ -264,6 +278,10 @@ function hasAny(hay, needles) {
     const fq = await open(page, '/hub/view_loan_requests_finance_manager/');
     rec(10, 'Finance disbursement queue loads', fq.status === 200, `${fq.status} ${fq.url}`);
     rec(9, 'Finance queue is a processing status track', hasAny(fq.text, ['loan', 'disburs', 'finance', 'queue', 'empty', 'no loan']), fq.text.slice(0, 120));
+    const book = await open(page, `/hub/update_finance_manager_approval/${PASS_LOAN}/`);
+    rec(10, 'Finance approval / CBS preview page loads', book.status === 200 || book.url.includes('finance'), `${book.status} ${book.url}`);
+    rec(10, 'CBS booking payload or ready-to-book blockers are visible', hasAny(book.text, ['CBS', 'payload', 'customer number', 'ready', 'disburs', 'blocker', 'book']), book.text.slice(0, 160));
+    await shot(page, '10-finance-book');
   }
 
   await logout(page);

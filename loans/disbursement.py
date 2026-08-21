@@ -203,6 +203,39 @@ def can_approve_finance_disbursement(user, loan_request) -> bool:
     return user_has_finance_authority(user)
 
 
+def finance_ready_to_book(loan_request) -> Dict[str, Any]:
+    """
+    Finance-facing checklist before approving disbursement / CBS book.
+    Extends disbursement_readiness with customer number + CBS payload preview.
+    """
+    ready = disbursement_readiness(loan_request)
+    blockers = list(ready.get('blockers') or [])
+    cid = (getattr(loan_request, 'customer_number', None) or '').strip()
+    if not cid:
+        blockers.append('Customer number required for CBS booking.')
+    if loan_request.disbursement_status != loan_request.DISBURSE_READY:
+        blockers.append('Loan must be marked ready for disbursement first.')
+    payload = None
+    payload_pretty = ''
+    try:
+        import json
+        from loans.services.cbs_client import build_disbursement_payload
+        payload = build_disbursement_payload(loan_request, user=None, notes='finance preview')
+        payload_pretty = json.dumps(payload, indent=2, default=str)
+    except Exception as exc:
+        blockers.append(f'Could not build CBS payload: {exc}')
+        payload = None
+    return {
+        'ok': not blockers,
+        'blockers': blockers,
+        'disbursement': ready,
+        'customer_number': cid,
+        'cbs_payload': payload,
+        'cbs_payload_pretty': payload_pretty,
+        'finance_already_approved': bool(loan_request.finance_disbursement_approval),
+    }
+
+
 def set_finance_disbursement_approval(loan_request, user, *, approved: bool = True) -> None:
     loan_request.finance_disbursement_approval = bool(approved)
     loan_request.save(update_fields=['finance_disbursement_approval'])

@@ -172,6 +172,10 @@ def fetch_customer_outstanding(customer_number: str) -> Optional[OutstandingResu
             return result
         if not getattr(settings, 'DECSI_CUSTOMER_FALLBACK_MOCK', True):
             return None
+        mock = mock_fetch_customer_outstanding(customer_number)
+        if mock:
+            mock.provider = 'mock_fallback'
+        return mock
     return mock_fetch_customer_outstanding(customer_number)
 
 
@@ -269,6 +273,7 @@ def book_disbursement(payload: Dict[str, Any]) -> BookDisbursementResult:
             return result
         # Fallback mock only when allowed (demo)
         mock = mock_book_disbursement(payload)
+        mock.provider = 'mock_fallback'
         mock.message = f'Live CBS failed ({result.message}); used mock fallback.'
         mock.raw['live_error'] = result.message
         return mock

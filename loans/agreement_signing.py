@@ -376,6 +376,9 @@ def record_signature(
 
     agreement.signatures.filter(role=role, is_valid=True).update(is_valid=False)
 
+    import hashlib
+
+    image_sha = hashlib.sha256(blob).hexdigest()
     sig = LoanAgreementSignature(
         agreement=agreement,
         role=role,
@@ -384,6 +387,8 @@ def record_signature(
         signer_id_number=id_no[:80],
         declaration_accepted=True,
         signer_user=signer_user,
+        signature_method=LoanAgreementSignature.METHOD_DRAWN_HASH,
+        signature_image_sha256=image_sha,
         content_hash_at_sign=agreement.content_hash,
         ip_address=_client_ip(request),
         user_agent=(request.META.get('HTTP_USER_AGENT') or '')[:512],

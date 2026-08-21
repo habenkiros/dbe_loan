@@ -1,0 +1,52 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Notices{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+    <div>
+      <h1 class="ap-section-title" style="margin:0;">Notices</h1>
+      <p class="ap-help" style="margin:0.35rem 0 0;">
+        Payment, submit, and status updates for your Digital Apply account.
+        {% if unread_count %}<strong>{{ unread_count }} unread</strong>.{% endif %}
+      </p>
+    </div>
+    {% if unread_count %}
+    <form method="post" action="{% url 'applicant_portal:mark_notices_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="ap-btn ap-btn-ghost" style="padding:0.4rem 0.75rem;min-height:2.4rem;font-size:0.85rem;">Mark all read</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if notices %}
+  <ul style="margin:1rem 0 0;padding:0;list-style:none;">
+    {% for n in notices %}
+    <li style="margin-bottom:0.65rem;padding:0.85rem 0.95rem;background:var(--soft);border:1px solid var(--line);border-radius:10px;{% if not n.is_read %}border-color:var(--accent);{% endif %}">
+      <div style="display:flex;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;align-items:baseline;">
+        <strong>{{ n.title }}</strong>
+        <span class="ap-app-meta">{{ n.created_at|date:"M j, Y H:i" }}{% if not n.is_read %} · Unread{% endif %}</span>
+      </div>
+      <div class="ap-app-meta" style="margin-top:0.35rem;">{{ n.message }}</div>
+      {% if n.application_id %}
+      <div style="margin-top:0.55rem;">
+        <a class="ap-btn ap-btn-ghost" style="padding:0.35rem 0.7rem;min-height:2.2rem;font-size:0.82rem;"
+           href="{% url 'applicant_portal:apply_status' n.application.public_id %}">View application</a>
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="ap-empty" style="margin-top:1rem;">
+    <strong>No notices yet</strong>
+    <p class="ap-help" style="margin:0.35rem auto 0;max-width:22rem;">
+      You will see updates here when you submit, pay, or when your file moves in the branch queue.
+    </p>
+  </div>
+  {% endif %}
+
+  <p style="margin:1.25rem 0 0;">
+    <a href="{% url 'applicant_portal:home' %}">← My applications</a>
+  </p>
+</div>
+{% endblock %}

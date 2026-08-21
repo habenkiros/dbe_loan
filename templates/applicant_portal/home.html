@@ -12,27 +12,6 @@
   </div>
 </div>
 
-{% if notices %}
-<div class="ap-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-    <h2 class="ap-section-title" style="font-size:1.15rem;margin:0;">Notices</h2>
-    <form method="post" action="{% url 'applicant_portal:mark_notices_read' %}">
-      {% csrf_token %}
-      <button type="submit" class="ap-btn ap-btn-ghost" style="padding:0.4rem 0.75rem;min-height:2.4rem;font-size:0.85rem;">Mark all read</button>
-    </form>
-  </div>
-  <ul style="margin:0.9rem 0 0;padding:0;list-style:none;">
-    {% for n in notices %}
-    <li style="margin-bottom:0.65rem;padding:0.75rem 0.85rem;background:var(--soft);border:1px solid var(--line);border-radius:10px;">
-      <strong>{{ n.title }}</strong>
-      <div class="ap-app-meta" style="margin-top:0.25rem;">{{ n.message }} · {{ n.created_at|date:"M j, H:i" }}</div>
-    </li>
-    {% empty %}
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
-
 <div class="ap-card">
   <h2 class="ap-section-title" style="font-size:1.15rem;margin:0 0 0.25rem;">Your applications</h2>
   <p class="ap-help" style="margin-bottom:0.85rem;">Tap an item to see steps completed, queue ID, and what happens next.</p>

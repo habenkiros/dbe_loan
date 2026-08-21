@@ -151,7 +151,7 @@ class OrgRolesRestructureTests(TestCase):
         resp = client.post(reverse('create_loan_request'), {
             'applicant_name': 'HO Client',
             'phone_number': '0911555666',
-            'customer_number': 'C-1',
+            'customer_number': '2000050041',
             'category': self.category.id,
             'collateral': self.collateral.id,
             'amount_requested': '2500000',

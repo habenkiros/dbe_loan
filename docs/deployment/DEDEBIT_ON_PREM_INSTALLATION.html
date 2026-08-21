@@ -5,15 +5,27 @@ pre{padding:12px;overflow:auto} table{border-collapse:collapse;width:100%} th,td
 th{background:#e7f2ec} .meta{background:#0b5c3b;color:#fff;padding:18px 20px;border-radius:12px;margin-bottom:24px}
 .meta h1{color:#fff;margin:0 0 6px;font-size:1.4rem}.meta p{margin:0;opacity:.92}</style></head><body>
 <div class="meta"><h1>Dedebit (DECSI) — On-Premises Installation</h1>
-<p>AI-powered Credit Intelligence · Seqela Technologies · 7-day evaluation license in this pack</p></div>
+<p>GitHub + one-command install · Seqela Technologies</p></div>
 <h1>Dedebit (DECSI) — On-Premises Installation Guide</h1>
 <p><strong>Audience:</strong> Dedebit Credit and Savings Institution (DECSI) technical / infrastructure team  </p>
 <p><strong>Product:</strong> AI-powered Credit Intelligence (Loan Hub + Digital Apply + collateral + market)  </p>
 <p><strong>Vendor:</strong> Seqela Technologies  </p>
 <p><strong>Deploy model:</strong> On-premises (your data centre / private cloud)  </p>
-<p><strong>Licensing:</strong> Signed <strong>license key</strong> with an <strong>expiry date</strong> (renewed by Seqela)</p>
+<p><strong>Licensing:</strong> Signed <strong>license key</strong> with an <strong>expiry date</strong> (renewed by Seqela)  </p>
+<p><strong>GitHub:</strong> https://github.com/habenkiros/decsi_loan  </p>
 <p>This pack is what IT needs to install, license, smoke-test, and hand over to operations.</p>
 <p>Related end-user manuals (admin / staff / customers) live under <code>docs/user_manual/</code> and inside the app at <code>/hub/help/</code>.</p>
+<hr>
+<h2>Quick start (simplest path)</h2>
+<p>On a Linux server with Docker 24+, Compose v2, and Git:</p>
+<pre>
+git clone https://github.com/habenkiros/decsi_loan.git
+cd decsi_loan
+./scripts/install_decsi.sh
+</pre>
+<p>That one script creates <code>.env</code>, applies the evaluation license, starts Docker, migrates the database, and can create a superuser.</p>
+<p>Short handout: [<code>INSTALL_DECSI.md</code>](../../INSTALL_DECSI.md) at the repo root.</p>
+<p>Continue below only if you need manual steps, HTTPS tablets, backups, or hardening.</p>
 <hr>
 <h2>1. What you receive from Seqela</h2>
 <table><tr>

@@ -1,0 +1,713 @@
+{
+  "ran_at": "2026-08-21T05:10:48.266Z",
+  "base": "http://127.0.0.1:8000",
+  "created_loan": {
+    "id": "29",
+    "queue": "HK-000002005"
+  },
+  "summary": {
+    "checks": 52,
+    "passed": 52,
+    "failed": 0
+  },
+  "by_stage": {
+    "1": {
+      "pass": 7,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 1,
+          "check": "Digital Apply landing loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/"
+        },
+        {
+          "stage": 1,
+          "check": "Applicant portal login is separate from hub",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/login/"
+        },
+        {
+          "stage": 1,
+          "check": "Applicant register page loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/register/"
+        },
+        {
+          "stage": 1,
+          "check": "BM sees create-loan entry after login",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 1,
+          "check": "Create loan form loads for BM",
+          "result": "PASS",
+          "evidence": "200"
+        },
+        {
+          "stage": 1,
+          "check": "Customer lookup is available (demo or live)",
+          "result": "PASS",
+          "evidence": "demo lookup"
+        },
+        {
+          "stage": 1,
+          "check": "BM can submit a new loan request",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/loan_request/29/documents/ queue=HK-000002005"
+        }
+      ]
+    },
+    "2": {
+      "pass": 2,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 2,
+          "check": "Documents page loads for existing file",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/documents/"
+        },
+        {
+          "stage": 2,
+          "check": "Upload / checklist / authenticate UI present",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock queue\nMy votes\nPost"
+        }
+      ]
+    },
+    "3": {
+      "pass": 2,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 3,
+          "check": "Queue number HK-… is issued on create",
+          "result": "PASS",
+          "evidence": "HK-000002005"
+        },
+        {
+          "stage": 3,
+          "check": "Loan list shows queue IDs",
+          "result": "PASS",
+          "evidence": "200 sample=HK-000002005"
+        }
+      ]
+    },
+    "4": {
+      "pass": 3,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 4,
+          "check": "GPS field-visit step loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/collateral/building/7/field-visit/1/"
+        },
+        {
+          "stage": 4,
+          "check": "Field visit captures location (GPS / map / site)",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/collateral/building/7/field-visit/1/"
+        },
+        {
+          "stage": 4,
+          "check": "Land collateral GPS path reachable",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/collateral/loan/28/land/"
+        }
+      ]
+    },
+    "5": {
+      "pass": 4,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 5,
+          "check": "Collateral estimation summary loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/collateral/loan/28/summary/"
+        },
+        {
+          "stage": 5,
+          "check": "Estimated amount / total visible",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Sara Mebrahtu\nLOAN OFFICER\nNotifications\nHelp\nLogout\nHome\nLoan requests\nCollateral\nMy vote"
+        },
+        {
+          "stage": 5,
+          "check": "Engineer can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 5,
+          "check": "Engineering QA queue loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/collateral/engineering-qa/"
+        }
+      ]
+    },
+    "6": {
+      "pass": 8,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 6,
+          "check": "Loan officer can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 1 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/1/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 2 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/2/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 3 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/3/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 4 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/4/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 5 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/5/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 6 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/6/"
+        },
+        {
+          "stage": 6,
+          "check": "Appraisal step 7 loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/7/"
+        }
+      ]
+    },
+    "7": {
+      "pass": 7,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 7,
+          "check": "Cooperative manager can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/view_loan_requests_operation_manager/"
+        },
+        {
+          "stage": 7,
+          "check": "Branch-level intake gate is on screen",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Mulugeta Assefa\nBRANCH COOPERATIVE MANAGER\nNotifications\nHelp\nLogout\nH"
+        },
+        {
+          "stage": 7,
+          "check": "BM can open committee / approval surfaces",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 7,
+          "check": "Committee appraisal pack loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request/26/committee_appraisal/"
+        },
+        {
+          "stage": 7,
+          "check": "Committee vote page reachable",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/loan_request_detail_manager/26/"
+        },
+        {
+          "stage": 7,
+          "check": "Credit head can sign in (HO committee config)",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 7,
+          "check": "Approval committee levels admin loads",
+          "result": "PASS",
+          "evidence": "200"
+        }
+      ]
+    },
+    "8": {
+      "pass": 2,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 8,
+          "check": "Post-approval screen loads (legal papers live here)",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests/"
+        },
+        {
+          "stage": 8,
+          "check": "Collateral restriction / legal document controls present",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock queue\nMy votes\nPost"
+        }
+      ]
+    },
+    "9": {
+      "pass": 3,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 9,
+          "check": "Officer loan queue / list loads",
+          "result": "PASS",
+          "evidence": "200"
+        },
+        {
+          "stage": 9,
+          "check": "Cooperative intake queue loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests_operation_manager/"
+        },
+        {
+          "stage": 9,
+          "check": "Finance queue is a processing status track",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDi"
+        }
+      ]
+    },
+    "10": {
+      "pass": 3,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 10,
+          "check": "Disbursement / post-approval track is on the same file",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock"
+        },
+        {
+          "stage": 10,
+          "check": "Finance manager can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/view_loan_requests_finance_manager/"
+        },
+        {
+          "stage": 10,
+          "check": "Finance disbursement queue loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests_finance_manager/"
+        }
+      ]
+    },
+    "11": {
+      "pass": 3,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 11,
+          "check": "Classic reports page loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/view_report/"
+        },
+        {
+          "stage": 11,
+          "check": "Report UI offers views / filters",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, admin\nSUPER ADMINISTRATOR\nNotifications\nHelp\nLogout\nHome\nCheckup\n▾\nCoo"
+        },
+        {
+          "stage": 11,
+          "check": "Credit Intelligence dashboard loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/credit-intelligence/"
+        }
+      ]
+    },
+    "12": {
+      "pass": 8,
+      "fail": 0,
+      "checks": [
+        {
+          "stage": 12,
+          "check": "Branch manager can sign in to /hub/",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 12,
+          "check": "Superadmin can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/"
+        },
+        {
+          "stage": 12,
+          "check": "Role-based user admin loads",
+          "result": "PASS",
+          "evidence": "200"
+        },
+        {
+          "stage": 12,
+          "check": "MFA setup page loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/mfa/setup/"
+        },
+        {
+          "stage": 12,
+          "check": "Security audit log loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/security/audit/"
+        },
+        {
+          "stage": 12,
+          "check": "Authorization levels configurable (committees already checked)",
+          "result": "PASS",
+          "evidence": "see credit.head manage_approval_committees"
+        },
+        {
+          "stage": 12,
+          "check": "Risk desk reachable (origination fraud controls, not AML product)",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/risk/"
+        },
+        {
+          "stage": 12,
+          "check": "Unauthenticated staff URL redirects to login",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/login/?next=/hub/create_loan_request/"
+        }
+      ]
+    }
+  },
+  "results": [
+    {
+      "stage": 1,
+      "check": "Digital Apply landing loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/"
+    },
+    {
+      "stage": 1,
+      "check": "Applicant portal login is separate from hub",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/login/"
+    },
+    {
+      "stage": 1,
+      "check": "Applicant register page loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/register/"
+    },
+    {
+      "stage": 12,
+      "check": "Branch manager can sign in to /hub/",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 1,
+      "check": "BM sees create-loan entry after login",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 1,
+      "check": "Create loan form loads for BM",
+      "result": "PASS",
+      "evidence": "200"
+    },
+    {
+      "stage": 1,
+      "check": "Customer lookup is available (demo or live)",
+      "result": "PASS",
+      "evidence": "demo lookup"
+    },
+    {
+      "stage": 1,
+      "check": "BM can submit a new loan request",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/loan_request/29/documents/ queue=HK-000002005"
+    },
+    {
+      "stage": 3,
+      "check": "Queue number HK-… is issued on create",
+      "result": "PASS",
+      "evidence": "HK-000002005"
+    },
+    {
+      "stage": 2,
+      "check": "Documents page loads for existing file",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/documents/"
+    },
+    {
+      "stage": 2,
+      "check": "Upload / checklist / authenticate UI present",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock queue\nMy votes\nPost"
+    },
+    {
+      "stage": 3,
+      "check": "Loan list shows queue IDs",
+      "result": "PASS",
+      "evidence": "200 sample=HK-000002005"
+    },
+    {
+      "stage": 6,
+      "check": "Loan officer can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 4,
+      "check": "GPS field-visit step loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/collateral/building/7/field-visit/1/"
+    },
+    {
+      "stage": 4,
+      "check": "Field visit captures location (GPS / map / site)",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/collateral/building/7/field-visit/1/"
+    },
+    {
+      "stage": 4,
+      "check": "Land collateral GPS path reachable",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/collateral/loan/28/land/"
+    },
+    {
+      "stage": 5,
+      "check": "Collateral estimation summary loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/collateral/loan/28/summary/"
+    },
+    {
+      "stage": 5,
+      "check": "Estimated amount / total visible",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Sara Mebrahtu\nLOAN OFFICER\nNotifications\nHelp\nLogout\nHome\nLoan requests\nCollateral\nMy vote"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 1 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/1/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 2 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/2/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 3 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/3/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 4 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/4/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 5 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/5/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 6 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/6/"
+    },
+    {
+      "stage": 6,
+      "check": "Appraisal step 7 loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/28/appraisal/step/7/"
+    },
+    {
+      "stage": 9,
+      "check": "Officer loan queue / list loads",
+      "result": "PASS",
+      "evidence": "200"
+    },
+    {
+      "stage": 5,
+      "check": "Engineer can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 5,
+      "check": "Engineering QA queue loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/collateral/engineering-qa/"
+    },
+    {
+      "stage": 7,
+      "check": "Cooperative manager can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/view_loan_requests_operation_manager/"
+    },
+    {
+      "stage": 9,
+      "check": "Cooperative intake queue loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests_operation_manager/"
+    },
+    {
+      "stage": 7,
+      "check": "Branch-level intake gate is on screen",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Mulugeta Assefa\nBRANCH COOPERATIVE MANAGER\nNotifications\nHelp\nLogout\nH"
+    },
+    {
+      "stage": 7,
+      "check": "BM can open committee / approval surfaces",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 7,
+      "check": "Committee appraisal pack loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request/26/committee_appraisal/"
+    },
+    {
+      "stage": 7,
+      "check": "Committee vote page reachable",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/loan_request_detail_manager/26/"
+    },
+    {
+      "stage": 7,
+      "check": "Credit head can sign in (HO committee config)",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 7,
+      "check": "Approval committee levels admin loads",
+      "result": "PASS",
+      "evidence": "200"
+    },
+    {
+      "stage": 8,
+      "check": "Post-approval screen loads (legal papers live here)",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests/"
+    },
+    {
+      "stage": 8,
+      "check": "Collateral restriction / legal document controls present",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock queue\nMy votes\nPost"
+    },
+    {
+      "stage": 10,
+      "check": "Disbursement / post-approval track is on the same file",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Alem Hailu\nBRANCH MANAGER\nNotifications\nHelp\nLogout\nHome\nLoan requests\n▾\nCollateral\nUnlock"
+    },
+    {
+      "stage": 10,
+      "check": "Finance manager can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/view_loan_requests_finance_manager/"
+    },
+    {
+      "stage": 10,
+      "check": "Finance disbursement queue loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/view_loan_requests_finance_manager/"
+    },
+    {
+      "stage": 9,
+      "check": "Finance queue is a processing status track",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Rahel Gebremichael\nFINANCE MANAGER\nNotifications\n2\nHelp\nLogout\nHome\nDi"
+    },
+    {
+      "stage": 12,
+      "check": "Superadmin can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/"
+    },
+    {
+      "stage": 11,
+      "check": "Classic reports page loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/view_report/"
+    },
+    {
+      "stage": 11,
+      "check": "Report UI offers views / filters",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, admin\nSUPER ADMINISTRATOR\nNotifications\nHelp\nLogout\nHome\nCheckup\n▾\nCoo"
+    },
+    {
+      "stage": 11,
+      "check": "Credit Intelligence dashboard loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/credit-intelligence/"
+    },
+    {
+      "stage": 12,
+      "check": "Role-based user admin loads",
+      "result": "PASS",
+      "evidence": "200"
+    },
+    {
+      "stage": 12,
+      "check": "MFA setup page loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/mfa/setup/"
+    },
+    {
+      "stage": 12,
+      "check": "Security audit log loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/security/audit/"
+    },
+    {
+      "stage": 12,
+      "check": "Authorization levels configurable (committees already checked)",
+      "result": "PASS",
+      "evidence": "see credit.head manage_approval_committees"
+    },
+    {
+      "stage": 12,
+      "check": "Risk desk reachable (origination fraud controls, not AML product)",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/risk/"
+    },
+    {
+      "stage": 12,
+      "check": "Unauthenticated staff URL redirects to login",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/login/?next=/hub/create_loan_request/"
+    }
+  ]
+}

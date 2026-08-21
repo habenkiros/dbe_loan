@@ -47,10 +47,23 @@
   </p>
 
   <div class="pa-strip">
-    <div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.75rem 1.25rem; align-items:center; justify-content:space-between;">
+      <div>
       <span class="pa-badge {% if loan_request.disbursement_status == 'disbursed' or loan_request.disbursement_status == 'ready_for_disbursement' %}pa-ok{% endif %}">
         {{ loan_request.get_disbursement_status_display|default:"Not started" }}
       </span>
+      {% if loan_request.cbs_booking_status %}
+        {% if loan_request.cbs_booking_status == 'mock' %}
+        <span class="pa-badge pa-muted">CBS: mock booked</span>
+        {% elif loan_request.cbs_booking_status == 'booked' %}
+        <span class="pa-badge pa-ok">CBS: booked</span>
+        {% elif loan_request.cbs_booking_status == 'failed' %}
+        <span class="pa-badge pa-bad">CBS: failed</span>
+        {% else %}
+        <span class="pa-badge pa-muted">CBS: {{ loan_request.cbs_booking_status }}</span>
+        {% endif %}
+        {% if loan_request.cbs_booking_ref %}<small> · {{ loan_request.cbs_booking_ref }}</small>{% endif %}
+      {% endif %}
       {% if loan_request.committee_decided_at %}
       <small> · Committee approved {{ loan_request.committee_decided_at|date:"SHORT_DATETIME_FORMAT" }}</small>
       {% endif %}
@@ -59,6 +72,11 @@
       {% elif loan_request.disbursement_status != 'disbursed' %}
       <br><small style="color:#155724;">Ready for next step</small>
       {% endif %}
+      </div>
+      <div class="list-actions">
+        {% url 'loan_audit_pack_zip' loan_request.id as audit_url %}
+        {% include "includes/list_action.html" with href=audit_url icon="download" label="Download audit pack (ZIP)" tone="gray" only %}
+      </div>
     </div>
   </div>
 

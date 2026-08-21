@@ -17,6 +17,7 @@ urlpatterns = [
     path('password/reset/', views.password_reset_confirm, name='password_reset_confirm'),
     path('account/password/', views.change_password, name='change_password'),
     path('account/notices/read/', views.mark_notices_read, name='mark_notices_read'),
+    path('account/notices/', views.notices, name='notices'),
     path('home/', views.home, name='home'),
     path('apply/new/', views.apply_start, name='apply_start'),
     path('apply/<uuid:public_id>/', views.apply_status, name='apply_status'),

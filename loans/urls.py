@@ -190,6 +190,11 @@ urlpatterns = [
         name='post_approval_detail',
     ),
     path(
+        'loan_request/<int:loan_request_id>/audit_pack.zip',
+        views.loan_audit_pack_zip,
+        name='loan_audit_pack_zip',
+    ),
+    path(
         'loan_request/<int:loan_request_id>/post_approval/condition/<int:condition_id>/',
         views.post_approval_condition_toggle,
         name='post_approval_condition_toggle',

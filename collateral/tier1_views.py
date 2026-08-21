@@ -14,6 +14,7 @@ from .views import (
     _can_request_collateral_unlock,
     _can_review_collateral_unlock,
     _collateral_eligible_loans,
+    _require_loan_collateral_access,
 )
 
 
@@ -53,7 +54,10 @@ def collateral_policy_config(request):
 @login_required
 @user_passes_test(_can_access_collateral)
 def collateral_evidence_pack(request, loan_request_id):
-    loan_request = get_object_or_404(_collateral_eligible_loans(request.user), pk=loan_request_id)
+    from loans.models import LoanRequest
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    _require_loan_collateral_access(request.user, loan_request)
     pack = build_collateral_evidence_pack(loan_request)
     return render(request, 'collateral/collateral_evidence_pack.html', pack)
 

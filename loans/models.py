@@ -532,6 +532,7 @@ class SecurityAuditLog(models.Model):
     EVT_PASSWORD_CHANGED = 'password_changed'
     EVT_AUDIT_EXPORTED = 'audit_exported'
     EVT_SESSION_TIMEOUT = 'session_timeout'
+    EVT_LOAN_AUDIT_PACK = 'loan_audit_pack'
     EVT_CHOICES = [
         (EVT_LOGIN_SUCCESS, 'Login success'),
         (EVT_LOGIN_FAILED, 'Login failed'),
@@ -550,6 +551,7 @@ class SecurityAuditLog(models.Model):
         (EVT_PASSWORD_CHANGED, 'Password changed'),
         (EVT_AUDIT_EXPORTED, 'Security audit exported'),
         (EVT_SESSION_TIMEOUT, 'Session idle timeout'),
+        (EVT_LOAN_AUDIT_PACK, 'Loan audit pack exported'),
     ]
 
     event_type = models.CharField(max_length=32, choices=EVT_CHOICES, db_index=True)
@@ -2895,6 +2897,13 @@ class LoanAgreement(models.Model):
 class LoanAgreementSignature(models.Model):
     """One digital (drawn) signature on an agreement, with audit metadata."""
 
+    METHOD_DRAWN_HASH = 'drawn_hash'
+    METHOD_PKI_QUALIFIED = 'pki_qualified'
+    METHOD_CHOICES = [
+        (METHOD_DRAWN_HASH, 'Drawn mark + content hash (branch e-sign)'),
+        (METHOD_PKI_QUALIFIED, 'PKI / qualified e-sign (reserved)'),
+    ]
+
     ROLE_BORROWER = 'borrower'
     ROLE_GUARANTOR = 'guarantor'
     ROLE_OFFICER = 'officer'
@@ -2939,6 +2948,30 @@ class LoanAgreementSignature(models.Model):
         upload_to='agreement_signatures/%Y/%m/',
         help_text='PNG captured from signature pad.',
     )
+    signature_method = models.CharField(
+        max_length=24,
+        choices=METHOD_CHOICES,
+        default=METHOD_DRAWN_HASH,
+        db_index=True,
+        help_text=(
+            'drawn_hash = pad image + SHA-256 content binding (current). '
+            'pki_qualified = reserved for future CA/TSP qualified e-sign.'
+        ),
+    )
+    signature_image_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='SHA-256 of the signature image bytes at capture time.',
+    )
+    pki_certificate_serial = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text='Reserved: signer certificate serial when PKI qualified e-sign is enabled.',
+    )
+    pki_timestamp_token = models.TextField(
+        blank=True,
+        help_text='Reserved: RFC 3161 / TSP timestamp token for qualified e-sign.',
+    )
     content_hash_at_sign = models.CharField(
         max_length=64,
         help_text='Must match agreement.content_hash at time of signing.',
@@ -2963,6 +2996,57 @@ class LoanAgreementSignature(models.Model):
 
     def __str__(self):
         return f'{self.get_role_display()} — {self.signer_name} @ {self.signed_at}'
+
+
+class CbsBookingAttempt(models.Model):
+    """Append-only log of CBS / Temenos disbursement booking attempts (mock or live)."""
+
+    STATUS_MOCK = 'mock'
+    STATUS_BOOKED = 'booked'
+    STATUS_FAILED = 'failed'
+    STATUS_SKIPPED = 'skipped'
+    STATUS_CHOICES = [
+        (STATUS_MOCK, 'Mock booked'),
+        (STATUS_BOOKED, 'Booked in CBS'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_SKIPPED, 'Skipped'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='cbs_booking_attempts',
+    )
+    attempted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    attempted_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cbs_booking_attempts',
+    )
+    provider = models.CharField(max_length=40, blank=True, default='')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, db_index=True)
+    booking_ref = models.CharField(max_length=120, blank=True, default='')
+    loan_account = models.CharField(max_length=120, blank=True, default='')
+    message = models.TextField(blank=True, default='')
+    idempotency_key = models.CharField(
+        max_length=80,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Typically loan_request_id — used to detect duplicate booking attempts.',
+    )
+    request_payload = models.JSONField(blank=True, default=dict)
+    response_raw = models.JSONField(blank=True, default=dict)
+
+    class Meta:
+        ordering = ['-attempted_at']
+        verbose_name = 'CBS booking attempt'
+        verbose_name_plural = 'CBS booking attempts'
+
+    def __str__(self):
+        return f'{self.loan_request_id} · {self.status} · {self.booking_ref or "—"}'
 
 
 class StaffDelegation(models.Model):

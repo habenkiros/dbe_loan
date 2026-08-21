@@ -121,11 +121,21 @@ docker compose exec web python manage.py check_license
 
 ## 4. Installation (Docker Compose — recommended)
 
-### 4.1 Obtain the application
+### 4.0 One-command install (DECSI / GitHub)
+
+```bash
+git clone https://github.com/habenkiros/decsi_loan.git
+cd decsi_loan
+./scripts/install_decsi.sh
+```
+
+See also root [`INSTALL_DECSI.md`](../../INSTALL_DECSI.md) and [`docs/deployment/DEDEBIT_ON_PREM_INSTALLATION.md`](../deployment/DEDEBIT_ON_PREM_INSTALLATION.md).
+
+### 4.1 Obtain the application (manual)
 
 ```bash
 cd /opt   # or your preferred path
-# Example: git clone <DECSI-internal-repo-url> decsi_loan
+# Example: git clone https://github.com/habenkiros/decsi_loan.git decsi_loan
 cd decsi_loan
 ```
 

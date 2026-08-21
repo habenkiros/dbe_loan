@@ -411,6 +411,28 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
                 'or configure DECSI_BASE_URL / DECSI_LEDGER_ADAPTER=cbs.'
             ]
         result = adapter.book_disbursement(loan_request, user, notes=notes)
+        try:
+            from loans.models import CbsBookingAttempt
+            from loans.services.cbs_client import build_disbursement_payload
+            payload = build_disbursement_payload(loan_request, user, notes=notes)
+            CbsBookingAttempt.objects.create(
+                loan_request=loan_request,
+                attempted_by=user if getattr(user, 'is_authenticated', False) else None,
+                provider=getattr(result, 'provider', '') or '',
+                status=(
+                    CbsBookingAttempt.STATUS_MOCK if result.status == 'mock'
+                    else CbsBookingAttempt.STATUS_BOOKED if result.ok
+                    else CbsBookingAttempt.STATUS_FAILED
+                ),
+                booking_ref=result.booking_ref or '',
+                loan_account=result.loan_account or '',
+                message=result.message or '',
+                idempotency_key=str(loan_request.loan_request_id or loan_request.pk),
+                request_payload=payload if isinstance(payload, dict) else {},
+                response_raw=getattr(result, 'raw', None) or {},
+            )
+        except Exception:
+            pass
         if not result.ok:
             loan_request.cbs_booking_status = loan_request.CBS_BOOK_FAILED
             loan_request.save(update_fields=['cbs_booking_status'])

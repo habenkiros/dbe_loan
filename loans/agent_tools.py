@@ -205,6 +205,26 @@ TOOL_SPECS: List[Dict[str, Any]] = [
     {
         'type': 'function',
         'function': {
+            'name': 'file_blockers',
+            'description': (
+                'Diagnose what is blocking a loan file right now: missing/unverified docs, incomplete appraisal, '
+                'collateral field work, committee wait, or post-approval/disbursement gaps. '
+                'Also returns a draft missing-document request message (does not send it) and agreement guidance '
+                '(does not generate or sign agreements). Use when the user asks "what\'s blocking this file?".'
+            ),
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'loan_code': {'type': 'string'},
+                    'loan_id': {'type': 'integer'},
+                },
+                'additionalProperties': False,
+            },
+        },
+    },
+    {
+        'type': 'function',
+        'function': {
             'name': 'register_collateral',
             'description': (
                 'Register a collateral SHELL for a loan (building, land, or other/vehicle). '
@@ -576,6 +596,24 @@ def _tool_document_checklist(user, args: Dict[str, Any], conversation) -> Dict[s
     }
 
 
+def _tool_file_blockers(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
+    loan, err = resolve_loan_for_agent(
+        user,
+        loan_code=args.get('loan_code') or '',
+        loan_pk=args.get('loan_id'),
+        conversation=conversation,
+    )
+    if err:
+        return {'ok': False, 'error': err}
+    from loans.file_blockers import build_file_blockers
+
+    out = build_file_blockers(loan)
+    out['ok'] = True
+    if conversation:
+        conversation.last_loan_request_id = loan.pk
+    return out
+
+
 def _tool_attach_demo_documents(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
     return {
         'ok': False,
@@ -899,6 +937,8 @@ def dispatch_tool(user, name: str, arguments: Dict[str, Any], conversation=None)
         return _tool_bootstrap_loan(user, args, conversation)
     if name == 'document_checklist':
         return _tool_document_checklist(user, args, conversation)
+    if name == 'file_blockers':
+        return _tool_file_blockers(user, args, conversation)
     if name == 'attach_demo_documents':
         return _tool_attach_demo_documents(user, args, conversation)
     if name == 'register_collateral':

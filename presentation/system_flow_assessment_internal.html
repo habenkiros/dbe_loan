@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Internal canvas — System flow assessment (downloadable PDF)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--ok:#065f36;--warn:#9a6700;--info:#185fa5;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela internal  ·  Not for DECSI  ·  System flow assessment canvas";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.5;font-size:10pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:14mm 12mm;box-shadow:0 4px 24px rgba(6,69,40,.08);}
+.screen.cover{padding:0;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:10mm 12mm 8mm;box-shadow:none;max-width:none;}
+  .screen.cover{padding:0;}
+  .no-print{display:none!important;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;}
+  table,tr,.box,.kpi,.exec,.callout,.hbar-row{break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+}
+h2{font-family:Fraunces,Georgia,serif;font-size:14pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11pt;color:var(--g);margin:12px 0 6px;}
+p,li{margin:0 0 6px;}
+ul,ol{margin:0 0 9px;padding-left:1.2em;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.callout.ok{background:#f0faf4;border-color:#a8d4b8;}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 6px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:15pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7.5pt;color:var(--muted);margin-top:3px;line-height:1.3;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;margin:0 0 8px;}
+.box h4{margin:0 0 4px;font-size:10.2pt;color:var(--gd);}
+.box.green{border-top:3px solid var(--g);}
+.box.gold{border-top:3px solid var(--gold);}
+.box.warn{border-top:3px solid var(--warn);}
+.box.info{border-top:3px solid var(--info);}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:8pt;}
+th,td{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7.2pt;text-transform:uppercase;letter-spacing:.04em;}
+.n{font-weight:700;color:var(--gd);text-align:center;}
+.st{display:inline-block;font-size:6.8pt;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:999px;white-space:nowrap;}
+.st-ok{color:var(--ok);border:1px solid #a8d4b8;background:#f0faf4;}
+.st-go{color:var(--info);border:1px solid #b7d3ea;background:#f3f8fc;}
+.st-part{color:var(--warn);border:1px solid #e8d48a;background:#fffdf5;}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6pt;}
+.small{font-size:8.4pt;color:var(--muted);}
+.cover{min-height:262mm;display:flex;flex-direction:column;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:14mm 16mm 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:24pt;line-height:1.12;margin:0 0 10px;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:165mm;line-height:1.5;}
+.cover-body{flex:1;padding:10mm 16mm 14mm;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;margin-top:10px;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.pillars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
+.pillar{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);}
+.pillar strong{display:block;color:var(--gd);font-size:9.5pt;margin-bottom:2px;}
+.pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
+.usage{height:12px;border-radius:999px;overflow:hidden;display:flex;background:#e4ece7;margin:6px 0 4px;}
+.usage i{display:block;height:100%;}
+.usage .a{width:70.8%;background:#0b6b3a;}
+.usage .b{width:6.8%;background:#185fa5;}
+.usage .c{width:12.4%;background:#c4a035;}
+.hbar-row{display:grid;grid-template-columns:42mm 1fr 14mm;gap:6px;align-items:center;margin:3px 0;}
+.hbar-row .lbl{font-size:7.6pt;color:var(--gd);}
+.hbar-row .track{height:8px;background:#e4ece7;border-radius:999px;overflow:hidden;}
+.hbar-row .track i{display:block;height:100%;background:var(--g);}
+.hbar-row .track i.cfg{background:var(--info);}
+.hbar-row .track i.part{background:var(--gold);}
+.hbar-row .pct{font-size:8pt;font-weight:700;color:var(--gd);text-align:right;}
+.mix{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;}
+.mix>div{border:1px solid var(--line);border-radius:8px;padding:10px 8px;text-align:center;}
+.mix .v{font-family:Fraunces,Georgia,serif;font-size:18pt;font-weight:700;}
+.print-bar{position:sticky;top:0;z-index:20;background:#064528;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:9pt;flex-wrap:wrap;}
+.print-bar a,.print-bar button{background:#c4a035;color:#064528;border:0;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;text-decoration:none;}
+.footer{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+@media print{.cover{min-height:0;max-height:269mm;overflow:hidden;page-break-inside:avoid;}}
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <span>Internal canvas export — Seqela only. Not the DECSI client pack.</span>
+  <span>
+    <a href="System_Flow_Assessment_Internal.pdf" download="System_Flow_Assessment_Internal.pdf">Download PDF</a>
+    <button type="button" onclick="window.print()">Print</button>
+  </span>
+</div>
+
+<div class="doc">
+
+<section class="screen cover">
+  <div class="cover">
+    <div class="cover-hero">
+      <div class="brand-row">
+        <div class="seqela">Seqela<span>Internal product review — not a DECSI send pack</span></div>
+        <div class="conf">Internal</div>
+      </div>
+      <p class="small" style="color:#e8d48a;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin:0 0 8px;">Canvas export</p>
+      <h1>System flow assessment</h1>
+      <p class="tagline">
+        Product completeness of DECSI Loan Hub against the 12-stage diagram in
+        presentation/system_flow.png. Code and automated-test review — not a live
+        production UAT at DECSI.
+      </p>
+    </div>
+    <div class="cover-body">
+      <div class="pillars">
+        <div class="pillar"><strong>90.5% flow completeness</strong><span>Mean of 12 stage scores (0–100). 1,086 / 1,200 completeness points.</span></div>
+        <div class="pillar"><strong>9 / 12 fully implemented</strong><span>Application through appraisal, authorization, workflow, and analytics.</span></div>
+        <div class="pillar"><strong>1 config · 2 partial</strong><span>Disbursement mock until CBS. Legal admin and dedicated fraud still partial.</span></div>
+        <div class="pillar"><strong>250 / 250 tests</strong><span>Clean gate after 20 Aug 2026 fixes. docker compose exec web python manage.py test</span></div>
+      </div>
+      <div class="meta">
+        <div><div class="l">Source canvas</div><div class="v">system-flow-assessment.canvas.tsx</div></div>
+        <div><div class="l">Diagram</div><div class="v">presentation/system_flow.png</div></div>
+        <div><div class="l">Date</div><div class="v">20 August 2026</div></div>
+        <div><div class="l">Classification</div><div class="v">Seqela internal — do not send as-is</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak">
+<h2>1. Overall</h2>
+<div class="exec">
+  <strong>The credit factory is built.</strong> Weighted completeness is 90.5% across the 12 flowchart boxes.
+  Nine stages are fully implemented in product code. Disbursement to core banking is coded but
+  mock-by-default until <span class="mono">DECSI_BASE_URL</span> is set. Two boxes are only partial:
+  standalone legal administration, and a dedicated fraud-detection product.
+</div>
+<div class="kpi">
+  <div><div class="v">90.5%</div><div class="l">Flow completeness</div></div>
+  <div><div class="v">9/12</div><div class="l">Fully implemented</div></div>
+  <div><div class="v">2</div><div class="l">Partial stages</div></div>
+  <div><div class="v">250/250</div><div class="l">Automated tests passed</div></div>
+</div>
+
+<h3>Coverage of the 12-box flow</h3>
+<div class="usage" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+<p class="small">Green = fully implemented scores (854) · Blue = CBS pending (82) · Gold = partial (150) · 1,086 / 1,200 points · 90.5% of flowchart scope.</p>
+
+<h3>Stage verdict mix</h3>
+<div class="mix">
+  <div><div class="v" style="color:var(--ok)">9</div><div class="small">Fully implemented</div></div>
+  <div><div class="v" style="color:var(--info)">1</div><div class="small">Live CBS pending</div></div>
+  <div><div class="v" style="color:var(--warn)">2</div><div class="small">Partial</div></div>
+</div>
+<p class="small">Count of flowchart boxes · n = 12 · Source: code review 20 Aug 2026.</p>
+
+<h3>Completeness by stage (%)</h3>
+<div class="hbar-row"><span class="lbl">1. Application</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
+<div class="hbar-row"><span class="lbl">2. Documents</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
+<div class="hbar-row"><span class="lbl">3. Queue number</span><span class="track"><i style="width:100%"></i></span><span class="pct">100</span></div>
+<div class="hbar-row"><span class="lbl">4. GPS</span><span class="track"><i style="width:92%"></i></span><span class="pct">92</span></div>
+<div class="hbar-row"><span class="lbl">5. Estimation</span><span class="track"><i style="width:98%"></i></span><span class="pct">98</span></div>
+<div class="hbar-row"><span class="lbl">6. Appraisal</span><span class="track"><i style="width:97%"></i></span><span class="pct">97</span></div>
+<div class="hbar-row"><span class="lbl">7. Authorization</span><span class="track"><i style="width:93%"></i></span><span class="pct">93</span></div>
+<div class="hbar-row"><span class="lbl">8. Legal prohibition</span><span class="track"><i class="part" style="width:68%"></i></span><span class="pct">68</span></div>
+<div class="hbar-row"><span class="lbl">9. Processing</span><span class="track"><i style="width:94%"></i></span><span class="pct">94</span></div>
+<div class="hbar-row"><span class="lbl">10. Disbursement</span><span class="track"><i class="cfg" style="width:82%"></i></span><span class="pct">82</span></div>
+<div class="hbar-row"><span class="lbl">11. Reports</span><span class="track"><i style="width:90%"></i></span><span class="pct">90</span></div>
+<div class="hbar-row"><span class="lbl">12. Security</span><span class="track"><i class="part" style="width:82%"></i></span><span class="pct">82</span></div>
+<p class="small">Score 0–100 per flowchart box · mean 90.5% (dashed target on canvas). Gold = partial · blue = config.</p>
+</section>
+
+<section class="screen pagebreak">
+<h2>2. Stage-by-stage result</h2>
+<p class="small">Scores are reviewer estimates of flowchart intent vs shipped code, not production KPIs.</p>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Flowchart box</th>
+      <th>Verdict</th>
+      <th>Score</th>
+      <th>What the product does</th>
+      <th>Evidence</th>
+      <th>Gap</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="n">1</td>
+      <td>Application<br><span class="small">Applying for loan; getting information</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">95</td>
+      <td>Staff create at /hub/create_loan_request/ plus Digital Apply at /apply/new/ (customer lookup, loan types, online intake)</td>
+      <td class="mono">LoanRequest, OnlineApplication, LoanCategory; submit_online_application</td>
+      <td>CBS customer lookup falls back to mock when DECSI_BASE_URL is unset</td>
+    </tr>
+    <tr>
+      <td class="n">2</td>
+      <td>Documents<br><span class="small">Necessary documents; get approval</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">95</td>
+      <td>Per–loan-type checklist, Eng+Amh OCR, integrity/identity checks, officer verify/reject</td>
+      <td class="mono">LoanRequestDocument.auth_status; document_auth.py; /hub/loan_request/&lt;id&gt;/documents/</td>
+      <td>LLM and external ID checks are optional hooks, not always on</td>
+    </tr>
+    <tr>
+      <td class="n">3</td>
+      <td>Loan Queue No Generation</td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">100</td>
+      <td>HK-######### issued on staff, online, agent, and CSV create</td>
+      <td class="mono">generate_incremental_loan_request_id(); LatestLoanRequestID</td>
+      <td>No separate ticket-printer app — the queue number is loan_request_id</td>
+    </tr>
+    <tr>
+      <td class="n">4</td>
+      <td>GPS<br><span class="small">Collateral integration; data capture</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">92</td>
+      <td>Field visits for building/land/other: site GPS, photo EXIF, maps, offline tablet sync, evidence pack</td>
+      <td class="mono">collateral/views field_visit; site_gps_lat/lon; /collateral/loan/&lt;id&gt;/…</td>
+      <td>Gebeta tiles need an API key; OSM fallback works without it</td>
+    </tr>
+    <tr>
+      <td class="n">5</td>
+      <td>Collateral Estimation<br><span class="small">Estimation detail; estimated amount</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">98</td>
+      <td>BOQ catalog, unit prices, building/land/movable valuation, engineering QA, grand total into appraisal Sheet 5</td>
+      <td class="mono">BuildingValuation, LandValuation, compute_collateral_totals; /collateral/engineering-qa/</td>
+      <td>None material</td>
+    </tr>
+    <tr>
+      <td class="n">6</td>
+      <td>Loan Appraisal<br><span class="small">Financial, business, approval</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">97</td>
+      <td>7-step MSME and corporate wizard: character, cashflow/ratios, E&amp;S, collateral, recommendation, optional schedule</td>
+      <td class="mono">APPRAISAL_STEPS; /hub/loan_request/&lt;id&gt;/appraisal/step/&lt;n&gt;/</td>
+      <td>Sheet 7 (repayment schedule) is optional by design</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section class="screen pagebreak">
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Flowchart box</th>
+      <th>Verdict</th>
+      <th>Score</th>
+      <th>What the product does</th>
+      <th>Evidence</th>
+      <th>Gap</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="n">7</td>
+      <td>Authorization<br><span class="small">Branch / zonal / HO operation / HO mgt</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">93</td>
+      <td>Configurable committees: branch → district → head_office → management, amount bands, votes, delegations</td>
+      <td class="mono">ApprovalCommitteeLevel keys; loans/committee.py; /hub/manage_approval_committees/</td>
+      <td>Flowchart “Zonal” is District; “HO Operation” is head_office (Cooperative intake is a separate gate)</td>
+    </tr>
+    <tr>
+      <td class="n">8</td>
+      <td>Prohibition of collateral in legal administration</td>
+      <td><span class="st st-part">Partially implemented</span></td>
+      <td class="n">68</td>
+      <td>Post-approval legal papers that block disbursement: restriction, POA, title search, mortgage, notary</td>
+      <td class="mono">loans/collateral_legal.py; /hub/loan_request/&lt;id&gt;/post_approval/</td>
+      <td>No Legal role, legal queue, or legal_cleared stage — enforced as a finance gate, not its own module</td>
+    </tr>
+    <tr>
+      <td class="n">9</td>
+      <td>Processing Workflow<br><span class="small">Status tracking; integration &amp; verification</span></td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">94</td>
+      <td>Role queues, committee status, document verify, process policy, risk desk, notifications</td>
+      <td class="mono">committee_status / disbursement_status; process_policy.py; /hub/view_loan_requests/</td>
+      <td>Workflow is Django state machines, not a BPMN engine</td>
+    </tr>
+    <tr>
+      <td class="n">10</td>
+      <td>Disbursement<br><span class="small">Disbursing to core banking</span></td>
+      <td><span class="st st-go">Code complete, live CBS pending</span></td>
+      <td class="n">82</td>
+      <td>Post-approval → Finance → confirm → book. Live Temenos client exists; mock ledger is the default</td>
+      <td class="mono">loans/disbursement.py; cbs_client.py; DECSI_CBS_BOOK_ON_DISBURSE</td>
+      <td>Live booking needs DECSI_BASE_URL; DECSI_CBS_USE_MOCK_LEDGER defaults to True</td>
+    </tr>
+    <tr>
+      <td class="n">11</td>
+      <td>Report &amp; Analytics</td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">90</td>
+      <td>Classic reports plus Credit Intelligence (pipeline, collateral, decision, assistant) and book-ops desks</td>
+      <td class="mono">/hub/credit-intelligence/; reporting.py; views_book.py</td>
+      <td>NPL / outstanding KPIs stay adapter-backed and weak until live CBS</td>
+    </tr>
+    <tr>
+      <td class="n">12</td>
+      <td>Security and Compliance<br><span class="small">RBAC; authorization; fraud detection</span></td>
+      <td><span class="st st-part">Partially implemented</span></td>
+      <td class="n">82</td>
+      <td>20+ roles, MFA, lockout, audit log, committee bands, password min-length 10, nosniff/DENY headers, document “suspicious” verdicts, watchlist, risk desk</td>
+      <td class="mono">CustomUser.ROLE_CHOICES; EnforceMfaMiddleware; SecurityAuditLog; /hub/security/audit/</td>
+      <td>No dedicated fraud/AML case engine or transaction-fraud model — document auth + watchlist only</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. Flowchart labels vs product names</h2>
+<p>Authorization titles in the diagram do not match the committee keys in code. Functionally the four-level chain is there.</p>
+<table>
+  <thead>
+    <tr>
+      <th>system_flow.png</th>
+      <th>Product implementation</th>
+      <th>Match</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Branch (S/branch) Level</td><td class="mono">ApprovalCommitteeLevel key = branch (sub-branch via Branch)</td><td>Direct</td></tr>
+    <tr><td>Zonal Level</td><td class="mono">key = district (District Manager / district committee)</td><td>Renamed</td></tr>
+    <tr><td>HO Operation Level</td><td class="mono">key = head_office committee; Cooperative intake is a separate queue</td><td>Split</td></tr>
+    <tr><td>HO Mgt Level</td><td class="mono">key = management (CEO / VP / Board)</td><td>Direct</td></tr>
+    <tr><td>Prohibition of collateral in legal administration</td><td>Post-approval legal documents + disbursement blockers</td><td>Relocated</td></tr>
+    <tr><td>Disbursing to Core Banking system</td><td class="mono">cbs_client + Finance gate; mock ledger unless DECSI_BASE_URL</td><td>Config</td></tr>
+    <tr><td>Fraud Detection</td><td>Document OCR suspicious verdict + watchlist + risk desk</td><td>Partial</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section class="screen pagebreak">
+<h2>4. Gaps that keep the flow from 100%</h2>
+
+<div class="box warn">
+  <h4>8. Legal administration is a finance gate, not a module · 68%</h4>
+  <p style="margin:0;">
+    The diagram places prohibition of collateral after authorization as its own step. The product stores
+    restriction, power of attorney, title search, mortgage registration, and notary papers on the post-approval
+    screen and blocks mark-disbursed until they are verified. There is no lawyer role, legal queue, or
+    legal_cleared status. Closing the gap means a Legal Administration queue between committee_approved and Finance.
+  </p>
+</div>
+<div class="box warn">
+  <h4>12. Fraud detection is document-level, not a fraud product · 82%</h4>
+  <p style="margin:0;">
+    Role-based access, committee authorization bands, TOTP MFA, session lockout, password minimum length 10,
+    nosniff / X-Frame-Options DENY, and SecurityAuditLog are implemented. What the flowchart calls fraud detection
+    is OCR integrity, identity match, a suspicious document verdict, a loan watchlist, and the risk desk. There is
+    no AML case system, device/velocity engine, or transaction-fraud model.
+  </p>
+</div>
+<div class="box info">
+  <h4>10. Core banking disbursement is mock until DECSI_BASE_URL · 82%</h4>
+  <p style="margin:0;">
+    The path post-approval → Finance approval → officer confirm → CBS book is fully coded
+    (<span class="mono">cbs_client.py</span>, <span class="mono">portfolio_ledger.py</span>, tests).
+    Default settings use <span class="mono">DECSI_CBS_USE_MOCK_LEDGER=True</span>. Live Temenos booking requires
+    <span class="mono">DECSI_BASE_URL</span>. Customer lookup at application time has the same mock fallback.
+  </p>
+</div>
+<div class="box gold">
+  <h4>Adjacent: Seqela Market staff admin is unwired · portal only</h4>
+  <p style="margin:0;">
+    The external market portal at /market-portal/ is live. Staff market admin views exist under
+    <span class="mono">partners/</span> but are not mounted in the root URL conf (tests expect /partners/ to 404).
+    This is outside the 12 boxes but is part of the surrounding product.
+  </p>
+</div>
+
+<h2>5. Automated test run</h2>
+<div class="callout ok">
+  <strong>Clean gate: 250 / 250 passed.</strong>
+  Re-run in the web container on 20 Aug 2026 after the seven failures/errors were fixed.
+  <span class="mono">python manage.py test</span> discovers the <span class="mono">loans.tests</span> package
+  (empty <span class="mono">loans/tests.py</span> stub removed).
+</div>
+<div class="kpi">
+  <div><div class="v">250</div><div class="l">Tests run</div></div>
+  <div><div class="v">250</div><div class="l">Passed</div></div>
+  <div><div class="v">0</div><div class="l">Failed</div></div>
+  <div><div class="v">35.2s</div><div class="l">Duration</div></div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Previous issue</th>
+      <th>Resolution</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Offline SW test still expected cache v8; help-text assertion stale</td>
+      <td>Test matches current collateral-field-vN cache and sync/retry bar</td>
+    </tr>
+    <tr>
+      <td>Appraisal lock POST hit /loan_request/… and got HTTP 301</td>
+      <td>Legacy hub redirect is 302; test posts via reverse() to /hub/…</td>
+    </tr>
+    <tr>
+      <td>Credit LO HO create used customer number C-1 (too short)</td>
+      <td>Test uses mock customer 2000050041; create path returns 302</td>
+    </tr>
+    <tr>
+      <td>Security tests: missing _env_bool, nosniff header, password min length</td>
+      <td>settings.py now has the helper, always-on headers, PASSWORD_MIN_LENGTH=10</td>
+    </tr>
+  </tbody>
+</table>
+<p class="small">Pass rate 100% (250/250) · docker compose exec web python manage.py test</p>
+</section>
+
+<section class="screen pagebreak">
+<h2>6. Closing the flowchart</h2>
+<ol>
+  <li>Add a Legal Administration queue and role so stage 8 sits between committee approval and Finance, matching the diagram.</li>
+  <li>Point <span class="mono">DECSI_BASE_URL</span> at core banking and turn off mock ledger in the target environment so stage 10 is a live disbursement.</li>
+  <li>If the diagram’s “Fraud Detection” is a contractual requirement, specify the product (document-only vs AML/transaction) — current coverage is origination fraud controls only.</li>
+  <li>Automated tests are a clean gate (250/250). Remaining work is process design (legal desk, fraud product) and CBS go-live, not test repair.</li>
+</ol>
+
+<div class="callout">
+  <strong>Not scored here:</strong> DECSI production currently runs queue and admin only; this assessment is of the
+  enhanced credit-factory codebase against system_flow.png.
+</div>
+
+<figure class="shot" style="margin:12px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
+  <img src="system_flow.png" alt="system_flow.png" style="display:block;width:100%;height:auto;max-height:110mm;object-fit:contain;background:#f7faf8;"/>
+  <figcaption class="small" style="padding:6px 9px;background:var(--bg);border-top:1px solid var(--line);">Source diagram: presentation/system_flow.png</figcaption>
+</figure>
+
+<div class="footer">
+  Export of Cursor canvas system-flow-assessment.canvas.tsx · 20 August 2026 · Seqela internal.<br>
+  Client-facing pack (no scores / file paths): DECSI_System_Flow_Assessment.pdf
+</div>
+</section>
+
+</div>
+</body>
+</html>

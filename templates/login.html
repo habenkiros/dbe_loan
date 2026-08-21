@@ -5,6 +5,7 @@
     {% load static %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#064420">
+    {% include "includes/favicon.html" %}
     <script>
     (function () {
       try {
@@ -188,37 +189,39 @@
         html[data-theme="dark"] .hub-theme-icon-moon { display: none; }
         html[data-theme="dark"] .hub-theme-icon-sun { display: inline-flex; }
         html[data-theme="dark"] {
-            --ink: #e4eee8;
-            --muted: #9bb0a4;
-            --green: #6dca8a;
-            --green-mid: #1f8a4a;
-            --green-hot: #2aaa58;
-            --line: #2c4638;
-            --soft: #1a2c22;
+            --ink: #ececec;
+            --muted: #9a9a9a;
+            --green: #f0f0f0;
+            --green-mid: #2a2a2a;
+            --green-hot: #3a3a3a;
+            --line: #2a2a2a;
+            --soft: #161616;
             color-scheme: dark;
         }
         html[data-theme="dark"] body {
-            background:
-                radial-gradient(ellipse 80% 50% at 10% -10%, rgba(45, 160, 85, 0.14), transparent 55%),
-                radial-gradient(ellipse 55% 40% at 100% 0%, rgba(20, 80, 40, 0.2), transparent 50%),
-                linear-gradient(180deg, #121c16 0%, #0e1712 100%);
+            background: #0a0a0a;
         }
         html[data-theme="dark"] .login-container {
-            background: #15231c;
+            background: #141414;
         }
         html[data-theme="dark"] .form-control input {
-            background: #101c16;
+            background: #111;
             color: var(--ink);
         }
         html[data-theme="dark"] .login-theme-toggle {
-            background: #15231c;
-            color: var(--green);
+            background: #141414;
+            color: #f0f0f0;
         }
         html[data-theme="dark"] .error-message {
-            background: #3a1c1c;
-            border-color: #7a3a3a;
+            background: #2a1414;
+            border-color: #5a2a2a;
             color: #f0c4c4;
         }
+        html[data-theme="dark"] .submit-button {
+            background: #2a2a2a;
+            border-color: #3a3a3a;
+        }
+        html[data-theme="dark"] .submit-button:hover { background: #3a3a3a; }
     </style>
 </head>
 <body>

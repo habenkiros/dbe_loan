@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from loans.appraisal_lock import get_appraisal_lock_state
@@ -92,7 +93,7 @@ class AppraisalLockTests(TestCase):
         client = Client()
         client.force_login(self.officer)
         resp = client.post(
-            f'/loan_request/{self.loan.id}/appraisal/step/6/',
+            reverse('loan_appraisal_step', args=[self.loan.id, 6]),
             {'finish_appraisal': '1', 'recommendation': 'approve'},
         )
         self.assertEqual(resp.status_code, 302)

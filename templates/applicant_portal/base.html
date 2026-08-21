@@ -5,13 +5,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#064420">
+  {% include "includes/favicon.html" %}
   <script>
   (function () {
     try {
       var t = localStorage.getItem('decsi-hub-theme');
       if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
-      if (t === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#082116');
+      if (t === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0a0a');
     } catch (e) {}
   })();
   </script>
@@ -39,6 +40,9 @@
           <a href="{% url 'applicant_portal:help_index' %}">Help</a>
           {% if request.session.applicant_portal_account_id %}
             <a href="{% url 'applicant_portal:home' %}">My applications</a>
+            <a href="{% url 'applicant_portal:notices' %}">
+              Notices{% if applicant_unread_notices %} ({{ applicant_unread_notices }}){% endif %}
+            </a>
             <a href="{% url 'applicant_portal:apply_start' %}">New apply</a>
             <a href="{% url 'applicant_portal:change_password' %}">Password</a>
             <a href="{% url 'applicant_portal:logout' %}">Sign out</a>

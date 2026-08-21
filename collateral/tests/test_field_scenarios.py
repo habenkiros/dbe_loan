@@ -327,11 +327,19 @@ class WeakNetworkRetryScenarioTests(FieldScenarioBase):
         self.assertIn('resetAbandonedAll', db_js)
         self.assertIn("row.status = 'abandoned'", db_js)
 
-        self.assertIn('collateral-field-v8', sw_js)
+        import re
+        sw_cache = re.search(r"CACHE_NAME = '([^']+)'", sw_js)
+        self.assertIsNotNone(sw_cache)
+        self.assertRegex(sw_cache.group(1), r'^collateral-field-v\d+$')
+        offline_cache = re.search(r"var cacheName = '([^']+)'", offline_js)
+        if offline_cache:
+            self.assertEqual(sw_cache.group(1), offline_cache.group(1))
         self.assertIn('cacheFirst', sw_js)
         self.assertIn('offline/shell', sw_js)
-        # Final submit stays online by design (not a queue item)
+        # Final submit is online-only; the bar is the retry/sync control surface
         offline_bar = (
             BASE_DIR / 'templates/collateral/_offline_bar.html'
         ).read_text(encoding='utf-8')
-        self.assertIn('Final collateral submit stays online', offline_bar)
+        self.assertIn('offline-sync-btn', offline_bar)
+        self.assertIn('offline-retry-abandoned-btn', offline_bar)
+        self.assertIn('Download for offline', offline_bar)

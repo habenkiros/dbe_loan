@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DECSI Credit Factory — System Process Flow Assessment</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;--warn:#9a6700;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela  ·  Confidential  ·  DECSI  ·  System process flow assessment";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.55;font-size:10.4pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:16mm 14mm;box-shadow:0 4px 24px rgba(6,69,40,.08);}
+.screen.cover{padding:0;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:0;box-shadow:none;max-width:none;min-height:0;}
+  .screen.cover{padding:0;}
+  .no-print{display:none!important;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;page-break-after:avoid;}
+  table,tr,.box,.kpi,.exec,.callout,figure.shot{break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+  .cover{
+    min-height:0 !important;
+    height:auto !important;
+    max-height:269mm;
+    overflow:hidden;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  .cover-hero{padding:11mm 0 9mm;}
+  .cover .brand-row{margin-bottom:8mm;}
+  .cover-body{padding:7mm 14mm 8mm;flex:0 1 auto;justify-content:flex-start;gap:7px;}
+  .cover h1{font-size:20pt;margin-bottom:6px;}
+  .cover .bank{font-size:16pt;}
+  .cover .bank-sub{margin-bottom:8px;}
+  .cover .tagline{font-size:10pt;}
+  .inner{padding:10mm 12mm 8mm;}
+}
+.inner{padding:0;}
+.cover{min-height:262mm;display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:14mm 0 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover-inner{padding:0 16mm;}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:16mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;letter-spacing:.02em;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover .for-label{font-size:8pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e8d48a;margin-bottom:6px;}
+.cover .bank{font-family:Fraunces,Georgia,serif;font-size:20pt;font-weight:700;margin:0 0 2px;line-height:1.2;}
+.cover .bank-sub{font-size:10pt;color:#b7d9c6;margin:0 0 14px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:24pt;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.02em;max-width:165mm;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:165mm;line-height:1.5;margin:0;}
+.cover-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:10mm 16mm 14mm;}
+.cover .pillars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
+.cover .pillar{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);}
+.cover .pillar strong{display:block;color:var(--gd);font-size:9.5pt;margin-bottom:2px;}
+.cover .pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.cover-foot{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--line);padding-top:8px;margin-top:8px;font-size:8pt;color:var(--muted);}
+.cover-foot strong{color:var(--gd);}
+.logo-img{height:52px;width:auto;display:block;object-fit:contain;}
+.logo-decsi{height:58px;width:auto;display:block;object-fit:contain;background:#fff;border-radius:50%;}
+h2{font-family:Fraunces,Georgia,serif;font-size:14.5pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11pt;color:var(--g);margin:12px 0 6px;}
+p,li{margin:0 0 7px;}
+ul,ol{margin:0 0 9px;padding-left:1.2em;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 6px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:15pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7.5pt;color:var(--muted);margin-top:3px;line-height:1.3;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;}
+.box h4{margin:0 0 4px;font-size:10.2pt;color:var(--gd);}
+.box.green{border-top:3px solid var(--g);}
+.box.gold{border-top:3px solid var(--gold);}
+.box.warn{border-top:3px solid var(--warn);}
+table{width:100%;border-collapse:collapse;margin:8px 0 11px;font-size:8.6pt;}
+th,td{border:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7.4pt;text-transform:uppercase;letter-spacing:.04em;}
+.n{font-weight:700;color:var(--gd);text-align:center;width:22px;}
+.st{display:inline-block;font-size:7pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;white-space:nowrap;}
+.st-ok{color:var(--ok);border:1px solid #a8d4b8;background:#f0faf4;}
+.st-go{color:#185fa5;border:1px solid #b7d3ea;background:#f3f8fc;}
+.st-part{color:var(--warn);border:1px solid #e8d48a;background:#fffdf5;}
+figure.shot{margin:8px 0 10px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+figure.shot img{display:block;width:100%;height:auto;max-height:118mm;object-fit:contain;background:#f7faf8;}
+figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg);border-top:1px solid var(--line);}
+.bar{height:10px;background:#e4ece7;border-radius:999px;overflow:hidden;margin:8px 0 4px;}
+.bar>i{display:block;height:100%;width:90%;background:var(--g);}
+.small{font-size:8.7pt;color:var(--muted);}
+.footer{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+.print-bar{position:sticky;top:0;z-index:20;background:#064528;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:9pt;}
+.print-bar button{background:#c4a035;color:#064528;border:0;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <span>DECSI system process flow assessment — Seqela · Confidential</span>
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div class="doc">
+
+<section class="screen cover">
+  <div class="cover">
+    <div class="cover-hero">
+      <div class="cover-inner">
+        <div class="brand-row">
+          <div>
+            <div class="seqela">Seqela<span>Credit technology for banks, MFIs &amp; SACCOs</span></div>
+          </div>
+          <div class="conf">Confidential</div>
+        </div>
+        <div class="for-label">Prepared for</div>
+        <p class="bank">Dedebit Credit and Savings Institution S.C.</p>
+        <p class="bank-sub">DECSI · Mekelle, Tigray</p>
+        <h1>System process flow assessment</h1>
+        <p class="tagline">
+          How the enhanced Credit Factory maps to DECSI’s 12-stage loan process —
+          from application through disbursement, reporting, and control.
+        </p>
+      </div>
+    </div>
+    <div class="cover-body">
+      <div class="pillars">
+        <div class="pillar"><strong>9 of 12 stages ready</strong><span>Application through appraisal, authorization, workflow, and analytics are built end-to-end.</span></div>
+        <div class="pillar"><strong>1 stage ready at go-live</strong><span>Disbursement to core banking is built; the live CBS connection is switched on at deployment.</span></div>
+        <div class="pillar"><strong>2 stages to complete</strong><span>Dedicated legal-administration step, and a standalone fraud-detection product, remain to match the diagram fully.</span></div>
+        <div class="pillar"><strong>Process alignment</strong><span>Assessed against DECSI’s system flow (application → documents → queue → GPS → estimation → appraisal → authorization → legal → processing → disbursement → reports → security).</span></div>
+      </div>
+      <div class="meta">
+        <div><div class="l">Document</div><div class="v">System process flow assessment</div></div>
+        <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08</div></div>
+        <div><div class="l">Date</div><div class="v">20 August 2026</div></div>
+        <div><div class="l">Classification</div><div class="v">Confidential — DECSI management &amp; IT</div></div>
+        <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
+        <div><div class="l">Basis</div><div class="v">DECSI system process flow (12 stages)</div></div>
+      </div>
+      <div class="cover-foot">
+        <div>Seqela · Addis Ababa · info@seqela.com · +251 964 790 724</div>
+        <div><strong>For DECSI management, Credit, IT, and Risk</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen pagebreak">
+<div class="inner">
+
+<h2>1. Purpose of this assessment</h2>
+<p>
+  DECSI provided a 12-stage system process flow covering the loan journey from
+  application to reporting and control. Seqela assessed the
+  <strong>enhanced Credit Factory</strong> against that flow so management can see,
+  stage by stage, what is ready for institution-wide rollout.
+</p>
+<p>
+  DECSI’s live production system today covers <strong>queue management, user management,
+  branch management, loan type management, and collateral type management</strong>
+  (53,901 applications processed on that platform). This report is not a claim that
+  all twelve boxes are already live in every branch. It is an assessment of the
+  <strong>enhanced factory built for DECSI</strong> — documents, appraisal, GPS collateral,
+  committees, Digital Apply, post-approval, and disbursement — mapped to the process
+  DECSI defined.
+</p>
+
+<div class="exec">
+  <strong>Headline.</strong> The Credit Factory is aligned with DECSI’s process.
+  Nine stages are fully implemented. Disbursement to core banking is implemented
+  in the product and is enabled when DECSI’s CBS connection is configured at go-live.
+  Two items remain if the diagram is to be matched one-for-one: a dedicated
+  <em>legal administration</em> queue after authorization, and a dedicated
+  <em>fraud detection</em> product beyond the document, watchlist, and risk controls
+  already in the system.
+</div>
+
+<div class="kpi">
+  <div><div class="v">12</div><div class="l">Process stages on DECSI’s flow</div></div>
+  <div><div class="v">9</div><div class="l">Fully ready in the Credit Factory</div></div>
+  <div><div class="v">1</div><div class="l">Ready — CBS at go-live</div></div>
+  <div><div class="v">2</div><div class="l">Partial — process completion</div></div>
+</div>
+<div class="bar" aria-hidden="true"><i></i></div>
+<p class="small">Overall process coverage of the enhanced factory against the 12-stage flow: approximately 90%.</p>
+
+<h2>2. How the assessment was done</h2>
+<ul>
+  <li>Each box on DECSI’s system process flow was mapped to the corresponding Credit Factory module, screens, and controls.</li>
+  <li>Status is <strong>Ready</strong> when the stage exists end-to-end in the product; <strong>Ready at go-live</strong> when the product is built and a live DECSI connection (core banking) is required to operate it in production; <strong>Partial</strong> when the intent is covered in another step, not as the standalone stage drawn on the flow.</li>
+  <li>This is a product-and-process assessment for management and IT. It is not a priced proposal and it is not a branch UAT sign-off.</li>
+  <li>Quality gate: the Credit Factory automated test suite passed <strong>250 of 250</strong> tests on 20 August 2026 (including application create, appraisal lock, security headers, password policy, and GPS/offline field retry).</li>
+</ul>
+
+</div>
+</section>
+
+<section class="screen pagebreak">
+<div class="inner">
+
+<h2>3. DECSI’s 12-stage process</h2>
+<p>
+  The assessment follows the process DECSI provided, in this order:
+  Application → Documents → Queue number → GPS → Collateral estimation →
+  Loan appraisal → Authorization → Legal administration → Processing workflow →
+  Disbursement → Reports &amp; analytics → Security &amp; compliance.
+</p>
+<figure class="shot">
+  <img src="system_flow.png" alt="DECSI system process flow — 12 stages"/>
+  <figcaption>DECSI system process flow (source document for this assessment).</figcaption>
+</figure>
+
+<div class="two">
+  <div class="box green">
+    <h4>What “Ready” means</h4>
+    <p class="small" style="margin:0;">The stage is implemented in the Credit Factory: staff (and, where relevant, the applicant) can complete the work on screen, with records, controls, and hand-off to the next stage.</p>
+  </div>
+  <div class="box gold">
+    <h4>What remains</h4>
+    <p class="small" style="margin:0;">Items that still differ from the drawing: legal work as its own queue after authorization; fraud as a dedicated product; and switching on the live core-banking booking at go-live.</p>
+  </div>
+</div>
+
+</div>
+</section>
+
+<section class="screen pagebreak">
+<div class="inner">
+
+<h2>4. Stage-by-stage result</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:22px;">#</th>
+      <th>DECSI process stage</th>
+      <th>Status</th>
+      <th>What the Credit Factory does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="n">1</td>
+      <td><strong>Application</strong><br><span class="small">Applying for loan; getting information</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Branch / credit staff capture the file. Customers can also apply through Digital Apply. Customer information and loan type are recorded at intake.</td>
+    </tr>
+    <tr>
+      <td class="n">2</td>
+      <td><strong>Documents</strong><br><span class="small">Necessary documents; approval</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Checklist by loan type, upload, English and Amharic document reading, and officer verify / reject before the file proceeds.</td>
+    </tr>
+    <tr>
+      <td class="n">3</td>
+      <td><strong>Loan queue no. generation</strong></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>A unique queue number is issued automatically when the loan is created (staff, online, or assisted create).</td>
+    </tr>
+    <tr>
+      <td class="n">4</td>
+      <td><strong>GPS</strong><br><span class="small">Collateral integration; data capture</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Field visit captures site location, photos, and evidence for building, land, and other collateral, including offline field use.</td>
+    </tr>
+    <tr>
+      <td class="n">5</td>
+      <td><strong>Collateral estimation</strong><br><span class="small">Estimation detail; estimated amount</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Bill of quantities, unit prices, estimated value, and engineering quality review. The total feeds the appraisal collateral sheet.</td>
+    </tr>
+    <tr>
+      <td class="n">6</td>
+      <td><strong>Loan appraisal</strong><br><span class="small">Financial, business, approval</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Seven-step MSME and corporate appraisal: character, cash flow, environment &amp; social, collateral, recommendation, and optional repayment schedule.</td>
+    </tr>
+    <tr>
+      <td class="n">7</td>
+      <td><strong>Authorization</strong><br><span class="small">Branch / zonal / HO operation / HO management</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Multi-level committees with amount bands: branch, district (DECSI “zonal” on the flow), head office, and management (CEO / VP / Board). Delegations are supported.</td>
+    </tr>
+    <tr>
+      <td class="n">8</td>
+      <td><strong>Prohibition of collateral in legal administration</strong></td>
+      <td><span class="st st-part">Partial</span></td>
+      <td>Restriction, power of attorney, title search, mortgage registration, and notary papers are captured after approval and <em>block disbursement</em> until verified. This is not yet a separate Legal Administration queue with a legal officer role.</td>
+    </tr>
+    <tr>
+      <td class="n">9</td>
+      <td><strong>Processing workflow</strong><br><span class="small">Status tracking; integration &amp; verification</span></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Role queues, status on every file, document verification, process policy gates, and notifications as the file moves.</td>
+    </tr>
+    <tr>
+      <td class="n">10</td>
+      <td><strong>Disbursement</strong><br><span class="small">Disbursing to core banking</span></td>
+      <td><span class="st st-go">Ready at go-live</span></td>
+      <td>Post-approval → Finance → confirm → book. The product is built to disburse into DECSI’s core banking system. The live CBS link is configured at deployment.</td>
+    </tr>
+    <tr>
+      <td class="n">11</td>
+      <td><strong>Report &amp; analytics</strong></td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Operational reports and Credit Intelligence (pipeline, collateral, decision support). Book-side arrears figures deepen when live CBS outstanding is connected.</td>
+    </tr>
+    <tr>
+      <td class="n">12</td>
+      <td><strong>Security and compliance</strong><br><span class="small">Role-based access; authorization; fraud detection</span></td>
+      <td><span class="st st-part">Partial</span></td>
+      <td>Roles, approval levels, multi-factor login, lockout, password policy (minimum 10 characters), browser security headers, and audit trail are in place. Fraud control today is document authenticity, watchlist, and the risk desk — not a separate fraud/AML case system.</td>
+    </tr>
+  </tbody>
+</table>
+
+</div>
+</section>
+
+<section class="screen pagebreak">
+<div class="inner">
+
+<h2>5. Names on the flow vs names in the system</h2>
+<p>
+  Authorization titles on the drawing use DECSI operational language. The Credit Factory
+  uses the same four-level chain with the geography names already in the live system.
+</p>
+<table>
+  <thead>
+    <tr>
+      <th>On DECSI’s flow</th>
+      <th>In the Credit Factory</th>
+      <th>Alignment</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Branch (S/branch) level</td>
+      <td>Branch committee (including sub-branch through the branch)</td>
+      <td>Direct</td>
+    </tr>
+    <tr>
+      <td>Zonal level</td>
+      <td>District committee</td>
+      <td>Same function; “district” is the name used in DECSI’s current system</td>
+    </tr>
+    <tr>
+      <td>HO Operation level</td>
+      <td>Head-office committee, with Branch Cooperative intake as a separate gate</td>
+      <td>Function covered; split into committee + cooperative intake</td>
+    </tr>
+    <tr>
+      <td>HO Mgt level</td>
+      <td>Management committee (CEO / VP / Board)</td>
+      <td>Direct</td>
+    </tr>
+    <tr>
+      <td>Prohibition of collateral in legal administration</td>
+      <td>Post-approval legal papers that must be verified before disbursement</td>
+      <td>Same control, later in the path (before money leaves, not as its own queue)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>6. Items to complete against the diagram</h2>
+
+<div class="box warn" style="margin-bottom:8px;">
+  <h4>A. Legal administration as its own stage (box 8)</h4>
+  <p style="margin-bottom:0;">
+    Today the factory will not disburse until government restriction, power of attorney,
+    and related legal papers are uploaded and verified. If DECSI requires a
+    <strong>Legal Administration desk</strong> between committee approval and Finance
+    (legal officer role, legal queue, “cleared for disbursement”), Seqela will add that
+    step so the screen path matches the drawing exactly.
+  </p>
+</div>
+<div class="box warn" style="margin-bottom:8px;">
+  <h4>B. Fraud detection as a dedicated product (box 12)</h4>
+  <p style="margin-bottom:0;">
+    Role-based access, authorization levels, multi-factor login, password policy,
+    browser security headers, and audit are ready.
+    Document fraud controls (authenticity, identity match, suspicious files) and a
+    watchlist are ready. If DECSI’s “Fraud Detection” means a full AML / investigation
+    case system, that should be specified as a scoped addition. If document and
+    origination controls are sufficient, box 12 can be treated as met for access and
+    authorization, with fraud controls at intake.
+  </p>
+</div>
+<div class="box gold">
+  <h4>C. Core banking at go-live (box 10)</h4>
+  <p style="margin-bottom:0;">
+    Disbursement, Finance approval, and booking into core banking are built.
+    At deployment, DECSI IT and Seqela enable the live CBS endpoints so disbursement
+    posts to the book rather than a test connection. Customer lookup at application
+    uses the same CBS party service when it is live.
+  </p>
+</div>
+
+</div>
+</section>
+
+<section class="screen pagebreak">
+<div class="inner">
+
+<h2>7. Recommended next steps</h2>
+<p>Four decisions close the remaining gap between the Credit Factory and DECSI’s 12-stage drawing.</p>
+<div class="two">
+  <div class="box green">
+    <h4>1. Confirm legal administration (box 8)</h4>
+    <p class="small" style="margin:0;">Keep legal papers as a disbursement gate (already built), or add a Legal Administration queue and legal officer role after authorization so the path matches the drawing one-for-one.</p>
+  </div>
+  <div class="box green">
+    <h4>2. Confirm fraud detection (box 12)</h4>
+    <p class="small" style="margin:0;">Accept origination fraud controls (document authenticity, watchlist, risk desk), or commission a dedicated fraud / AML investigation product as a scoped addition.</p>
+  </div>
+  <div class="box gold">
+    <h4>3. Plan core-banking go-live (box 10)</h4>
+    <p class="small" style="margin:0;">Joint Seqela–DECSI IT session to connect customer lookup and disbursement booking to DECSI’s live core banking endpoints at deployment.</p>
+  </div>
+  <div class="box gold">
+    <h4>4. Walk the twelve stages (UAT)</h4>
+    <p class="small" style="margin:0;">Run a sample MSME file through the flow with Credit, Engineering, Cooperative, Finance, and IT, using this document as the checklist.</p>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>For management.</strong> The enhanced Credit Factory is built to DECSI’s process
+  and can be rolled out against this flow. The remaining decisions are process design
+  (legal desk; fraud product) and the core-banking connection at go-live — not a missing
+  origination, appraisal, GPS, or committee system.
+</div>
+
+<div class="meta" style="margin-top:14px;">
+  <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
+  <div><div class="l">For</div><div class="v">DECSI management, Credit, IT, Risk</div></div>
+  <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
+  <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08 · 20 August 2026</div></div>
+</div>
+<p class="small" style="margin-top:10px;">This document is a process-alignment assessment. It is not a financial proposal.</p>
+
+<div class="footer">
+  Seqela · Addis Ababa · seqela.com · Confidential — Dedebit Credit and Savings Institution S.C.
+</div>
+
+</div>
+</section>
+
+</div>
+</body>
+</html>

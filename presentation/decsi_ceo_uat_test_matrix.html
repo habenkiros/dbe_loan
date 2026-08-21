@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DECSI Credit Factory — UAT Test Matrix &amp; CEO Report</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;--warn:#9a6700;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela  ·  Confidential  ·  DECSI UAT  ·  CEO report pack";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.5;font-size:10pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:12px auto;background:#fff;padding:16mm 14mm;box-shadow:0 4px 24px rgba(6,69,40,.08);}
+.screen.cover{padding:0;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:14mm 12mm;box-shadow:none;max-width:none;}
+  .screen.cover{padding:0;}
+  .no-print{display:none!important;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;}
+  table,tr,.box{break-inside:avoid;}
+  select,input,textarea{border:none!important;background:transparent!important;appearance:none;-webkit-appearance:none;font:inherit;color:inherit;}
+}
+.cover{min-height:262mm;display:flex;flex-direction:column;}
+.cover-hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:16mm 16mm 12mm;position:relative;}
+.cover-hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.cover .brand-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:22mm;}
+.cover .seqela{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;}
+.cover .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:3px;}
+.cover .conf{font-size:7.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:5px 10px;border-radius:999px;}
+.cover .for-label{font-size:8pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#e8d48a;margin-bottom:6px;}
+.cover .bank{font-family:Fraunces,Georgia,serif;font-size:22pt;font-weight:700;margin:0 0 4px;}
+.cover .bank-sub{font-size:10pt;color:#b7d9c6;margin:0 0 16px;}
+.cover h1{font-family:Fraunces,Georgia,serif;font-size:26pt;line-height:1.12;color:#fff;margin:0 0 12px;letter-spacing:-.02em;max-width:165mm;}
+.cover .tagline{font-size:11pt;color:#d7ebe0;max-width:160mm;line-height:1.5;}
+.cover-body{flex:1;padding:12mm 16mm 14mm;display:flex;flex-direction:column;justify-content:space-between;}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:9.5pt;}
+.meta .l{color:var(--muted);font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.logo-img{height:52px;width:auto;}
+h2{font-family:Fraunces,Georgia,serif;font-size:14.5pt;color:var(--gd);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line);}
+h3{font-size:11pt;color:var(--g);margin:14px 0 6px;}
+h4{font-size:10pt;color:var(--gd);margin:10px 0 4px;}
+p,li{margin:0 0 6px;}
+ul,ol{margin:0 0 10px;padding-left:1.2em;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:10px 12px;border-radius:0 8px 8px 0;margin:8px 0 12px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:9px 11px;margin:10px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;margin:0 0 8px;}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 8px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:13pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7.5pt;color:var(--muted);margin-top:3px;line-height:1.3;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0;}
+table{width:100%;border-collapse:collapse;margin:6px 0 12px;font-size:8.2pt;}
+th,td{border:1px solid var(--line);padding:4px 5px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7pt;text-transform:uppercase;letter-spacing:.03em;}
+.small{font-size:8.5pt;color:var(--muted);}
+.footer{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
+.id{font-weight:700;color:var(--gd);white-space:nowrap;}
+select,input[type=text],input[type=date],textarea{
+  width:100%;font:inherit;font-size:8pt;border:1px solid #c9d6ce;border-radius:4px;padding:2px 4px;background:#fff;
+}
+textarea{min-height:42px;resize:vertical;}
+.sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;}
+.sig .box{min-height:88px;}
+.tag{display:inline-block;font-size:7pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--g);}
+.tag.live{color:var(--ok);border-color:#a8d4b8;}
+.tag.new{color:#7a4f00;border-color:#e8d48a;background:#fffdf5;}
+.print-bar{position:sticky;top:0;z-index:20;background:#064528;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:9pt;}
+.print-bar button{background:#c4a035;color:#064528;border:0;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;}
+.score{width:92px;}
+.go{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;}
+.go label{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-weight:600;font-size:9.5pt;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <span>DECSI UAT pack — fill on screen, then <strong>Print → Save as PDF</strong> for the CEO.</span>
+  <button onclick="window.print()">Print / PDF</button>
+</div>
+
+<div class="doc">
+
+<!-- COVER -->
+<div class="screen cover">
+  <div class="cover">
+    <div class="cover-hero">
+      <div class="brand-row">
+        <div>
+          <img class="logo-img" src="logo.png" alt="Seqela"/>
+          <div class="seqela">Seqela<span>Credit factory · UAT pack</span></div>
+        </div>
+        <div class="conf">Confidential · DECSI</div>
+      </div>
+      <div class="for-label">Prepared for</div>
+      <div class="bank">Dedebit Credit and Saving Institution S.C.</div>
+      <p class="bank-sub">Internal user-acceptance testing of the credit factory in the proposal</p>
+      <h1>Test matrix and CEO report pack</h1>
+      <p class="tagline">What to test, who tests it, what “pass” means, and one page the CEO can read after the pilot — mapped to the Seqela proposal, not to a generic software checklist.</p>
+    </div>
+    <div class="cover-body">
+      <div class="meta">
+        <div><div class="l">Document</div><div class="v">DECSI-UAT-CEO-2026-08</div></div>
+        <div><div class="l">Wave</div><div class="v">Pilot UAT — credit factory</div></div>
+        <div><div class="l">Test window</div><div class="v"><input type="text" placeholder="e.g. 25 Aug – 12 Sep 2026" style="font-size:10pt;font-weight:600;border:none;background:transparent;padding:0;"/></div></div>
+        <div><div class="l">Pilot branches</div><div class="v"><input type="text" placeholder="Branch names" style="font-size:10pt;font-weight:600;border:none;background:transparent;padding:0;"/></div></div>
+        <div><div class="l">UAT lead (DECSI)</div><div class="v"><input type="text" placeholder="Name / title" style="font-size:10pt;font-weight:600;border:none;background:transparent;padding:0;"/></div></div>
+        <div><div class="l">Seqela counterpart</div><div class="v">Hypercare during test window</div></div>
+      </div>
+      <p class="small" style="margin-top:14px;">Companion to the DECSI product proposal and technical specification. Queue, users, branches, loan types and collateral types are already live (built at no charge). This pack tests the <strong>enhanced credit factory</strong> the proposal asks DECSI to put into production: appraisal, GPS collateral, committees, Digital Apply, closing → Finance, monitoring and collections case file.</p>
+      <div class="footer" style="border:none;margin:0;padding:0;">Print this pack · Testers complete Sections 4–6 · Credit / Risk / IT sign Section 7 · CEO reads Section 1 only unless a Fail is Critical.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 1 CEO PAGE -->
+<div class="screen pagebreak">
+  <h2>1. One-page CEO scorecard</h2>
+  <p class="exec">Fill this page <strong>after</strong> the pilot files are closed. Testers do not fill this first. The CEO should be able to decide Go / Go-with-conditions / Hold from this page plus the defect list of Critical items only.</p>
+
+  <h3>Recommendation to the CEO</h3>
+  <div class="go">
+    <label><input type="radio" name="go"/> Go — deploy selected branches / loan types</label>
+    <label><input type="radio" name="go"/> Go with conditions — listed Critical items must close first</label>
+    <label><input type="radio" name="go"/> Hold — factory not ready for production files</label>
+  </div>
+  <p class="small">Conditions (if any):</p>
+  <textarea placeholder="e.g. Risk-before-committee gate must be on; CBS booking deferred to wave 2; two Critical defects to close by date…"></textarea>
+
+  <h3>Headline results</h3>
+  <div class="kpi">
+    <div>
+      <div class="v"><input type="text" placeholder="__ %" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Capability accepted<br/>(Pass ÷ tested, exclude N/A)</div>
+    </div>
+    <div>
+      <div class="v"><input type="text" placeholder="0" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Critical defects still open<br/>(block a real loan file)</div>
+    </div>
+    <div>
+      <div class="v"><input type="text" placeholder="0" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Major defects still open<br/>(workaround exists)</div>
+    </div>
+    <div>
+      <div class="v"><input type="text" placeholder="__ hrs" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Median hours: create file → committee-ready pack</div>
+    </div>
+    <div>
+      <div class="v"><input type="text" placeholder="__ %" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Files returned to officer before first vote</div>
+    </div>
+    <div>
+      <div class="v"><input type="text" placeholder="__ / __" style="text-align:center;font-size:14pt;font-weight:700;border:none;background:transparent;"/></div>
+      <div class="l">Pilot files completed end-to-end<br/>(intake → Finance queue)</div>
+    </div>
+  </div>
+
+  <h3>Domain roll-up (from Section 4)</h3>
+  <p class="small">Score each domain: <strong>Pass</strong> = all Must-have cases passed; <strong>Partial</strong> = usable with workaround; <strong>Fail</strong> = cannot run that part of the factory; <strong>N/A</strong> = not in this wave.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Domain (proposal)</th>
+        <th>Must-have for CEO?</th>
+        <th>Owner</th>
+        <th class="score">Result</th>
+        <th>One-line for CEO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>A. Access, roles, MFA, audit</td><td>Yes</td><td>IT + Admin</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>B. Queue &amp; admin (already live)</td><td>Yes — no regression</td><td>Ops / Admin</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>C. Documents &amp; file completeness</td><td>Yes</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>D. 7-step MSME / corporate appraisal</td><td>Yes</td><td>Officer + Credit</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>E. GPS collateral / BOQ / land / movable</td><td>Yes</td><td>Field / Engineer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>F. Risk review before committee</td><td>Yes</td><td>Risk</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>G. Ops / Finance queues &amp; committee vote</td><td>Yes</td><td>Ops, Finance, Committee</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>H. Closing → legal → own contribution → Finance</td><td>Yes</td><td>Officer, Legal, Finance</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>I. Monitoring after disbursement</td><td>Wave 1 preferred</td><td>Officer / BM</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>J. Collections / workout case file</td><td>Wave 1 preferred</td><td>Collections / Credit Head</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>K. Digital Apply (customer)</td><td>If in this wave</td><td>Customer + Intake</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>L. Credit Intelligence (management view)</td><td>Yes</td><td>Credit Head / CEO office</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>M. Agentic Assist (cannot approve)</td><td>Nice-to-have</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td>N. Seqela Market</td><td>Optional this wave</td><td>Business / IT</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>What the CEO is buying vs what is already live</h3>
+  <table>
+    <thead><tr><th>Already live at DECSI (do not re-buy; regression-test only)</th><th>This UAT proves the proposal factory</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Queue management · users · branches · loan types · collateral types. Operating book from that queue: 53,901 applications · ETB 17.03B approved · ETB 13B+ disbursed.</td>
+        <td>Documents / OCR · 7-step appraisal · GPS collateral · risk gate · multi-level committees · Digital Apply · closing &amp; Finance queue · monitoring &amp; collections case file · intelligence · MFA / delegations.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">CBS remains the ledger of money. The hub is the credit case file. Do not score “Fail” because the hub did not post a repayment if CBS is still the book of record.</p>
+</div>
+
+<!-- 2 HOW TO RUN -->
+<div class="screen pagebreak">
+  <h2>2. How DECSI should run this test</h2>
+
+  <div class="two">
+    <div class="box">
+      <h4>Pilot shape (recommended)</h4>
+      <ul>
+        <li><strong>2–3 branches</strong> (one HO-adjacent, one typical branch)</li>
+        <li><strong>2 loan types</strong> DECSI actually books (e.g. MSME secured + one other)</li>
+        <li><strong>10–15 files</strong> through the factory (not 50 half-finished files)</li>
+        <li>At least <strong>3 collateral shapes</strong>: building, land or movable, and Building + Land</li>
+        <li>At least <strong>1 Digital Apply</strong> file if that channel is in this wave</li>
+        <li>At least <strong>1 return-to-officer</strong> and <strong>1 reject</strong> so those paths are proven</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h4>Who must sit in the room</h4>
+      <ul>
+        <li>Loan officer (creates and appraises)</li>
+        <li>Branch manager</li>
+        <li>Risk officer (Clear / Return)</li>
+        <li>Ops and Finance (pre-committee and disbursement queues)</li>
+        <li>Committee member at the level that would vote the amount</li>
+        <li>Field / engineer (GPS pack)</li>
+        <li>IT (access, backup, MFA)</li>
+        <li>UAT lead who owns this pack and the CEO page</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Scoring rules — use these words only</h3>
+  <table>
+    <thead><tr><th>Result</th><th>Meaning</th><th>CEO impact</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Pass</strong></td><td>Works as proposed. No workaround. Evidence noted (Queue ID / screenshot / time).</td><td>Counts toward acceptance %.</td></tr>
+      <tr><td><strong>Partial</strong></td><td>Usable, but missing a proposed control or needs a workaround. Log a Major or Minor defect.</td><td>Does not block Go unless it is a Must-have domain.</td></tr>
+      <tr><td><strong>Fail</strong></td><td>Cannot complete the step, or the control the proposal promised is absent (e.g. file reaches committee with no risk review when policy requires it).</td><td>Must-have Fail = Hold or Go-with-conditions.</td></tr>
+      <tr><td><strong>N/A</strong></td><td>Out of this wave on purpose (e.g. CBS auto-booking not connected; Market not in pilot).</td><td>Does not lower the acceptance %. Write the reason.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Defect severity</h3>
+  <table>
+    <thead><tr><th>Severity</th><th>When to use</th><th>CEO rule</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Critical</strong></td><td>A real loan file cannot move, money could be booked wrong, or a policy gate can be skipped.</td><td>No unconditional Go while any Critical is open.</td></tr>
+      <tr><td><strong>Major</strong></td><td>Workaround exists (Excel, paper, second login) but audit / cycle-time / dual-control is weakened.</td><td>Allowed on Go-with-conditions with owner and date.</td></tr>
+      <tr><td><strong>Minor</strong></td><td>Wording, layout, Amharic label, print layout — does not change the credit decision.</td><td>Does not block Go.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Do not test the wrong thing.</strong> Loan type in this system is the DECSI credit product (working capital, housing, etc.). Appraisal is the shared 7-step MSME / corporate wizard — testers should not demand a different appraisal engine per loan-type name. Collateral screens follow collateral type (building / land / movable / mixed), not loan type. Collections and workout in the hub are the <em>case file</em>; CBS still posts cash.
+  </div>
+</div>
+
+<!-- 3 KPI DEFINITIONS -->
+<div class="screen pagebreak">
+  <h2>3. Operating KPIs the CEO should see after the window</h2>
+  <p>These are the proposal’s success measures (cycle time, completeness, returns). Measure on the <strong>same 10–15 pilot files</strong>. Write Excel/paper baseline if DECSI has it; otherwise write “no baseline” and still record hub times.</p>
+  <table>
+    <thead>
+      <tr><th>KPI</th><th>How to measure</th><th>Excel / paper baseline</th><th>Hub result</th><th>Better?</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>K1.</strong> Time to committee-ready pack</td>
+        <td>Hours from Queue ID issued to first eligible committee submit (docs + appraisal + collateral + risk clear).</td>
+        <td><input type="text" placeholder="hrs / days"/></td>
+        <td><input type="text"/></td>
+        <td><select><option></option><option>Yes</option><option>No</option><option>Same</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K2.</strong> Officer return rate</td>
+        <td>% of those files sent back before first vote (incomplete, risk return, ops/finance return).</td>
+        <td><input type="text" placeholder="%"/></td>
+        <td><input type="text"/></td>
+        <td><select><option></option><option>Yes</option><option>No</option><option>Same</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K3.</strong> Incomplete files stopped early</td>
+        <td>Number of files blocked by document / DSCR / E&amp;S / coverage / risk gate <em>before</em> committee time is used.</td>
+        <td><input type="text"/></td>
+        <td><input type="text"/></td>
+        <td><select><option></option><option>Yes</option><option>No</option><option>Same</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K4.</strong> Collateral pack at committee</td>
+        <td>% of voted files that had GPS/photo (or recorded exception) and the correct building/land/movable totals.</td>
+        <td><input type="text" placeholder="%"/></td>
+        <td><input type="text"/></td>
+        <td><select><option></option><option>Yes</option><option>No</option><option>Same</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K5.</strong> Closing to Finance queue</td>
+        <td>Hours from committee approve to appearance on Finance disbursement queue (restriction, agreement, legal flags per policy).</td>
+        <td><input type="text"/></td>
+        <td><input type="text"/></td>
+        <td><select><option></option><option>Yes</option><option>No</option><option>Same</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K6.</strong> Digital Apply (if in wave)</td>
+        <td>Register → upload → fee paid/waived → Queue ID → staff notification. Count successes / attempts.</td>
+        <td>n/a</td>
+        <td><input type="text" placeholder="n / n"/></td>
+        <td><select><option></option><option>Yes</option><option>N/A</option></select></td>
+      </tr>
+      <tr>
+        <td><strong>K7.</strong> Dual control</td>
+        <td>Same person cannot vote their own file; MFA on for HO/committee roles; delegation used once without password sharing.</td>
+        <td>—</td>
+        <td><select><option></option><option>Pass</option><option>Fail</option></select></td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">Target for a clean Go: K1 and K5 faster than paper; K2 down; K4 = 100% of voted files; K7 Pass; zero Critical defects.</p>
+</div>
+
+<!-- 4 MATRIX -->
+<div class="screen pagebreak">
+  <h2>4. Test matrix</h2>
+  <p class="small">Each row is one thing the CEO was promised. Testers: fill Result, Queue ID or note, initials. UAT lead copies domain scores to Section 1.</p>
+
+  <h3>A. Access, roles, MFA, audit <span class="tag new">Factory / IT</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence / Queue ID</th></tr></thead>
+    <tbody>
+      <tr><td class="id">A01</td><td>Staff login at branch and HO</td><td>Correct landing; cannot see other branch’s book (officer / BM scoped).</td><td>IT + Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">A02</td><td>Sixteen role types used in pilot (officer, BM, DM, risk, ops, finance, committee, engineer, auditor, admin…)</td><td>Each named tester can only do their job. Auditor read-only.</td><td>Admin</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">A03</td><td>MFA (TOTP) for HO / committee / admin</td><td>Login fails without code; succeeds with code.</td><td>IT</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">A04</td><td>Delegation without password sharing</td><td>Admin-approved cover lets deputy act in scope; audit shows acting-as.</td><td>Admin + BM</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">A05</td><td>Audit export of a file’s key events</td><td>Who submitted, who voted, who disbursed — exportable.</td><td>Auditor / IT</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>B. Queue &amp; administration <span class="tag live">Already live — regression</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">B01</td><td>Create staff application; Queue ID issued</td><td>ID visible to officer and BM of that branch.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">B02</td><td>Loan types in use at DECSI selectable</td><td>Pilot products appear; inactive types hidden.</td><td>Admin</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">B03</td><td>Users / branches / districts still maintainable</td><td>Add user, assign branch, disable user — no breakage vs live queue.</td><td>Admin</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">B04</td><td>Search / filter queue under load of pilot files</td><td>Find by name, Queue ID, status in &lt; 5 seconds.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>C. Documents &amp; completeness <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">C01</td><td>Upload PDF and image; English OCR if enabled</td><td>File stored; text searchable or extracted as designed.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">C02</td><td>Amharic document (if OCR on)</td><td>Does not crash; useful extract or clear “needs review”.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">C03</td><td>Incomplete pack cannot skip to committee</td><td>Submit blocked with a readable list of missing items.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">C04</td><td>KYC / ID fields on the file</td><td>Required identity fields enforced per DECSI checklist used in pilot.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="screen pagebreak">
+  <h3>D. Appraisal (7-step MSME / corporate) <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">D01</td><td>Walk all 7 appraisal steps on an MSME file</td><td>Character, cashflow/DSCR, qualitative, E&amp;S, collateral worksheet, scorecard, amortisation — data saves; can resume.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">D02</td><td>DSCR / capacity gate</td><td>Weak DSCR vs policy cannot be sent to committee (or is hard-flagged per DECSI analysis policy).</td><td>Officer + Credit</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">D03</td><td>E&amp;S gate</td><td>Failed E&amp;S blocks or returns as configured — not silent.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">D04</td><td>Scorecard is explainable</td><td>Committee pack shows pillar scores, not a black-box number only.</td><td>Committee</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">D05</td><td>Corporate / larger file path (if in pilot)</td><td>Same wizard handles the larger case without Excel side-file.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">D06</td><td>Ask vs capacity visible</td><td>Requested amount vs assessed capacity is obvious before vote.</td><td>Committee</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>E. GPS collateral, BOQ, land, movable <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">E01</td><td>Building: BOQ / structure capture + photos</td><td>Totals flow to coverage; photos stored.</td><td>Engineer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E02</td><td>Land capture</td><td>Land value on the file; not dropped.</td><td>Field</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E03</td><td>Movable capture</td><td>Movable items listed and valued.</td><td>Field</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E04</td><td>Building + Land (mixed) totals</td><td>Coverage = building <em>plus</em> land (both count). This is a known historical Excel/name trap — must pass.</td><td>Engineer + Credit</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E05</td><td>GPS / map on field visit (or recorded exception)</td><td>Coordinates or explicit exception on pack; committee can see evidence.</td><td>Field</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E06</td><td>Coverage vs loan ask</td><td>Under-covered file blocked or hard-flagged per policy before committee.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">E07</td><td>Weak connectivity / tablet path (if used)</td><td>Capture offline or retry without losing the visit.</td><td>Field / IT</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>F. Risk before committee <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">F01</td><td>Officer cannot submit to committee until risk has cleared (policy on)</td><td>Hard block with message; timestamp when cleared.</td><td>Officer + Risk</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">F02</td><td>Risk Return with notes</td><td>Officer sees notes; file not on committee agenda.</td><td>Risk</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">F03</td><td>Risk Clear</td><td>File becomes eligible for committee submit.</td><td>Risk</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="screen pagebreak">
+  <h3>G. Ops / Finance queues and committee <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">G01</td><td>Pre-committee ops queue</td><td>Ops can accept or return with notes.</td><td>Ops</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">G02</td><td>Pre-committee finance queue</td><td>Finance can accept or return with notes.</td><td>Finance</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">G03</td><td>Amount-based routing (Branch / District / HO / Management)</td><td>A small amount stays at the right level; a large amount does not sit only at branch.</td><td>Credit Head</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">G04</td><td>Committee pack on one screen</td><td>Scorecard, DSCR, E&amp;S, collateral, docs — no Excel hunt.</td><td>Committee</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">G05</td><td>Vote approve / reject / return</td><td>Each outcome recorded; return reaches officer with notes; notifications fire.</td><td>Committee</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">G06</td><td>Maker cannot vote own file</td><td>Conflict blocked or forced recusal as designed.</td><td>Committee + IT</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>H. Closing → legal → contribution → Finance <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">H01</td><td>Post-approval conditions / restriction</td><td>File cannot reach Finance while policy-required restriction is open.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H02</td><td>Loan agreement e-sign / attested sign</td><td>Signatures recorded (name, ID, time, hash or equivalent); Finance blocked until complete if policy on.</td><td>Officer + Customer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H03</td><td>Legal: title search, mortgage registration, notary</td><td>Each kind can be logged; disbursement blocked while required kinds are open.</td><td>Legal / Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H04</td><td>Own contribution required + verified</td><td>Cannot disburse until verified when policy requires it.</td><td>Officer + Finance</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H05</td><td>Tranche draw (if enabled)</td><td>Partial disbursement then remaining; first draw is the booking event if CBS booking is on.</td><td>Finance</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H06</td><td>Finance disbursement queue</td><td>Eligible file appears; ineligible file does not. Action audited.</td><td>Finance</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">H07</td><td>CBS booking (only if connected this wave)</td><td>Hub does not pretend to be the ledger; booking matches agreed API / manual procedure.</td><td>IT + Finance</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>I. Monitoring <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">I01</td><td>Monitoring desk lists disbursed pilot loans in scope</td><td>Officer sees assigned book; BM sees branch; HO sees org.</td><td>Officer / BM</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">I02</td><td>Visit / covenant / watchlist on a file</td><td>Visit logged; Sheet-6 style covenants can be recorded; watchlist flag visible.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">I03</td><td>Wrong roles cannot open Monitoring as a book of record</td><td>Engineer / auditor not granted Monitoring desk unless policy says so.</td><td>IT</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>J. Collections / workout (case file) <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">J01</td><td>Collections desk: arrears file + action log</td><td>Actions recorded; does not post cash in the hub.</td><td>Collections</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">J02</td><td>Workout / write-off case file</td><td>Only Credit Head / Finance Manager / CEO / admin (per policy) can decide; others cannot.</td><td>Credit Head</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">J03</td><td>Hub vs CBS</td><td>Testers confirm money movement is still CBS; hub is the credit narrative.</td><td>Finance</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="screen pagebreak">
+  <h3>K. Digital Apply <span class="tag new">Factory — if in this wave</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">K01</td><td>Customer register and apply</td><td>Account created; application saved.</td><td>Customer</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">K02</td><td>Upload docs + fee pay or waive</td><td>Mock/live fee path works; waive only by authorised staff if used.</td><td>Customer + Admin</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">K03</td><td>Submit → Queue ID + staff notice</td><td>Appears in online intake; officer notified.</td><td>Intake</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">K04</td><td>Customer sees status / notices after staff action</td><td>No silent black hole after submit.</td><td>Customer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>L. Credit Intelligence <span class="tag new">Factory</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">L01</td><td>Portfolio / pipeline view for Credit Head</td><td>Counts and amounts by status/branch match the 10–15 files (spot-check).</td><td>Credit Head</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">L02</td><td>Collateral analytics</td><td>Coverage / type mix visible; not empty on files with packs.</td><td>Credit Head</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">L03</td><td>Scoped Q&amp;A / workspace (if used)</td><td>Does not leak other-branch files to a BM.</td><td>BM + IT</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>M. Agentic Assist <span class="tag new">Factory — rails</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">M01</td><td>Copilot helps checklist / draft</td><td>Useful on at least one file; errors are obvious.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Partial</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">M02</td><td>Hard rails: cannot approve or disburse</td><td>No path for the copilot to vote or send money.</td><td>IT + Officer</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>N. Seqela Market <span class="tag">Optional this wave</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">N01</td><td>Guest price quote saves</td><td>Quote recorded; no crash.</td><td>Business / IT</td><td><select><option></option><option>Pass</option><option>Fail</option><option>N/A</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+
+  <h3>O. Process policy (admin) <span class="tag new">Controls</span></h3>
+  <table>
+    <thead><tr><th>ID</th><th>Test</th><th>Pass if</th><th>Who</th><th class="score">Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="id">O01</td><td>Settings → Process policy (superadmin)</td><td>Risk-before-committee, closing floors, Monitoring/Collections roles visible and savable.</td><td>Superadmin</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+      <tr><td class="id">O02</td><td>Officer cannot waive a policy-on closing floor</td><td>Locked checkboxes / hard block on Post-approval.</td><td>Officer</td><td><select><option></option><option>Pass</option><option>Fail</option></select></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 5 FILE LOG -->
+<div class="screen pagebreak">
+  <h2>5. Pilot file log (attach Queue IDs)</h2>
+  <p class="small">Every Pass/Fail in Section 4 should point at a real file. Aim for 10–15 rows. Status examples: Draft · Appraisal · Risk · Committee · Approved · Closing · Finance · Disbursed · Rejected · Returned.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Queue ID</th>
+        <th>Branch</th>
+        <th>Loan type</th>
+        <th>Collateral kind</th>
+        <th>Channel</th>
+        <th>End status</th>
+        <th>Hours to committee-ready</th>
+        <th>Returned?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text" placeholder="building / land / movable / mixed"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>2</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>3</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>4</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>5</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>6</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>7</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>8</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>9</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>10</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>11</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+      <tr><td>12</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Staff</option><option>Digital Apply</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>No</option><option>Yes</option></select></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 6 DEFECTS -->
+<div class="screen pagebreak">
+  <h2>6. Defect log (attach to CEO pack)</h2>
+  <p>Copy Critical rows onto Section 1 conditions. Do not bury Critical items in a long Minor list.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Def #</th>
+        <th>Test ID</th>
+        <th>Severity</th>
+        <th>What happened</th>
+        <th>Expected (proposal)</th>
+        <th>Owner</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>D-01</td><td><input type="text" placeholder="e.g. E04"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-02</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-03</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-04</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-05</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-06</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-07</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+      <tr><td>D-08</td><td><input type="text"/></td><td><select><option></option><option>Critical</option><option>Major</option><option>Minor</option></select></td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td><td><select><option></option><option>Open</option><option>Fixed — retest</option><option>Accepted risk</option></select></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Counts for the CEO</h3>
+  <table>
+    <thead><tr><th></th><th>Open</th><th>Fixed — retest</th><th>Accepted risk</th></tr></thead>
+    <tbody>
+      <tr><td>Critical</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td></tr>
+      <tr><td>Major</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td></tr>
+      <tr><td>Minor</td><td><input type="text"/></td><td><input type="text"/></td><td><input type="text"/></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 7 SIGNOFF -->
+<div class="screen pagebreak">
+  <h2>7. Sign-off (before the pack goes to the CEO)</h2>
+  <p>The CEO should not be asked to interpret raw tester notes. These four signatures mean Section 1 is true.</p>
+  <div class="sig">
+    <div class="box">
+      <h4>UAT lead</h4>
+      <p class="small">Matrix complete; KPIs calculated; defects classified.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+    <div class="box">
+      <h4>Credit / appraisal</h4>
+      <p class="small">D–G reflect how DECSI will actually decide files.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+    <div class="box">
+      <h4>Risk &amp; compliance</h4>
+      <p class="small">Gates, dual control, legal/closing floors, collections case file.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+  </div>
+  <div class="sig">
+    <div class="box">
+      <h4>Finance</h4>
+      <p class="small">Disbursement queue; hub vs CBS; contribution / tranches.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+    <div class="box">
+      <h4>IT</h4>
+      <p class="small">Access, MFA, backup/restore, environment used for UAT.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+    <div class="box">
+      <h4>CEO (decision)</h4>
+      <p class="small">Go / Go with conditions / Hold — as marked on page 1.</p>
+      <p>Name<br/><input type="text"/></p>
+      <p>Date<br/><input type="date"/></p>
+      <p>Signature</p>
+    </div>
+  </div>
+
+  <h3>UAT environment (IT fills)</h3>
+  <table>
+    <tbody>
+      <tr><th style="width:32%">URL / host</th><td><input type="text" placeholder="https://…"/></td></tr>
+      <tr><th>Build / date</th><td><input type="text"/></td></tr>
+      <tr><th>CBS connected this wave?</th><td><select><option></option><option>No — hub case file only</option><option>Yes — booking API</option><option>Manual dual-key procedure</option></select></td></tr>
+      <tr><th>Digital Apply open?</th><td><select><option></option><option>Yes</option><option>No — staff intake only</option></select></td></tr>
+      <tr><th>Process policy snapshot</th><td><input type="text" placeholder="Risk-before-committee on/off; closing floors on/off"/></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>What to send the CEO:</strong> printed or PDF of <em>Section 1</em> + Critical rows from Section 6 + the signed Section 7. Keep the full matrix in Credit/IT files. Do not send 12 pages of Pass rows unless the CEO asks.
+  </div>
+
+  <p class="footer">DECSI-UAT-CEO-2026-08 · Seqela · Mapped to the DECSI credit-factory proposal · Queue already live; this pack tests the factory the CEO is being asked to put into production.</p>
+</div>
+
+</div>
+</body>
+</html>

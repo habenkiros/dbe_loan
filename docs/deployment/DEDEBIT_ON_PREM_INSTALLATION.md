@@ -4,11 +4,30 @@
 **Product:** AI-powered Credit Intelligence (Loan Hub + Digital Apply + collateral + market)  
 **Vendor:** Seqela Technologies  
 **Deploy model:** On-premises (your data centre / private cloud)  
-**Licensing:** Signed **license key** with an **expiry date** (renewed by Seqela)
+**Licensing:** Signed **license key** with an **expiry date** (renewed by Seqela)  
+**GitHub:** https://github.com/habenkiros/decsi_loan  
 
 This pack is what IT needs to install, license, smoke-test, and hand over to operations.
 
 Related end-user manuals (admin / staff / customers) live under `docs/user_manual/` and inside the app at `/hub/help/`.
+
+---
+
+## Quick start (simplest path)
+
+On a Linux server with Docker 24+, Compose v2, and Git:
+
+```bash
+git clone https://github.com/habenkiros/decsi_loan.git
+cd decsi_loan
+./scripts/install_decsi.sh
+```
+
+That one script creates `.env`, applies the evaluation license, starts Docker, migrates the database, and can create a superuser.
+
+Short handout: [`INSTALL_DECSI.md`](../../INSTALL_DECSI.md) at the repo root.
+
+Continue below only if you need manual steps, HTTPS tablets, backups, or hardening.
 
 ---
 

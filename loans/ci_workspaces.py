@@ -15,14 +15,26 @@ from loans.credit_intelligence import WEAK_BANDS, _money, _watchlist, scoped_loa
 
 def build_risk_alerts(user, limit: int = 12) -> List[Dict[str, Any]]:
     """Portfolio + application risk alerts for Intelligence Center."""
+    from loans.ci_alerts import (
+        append_aging_file_alerts,
+        append_committee_sla_alerts,
+        append_coverage_alerts,
+        append_missing_docs_alerts,
+    )
     from loans.models import LoanRequest
 
     qs, _ = scoped_loans(user)
     alerts: List[Dict[str, Any]] = []
 
+    # Operational differentiators (aging / docs / SLA / policy coverage)
+    append_aging_file_alerts(qs, alerts, limit=4)
+    append_missing_docs_alerts(qs, alerts, limit=4)
+    append_committee_sla_alerts(qs, alerts, limit=4)
+    append_coverage_alerts(qs, alerts, limit=4)
+
     weak = qs.filter(appraisal__credit_score_band__in=WEAK_BANDS).select_related(
         'appraisal', 'branch',
-    ).order_by('appraisal__credit_score_total')[:8]
+    ).order_by('appraisal__credit_score_total')[:6]
     for lr in weak:
         appr = lr.appraisal
         score = float(appr.credit_score_total) if appr and appr.credit_score_total is not None else None
@@ -40,27 +52,10 @@ def build_risk_alerts(user, limit: int = 12) -> List[Dict[str, Any]]:
             'action_url_args': [lr.id],
         })
 
-    thin_cov = qs.filter(
-        appraisal__collateral_coverage_ratio__isnull=False,
-        appraisal__collateral_coverage_ratio__lt=Decimal('1.0'),
-    ).select_related('appraisal')[:5]
-    for lr in thin_cov:
-        ratio = lr.appraisal.collateral_coverage_ratio
-        alerts.append({
-            'severity': 'medium',
-            'kind': 'collateral_coverage',
-            'title': f'Thin collateral coverage: {lr.applicant_name}',
-            'body': f'{lr.loan_request_id} · coverage ratio {float(ratio):.2f}×',
-            'loan_id': lr.id,
-            'action_label': 'Open loan',
-            'action_url_name': 'loan_request_detail',
-            'action_url_args': [lr.id],
-        })
-
     low_dscr = qs.filter(
         appraisal__dscr_annual__isnull=False,
         appraisal__dscr_annual__lt=Decimal('1.0'),
-    ).select_related('appraisal')[:5]
+    ).select_related('appraisal')[:4]
     for lr in low_dscr:
         dscr = lr.appraisal.dscr_annual
         alerts.append({

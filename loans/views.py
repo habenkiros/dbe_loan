@@ -1826,7 +1826,12 @@ def loan_request_detail_finance(request, loan_request_id):
 #manager
 @login_required
 def loan_request_detail_manager(request, loan_request_id):
-    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    from .committee_evidence import build_committee_vote_evidence
+
+    loan_request = get_object_or_404(
+        LoanRequest.objects.select_related('branch', 'collateral', 'assigned_loan_officer'),
+        pk=loan_request_id,
+    )
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).select_related('created_by').first()
     basic_info = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
     committee_tally = get_committee_tally(loan_request, current_user=request.user)
@@ -1843,8 +1848,9 @@ def loan_request_detail_manager(request, loan_request_id):
         messages.warning(request, 'You do not have access to this approval review.')
         return redirect('view_loan_requests_manager')
     can_return = user_can_return_to_officer(request.user, loan_request)
-    scorecard = None
-    if appraisal:
+    evidence = build_committee_vote_evidence(loan_request)
+    scorecard = evidence.get('scorecard')
+    if appraisal and not scorecard:
         scorecard = appraisal.scorecard_detail or build_credit_scorecard(appraisal)
     return render(request, 'loans/loan_request_detail_manager.html', {
         'loan_request': loan_request,
@@ -1854,6 +1860,7 @@ def loan_request_detail_manager(request, loan_request_id):
         'vote_form': vote_form,
         'can_return_to_officer': can_return,
         'scorecard': scorecard,
+        'evidence': evidence,
     })
 
 
@@ -2081,6 +2088,43 @@ def post_approval_queue(request):
         'selected_status': status_filter,
         'querystring': page_querystring(request),
     })
+
+
+@login_required
+def loan_audit_pack_zip(request, loan_request_id):
+    """Download compliance audit ZIP for a loan (docs, appraisal, votes, legal, agreement, CBS)."""
+    from django.http import HttpResponse
+
+    from loans.audit_export_pack import build_loan_audit_pack_zip, user_can_export_audit_pack
+    from loans.models import SecurityAuditLog
+    from loans.security import log_security_event
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not user_can_export_audit_pack(request.user, loan_request):
+        messages.warning(request, 'You do not have access to export the audit pack for this loan.')
+        return redirect('view_loan_requests')
+
+    zip_bytes, manifest = build_loan_audit_pack_zip(loan_request, exported_by=request.user)
+    try:
+        log_security_event(
+            SecurityAuditLog.EVT_LOAN_AUDIT_PACK,
+            request=request,
+            user=request.user,
+            username=request.user.username,
+            detail={
+                'loan_request_id': loan_request.loan_request_id,
+                'loan_pk': loan_request.pk,
+                'file_count': len(manifest.get('files_sha256') or {}),
+            },
+        )
+    except Exception:
+        pass
+
+    filename = f'audit_pack_{loan_request.loan_request_id}.zip'
+    response = HttpResponse(zip_bytes, content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Length'] = str(len(zip_bytes))
+    return response
 
 
 @login_required

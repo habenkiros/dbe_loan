@@ -1302,31 +1302,42 @@ textarea { resize: vertical; min-height: 4.5rem; }
   .ap-card { padding: 1rem 0.95rem; }
 }
 
-/* ——— Dark theme (virtual portal) ——— */
+/* ——— Dark theme (true charcoal, not green) ——— */
 html[data-theme="dark"] {
   color-scheme: dark;
-  --ink: #e4eee8;
-  --muted: #9bb0a4;
-  --bg0: #082116;
-  --bg1: #0e1712;
-  --card: #15231c;
-  --accent: #3d9a5c;
-  --accent-deep: #8fd4a6;
-  --accent-hover: #2aaa58;
-  --line: #2c4638;
-  --soft: #1a2c22;
-  --ok: #6dca8a;
+  --ink: #ececec;
+  --muted: #9a9a9a;
+  --bg0: #050505;
+  --bg1: #0a0a0a;
+  --card: #141414;
+  --accent: #d0d0d0;
+  --accent-deep: #f0f0f0;
+  --accent-hover: #ffffff;
+  --line: #2a2a2a;
+  --soft: #161616;
+  --ok: #c8c8c8;
   --warn: #e08080;
   --gold: #d4a84a;
-  --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 28px 64px rgba(0, 0, 0, 0.45);
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 28px 64px rgba(0, 0, 0, 0.6);
 }
 
 html[data-theme="dark"] body {
-  background:
-    radial-gradient(ellipse 90% 55% at 8% -12%, rgba(45, 160, 85, 0.12), transparent 55%),
-    radial-gradient(ellipse 60% 45% at 100% 0%, rgba(20, 80, 40, 0.18), transparent 50%),
-    linear-gradient(180deg, #121c16 0%, var(--bg1) 100%);
+  background: #0a0a0a;
+}
+
+html[data-theme="dark"] .ap-top {
+  background: #050505;
+  border-bottom-color: #1f1f1f;
+}
+
+html[data-theme="dark"] .ap-footer {
+  background: #050505;
+}
+
+html[data-theme="dark"] .ap-nav a.ap-nav-cta {
+  background: #2a2a2a;
+  color: #fff !important;
 }
 
 html[data-theme="dark"] .ap-input,
@@ -1338,9 +1349,18 @@ html[data-theme="dark"] input[type=tel],
 html[data-theme="dark"] input[type=file],
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea {
-  background: #101c16;
+  background: #111;
   color: var(--ink);
   border-color: var(--line);
+}
+
+html[data-theme="dark"] .ap-btn-primary {
+  background: #2a2a2a;
+  color: #fff;
+}
+html[data-theme="dark"] .ap-btn-primary:hover {
+  background: #3a3a3a;
+  color: #fff;
 }
 
 html[data-theme="dark"] .ap-btn-light {
@@ -1348,37 +1368,62 @@ html[data-theme="dark"] .ap-btn-light {
   color: var(--accent-deep);
 }
 
+html[data-theme="dark"] .ap-lp-hero,
+html[data-theme="dark"] .ap-home-hero {
+  background: #0a0a0a;
+}
+
+html[data-theme="dark"] .ap-lp-hero::after,
+html[data-theme="dark"] .ap-home-hero::after {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06), transparent 70%);
+}
+
+html[data-theme="dark"] .ap-lp-section--alt {
+  background: #111;
+  border-color: #2a2a2a;
+}
+
+html[data-theme="dark"] .ap-lp-section--dark {
+  background: #0d0d0d;
+  color: #ececec;
+}
+
+html[data-theme="dark"] .ap-need-icon {
+  background: #2a2a2a;
+  color: #f0f0f0;
+}
+
 html[data-theme="dark"] .ap-steps li.is-done {
-  background: #163224;
-  border-color: #2d6a45;
-  color: #b8ecc8;
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  color: #d8d8d8;
 }
 
 html[data-theme="dark"] .ap-status-chip.tone-progress,
 html[data-theme="dark"] .ap-status-chip.tone-ok,
 html[data-theme="dark"] .ap-status-chip.tone-done {
-  background: #163224;
-  border-color: #2d6a45;
-  color: #b8ecc8;
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  color: #d8d8d8;
 }
 
 html[data-theme="dark"] .ap-status-chip.tone-warn {
-  background: #3a1c1c;
-  border-color: #7a3a3a;
+  background: #2a1414;
+  border-color: #5a2a2a;
   color: #f0c4c4;
 }
 
 html[data-theme="dark"] .ap-messages li.success,
 html[data-theme="dark"] .ap-messages li.info {
-  background: #163224;
-  border-color: #2d6a45;
-  color: #b8ecc8;
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  color: #d8d8d8;
 }
 
 html[data-theme="dark"] .ap-messages li.error,
 html[data-theme="dark"] .ap-messages li.warning {
-  background: #3a1c1c;
-  border-color: #7a3a3a;
+  background: #2a1414;
+  border-color: #5a2a2a;
   color: #f0c4c4;
 }
 
@@ -1387,6 +1432,13 @@ html[data-theme="dark"] .ap-timeline li::before {
 }
 
 html[data-theme="dark"] .ap-fact-request {
-  background: #3a3018 !important;
-  border-color: #7a6430 !important;
+  background: #2a2414 !important;
+  border-color: #5a4a28 !important;
+}
+
+@media (max-width: 720px) {
+  html[data-theme="dark"] .ap-nav {
+    background: #0d0d0d;
+    border-bottom-color: #1f1f1f;
+  }
 }

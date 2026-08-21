@@ -1,0 +1,182 @@
+{# Committee vote evidence: documents + appraisal snapshot + collateral — before casting a vote. #}
+{% if evidence %}
+<style>
+.ev-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:0.75rem; margin:0.85rem 0 0; }
+@media (max-width: 900px) { .ev-grid { grid-template-columns:1fr; } }
+.ev-card { background:#fff; border:1px solid #d5ddd8; border-radius:8px; padding:0.85rem 0.95rem; min-height:8rem; }
+.ev-card h3 { margin:0 0 0.4rem; font-size:0.98rem; color:#064420; }
+.ev-card .ev-meta { font-size:0.8rem; color:#555; margin:0 0 0.5rem; }
+.ev-card ul { margin:0.25rem 0 0; padding-left:1.1rem; font-size:0.88rem; }
+.ev-card li { margin:0.2rem 0; }
+.ev-empty { color:#777; font-size:0.88rem; font-style:italic; }
+.ev-badge { display:inline-block; padding:0.12rem 0.4rem; border-radius:4px; font-size:0.75rem; font-weight:600; background:#e9ecef; color:#495057; }
+.ev-ok { background:#d4edda; color:#155724; }
+.ev-warn { background:#fff3cd; color:#856404; }
+.ev-bad { background:#f8d7da; color:#721c24; }
+.ev-actions { margin-top:0.55rem; display:flex; flex-wrap:wrap; gap:0.35rem; }
+.ev-panel-title { margin:0; font-size:1.1rem; color:#064420; }
+</style>
+
+<div id="evidence" class="committee-panel" style="border-color:#064420;">
+  <div style="display:flex; flex-wrap:wrap; gap:0.5rem 1rem; align-items:center; justify-content:space-between;">
+    <h2 class="ev-panel-title">Evidence before you vote</h2>
+    <div class="list-actions">
+      {% if evidence.has_appraisal %}
+      {% url 'committee_appraisal_pack' loan_request.id as pack_url %}
+      {% include "includes/list_action.html" with href=pack_url icon="appraisal" label="Full appraisal pack" tone="blue" only %}
+      {% endif %}
+      {% url 'collateral:evidence_pack' loan_request.id as col_pack_url %}
+      {% include "includes/list_action.html" with href=col_pack_url icon="summary" label="Collateral pack" tone="gray" only %}
+    </div>
+  </div>
+  <p class="help" style="margin:0.35rem 0 0;">
+    Review documents, the officer recommendation, and collateral coverage on this page.
+    Open the packs only when you need the full sheets or photo evidence.
+  </p>
+
+  <div class="ev-grid">
+    {# ——— Documents ——— #}
+    <div class="ev-card">
+      <h3>Application documents</h3>
+      <p class="ev-meta">
+        {% if evidence.document_count %}
+          {{ evidence.document_count }} file{{ evidence.document_count|pluralize }}
+          · <span class="ev-badge {% if evidence.document_rejected %}ev-bad{% elif evidence.document_pending %}ev-warn{% else %}ev-ok{% endif %}">
+            {{ evidence.document_verified }} verified
+            {% if evidence.document_pending %} · {{ evidence.document_pending }} pending{% endif %}
+            {% if evidence.document_rejected %} · {{ evidence.document_rejected }} rejected{% endif %}
+          </span>
+        {% else %}
+          <span class="ev-badge ev-warn">None uploaded</span>
+        {% endif %}
+      </p>
+      {% if evidence.doc_readiness %}
+        {% if evidence.doc_readiness.ready %}
+        <p class="ev-meta"><span class="ev-badge ev-ok">Checklist ready</span></p>
+        {% else %}
+        <p class="ev-meta"><span class="ev-badge ev-warn">Checklist incomplete</span></p>
+        {% endif %}
+      {% endif %}
+      {% if evidence.documents %}
+      <ul>
+        {% for doc in evidence.documents %}
+        <li>
+          {% if doc.file %}
+          <a href="{% url 'view_loan_document' loan_request.id doc.id %}" target="_blank" rel="noopener">
+            {{ doc.document_type.name }}
+          </a>
+          {% else %}
+          {{ doc.document_type.name }}
+          {% endif %}
+          <br>
+          <span class="ev-badge {% if doc.auth_status == 'verified' %}ev-ok{% elif doc.auth_status == 'rejected' %}ev-bad{% else %}ev-warn{% endif %}">
+            {{ doc.get_auth_status_display|default:doc.auth_status|default:"—" }}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="ev-empty">No application documents on this file.</p>
+      {% endif %}
+    </div>
+
+    {# ——— Appraisal ——— #}
+    <div class="ev-card">
+      <h3>Appraisal snapshot</h3>
+      {% if evidence.appraisal %}
+      <p class="ev-meta">
+        <span class="ev-badge ev-ok">{{ evidence.appraisal.get_recommendation_display|default:"—" }}</span>
+        {% if evidence.scorecard %}
+        · Score <strong>{{ evidence.scorecard.total|floatformat:1 }}/100</strong>
+        ({{ evidence.scorecard.band_label }})
+        {% endif %}
+      </p>
+      <ul style="list-style:none; padding-left:0;">
+        <li><strong>Amount:</strong>
+          {% if evidence.appraisal.amount_approved %}{{ evidence.appraisal.amount_approved|floatformat:2 }}{% else %}—{% endif %}
+          <small>(asked {{ loan_request.amount_requested|floatformat:2 }})</small>
+        </li>
+        <li><strong>Term / rate:</strong>
+          {{ evidence.appraisal.term_approved_months|default:"—" }} mo
+          · {% if evidence.appraisal.rate_approved %}{{ evidence.appraisal.rate_approved }}%{% else %}—{% endif %}
+        </li>
+        {% if evidence.appraisal.collateral_total_value or evidence.appraisal.collateral_coverage_ratio %}
+        <li><strong>Sheet 5 coverage:</strong>
+          {% if evidence.appraisal.collateral_total_value %}{{ evidence.appraisal.collateral_total_value|floatformat:2 }}{% else %}—{% endif %}
+          {% if evidence.appraisal.collateral_coverage_ratio %}
+          · {{ evidence.appraisal.collateral_coverage_ratio|floatformat:2 }}×
+          {% endif %}
+        </li>
+        {% endif %}
+      </ul>
+      {% if evidence.strengths_short %}
+      <p class="ev-meta" style="margin-top:0.45rem;"><strong>Strengths:</strong> {{ evidence.strengths_short }}</p>
+      {% endif %}
+      {% if evidence.weaknesses_short %}
+      <p class="ev-meta"><strong>Weaknesses:</strong> {{ evidence.weaknesses_short }}</p>
+      {% endif %}
+      <div class="ev-actions list-actions">
+        {% url 'committee_appraisal_pack' loan_request.id as pack_url2 %}
+        {% include "includes/list_action.html" with href=pack_url2 icon="appraisal" label="Sheets 1–7" tone="blue" only %}
+        {% url 'export_appraisal_pack_pdf' loan_request.id as pdf_url %}
+        {% include "includes/list_action.html" with href=pdf_url icon="print" label="PDF" tone="green" only %}
+      </div>
+      {% else %}
+      <p class="ev-empty">No appraisal on this loan yet.</p>
+      {% endif %}
+    </div>
+
+    {# ——— Collateral ——— #}
+    <div class="ev-card">
+      <h3>Collateral estimation</h3>
+      {% if evidence.pipeline_label %}
+      <p class="ev-meta">
+        <span class="ev-badge {% if evidence.pipeline_stage == 'engineering_approved' or evidence.pipeline_stage == 'ready_to_submit' %}ev-ok{% elif evidence.pipeline_stage == 'returned' %}ev-bad{% else %}ev-warn{% endif %}">
+          {{ evidence.pipeline_label }}
+        </span>
+      </p>
+      {% endif %}
+      {% if evidence.collateral_totals and evidence.collateral_totals.grand_total %}
+      <ul style="list-style:none; padding-left:0;">
+        <li><strong>Estimated value:</strong> {{ evidence.collateral_totals.grand_total|floatformat:2 }}</li>
+        {% if evidence.coverage and evidence.coverage.coverage_pct %}
+        <li><strong>Coverage:</strong> {{ evidence.coverage.coverage_pct }}%
+          {% if evidence.coverage.adequate_for_submit %}<span class="ev-badge ev-ok">Meets policy</span>
+          {% else %}<span class="ev-badge ev-warn">Below / flagged</span>{% endif %}
+        </li>
+        {% endif %}
+        {% if evidence.collateral_totals.total_buildings %}
+        <li>Buildings: {{ evidence.collateral_totals.total_buildings|floatformat:2 }}</li>
+        {% endif %}
+        {% if evidence.collateral_totals.land_value %}
+        <li>Land: {{ evidence.collateral_totals.land_value|floatformat:2 }}</li>
+        {% endif %}
+        {% if evidence.collateral_totals.total_other %}
+        <li>Other: {{ evidence.collateral_totals.total_other|floatformat:2 }}</li>
+        {% endif %}
+      </ul>
+      {% elif evidence.has_collateral %}
+      <p class="ev-meta">Field work registered — open the pack for values and photos.</p>
+      {% else %}
+      <p class="ev-empty">No collateral estimation recorded yet.</p>
+      {% endif %}
+      {% if evidence.collateral_readiness and evidence.collateral_readiness.buildings %}
+      <ul>
+        {% for row in evidence.collateral_readiness.buildings|slice:":4" %}
+        <li>{{ row.building.name }}
+          — {% if row.readiness.ready %}<span class="ev-badge ev-ok">ready</span>
+          {% else %}<span class="ev-badge ev-warn">{{ row.readiness.image_count }}/{{ row.readiness.min_images }} photos</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="ev-actions list-actions">
+        {% url 'collateral:summary' loan_request.id as sum_url %}
+        {% include "includes/list_action.html" with href=sum_url icon="summary" label="Summary" tone="blue" only %}
+        {% url 'collateral:evidence_pack' loan_request.id as col_pack_url2 %}
+        {% include "includes/list_action.html" with href=col_pack_url2 icon="open" label="Photos &amp; maps" tone="gray" only %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

@@ -113,13 +113,26 @@ def _can_review_collateral_unlock(user, loan_request) -> bool:
 
 
 def _can_access_collateral(user):
-    """Roles that can work on collateral (loan officer, engineer, branch manager, etc.)."""
-    return user.role in (
-        'branch_manager', 'loan_officer', 'engineer', 'engineering_head',
+    """Roles that can open collateral pages (field work or committee read of evidence)."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    role = getattr(user, 'role', None)
+    if role in (
+        'branch_manager', 'loan_officer', 'credit_loan_officer', 'credit_head',
+        'engineer', 'engineering_head',
         'cooperative_manager', 'operation_manager', 'finance_manager',
-        'credit_head', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
+        'accountant', 'district_manager',
+        'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service', 'board_member',
         'admin', 'superadmin',
-    )
+    ):
+        return True
+    try:
+        from loans.committee import user_is_approval_participant
+        return user_is_approval_participant(user)
+    except Exception:
+        return False
 
 
 def _collateral_eligible_loans(user=None):
@@ -164,6 +177,7 @@ def _user_can_access_loan_collateral(user, loan_request) -> bool:
     Whether the user may open this loan's collateral field/summary pages.
     Broader than dashboard listing: engineering reviewers must open field evidence
     even when the loan is not in their estimation assignment list.
+    Committee voters get read access so they can review valuation before voting.
     """
     if not user or not getattr(user, 'is_authenticated', False) or loan_request is None:
         return False
@@ -182,6 +196,12 @@ def _user_can_access_loan_collateral(user, loan_request) -> bool:
         from .engineering_qa import can_review_engineering
         if can_review_engineering(user, loan_request):
             return True
+    try:
+        from loans.committee import user_can_view_committee_loan
+        if user_can_view_committee_loan(user, loan_request):
+            return True
+    except Exception:
+        pass
     return False
 
 
@@ -1234,10 +1254,11 @@ def other_collateral_delete(request, item_id):
 def summary(request, loan_request_id):
     """Collateral summary: one page per loan. Shows only the section matching the loan's collateral type (buildings, land, or other)."""
     loan_request = get_object_or_404(
-        _collateral_eligible_loans(request.user).select_related('collateral', 'collateral_submitted_by'),
+        LoanRequest.objects.select_related('collateral', 'collateral_submitted_by', 'branch'),
         pk=loan_request_id,
     )
-    ct = (loan_request.collateral.name or '').lower()
+    _require_loan_collateral_access(request.user, loan_request)
+    ct = (loan_request.collateral.name or '').lower() if loan_request.collateral_id else ''
     engines = engines_for_loan(loan_request)
     buildings = Building.objects.filter(loan_request=loan_request).prefetch_related(
         'buildingvaluation_set__sub_work', 'buildingvaluation_set__sub_sub_work'

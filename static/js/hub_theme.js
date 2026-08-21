@@ -15,7 +15,7 @@
     var dark = theme === 'dark';
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#082116' : '#064420');
+    if (meta) meta.setAttribute('content', dark ? '#0a0a0a' : '#064420');
     document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
       btn.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');

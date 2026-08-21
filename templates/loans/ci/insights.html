@@ -12,7 +12,7 @@
     <div>
       <p class="ci-eyebrow">AI Credit Intelligence</p>
       <h1>Risk alerts &amp; recommendations</h1>
-      <p>Rule-based alerts from score bands, DSCR, and collateral coverage — not generative predictions.</p>
+      <p>Operational alerts: aging files, missing docs, committee SLA, coverage below policy — plus score/DSCR signals.</p>
     </div>
     <div class="dash-hero-meta">
       <span class="dash-pill">Scope: {{ scope_label }}</span>
@@ -24,7 +24,7 @@
     <article class="ci-insight sev-{{ alert.severity }}">
       <div class="ci-insight-head">
         <strong>{{ alert.title }}</strong>
-        <span class="ci-conf">{{ alert.kind }}</span>
+        <span class="ci-conf">{% if alert.kind == 'aging_file' %}Aging file{% elif alert.kind == 'missing_docs' %}Missing docs{% elif alert.kind == 'committee_sla' %}Committee SLA{% elif alert.kind == 'collateral_coverage' %}Coverage{% elif alert.kind == 'high_risk_borrower' %}High risk{% elif alert.kind == 'repayment_capacity' %}DSCR{% elif alert.kind == 'committee_queue' %}Queue{% else %}{{ alert.kind }}{% endif %}</span>
       </div>
       <p>{{ alert.body }}</p>
       {% if alert.action_url and alert.action_url != '#' %}

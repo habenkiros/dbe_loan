@@ -348,24 +348,34 @@ decsi_loan/
 
 ## Getting started
 
-> **DECSI IT staff:** for minimum server requirements, Docker install, smoke tests, backup, and security baseline, use  
-> [`docs/user_manual/06_installation_it.md`](docs/user_manual/06_installation_it.md) (also under Hub → **Help**).
+> **DECSI / Dedebit IT (on-prem):** one-command install from GitHub — see [`INSTALL_DECSI.md`](INSTALL_DECSI.md)  
+> (`./scripts/install_decsi.sh`). Full guide: [`docs/deployment/DEDEBIT_ON_PREM_INSTALLATION.md`](docs/deployment/DEDEBIT_ON_PREM_INSTALLATION.md).  
+> Also: [`docs/user_manual/06_installation_it.md`](docs/user_manual/06_installation_it.md) (Hub → **Help**).
 
 ### Prerequisites
 
-- Docker Compose, **or** Python 3.9+, PostgreSQL 16  
+- Docker Compose, **or** Python 3.9+, PostgreSQL 16
 - Host OCR + PDF stack if not using Docker: Tesseract (eng/amh), poppler, WeasyPrint libs (Pango/Cairo)
 
-### Docker Compose (recommended)
+### Docker Compose — DECSI simple install (recommended)
+
+```bash
+git clone https://github.com/habenkiros/decsi_loan.git
+cd decsi_loan
+./scripts/install_decsi.sh
+```
+
+App: **http://\<server-ip\>:8000** · Staff: **/hub/login/** · License: **/license/**
+
+### Docker Compose — manual
 
 ```bash
 cd decsi_loan
-docker compose up --build
+cp .env.example .env   # set SECRET_KEY, LICENSE_KEY, DB_PASSWORD, ALLOWED_HOSTS
+docker compose up --build -d
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py createsuperuser
 ```
-
-App: **http://localhost:8000**
 
 #### HTTPS for tablets (GPS / camera on LAN)
 

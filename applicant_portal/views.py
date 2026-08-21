@@ -191,17 +191,31 @@ def home(request):
         )
         .order_by('-updated_at')[:40]
     )
-    notices = list(
-        ApplicantNotification.objects
-        .filter(account=request.portal_applicant, is_read=False)
-        .order_by('-created_at')[:8]
-    )
     from applicant_portal.status import enrich_applications
 
     return render(request, 'applicant_portal/home.html', {
         'rows': enrich_applications(apps),
         'applicant': request.portal_applicant,
-        'notices': notices,
+    })
+
+
+@applicant_login_required
+@require_http_methods(['GET'])
+def notices(request):
+    """Dedicated notices inbox — not shown on the applications dashboard."""
+    closed = _portal_or_closed(request)
+    if closed:
+        return closed
+    qs = (
+        ApplicantNotification.objects
+        .filter(account=request.portal_applicant)
+        .select_related('application')
+        .order_by('-created_at')[:80]
+    )
+    return render(request, 'applicant_portal/notices.html', {
+        'applicant': request.portal_applicant,
+        'notices': list(qs),
+        'unread_count': sum(1 for n in qs if not n.is_read),
     })
 
 
@@ -798,4 +812,4 @@ def mark_notices_read(request):
     ApplicantNotification.objects.filter(
         account=request.portal_applicant, is_read=False,
     ).update(is_read=True)
-    return redirect(request.META.get('HTTP_REFERER') or 'applicant_portal:home')
+    return redirect(request.META.get('HTTP_REFERER') or 'applicant_portal:notices')

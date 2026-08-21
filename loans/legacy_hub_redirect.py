@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from django.http import HttpResponsePermanentRedirect
+from django.http import HttpResponseRedirect
 from django.urls import Resolver404, resolve
 
 
@@ -49,5 +49,5 @@ class StaffHubLegacyRedirectMiddleware:
 
         qs = request.META.get('QUERY_STRING') or ''
         target = hub_path + (f'?{qs}' if qs else '')
-        # Temporary redirect so bookmarks update without hard-coding permanent forever
-        return HttpResponsePermanentRedirect(target)
+        # 302: bookmarks update without making POST a permanent GET (301 drops the body).
+        return HttpResponseRedirect(target)

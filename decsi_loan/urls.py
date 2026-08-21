@@ -71,6 +71,12 @@ _staff_auth_urlpatterns = [
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('license/', license_status_view, name='product_license_status'),
+    # Browsers request /favicon.ico by default (outside static/)
+    path(
+        'favicon.ico',
+        RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico', permanent=False),
+        name='favicon',
+    ),
     # Public digital apply at domain root
     path('', include('applicant_portal.urls')),
     # Staff loan hub

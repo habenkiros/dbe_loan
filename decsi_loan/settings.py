@@ -16,7 +16,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 
-DEBUG = os.getenv('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
+
+def _env_bool(name, default=False):
+    """Parse a truthy/falsey environment flag. Missing/blank uses *default*."""
+    raw = os.getenv(name)
+    if raw is None or str(raw).strip() == '':
+        return bool(default)
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+DEBUG = _env_bool('DEBUG', default=False)
 
 _allowed = os.getenv('ALLOWED_HOSTS', '*').strip()
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] if _allowed else ['*']
@@ -77,6 +86,7 @@ TEMPLATES = [
                 'loans.context_processors.staff_nav',
                 'loans.context_processors.product_license',
                 'collateral.context_processors.gebeta_maps',
+                'applicant_portal.context_processors.portal_notices',
             ],
         },
     },
@@ -104,12 +114,15 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
+PASSWORD_MIN_LENGTH = int(os.getenv('PASSWORD_MIN_LENGTH', '10') or '10')
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': PASSWORD_MIN_LENGTH},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -118,6 +131,13 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Browser hardening (always on; not gated on DEBUG)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SESSION_COOKIE_HTTPONLY = True
+# JS clients must read csrftoken for AJAX
+CSRF_COOKIE_HTTPONLY = False
 
 
 
@@ -298,3 +318,7 @@ OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1').stri
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini').strip() or 'gpt-4o-mini'
 OPENAI_API_VERSION = os.getenv('OPENAI_API_VERSION', '').strip()  # Azure only, e.g. 2024-08-01-preview
 AGENT_LLM_TIMEOUT = int(os.getenv('AGENT_LLM_TIMEOUT', '60') or '60')
+
+# Credit Intelligence operational alert thresholds (days)
+CI_AGING_APPRAISAL_DAYS = int(os.getenv('CI_AGING_APPRAISAL_DAYS', '7') or '7')
+CI_COMMITTEE_SLA_DAYS = int(os.getenv('CI_COMMITTEE_SLA_DAYS', '5') or '5')

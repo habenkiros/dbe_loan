@@ -311,7 +311,18 @@ function hasAny(hay, needles) {
     await shot(page, '12-security');
 
     const fraudHint = await open(page, '/hub/risk/');
-    rec(12, 'Risk desk reachable (origination fraud controls, not AML product)', [200, 302, 403, 404].includes(fraudHint.status), `${fraudHint.status} ${fraudHint.url}`);
+    rec(12, 'Risk desk reachable (credit risk review)', [200, 302, 403, 404].includes(fraudHint.status), `${fraudHint.status} ${fraudHint.url}`);
+  }
+
+  await logout(page);
+
+  {
+    const lg = await login(page, 'risk.officer');
+    rec(12, 'Risk/compliance officer can sign in', lg.ok, lg.url);
+    const desk = await open(page, '/hub/compliance/');
+    rec(12, 'Fraud / AML desk loads', desk.status === 200 && desk.url.includes('compliance'), `${desk.status} ${desk.url}`);
+    rec(12, 'Compliance desk shows investigation queues or case UI', hasAny(desk.text, ['fraud', 'AML', 'case', 'queue', 'investigat', 'open']), desk.text.slice(0, 160));
+    await shot(page, '12-compliance-desk');
   }
 
   // Negative: applicant cannot open hub create

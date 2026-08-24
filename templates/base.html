@@ -241,6 +241,10 @@
                     {% include "includes/nav_icon.html" with icon="approval" only %}
                     Risk desk
                 </a>
+                <a href="{% url 'compliance_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Fraud / AML
+                </a>
                 {% if nav_show_book_ops %}
                 <a href="{% url 'monitoring_desk' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}

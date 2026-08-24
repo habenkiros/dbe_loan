@@ -274,7 +274,25 @@ def refresh_appraisal_banking(appraisal, loan_request=None, *, months: int = DEF
         'refreshed_at': timezone.now().isoformat(),
         'sample_tx_count': len(rows),
     }
+    from loans.compliance.transaction_fraud import score_transaction_anomalies
+    from loans.compliance.policy import get_compliance_policy
+
+    assessment = score_transaction_anomalies(
+        rows,
+        metrics=metrics,
+        proposed_installment=installment,
+    )
+    policy = get_compliance_policy()
+    payload['anomaly'] = assessment
+    payload['anomaly_warn'] = assessment['score'] >= int(policy.anomaly_score_warn or 40)
+
     appraisal.banking_behavior = payload
     appraisal.banking_refreshed_at = timezone.now()
     appraisal.save(update_fields=['banking_behavior', 'banking_refreshed_at', 'updated_at'])
+
+    try:
+        from loans.compliance.case_engine import maybe_open_banking_case
+        maybe_open_banking_case(loan, appraisal, assessment)
+    except Exception:
+        logger.exception('Compliance banking case hook failed for loan %s', loan.pk)
     return payload

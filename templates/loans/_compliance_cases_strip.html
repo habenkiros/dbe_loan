@@ -1,0 +1,30 @@
+{% if compliance_cases %}
+<div class="lw-panel" style="border-color:#9a3412;margin-bottom:1rem;">
+  <h3 style="margin-top:0;color:#9a3412;">Fraud / AML cases</h3>
+  <ul style="margin:0;padding-left:1.1rem;">
+    {% for c in compliance_cases %}
+    <li style="margin-bottom:0.35rem;">
+      <a href="{% url 'compliance_case_detail' c.id %}"><strong>{{ c.case_number }}</strong></a>
+      · {{ c.get_case_type_display }} · {{ c.get_status_display }}
+      {% if c.is_open %}<span class="lw-badge lw-warn">Open</span>{% endif %}
+      — {{ c.summary|truncatechars:90 }}
+    </li>
+    {% endfor %}
+  </ul>
+  <p style="margin:0.75rem 0 0;">
+    <a class="btn btn-gray" href="{% url 'compliance_desk' %}">Fraud / AML desk</a>
+  </p>
+</div>
+{% elif can_open_compliance_case %}
+<div class="lw-panel" style="margin-bottom:1rem;">
+  <h3 style="margin-top:0;">Fraud / AML referral</h3>
+  <form method="post" action="{% url 'compliance_open_manual_case' %}">
+    {% csrf_token %}
+    <input type="hidden" name="loan_request_id" value="{{ loan_request.id }}">
+    <input type="hidden" name="case_type" value="fraud">
+    <label for="compliance-summary">Open investigation case</label>
+    <textarea name="summary" id="compliance-summary" rows="2" class="form-control" required placeholder="Describe suspected fraud or AML concern (min 10 characters)"></textarea>
+    <p style="margin-top:0.5rem;"><button type="submit" class="btn btn-blue">Open case</button></p>
+  </form>
+</div>
+{% endif %}

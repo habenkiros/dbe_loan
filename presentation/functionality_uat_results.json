@@ -1,13 +1,13 @@
 {
-  "ran_at": "2026-08-21T19:42:39.287Z",
+  "ran_at": "2026-08-24T05:24:49.918Z",
   "base": "http://127.0.0.1:8000",
   "created_loan": {
-    "id": "30",
-    "queue": "HK-000002006"
+    "id": "31",
+    "queue": "HK-000002007"
   },
   "summary": {
-    "checks": 59,
-    "passed": 59,
+    "checks": 62,
+    "passed": 62,
     "failed": 0
   },
   "by_stage": {
@@ -61,7 +61,7 @@
           "stage": 1,
           "check": "BM can submit a new loan request",
           "result": "PASS",
-          "evidence": "http://127.0.0.1:8000/hub/loan_request/30/documents/ queue=HK-000002006"
+          "evidence": "http://127.0.0.1:8000/hub/loan_request/31/documents/ queue=HK-000002007"
         }
       ]
     },
@@ -91,13 +91,13 @@
           "stage": 3,
           "check": "Queue number HK-… is issued on create",
           "result": "PASS",
-          "evidence": "HK-000002006"
+          "evidence": "HK-000002007"
         },
         {
           "stage": 3,
           "check": "Loan list shows queue IDs",
           "result": "PASS",
-          "evidence": "200 sample=HK-000002006"
+          "evidence": "200 sample=HK-000002007"
         }
       ]
     },
@@ -384,7 +384,7 @@
       ]
     },
     "12": {
-      "pass": 8,
+      "pass": 11,
       "fail": 0,
       "checks": [
         {
@@ -425,9 +425,27 @@
         },
         {
           "stage": 12,
-          "check": "Risk desk reachable (origination fraud controls, not AML product)",
+          "check": "Risk desk reachable (credit risk review)",
           "result": "PASS",
           "evidence": "200 http://127.0.0.1:8000/hub/risk/"
+        },
+        {
+          "stage": 12,
+          "check": "Risk/compliance officer can sign in",
+          "result": "PASS",
+          "evidence": "http://127.0.0.1:8000/hub/risk/"
+        },
+        {
+          "stage": 12,
+          "check": "Fraud / AML desk loads",
+          "result": "PASS",
+          "evidence": "200 http://127.0.0.1:8000/hub/compliance/"
+        },
+        {
+          "stage": 12,
+          "check": "Compliance desk shows investigation queues or case UI",
+          "result": "PASS",
+          "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Risk Officer\nRISK & COMPLIANCE OFFICER\nNotifications\nHelp\nLogout\nHome\nRisk desk\nFraud / AML\nMonitoring\nCollect"
         },
         {
           "stage": 12,
@@ -491,13 +509,13 @@
       "stage": 1,
       "check": "BM can submit a new loan request",
       "result": "PASS",
-      "evidence": "http://127.0.0.1:8000/hub/loan_request/30/documents/ queue=HK-000002006"
+      "evidence": "http://127.0.0.1:8000/hub/loan_request/31/documents/ queue=HK-000002007"
     },
     {
       "stage": 3,
       "check": "Queue number HK-… is issued on create",
       "result": "PASS",
-      "evidence": "HK-000002006"
+      "evidence": "HK-000002007"
     },
     {
       "stage": 2,
@@ -515,7 +533,7 @@
       "stage": 3,
       "check": "Loan list shows queue IDs",
       "result": "PASS",
-      "evidence": "200 sample=HK-000002006"
+      "evidence": "200 sample=HK-000002007"
     },
     {
       "stage": 6,
@@ -783,9 +801,27 @@
     },
     {
       "stage": 12,
-      "check": "Risk desk reachable (origination fraud controls, not AML product)",
+      "check": "Risk desk reachable (credit risk review)",
       "result": "PASS",
       "evidence": "200 http://127.0.0.1:8000/hub/risk/"
+    },
+    {
+      "stage": 12,
+      "check": "Risk/compliance officer can sign in",
+      "result": "PASS",
+      "evidence": "http://127.0.0.1:8000/hub/risk/"
+    },
+    {
+      "stage": 12,
+      "check": "Fraud / AML desk loads",
+      "result": "PASS",
+      "evidence": "200 http://127.0.0.1:8000/hub/compliance/"
+    },
+    {
+      "stage": 12,
+      "check": "Compliance desk shows investigation queues or case UI",
+      "result": "PASS",
+      "evidence": "AI-powered Credit Intelligence\nSTAFF HUB\nWelcome, Risk Officer\nRISK & COMPLIANCE OFFICER\nNotifications\nHelp\nLogout\nHome\nRisk desk\nFraud / AML\nMonitoring\nCollect"
     },
     {
       "stage": 12,

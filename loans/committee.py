@@ -688,6 +688,10 @@ def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
         errors.append(
             'Risk & Compliance must sign off before this loan can go to committee.'
         )
+    from loans.compliance.case_engine import origination_compliance_blocked, compliance_blockers
+    if origination_compliance_blocked(loan_request):
+        for msg in compliance_blockers(loan_request)[:2]:
+            errors.append(f'Fraud/AML case open — {msg}')
     if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
         errors.append('This loan is already in the approval committee workflow.')
     if loan_request.committee_status == loan_request.COMMITTEE_APPROVED:

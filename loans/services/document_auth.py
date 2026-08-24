@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -11,6 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import requests
 from django.conf import settings
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 def _ocr_lang() -> str:
@@ -914,6 +917,17 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
         document.auth_status = LoanRequestDocument.AUTH_AUTO_PASSED
 
     document.save(update_fields=["file_sha256", "file_size", "original_filename", "auth_status", "automated_checks"])
+
+    try:
+        from loans.compliance.case_engine import maybe_open_document_case
+        maybe_open_document_case(
+            document,
+            duplicate_other=duplicate_other,
+            opened_by=getattr(document, 'uploaded_by', None),
+        )
+    except Exception:
+        logger.exception('Compliance document case hook failed for doc %s', document.pk)
+
     return report
 
 

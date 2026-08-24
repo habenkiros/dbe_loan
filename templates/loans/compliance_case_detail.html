@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Case {{ case.case_number }}{% endblock %}
+{% block content %}
+<p class="help"><a href="{% url 'compliance_desk' %}">← Fraud / AML desk</a>
+  {% if case.loan_request %} · <a href="{% url 'loan_request_detail' case.loan_request.id %}">Loan {{ case.loan_request.loan_request_id }}</a>{% endif %}
+</p>
+
+<div class="lw-panel" style="border-color:#064420;">
+  <h1 style="margin-top:0;font-size:1.35rem;">{{ case.case_number }}</h1>
+  <p style="margin:0.25rem 0;">
+    <strong>{{ case.get_case_type_display }}</strong> · {{ case.get_status_display }} · {{ case.get_priority_display }} priority
+    · Source: {{ case.get_source_display }}
+  </p>
+  <p style="margin:0.5rem 0 0;">{{ case.summary }}</p>
+  <p class="help" style="margin:0.35rem 0 0;">
+    Opened {{ case.opened_at|date:"Y-m-d H:i" }}
+    {% if case.opened_by %}by {{ case.opened_by.username }}{% endif %}
+    {% if case.assigned_to %} · Assigned: {{ case.assigned_to.username }}{% endif %}
+  </p>
+  {% if case.blocks_origination or case.blocks_disbursement %}
+  <p style="margin:0.75rem 0 0;">
+    {% if case.blocks_origination %}<span class="lw-badge lw-warn">Blocks committee / origination</span>{% endif %}
+    {% if case.blocks_disbursement %}<span class="lw-badge lw-warn">Blocks disbursement</span>{% endif %}
+  </p>
+  {% endif %}
+  {% if case.metadata.anomaly_score %}
+  <p class="help">Transaction anomaly score: <strong>{{ case.metadata.anomaly_score }}</strong> ({{ case.metadata.risk_band }})</p>
+  {% endif %}
+</div>
+
+{% if can_manage and case.is_open %}
+<div class="lw-panel">
+  <h3>Case actions</h3>
+  <form method="post" action="{% url 'compliance_case_action' case.id %}">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="note">Note / resolution</label>
+      <textarea name="note" id="note" rows="3" class="form-control" placeholder="Investigation notes or closing reason"></textarea>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
+      <button type="submit" name="action" value="investigate" class="btn btn-blue">Mark investigating</button>
+      <button type="submit" name="action" value="escalate" class="btn btn-gray">Escalate</button>
+      <button type="submit" name="action" value="note" class="btn btn-gray">Add note</button>
+      <button type="submit" name="action" value="false_positive" class="btn btn-green">Close — false positive</button>
+      <button type="submit" name="action" value="close" class="btn btn-green">Close — confirmed</button>
+    </div>
+  </form>
+  <form method="post" action="{% url 'compliance_case_action' case.id %}" style="margin-top:1rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="assign">
+    <label for="assignee_id">Assign investigator</label>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-top:0.35rem;">
+      <select name="assignee_id" id="assignee_id" class="form-control" style="max-width:16rem;">
+        {% for u in assignees %}
+        <option value="{{ u.id }}" {% if case.assigned_to_id == u.id %}selected{% endif %}>{{ u.username }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-blue">Assign</button>
+    </div>
+  </form>
+</div>
+{% elif case.resolution_note %}
+<div class="lw-panel">
+  <h3>Resolution</h3>
+  <p>{{ case.resolution_note }}</p>
+  <p class="help">Closed {{ case.closed_at|date:"Y-m-d H:i" }}{% if case.closed_by %} by {{ case.closed_by.username }}{% endif %}</p>
+</div>
+{% endif %}
+
+<div class="lw-panel">
+  <h3>Case file</h3>
+  {% if events %}
+  <ul style="list-style:none;padding:0;margin:0;">
+    {% for e in events %}
+    <li style="border-bottom:1px solid #e5ece8;padding:0.65rem 0;">
+      <strong>{{ e.get_event_type_display }}</strong>
+      <span class="help"> · {{ e.created_at|date:"Y-m-d H:i" }}{% if e.recorded_by %} · {{ e.recorded_by.username }}{% endif %}</span>
+      {% if e.notes %}<div style="margin-top:0.25rem;">{{ e.notes|linebreaksbr }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="help">No events yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

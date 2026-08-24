@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Fraud / AML desk{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <section class="dash-hero">
+    <div>
+      <h1>Fraud &amp; AML desk</h1>
+      <p>
+        Investigation cases for document fraud, transaction anomalies, and manual referrals.
+        Separate from credit risk review and post-disbursement monitoring watchlist.
+      </p>
+    </div>
+    <div class="dash-hero-meta list-actions list-actions-lg">
+      <a class="btn btn-gray" href="{% url 'risk_desk' %}">Credit risk desk</a>
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+    {% for key, label in queue_choices %}
+    <a href="?queue={{ key }}"
+       style="text-decoration:none;border:1px solid {% if queue == key %}#1a5c3a{% else %}#c9dbd1{% endif %};background:{% if queue == key %}#e8f5ee{% else %}#fff{% endif %};padding:0.4rem 0.7rem;border-radius:4px;font-size:0.9rem;color:#1a2e24;">
+      {{ label }} · <strong>
+        {% if key == 'open' %}{{ counts.open }}
+        {% elif key == 'investigating' %}{{ counts.investigating }}
+        {% elif key == 'escalated' %}{{ counts.escalated }}
+        {% elif key == 'fraud' %}{{ counts.fraud }}
+        {% elif key == 'aml' %}{{ counts.aml }}
+        {% elif key == 'blocked' %}{{ counts.blocked }}
+        {% else %}0{% endif %}
+      </strong>
+    </a>
+    {% endfor %}
+  </div>
+
+  <section class="lw-panel">
+    <h3>{{ scope_label }}</h3>
+    {% if page_obj.object_list %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Case</th><th>Type</th><th>Priority</th><th>Status</th><th>Loan</th><th>Summary</th><th>Opened</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in page_obj %}
+        <tr>
+          <td><strong>{{ c.case_number }}</strong></td>
+          <td>{{ c.get_case_type_display }}</td>
+          <td>
+            {% if c.priority == 'critical' or c.priority == 'high' %}
+            <span class="lw-badge lw-warn">{{ c.get_priority_display }}</span>
+            {% else %}{{ c.get_priority_display }}{% endif %}
+          </td>
+          <td>{{ c.get_status_display }}</td>
+          <td>{% if c.loan_request %}<a href="{% url 'loan_request_detail' c.loan_request.id %}">{{ c.loan_request.loan_request_id }}</a>{% else %}—{% endif %}</td>
+          <td>{{ c.summary|truncatechars:80 }}</td>
+          <td>{{ c.opened_at|date:"Y-m-d H:i" }}</td>
+          <td><a class="btn btn-blue" href="{% url 'compliance_case_detail' c.id %}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages %}
+    <p class="help">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+    {% endif %}
+    {% else %}
+    <p class="help">No cases in this queue.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

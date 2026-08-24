@@ -110,7 +110,7 @@ figure.shot{margin:8px 0 10px;border:1px solid var(--line);border-radius:8px;ove
 figure.shot img{display:block;width:100%;height:auto;max-height:118mm;object-fit:contain;background:#f7faf8;}
 figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg);border-top:1px solid var(--line);}
 .bar{height:10px;background:#e4ece7;border-radius:999px;overflow:hidden;margin:8px 0 4px;}
-.bar>i{display:block;height:100%;width:91%;background:var(--g);}
+.bar>i{display:block;height:100%;width:92%;background:var(--g);}
 .small{font-size:8.7pt;color:var(--muted);}
 .footer{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);font-size:8pt;color:var(--muted);}
 .print-bar{position:sticky;top:0;z-index:20;background:#064528;color:#fff;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:9pt;}
@@ -148,15 +148,15 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
     </div>
     <div class="cover-body">
       <div class="pillars">
-        <div class="pillar"><strong>9 of 12 stages ready</strong><span>Application through appraisal, authorization, workflow, and analytics are built end-to-end.</span></div>
+        <div class="pillar"><strong>10 of 12 stages ready</strong><span>Application through appraisal, authorization, workflow, analytics, and fraud/AML investigation are built end-to-end.</span></div>
         <div class="pillar"><strong>1 stage ready at go-live</strong><span>Disbursement to core banking is built; the live CBS connection is switched on at deployment.</span></div>
-        <div class="pillar"><strong>2 stages to complete</strong><span>Dedicated legal-administration step, and a standalone fraud-detection product, remain to match the diagram fully.</span></div>
+        <div class="pillar"><strong>1 stage to complete</strong><span>A dedicated legal-administration step after authorization remains to match the diagram one-for-one.</span></div>
         <div class="pillar"><strong>Process alignment</strong><span>Assessed against DECSI’s system flow (application → documents → queue → GPS → estimation → appraisal → authorization → legal → processing → disbursement → reports → security).</span></div>
       </div>
       <div class="meta">
         <div><div class="l">Document</div><div class="v">System process flow assessment</div></div>
         <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08</div></div>
-        <div><div class="l">Date</div><div class="v">21 August 2026</div></div>
+        <div><div class="l">Date</div><div class="v">24 August 2026</div></div>
         <div><div class="l">Classification</div><div class="v">Confidential — DECSI management &amp; IT</div></div>
         <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
         <div><div class="l">Basis</div><div class="v">DECSI system process flow (12 stages)</div></div>
@@ -191,32 +191,30 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
 
 <div class="exec">
   <strong>Headline.</strong> The Credit Factory is aligned with DECSI’s process.
-  Nine stages are fully implemented. Disbursement to core banking is implemented
-  in the product (Finance sees a booking preview) and is enabled when DECSI’s
-  CBS connection is configured at go-live.
-  Two items remain if the diagram is to be matched one-for-one: a dedicated
-  <em>legal administration</em> queue after authorization, and a dedicated
-  <em>fraud detection</em> product beyond the document, watchlist, and risk controls
-  already in the system.
-  This pack was re-assessed on 21 August 2026 after remote agreement signing,
-  document-to-appraisal fill, and Finance booking preview were added.
+  Ten stages are fully implemented, including a Fraud &amp; AML investigation desk
+  that can hold a file before committee and before disbursement.
+  Disbursement to core banking is implemented in the product (Finance sees a booking preview)
+  and is enabled when DECSI’s CBS connection is configured at go-live.
+  One item remains if the diagram is to be matched one-for-one: a dedicated
+  <em>legal administration</em> queue after authorization.
+  This pack was re-assessed on 24 August 2026 after the Fraud/AML case desk was added.
 </div>
 
 <div class="kpi">
   <div><div class="v">12</div><div class="l">Process stages on DECSI’s flow</div></div>
-  <div><div class="v">9</div><div class="l">Fully ready in the Credit Factory</div></div>
+  <div><div class="v">10</div><div class="l">Fully ready in the Credit Factory</div></div>
   <div><div class="v">1</div><div class="l">Ready — CBS at go-live</div></div>
-  <div><div class="v">2</div><div class="l">Partial — process completion</div></div>
+  <div><div class="v">1</div><div class="l">Partial — legal administration</div></div>
 </div>
 <div class="bar" aria-hidden="true"><i></i></div>
-<p class="small">Overall process coverage of the enhanced factory against the 12-stage flow: approximately 91%.</p>
+<p class="small">Overall process coverage of the enhanced factory against the 12-stage flow: approximately 92%.</p>
 
 <h2>2. How the assessment was done</h2>
 <ul>
   <li>Each box on DECSI’s system process flow was mapped to the corresponding Credit Factory module, screens, and controls.</li>
   <li>Status is <strong>Ready</strong> when the stage exists end-to-end in the product; <strong>Ready at go-live</strong> when the product is built and a live DECSI connection (core banking) is required to operate it in production; <strong>Partial</strong> when the intent is covered in another step, not as the standalone stage drawn on the flow.</li>
   <li>This is a product-and-process assessment for management and IT. It is not a priced proposal and it is not a branch UAT sign-off.</li>
-  <li>Quality gate: the Credit Factory automated test suite passed <strong>276 of 276</strong> tests on 21 August 2026 (including remote OTP signing, document extraction into appraisal, finance CBS preview, application create, and GPS/offline field retry).</li>
+  <li>Quality gate: the Credit Factory automated test suite passed <strong>282 of 282</strong> tests on 24 August 2026 (including Fraud/AML case engine, remote OTP signing, document extraction into appraisal, finance CBS preview, application create, and GPS/offline field retry).</li>
 </ul>
 
 </div>
@@ -335,8 +333,8 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
     <tr>
       <td class="n">12</td>
       <td><strong>Security and compliance</strong><br><span class="small">Role-based access; authorization; fraud detection</span></td>
-      <td><span class="st st-part">Partial</span></td>
-      <td>Roles, approval levels, multi-factor login, lockout, password policy (minimum 10 characters), browser security headers, and audit trail are in place. Fraud control today is document authenticity, watchlist, and the risk desk — not a separate fraud/AML case system.</td>
+      <td><span class="st st-ok">Ready</span></td>
+      <td>Roles, approval levels, multi-factor login, lockout, password policy (minimum 10 characters), browser security headers, and audit trail. A Fraud &amp; AML desk opens investigation cases from duplicate or suspicious documents and unusual banking history, and can hold a file before committee and before disbursement.</td>
     </tr>
   </tbody>
 </table>
@@ -401,16 +399,14 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
     step so the screen path matches the drawing exactly.
   </p>
 </div>
-<div class="box warn" style="margin-bottom:8px;">
-  <h4>B. Fraud detection as a dedicated product (box 12)</h4>
+<div class="box gold" style="margin-bottom:8px;">
+  <h4>B. Fraud / AML depth (box 12) — optional extension</h4>
   <p style="margin-bottom:0;">
-    Role-based access, authorization levels, multi-factor login, password policy,
-    browser security headers, and audit are ready.
-    Document fraud controls (authenticity, identity match, suspicious files) and a
-    watchlist are ready. If DECSI’s “Fraud Detection” means a full AML / investigation
-    case system, that should be specified as a scoped addition. If document and
-    origination controls are sufficient, box 12 can be treated as met for access and
-    authorization, with fraud controls at intake.
+    A Fraud &amp; AML investigation desk is in the product: cases open from document
+    and banking alerts, and open cases can block committee and disbursement.
+    Live core-banking transaction streaming and regulatory suspicious-transaction
+    filing (goAML) are not in this release; they can be specified as a later addition
+    if DECSI’s compliance policy requires them.
   </p>
 </div>
 <div class="box gold">
@@ -437,8 +433,8 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
     <p class="small" style="margin:0;">Keep legal papers as a disbursement gate (already built), or add a Legal Administration queue and legal officer role after authorization so the path matches the drawing one-for-one.</p>
   </div>
   <div class="box green">
-    <h4>2. Confirm fraud detection (box 12)</h4>
-    <p class="small" style="margin:0;">Accept origination fraud controls (document authenticity, watchlist, risk desk), or commission a dedicated fraud / AML investigation product as a scoped addition.</p>
+    <h4>2. Confirm AML depth (box 12)</h4>
+    <p class="small" style="margin:0;">The origination Fraud &amp; AML desk is in place. Decide later whether DECSI also needs live core-banking transaction monitoring or regulatory STR filing as a scoped addition.</p>
   </div>
   <div class="box gold">
     <h4>3. Plan core-banking go-live (box 10)</h4>
@@ -446,22 +442,22 @@ figcaption{font-size:8pt;color:var(--muted);padding:6px 9px;background:var(--bg)
   </div>
   <div class="box gold">
     <h4>4. Walk the twelve stages (UAT)</h4>
-    <p class="small" style="margin:0;">A sample MSME file was walked through the running hub on 21 August 2026 (all 12 stages opened; 59 of 59 scripted checks passed). Repeat with Credit, Engineering, Cooperative, Finance, and IT on DECSI’s own environment as the go-live checklist.</p>
+    <p class="small" style="margin:0;">A sample MSME file was walked through the running hub on 24 August 2026 (all 12 stages opened; 62 of 62 scripted checks passed, including the Fraud/AML desk). Repeat with Credit, Engineering, Cooperative, Finance, Risk, and IT on DECSI’s own environment as the go-live checklist.</p>
   </div>
 </div>
 
 <div class="callout">
   <strong>For management.</strong> The enhanced Credit Factory is built to DECSI’s process
   and can be rolled out against this flow. The remaining decisions are process design
-  (legal desk; fraud product) and the core-banking connection at go-live — not a missing
-  origination, appraisal, GPS, or committee system.
+  (legal desk) and the core-banking connection at go-live — not a missing
+  origination, appraisal, GPS, committee, or fraud-investigation system.
 </div>
 
 <div class="meta" style="margin-top:14px;">
   <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
   <div><div class="l">For</div><div class="v">DECSI management, Credit, IT, Risk</div></div>
   <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
-  <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08 · 21 August 2026</div></div>
+  <div><div class="l">Reference</div><div class="v">SEQ/DECSI/FLOW/2026-08 · 24 August 2026</div></div>
 </div>
 <p class="small" style="margin-top:10px;">This document is a process-alignment assessment. It is not a financial proposal.</p>
 

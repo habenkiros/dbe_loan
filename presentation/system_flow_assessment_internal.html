@@ -86,9 +86,9 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 .pillar span{font-size:8.5pt;color:var(--muted);line-height:1.4;}
 .usage{height:12px;border-radius:999px;overflow:hidden;display:flex;background:#e4ece7;margin:6px 0 4px;}
 .usage i{display:block;height:100%;}
-.usage .a{width:71.5%;background:#0b6b3a;}
+.usage .a{width:79.0%;background:#0b6b3a;}
 .usage .b{width:7.1%;background:#185fa5;}
-.usage .c{width:12.6%;background:#c4a035;}
+.usage .c{width:5.7%;background:#c4a035;}
 .hbar-row{display:grid;grid-template-columns:42mm 1fr 14mm;gap:6px;align-items:center;margin:3px 0;}
 .hbar-row .lbl{font-size:7.6pt;color:var(--gd);}
 .hbar-row .track{height:8px;background:#e4ece7;border-radius:999px;overflow:hidden;}
@@ -134,15 +134,15 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
     </div>
     <div class="cover-body">
       <div class="pillars">
-        <div class="pillar"><strong>91.2% flow completeness</strong><span>Mean of 12 stage scores (0–100). 1,094 / 1,200 completeness points (was 90.5% / 1,086 on 20 Aug).</span></div>
-        <div class="pillar"><strong>9 / 12 fully implemented</strong><span>Application through appraisal, authorization, workflow, and analytics.</span></div>
-        <div class="pillar"><strong>1 config · 2 partial</strong><span>Disbursement mock until CBS. Legal admin and dedicated fraud still partial.</span></div>
-        <div class="pillar"><strong>276 / 276 tests</strong><span>Clean gate on 21 Aug 2026 re-run. docker compose exec web python manage.py test</span></div>
+        <div class="pillar"><strong>91.8% flow completeness</strong><span>Mean of 12 stage scores (0–100). 1,101 / 1,200 completeness points (was 91.2% / 1,094 on 21 Aug).</span></div>
+        <div class="pillar"><strong>10 / 12 fully implemented</strong><span>Application through appraisal, authorization, workflow, analytics, and fraud/AML desk.</span></div>
+        <div class="pillar"><strong>1 config · 1 partial</strong><span>Disbursement mock until CBS. Legal admin still partial. Fraud/AML case engine is now in product.</span></div>
+        <div class="pillar"><strong>282 / 282 tests</strong><span>Clean gate on 24 Aug 2026 re-run. docker compose exec web python manage.py test</span></div>
       </div>
       <div class="meta">
         <div><div class="l">Source canvas</div><div class="v">system-flow-assessment.canvas.tsx</div></div>
         <div><div class="l">Diagram</div><div class="v">presentation/system_flow.png</div></div>
-        <div><div class="l">Date</div><div class="v">21 August 2026</div></div>
+        <div><div class="l">Date</div><div class="v">24 August 2026</div></div>
         <div><div class="l">Classification</div><div class="v">Seqela internal — do not send as-is</div></div>
       </div>
     </div>
@@ -152,30 +152,31 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 <section class="screen pagebreak">
 <h2>1. Overall</h2>
 <div class="exec">
-  <strong>The credit factory is built.</strong> Weighted completeness is 91.2% across the 12 flowchart boxes
-  (was 90.5% on 20 Aug).
-  Nine stages are fully implemented in product code. Disbursement to core banking is coded, with a Finance
-  CBS payload preview, but still mock-by-default until <span class="mono">DECSI_BASE_URL</span> is set. Two boxes are only partial:
-  standalone legal administration, and a dedicated fraud-detection product.
+  <strong>The credit factory is built.</strong> Weighted completeness is 91.8% across the 12 flowchart boxes
+  (was 91.2% on 21 Aug).
+  Ten stages are fully implemented in product code, including a Fraud/AML case desk that can block committee
+  and disbursement. Disbursement to core banking is coded, with a Finance CBS payload preview, but still
+  mock-by-default until <span class="mono">DECSI_BASE_URL</span> is set. One box stays partial:
+  standalone legal administration.
 </div>
 <div class="kpi">
-  <div><div class="v">91.2%</div><div class="l">Flow completeness</div></div>
-  <div><div class="v">9/12</div><div class="l">Fully implemented</div></div>
-  <div><div class="v">2</div><div class="l">Partial stages</div></div>
-  <div><div class="v">276/276</div><div class="l">Automated tests passed</div></div>
+  <div><div class="v">91.8%</div><div class="l">Flow completeness</div></div>
+  <div><div class="v">10/12</div><div class="l">Fully implemented</div></div>
+  <div><div class="v">1</div><div class="l">Partial stages</div></div>
+  <div><div class="v">282/282</div><div class="l">Automated tests passed</div></div>
 </div>
 
 <h3>Coverage of the 12-box flow</h3>
 <div class="usage" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
-<p class="small">Green = fully implemented scores (858) · Blue = CBS pending (85) · Gold = partial (151) · 1,094 / 1,200 points · 91.2% of flowchart scope.</p>
+<p class="small">Green = fully implemented scores (948) · Blue = CBS pending (85) · Gold = partial (68) · 1,101 / 1,200 points · 91.8% of flowchart scope.</p>
 
 <h3>Stage verdict mix</h3>
 <div class="mix">
-  <div><div class="v" style="color:var(--ok)">9</div><div class="small">Fully implemented</div></div>
+  <div><div class="v" style="color:var(--ok)">10</div><div class="small">Fully implemented</div></div>
   <div><div class="v" style="color:var(--info)">1</div><div class="small">Live CBS pending</div></div>
-  <div><div class="v" style="color:var(--warn)">2</div><div class="small">Partial</div></div>
+  <div><div class="v" style="color:var(--warn)">1</div><div class="small">Partial</div></div>
 </div>
-<p class="small">Count of flowchart boxes · n = 12 · Source: code review 21 Aug 2026.</p>
+<p class="small">Count of flowchart boxes · n = 12 · Source: code review 24 Aug 2026.</p>
 
 <h3>Completeness by stage (%)</h3>
 <div class="hbar-row"><span class="lbl">1. Application</span><span class="track"><i style="width:96%"></i></span><span class="pct">96</span></div>
@@ -189,8 +190,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 <div class="hbar-row"><span class="lbl">9. Processing</span><span class="track"><i style="width:95%"></i></span><span class="pct">95</span></div>
 <div class="hbar-row"><span class="lbl">10. Disbursement</span><span class="track"><i class="cfg" style="width:85%"></i></span><span class="pct">85</span></div>
 <div class="hbar-row"><span class="lbl">11. Reports</span><span class="track"><i style="width:90%"></i></span><span class="pct">90</span></div>
-<div class="hbar-row"><span class="lbl">12. Security</span><span class="track"><i class="part" style="width:83%"></i></span><span class="pct">83</span></div>
-<p class="small">Score 0–100 per flowchart box · mean 91.2%. Gold = partial · blue = config. Re-assessed 21 Aug 2026.</p>
+<div class="hbar-row"><span class="lbl">12. Security</span><span class="track"><i style="width:90%"></i></span><span class="pct">90</span></div>
+<p class="small">Score 0–100 per flowchart box · mean 91.8%. Gold = partial · blue = config. Re-assessed 24 Aug 2026.</p>
 </section>
 
 <section class="screen pagebreak">
@@ -329,11 +330,11 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
     <tr>
       <td class="n">12</td>
       <td>Security and Compliance<br><span class="small">RBAC; authorization; fraud detection</span></td>
-      <td><span class="st st-part">Partially implemented</span></td>
-      <td class="n">83</td>
-      <td>20+ roles, MFA, lockout, audit log, committee bands, password min-length 10, nosniff/DENY headers, document “suspicious” verdicts, watchlist, risk desk, delegation document access</td>
-      <td class="mono">CustomUser.ROLE_CHOICES; EnforceMfaMiddleware; SecurityAuditLog; StaffDelegation</td>
-      <td>No dedicated fraud/AML case engine or transaction-fraud model — document auth + watchlist only</td>
+      <td><span class="st st-ok">Fully implemented</span></td>
+      <td class="n">90</td>
+      <td>20+ roles, MFA, lockout, audit, committee bands, plus Fraud/AML case engine: auto-open from documents and banking anomalies, investigation desk, committee and disbursement gates</td>
+      <td class="mono">loans/compliance/case_engine.py; ComplianceCase; /hub/compliance/</td>
+      <td>Origination AML, not live CBS transaction streaming or regulatory SAR/goAML filing</td>
     </tr>
   </tbody>
 </table>
@@ -355,7 +356,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
     <tr><td>HO Mgt Level</td><td class="mono">key = management (CEO / VP / Board)</td><td>Direct</td></tr>
     <tr><td>Prohibition of collateral in legal administration</td><td>Post-approval legal documents + disbursement blockers</td><td>Relocated</td></tr>
     <tr><td>Disbursing to Core Banking system</td><td class="mono">cbs_client + Finance gate; mock ledger unless DECSI_BASE_URL</td><td>Config</td></tr>
-    <tr><td>Fraud Detection</td><td>Document OCR suspicious verdict + watchlist + risk desk</td><td>Partial</td></tr>
+    <tr><td>Fraud Detection</td><td>Fraud/AML case desk + document/banking auto-open + origination/disbursement gates</td><td>Direct (origination scope)</td></tr>
   </tbody>
 </table>
 </section>
@@ -372,13 +373,13 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
     legal_cleared status. Closing the gap means a Legal Administration queue between committee_approved and Finance.
   </p>
 </div>
-<div class="box warn">
-  <h4>12. Fraud detection is document-level, not a fraud product · 83%</h4>
+<div class="box gold">
+  <h4>12. Fraud/AML is origination monitoring, not goAML · 90%</h4>
   <p style="margin:0;">
-    Role-based access, committee authorization bands, TOTP MFA, session lockout, password minimum length 10,
-    nosniff / X-Frame-Options DENY, and SecurityAuditLog are implemented. What the flowchart calls fraud detection
-    is OCR integrity, identity match, a suspicious document verdict, a loan watchlist, and the risk desk. There is
-    no AML case system, device/velocity engine, or transaction-fraud model.
+    A dedicated Fraud &amp; AML desk now opens investigation cases from duplicate/suspicious documents
+    and banking-history anomaly scores. Open cases can block committee submit and disbursement.
+    Residual gap vs a bank AML product: no live CBS transaction stream, no device/velocity engine,
+    and no regulatory SAR/goAML filing.
   </p>
 </div>
 <div class="box info">
@@ -402,43 +403,39 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 
 <h2>5. Automated test run</h2>
 <div class="callout ok">
-  <strong>Clean gate: 276 / 276 passed.</strong>
-  Re-run in the web container on 21 Aug 2026 after the feature update (remote OTP, document extraction,
-  finance ready-to-book, Chapa HTTPS gate). One Nominatim geocode warning (network unreachable) did not fail any test.
+  <strong>Clean gate: 282 / 282 passed.</strong>
+  Re-run in the web container on 24 Aug 2026 after the Fraud/AML case engine (auto-open, desk,
+  origination and disbursement gates). Suite grew from 276 to 282.
 </div>
 <div class="kpi">
-  <div><div class="v">276</div><div class="l">Tests run</div></div>
-  <div><div class="v">276</div><div class="l">Passed</div></div>
+  <div><div class="v">282</div><div class="l">Tests run</div></div>
+  <div><div class="v">282</div><div class="l">Passed</div></div>
   <div><div class="v">0</div><div class="l">Failed</div></div>
-  <div><div class="v">90.9s</div><div class="l">Duration</div></div>
+  <div><div class="v">64.6s</div><div class="l">Duration</div></div>
 </div>
 <table>
   <thead>
     <tr>
-      <th>What changed since 20 Aug</th>
+      <th>What changed since 21 Aug</th>
       <th>Effect on this assessment</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Remote SMS OTP agreement signing (<span class="mono">/sign/agreement/&lt;token&gt;/</span>)</td>
-      <td>Stage 9 stronger (closing pack); stage 10 still mock CBS</td>
+      <td>Fraud/AML case engine: desk, auto-open from documents and banking anomalies, committee and disbursement blockers</td>
+      <td>Stage 12 83 partial → 90 full. Only legal administration remains partial.</td>
     </tr>
     <tr>
-      <td>Document extraction defaults fill appraisal Sheet 1; Mock vs Live labels</td>
-      <td>Stages 1, 2, 6 scored up; live CBS still required for real party data</td>
+      <td>New tests: <span class="mono">loans.tests.test_compliance_fraud_engine</span></td>
+      <td>Suite 276 → 282, all passing</td>
     </tr>
     <tr>
-      <td>Finance ready-to-book + CBS payload preview; no silent mock when live URL set</td>
-      <td>Stage 10 82 → 85; still config until <span class="mono">DECSI_BASE_URL</span> in the target env</td>
-    </tr>
-    <tr>
-      <td>New tests: <span class="mono">test_decsi_short_list</span>, <span class="mono">test_document_extraction_and_api_labels</span></td>
-      <td>Suite 250 → 276, all passing</td>
+      <td>Legal administration and live CBS booking unchanged</td>
+      <td>Stage 8 still 68%; stage 10 still mock-by-default (85%)</td>
     </tr>
   </tbody>
 </table>
-<p class="small">Pass rate 100% (276/276) · docker compose exec web python manage.py test</p>
+<p class="small">Pass rate 100% (282/282) · docker compose exec web python manage.py test</p>
 </section>
 
 <section class="screen pagebreak">
@@ -446,8 +443,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 <ol>
   <li>Add a Legal Administration queue and role so stage 8 sits between committee approval and Finance, matching the diagram.</li>
   <li>Point <span class="mono">DECSI_BASE_URL</span> at core banking and turn off mock ledger in the target environment so stage 10 is a live disbursement.</li>
-  <li>If the diagram’s “Fraud Detection” is a contractual requirement, specify the product (document-only vs AML/transaction) — current coverage is origination fraud controls only.</li>
-  <li>Automated tests are a clean gate (276/276). Remaining work is process design (legal desk, fraud product) and CBS go-live, not test repair.</li>
+  <li>Fraud/AML desk is in place for origination. If DECSI needs live CBS transaction monitoring or regulatory SAR/goAML filing, specify that as a scoped addition.</li>
+  <li>Automated tests are a clean gate (282/282). Remaining work is the legal desk (process design) and CBS go-live, not test repair.</li>
 </ol>
 
 <div class="callout">
@@ -461,7 +458,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7.6
 </figure>
 
 <div class="footer">
-  Export of Cursor canvas system-flow-assessment.canvas.tsx · 21 August 2026 · Seqela internal.<br>
+  Export of Cursor canvas system-flow-assessment.canvas.tsx · 24 August 2026 · Seqela internal.<br>
   Client-facing pack (no scores / file paths): DECSI_System_Flow_Assessment.pdf
 </div>
 </section>

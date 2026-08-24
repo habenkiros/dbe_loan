@@ -2555,6 +2555,7 @@ class LoanNotification(models.Model):
     KIND_COLLATERAL_ENGINEERING_APPROVED = 'collateral_engineering_approved'
     KIND_DISBURSEMENT_READY = 'disbursement_ready'
     KIND_DISBURSED = 'disbursed'
+    KIND_COMPLIANCE_CASE_OPENED = 'compliance_case_opened'
     KIND_CHOICES = [
         (KIND_VOTE_NEEDED, 'Vote needed'),
         (KIND_LEVEL_ADVANCED, 'Advanced to next level'),
@@ -2572,6 +2573,7 @@ class LoanNotification(models.Model):
         (KIND_COLLATERAL_ENGINEERING_APPROVED, 'Collateral approved by engineering'),
         (KIND_DISBURSEMENT_READY, 'Ready for disbursement'),
         (KIND_DISBURSED, 'Disbursed'),
+        (KIND_COMPLIANCE_CASE_OPENED, 'Compliance case opened'),
     ]
 
     user = models.ForeignKey(
@@ -3315,4 +3317,230 @@ class LoanCollectionAction(models.Model):
 
     def __str__(self):
         return f'{self.kind} {self.loan_request.loan_request_id}'
+
+
+class CompliancePolicy(models.Model):
+    """Singleton: fraud / AML case engine thresholds and gates."""
+
+    compliance_engine_enabled = models.BooleanField(
+        default=True,
+        help_text='Master switch for auto-opening compliance cases and desk.',
+    )
+    anomaly_score_threshold = models.PositiveSmallIntegerField(
+        default=60,
+        help_text='Open AML case when transaction anomaly score ≥ this (0–100).',
+    )
+    anomaly_score_warn = models.PositiveSmallIntegerField(
+        default=40,
+        help_text='Surface warning in banking metrics below case threshold.',
+    )
+    auto_open_document_duplicate = models.BooleanField(
+        default=True,
+        help_text='Open fraud case when document SHA matches another loan file.',
+    )
+    auto_open_document_suspicious = models.BooleanField(
+        default=True,
+        help_text='Open fraud case when officer marks document suspicious.',
+    )
+    auto_open_banking_anomaly = models.BooleanField(
+        default=True,
+        help_text='Open AML case when banking anomaly score exceeds threshold.',
+    )
+    require_compliance_clear_before_committee = models.BooleanField(
+        default=True,
+        help_text='Block committee submit while open fraud/AML cases block origination.',
+    )
+    require_compliance_clear_before_disbursement = models.BooleanField(
+        default=True,
+        help_text='Block disbursement while open cases block disbursement.',
+    )
+
+    class Meta:
+        verbose_name = 'Compliance policy'
+        verbose_name_plural = 'Compliance policy'
+
+    def __str__(self):
+        return 'Compliance policy'
+
+
+class ComplianceCase(models.Model):
+    """Fraud or AML investigation case tied to a loan file (or standalone alert)."""
+
+    TYPE_FRAUD = 'fraud'
+    TYPE_AML = 'aml'
+    TYPE_CHOICES = [
+        (TYPE_FRAUD, 'Fraud'),
+        (TYPE_AML, 'AML / transaction monitoring'),
+    ]
+
+    STATUS_OPEN = 'open'
+    STATUS_INVESTIGATING = 'investigating'
+    STATUS_ESCALATED = 'escalated'
+    STATUS_CLOSED = 'closed'
+    STATUS_FALSE_POSITIVE = 'false_positive'
+    STATUS_CHOICES = [
+        (STATUS_OPEN, 'Open'),
+        (STATUS_INVESTIGATING, 'Investigating'),
+        (STATUS_ESCALATED, 'Escalated'),
+        (STATUS_CLOSED, 'Closed — confirmed'),
+        (STATUS_FALSE_POSITIVE, 'Closed — false positive'),
+    ]
+
+    SOURCE_DOCUMENT = 'document_auth'
+    SOURCE_BANKING = 'banking_anomaly'
+    SOURCE_MANUAL = 'manual'
+    SOURCE_DIGITAL_APPLY = 'digital_apply'
+    SOURCE_DISBURSEMENT = 'disbursement'
+    SOURCE_CHOICES = [
+        (SOURCE_DOCUMENT, 'Document authentication'),
+        (SOURCE_BANKING, 'Banking / transaction anomaly'),
+        (SOURCE_MANUAL, 'Manual referral'),
+        (SOURCE_DIGITAL_APPLY, 'Digital Apply'),
+        (SOURCE_DISBURSEMENT, 'Disbursement'),
+    ]
+
+    PRIORITY_LOW = 'low'
+    PRIORITY_MEDIUM = 'medium'
+    PRIORITY_HIGH = 'high'
+    PRIORITY_CRITICAL = 'critical'
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, 'Low'),
+        (PRIORITY_MEDIUM, 'Medium'),
+        (PRIORITY_HIGH, 'High'),
+        (PRIORITY_CRITICAL, 'Critical'),
+    ]
+
+    case_number = models.CharField(max_length=32, unique=True, db_index=True)
+    case_type = models.CharField(max_length=16, choices=TYPE_CHOICES, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    priority = models.CharField(max_length=12, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM, db_index=True)
+    source = models.CharField(max_length=24, choices=SOURCE_CHOICES, db_index=True)
+    summary = models.CharField(max_length=500)
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='compliance_cases',
+    )
+    document = models.ForeignKey(
+        'LoanRequestDocument',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='compliance_cases',
+    )
+    assigned_to = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='compliance_cases_assigned',
+    )
+    blocks_origination = models.BooleanField(default=True)
+    blocks_disbursement = models.BooleanField(default=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    opened_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='compliance_cases_opened',
+    )
+    opened_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    closed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='compliance_cases_closed',
+    )
+    closed_at = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-opened_at']
+        indexes = [
+            models.Index(fields=['status', 'priority']),
+            models.Index(fields=['loan_request', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.case_number} ({self.get_case_type_display()})'
+
+    @property
+    def is_open(self) -> bool:
+        return self.status in (
+            self.STATUS_OPEN,
+            self.STATUS_INVESTIGATING,
+            self.STATUS_ESCALATED,
+        )
+
+
+class ComplianceCaseEvent(models.Model):
+    """Append-only audit trail on a compliance case."""
+
+    TYPE_OPENED = 'opened'
+    TYPE_NOTE = 'note'
+    TYPE_STATUS = 'status_change'
+    TYPE_ASSIGNMENT = 'assignment'
+    TYPE_ESCALATION = 'escalation'
+    TYPE_EVIDENCE = 'evidence'
+    TYPE_CHOICES = [
+        (TYPE_OPENED, 'Opened'),
+        (TYPE_NOTE, 'Note'),
+        (TYPE_STATUS, 'Status change'),
+        (TYPE_ASSIGNMENT, 'Assignment'),
+        (TYPE_ESCALATION, 'Escalation'),
+        (TYPE_EVIDENCE, 'Evidence'),
+    ]
+
+    case = models.ForeignKey(ComplianceCase, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=20, choices=TYPE_CHOICES, db_index=True)
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='compliance_case_events',
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.case.case_number} · {self.event_type}'
+
+
+class TransactionAnomalyAssessment(models.Model):
+    """Persisted transaction-fraud score each time banking behavior is refreshed."""
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='transaction_anomaly_assessments',
+    )
+    appraisal = models.ForeignKey(
+        LoanAppraisal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='transaction_anomaly_assessments',
+    )
+    score = models.PositiveSmallIntegerField(default=0)
+    risk_band = models.CharField(max_length=16, default='low', db_index=True)
+    signals = models.JSONField(default=list, blank=True)
+    provider = models.CharField(max_length=24, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    computed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-computed_at']
+
+    def __str__(self):
+        return f'{self.loan_request.loan_request_id} score={self.score}'
 

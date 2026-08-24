@@ -56,6 +56,23 @@ def build_file_blockers(loan_request) -> Dict[str, Any]:
     except Exception:
         pass
 
+    # Fraud / AML compliance cases
+    try:
+        from loans.compliance.case_engine import open_cases_for_loan
+        for case in open_cases_for_loan(loan_request)[:5]:
+            blockers.append({
+                'area': 'compliance',
+                'severity': 'high' if case.priority in ('critical', 'high') else 'medium',
+                'message': f'{case.get_case_type_display()} case {case.case_number}: {case.summary[:100]}',
+                'action_label': 'Investigate case',
+                'action_url_name': 'compliance_case_detail',
+                'action_url_args': [case.id],
+            })
+        if open_cases_for_loan(loan_request).exists():
+            stage = 'compliance'
+    except Exception:
+        pass
+
     # Appraisal sheets
     try:
         from loans.models import LoanAppraisal, LoanRequestBasicInfo

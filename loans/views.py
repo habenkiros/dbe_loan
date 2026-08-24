@@ -849,7 +849,10 @@ def loan_request_detail(request, loan_request_id):
         basic_info = getattr(loan_request, 'basic_info', None)
         decision_card = build_application_decision(loan_request, appraisal, basic_info)
     from .risk_desk import loan_risk_summary
+    from loans.compliance.case_engine import open_cases_for_loan, user_can_manage_compliance_cases
     risk_summary = loan_risk_summary(loan_request)
+    compliance_cases = list(open_cases_for_loan(loan_request, open_only=False)[:8])
+    can_open_compliance_case = user_can_manage_compliance_cases(user)
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -876,6 +879,8 @@ def loan_request_detail(request, loan_request_id):
         'committee_tally': committee_tally,
         'decision_card': decision_card,
         'risk_summary': risk_summary,
+        'compliance_cases': compliance_cases,
+        'can_open_compliance_case': can_open_compliance_case,
     })
 
 
@@ -996,6 +1001,16 @@ def authenticate_loan_document(request, loan_request_id, document_id):
         doc.authenticated_at = timezone.now()
         doc.save()
         notify_document_rejected(doc, request.user)
+        if doc.auth_verdict == LRD.VERDICT_SUSPICIOUS:
+            try:
+                from loans.compliance.case_engine import maybe_open_document_case
+                case = maybe_open_document_case(
+                    doc, suspicious=True, opened_by=request.user,
+                )
+                if case:
+                    messages.info(request, f'Fraud case {case.case_number} opened for investigation.')
+            except Exception:
+                pass
         messages.warning(request, f'"{doc.document_type.name}" rejected.')
     elif action == 'requeue':
         try:

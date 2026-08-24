@@ -137,6 +137,9 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
     if requirement_on(loan_request, 'own_contribution_required'):
         if not loan_request.own_contribution_verified_at:
             blockers.append('Borrower own-contribution / equity must be verified before disbursement.')
+    from loans.compliance.case_engine import disbursement_compliance_blocked, compliance_blockers
+    if disbursement_compliance_blocked(loan_request):
+        blockers.extend(compliance_blockers(loan_request)[:3])
     return {
         'ok': not blockers and is_post_approval(loan_request),
         'blockers': blockers,

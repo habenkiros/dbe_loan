@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Fraunces:opsz,wght@9..144,700&display=swap');
 :root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--ok:#065f36;}
 *{box-sizing:border-box;}
-@page{size:A4;margin:12mm 12mm 16mm;@bottom-left{content:"Seqela internal  ·  Functionality UAT  ·  21 Aug 2026";font-family:"DM Sans",sans-serif;font-size:7.5pt;color:#5a6b62;}@bottom-right{content:counter(page);font-family:"DM Sans",sans-serif;font-size:9pt;color:#064528;font-weight:600;}}
+@page{size:A4;margin:12mm 12mm 16mm;@bottom-left{content:"Seqela internal  ·  Functionality UAT  ·  24 Aug 2026";font-family:"DM Sans",sans-serif;font-size:7.5pt;color:#5a6b62;}@bottom-right{content:counter(page);font-family:"DM Sans",sans-serif;font-size:9pt;color:#064528;font-weight:600;}}
 body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;font-size:10pt;line-height:1.5;}
 .doc{max-width:210mm;margin:0 auto;background:#fff;padding:14mm 12mm;}
 @media print{body{background:#fff}.doc{padding:0;max-width:none}}
@@ -31,24 +31,24 @@ th{background:var(--bg);color:var(--gd);font-size:7.2pt;text-transform:uppercase
 </style>
 </head>
 <body>
-<div class="print-bar"><span>Functionality UAT · 21 Aug 2026 re-run · Seqela internal</span><a href="Functionality_UAT_Results.pdf" download>Download PDF</a></div>
+<div class="print-bar"><span>Functionality UAT · 24 Aug 2026 re-run · Seqela internal</span><a href="Functionality_UAT_Results.pdf" download>Download PDF</a></div>
 <div class="doc">
 <h1>Functionality UAT — 12-stage system flow</h1>
-<p class="small">Live browser check on http://127.0.0.1:8000 · 21 August 2026 (re-run after feature updates). Distinct from the code-map assessment: a real loan was created and each stage was opened as the matching staff role.</p>
-<div class="exec"><strong>Result.</strong> All 12 stages opened in the running hub. 10 stages pass. Legal and disbursement are <em>partial</em> because this run did not upload a new legal PDF or book live core banking — the screens themselves work (post-approval on DCSI-S0010; Finance CBS preview; remote OTP sign page).</div>
+<p class="small">Live browser check on http://127.0.0.1:8000 · 24 August 2026 (re-run after Fraud/AML desk). Distinct from the code-map assessment: a real loan was created and each stage was opened as the matching staff role.</p>
+<div class="exec"><strong>Result.</strong> All 12 stages opened in the running hub. 10 stages pass. Legal and disbursement are <em>partial</em> because this run did not upload a new legal PDF or book live core banking — the screens themselves work (post-approval on DCSI-S0010; Finance CBS preview; remote OTP sign page; Fraud/AML desk).</div>
 <div class="kpi">
   <div><div class="v">10</div><div class="l">Stages pass</div></div>
   <div><div class="v">2</div><div class="l">Partial (legal / CBS)</div></div>
-  <div><div class="v">59/59</div><div class="l">Scripted checks</div></div>
-  <div><div class="v">HK-000002006</div><div class="l">Loan created this run</div></div>
+  <div><div class="v">62/62</div><div class="l">Scripted checks</div></div>
+  <div><div class="v">HK-000002007</div><div class="l">Loan created this run</div></div>
 </div>
 <h2>Stage results</h2>
 <table>
 <thead><tr><th>#</th><th>Stage</th><th>Verdict</th><th>What we exercised</th><th>Evidence</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>Application</td><td><span class="st ok">Pass</span></td><td>Digital Apply public site; BM create form with mock vs live lookup; live submit</td><td>Loan 30 · HK-000002006</td></tr>
+<tr><td>1</td><td>Application</td><td><span class="st ok">Pass</span></td><td>Digital Apply public site; BM create form with mock vs live lookup; live submit</td><td>Loan 31 · HK-000002007</td></tr>
 <tr><td>2</td><td>Documents</td><td><span class="st ok">Pass</span></td><td>Documents workspace on existing file</td><td>/hub/loan_request/28/documents/ 200</td></tr>
-<tr><td>3</td><td>Queue number</td><td><span class="st ok">Pass</span></td><td>HK- issued on create; list shows IDs</td><td>HK-000002006</td></tr>
+<tr><td>3</td><td>Queue number</td><td><span class="st ok">Pass</span></td><td>HK- issued on create; list shows IDs</td><td>HK-000002007</td></tr>
 <tr><td>4</td><td>GPS</td><td><span class="st ok">Pass</span></td><td>Field visit + land path as officer</td><td>building/7/field-visit/1/ 200</td></tr>
 <tr><td>5</td><td>Collateral estimation</td><td><span class="st ok">Pass</span></td><td>Summary totals; engineering QA queue</td><td>summary 200 · engineering-qa 200</td></tr>
 <tr><td>6</td><td>Loan appraisal</td><td><span class="st ok">Pass</span></td><td>All 7 steps load; Sheet 1 source labelling</td><td>loan 28 steps 1–7 each 200</td></tr>
@@ -57,10 +57,10 @@ th{background:var(--bg);color:var(--gd);font-size:7.2pt;text-transform:uppercase
 <tr><td>9</td><td>Processing workflow</td><td><span class="st ok">Pass</span></td><td>Officer, cooperative, finance queues; remote OTP sign page; public sign URL rejects bad token</td><td>agreement/2/sign/ 200 · /sign/agreement/… 404</td></tr>
 <tr><td>10</td><td>Disbursement</td><td><span class="st part">Partial</span></td><td>Finance queue + CBS payload / ready-to-book page. Did not mark disbursed or book live CBS.</td><td>update_finance_manager_approval/22/ 200 · awaiting_conditions</td></tr>
 <tr><td>11</td><td>Report &amp; analytics</td><td><span class="st ok">Pass</span></td><td>Classic reports + Credit Intelligence</td><td>view_report + credit-intelligence 200</td></tr>
-<tr><td>12</td><td>Security</td><td><span class="st ok">Pass</span></td><td>Login, MFA setup, audit, user admin, risk desk, unauth redirect. No AML product (same as flow assessment).</td><td>mfa/setup, security/audit, risk, manage_users 200</td></tr>
+<tr><td>12</td><td>Security</td><td><span class="st ok">Pass</span></td><td>Login, MFA setup, audit, user admin, risk desk, Fraud/AML desk (risk.officer), unauth redirect</td><td>mfa/setup, security/audit, risk, compliance, manage_users 200</td></tr>
 </tbody>
 </table>
-<p class="small">Roles: bm.mekele, lo.mekele1, eng.mekele, coop.manager, credit.head, fin.manager, admin · Demo@12345 · Script: presentation/run_flow_functionality_uat.js</p>
+<p class="small">Roles: bm.mekele, lo.mekele1, eng.mekele, coop.manager, credit.head, fin.manager, risk.officer, admin · Demo@12345 · Script: presentation/run_flow_functionality_uat.js</p>
 </div>
 </body>
 </html>

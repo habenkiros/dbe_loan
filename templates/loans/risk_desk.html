@@ -19,6 +19,7 @@
       {% include "includes/list_action.html" with href=rep_url icon="report" label="Reports" tone="blue" only %}
       {% url 'credit_intelligence_overview' as ci_url %}
       {% include "includes/list_action.html" with href=ci_url icon="report" label="Portfolio insights" tone="green" only %}
+      <a class="btn btn-gray" href="{% url 'compliance_desk' %}">Fraud / AML desk</a>
     </div>
   </section>
 

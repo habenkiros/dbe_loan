@@ -41,6 +41,30 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Nightly backup at 00:00 Africa/Addis_Ababa → ./backups/
+  backup:
+    build:
+      context: ./deploy/backup
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-decsiloandb}
+      DB_USER: ${DB_USER:-decsiloandbuser}
+      DB_PASSWORD: ${DB_PASSWORD:-decsiloandbpassword}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      MEDIA_PATH: /app/media
+      TZ: ${BACKUP_TZ:-Africa/Addis_Ababa}
+    volumes:
+      - ./backups:/backups
+      - media_data:/app/media:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   media_data:

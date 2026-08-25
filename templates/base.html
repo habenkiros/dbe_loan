@@ -262,6 +262,24 @@
                 </a>
                 {% endif %}
 
+            {% elif user.role == 'legal_officer' %}
+                <a href="{% url 'legal_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="shield" only %}
+                    Legal desk
+                </a>
+                {% if nav_show_post_approval %}
+                <a href="{% url 'post_approval_queue' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="money" only %}
+                    Post-approval
+                </a>
+                {% endif %}
+                {% if nav_show_reports %}
+                <a href="{% url 'view_report_options' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Reports
+                </a>
+                {% endif %}
+
             {% elif user.role == 'accountant' or user.role == 'district_manager' or user.role == 'ceo' or user.role == 'vp' or user.role == 'vp_operations' or user.role == 'vp_it' or user.role == 'vp_customer_service' or user.role == 'board_member' or user.role == 'auditor' %}
                 {% if user.role == 'district_manager' %}
                 <a href="{% url 'view_loan_requests' %}" class="nav-link">
@@ -362,6 +380,8 @@
                         {% include "includes/dropdown_link.html" with href=checkup_loans_url icon="loan" label="Loan requests" only %}
                         {% url 'post_approval_queue' as checkup_post_url %}
                         {% include "includes/dropdown_link.html" with href=checkup_post_url icon="money" label="Post-approval" only %}
+                        {% url 'legal_desk' as checkup_legal_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_legal_url icon="shield" label="Legal desk" only %}
                         {% url 'view_report_options' as checkup_reports_url %}
                         {% include "includes/dropdown_link.html" with href=checkup_reports_url icon="report" label="Reports" only %}
                         {% url 'branch_report_dashboard' as checkup_dash_url %}

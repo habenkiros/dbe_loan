@@ -455,6 +455,10 @@ class Command(BaseCommand):
             'risk.officer', email='risk@decsi.local', phone_number='0911000080',
             role='risk_compliance', first_name='Risk', last_name='Officer',
         )
+        users['legal'] = self._ensure_user(
+            'legal.officer', email='legal@decsi.local', phone_number='0911000082',
+            role='legal_officer', first_name='Legal', last_name='Officer',
+        )
         users['auditor'] = self._ensure_user(
             'auditor', email='auditor@decsi.local', phone_number='0911000081',
             role='auditor', first_name='Internal', last_name='Auditor',

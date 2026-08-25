@@ -91,6 +91,39 @@ def collateral_legal_blockers(loan_request) -> List[str]:
     return blockers
 
 
+def legal_papers_required(loan_request) -> bool:
+    """True when any collateral legal paper gate applies to this loan."""
+    if requirement_on(loan_request, 'require_collateral_restriction'):
+        return True
+    if getattr(loan_request, 'collateral_held_via_poa', False):
+        return True
+    if requirement_on(loan_request, 'require_title_search'):
+        return True
+    if requirement_on(loan_request, 'require_mortgage_registration'):
+        return True
+    if requirement_on(loan_request, 'require_notary_stamp'):
+        return True
+    return False
+
+
+def legal_clearance_required(loan_request) -> bool:
+    """True when Legal Administration must stamp the file before disbursement."""
+    from loans.process_policy import get_or_create_process_policy
+
+    if not legal_papers_required(loan_request):
+        return False
+    policy = get_or_create_process_policy()
+    return bool(getattr(policy, 'require_legal_clearance', True))
+
+
+def legal_clearance_blockers(loan_request) -> List[str]:
+    if not legal_clearance_required(loan_request):
+        return []
+    if getattr(loan_request, 'legal_cleared_at', None):
+        return []
+    return ['Legal Administration must clear this file for disbursement.']
+
+
 def _doc_state(docs, required: bool, not_used: bool = False) -> str:
     if not_used:
         return 'not_used'

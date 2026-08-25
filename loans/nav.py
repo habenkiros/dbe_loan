@@ -44,6 +44,7 @@ POST_APPROVAL_ROLES: Set[str] = {
     'cooperative_manager',
     'operation_manager',
     'finance_manager',
+    'legal_officer',
     'admin',
     'superadmin',
 }
@@ -57,6 +58,7 @@ REPORTS_ROLES: Set[str] = {
     'operation_manager',
     'finance_manager',
     'risk_compliance',
+    'legal_officer',
     'accountant',
     'district_manager',
     'ceo',

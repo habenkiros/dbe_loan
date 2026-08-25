@@ -108,6 +108,9 @@ def compliance_open_manual_case(request):
     loan = get_object_or_404(LoanRequest, pk=loan_id) if loan_id else None
     summary = (request.POST.get('summary') or '').strip()
     case_type = (request.POST.get('case_type') or ComplianceCase.TYPE_FRAUD).strip()
+    valid_types = {c[0] for c in ComplianceCase.TYPE_CHOICES}
+    if case_type not in valid_types:
+        case_type = ComplianceCase.TYPE_FRAUD
     if len(summary) < 10:
         messages.error(request, 'Enter a case summary (min 10 characters).')
         if loan:
@@ -128,3 +131,22 @@ def compliance_open_manual_case(request):
         return redirect('compliance_case_detail', case_id=case.pk)
     messages.warning(request, 'Case engine disabled or duplicate.')
     return redirect('compliance_desk')
+
+
+@login_required
+@user_passes_test(user_can_manage_compliance_cases)
+@require_POST
+def compliance_rescreen_loan(request, loan_request_id):
+    loan = get_object_or_404(LoanRequest, pk=loan_request_id)
+    from loans.compliance.case_engine import screen_loan_and_open_case
+
+    case = screen_loan_and_open_case(
+        loan,
+        opened_by=request.user,
+        source=ComplianceCase.SOURCE_NAME_SCREEN,
+    )
+    if case:
+        messages.warning(request, f'Sanctions/PEP hit — case {case.case_number} opened.')
+        return redirect('compliance_case_detail', case_id=case.pk)
+    messages.success(request, 'Sanctions/PEP screen clear (or provider off).')
+    return redirect('loan_request_detail', loan_request_id=loan.pk)

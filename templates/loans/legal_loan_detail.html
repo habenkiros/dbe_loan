@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Legal — {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<p class="help">
+  <a href="{% url 'legal_desk' %}">← Legal Administration</a>
+  · <a href="{% url 'post_approval_detail' loan_request.id %}">Closing pack</a>
+  · <a href="{% url 'loan_request_detail' loan_request.id %}">Loan detail</a>
+</p>
+
+<div class="lw-panel" style="border-color:#064420;">
+  <h1 style="margin-top:0;font-size:1.3rem;">{{ loan_request.loan_request_id }}</h1>
+  <p style="margin:0;">{{ loan_request.applicant_name }} · {{ loan_request.branch.name }}</p>
+  <p class="help" style="margin:0.35rem 0 0;">
+    {% if loan_request.legal_cleared_at %}
+    <span class="lw-badge lw-ok">Cleared {{ loan_request.legal_cleared_at|date:"Y-m-d H:i" }}</span>
+    {% if loan_request.legal_cleared_by %} by {{ loan_request.legal_cleared_by.username }}{% endif %}
+    {% else %}
+    <span class="lw-badge lw-warn">Not cleared</span>
+    {% endif %}
+    {% if clearance_required %} · Legal stamp required before disbursement{% endif %}
+  </p>
+  {% if loan_request.legal_clearance_note %}
+  <p style="margin:0.75rem 0 0;"><strong>Note:</strong> {{ loan_request.legal_clearance_note }}</p>
+  {% endif %}
+</div>
+
+<div class="lw-panel">
+  <h3>Collateral legal papers</h3>
+  {% if paper_blockers %}
+  <ul>
+    {% for b in paper_blockers %}<li style="color:#9a3412;">{{ b }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="help" style="color:#0a6b2e;">Required legal papers are verified (or not required for this loan).</p>
+  {% endif %}
+  <table class="table">
+    <tr><th>Restriction</th><td>{{ legal.restriction_state }}</td></tr>
+    <tr><th>Power of attorney</th><td>{{ legal.poa_state }}</td></tr>
+    <tr><th>Title search</th><td>{{ legal.title_state }}</td></tr>
+    <tr><th>Mortgage registration</th><td>{{ legal.mortgage_state }}</td></tr>
+    <tr><th>Notary / stamp</th><td>{{ legal.notary_state }}</td></tr>
+  </table>
+  <p><a class="btn btn-blue" href="{% url 'post_approval_detail' loan_request.id %}">Verify / upload papers on closing pack</a></p>
+</div>
+
+{% if can_manage %}
+<div class="lw-panel">
+  <h3>Legal actions</h3>
+  <form method="post" action="{% url 'legal_loan_action' loan_request.id %}">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="note">Clearance / return note</label>
+      <textarea name="note" id="note" rows="3" class="form-control" placeholder="Optional for clear; required for return"></textarea>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
+      <button type="submit" name="action" value="clear" class="btn btn-green"
+              {% if paper_blockers %}disabled title="Verify all required papers first"{% endif %}>
+        Clear for disbursement
+      </button>
+      <button type="submit" name="action" value="return" class="btn btn-gray">Return to branch</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

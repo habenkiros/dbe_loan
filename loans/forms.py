@@ -163,6 +163,14 @@ class ProcessPolicyForm(forms.Form):
         label='Require borrower own-contribution / equity before first disbursement',
         help_text='Officers still enter and verify the amount on post-approval.',
     )
+    require_legal_clearance = forms.BooleanField(
+        required=False,
+        label='Require Legal Administration clearance before disbursement',
+        help_text=(
+            'When on, and any collateral legal paper is required, Legal must stamp '
+            'the file before Finance can disburse.'
+        ),
+    )
     enable_disbursement_tranches = forms.BooleanField(
         required=False,
         label='Allow staged (tranche) disbursement',

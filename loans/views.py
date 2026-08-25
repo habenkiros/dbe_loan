@@ -284,6 +284,16 @@ def create_loan_request(request):
                 loan_request.origin_level = LoanRequest.ORIGIN_BRANCH
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
+            try:
+                from loans.compliance.case_engine import screen_loan_and_open_case
+                from loans.models import ComplianceCase
+                screen_loan_and_open_case(
+                    loan_request,
+                    opened_by=request.user,
+                    source=ComplianceCase.SOURCE_NAME_SCREEN,
+                )
+            except Exception:
+                pass
             if profile:
                 msg = (
                     f'Loan request created for customer {cn} '
@@ -2643,10 +2653,14 @@ def post_approval_collateral_legal_upload(request, loan_request_id):
 def post_approval_collateral_legal_verify(request, loan_request_id, doc_id):
     from .collateral_legal import verify_legal_document
     from .disbursement import can_manage_conditions
+    from .legal_desk import user_can_manage_legal
     from .models import LoanCollateralLegalDocument
 
     loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
-    if not can_manage_conditions(request.user, loan_request):
+    if not (
+        can_manage_conditions(request.user, loan_request)
+        or user_can_manage_legal(request.user)
+    ):
         messages.warning(request, 'You cannot verify collateral legal documents on this loan.')
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
     doc = get_object_or_404(
@@ -4036,6 +4050,8 @@ def home(request):
         return redirect('view_loan_requests_operation_manager')
     if role == 'risk_compliance':
         return redirect('risk_desk')
+    if role == 'legal_officer':
+        return redirect('legal_desk')
     if role == 'finance_manager':
         return redirect('view_loan_requests_finance_manager')
 

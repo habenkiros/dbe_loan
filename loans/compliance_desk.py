@@ -14,6 +14,7 @@ QUEUE_CHOICES = (
     ('escalated', 'Escalated'),
     ('fraud', 'Fraud cases'),
     ('aml', 'AML / transaction monitoring'),
+    ('sanctions', 'Sanctions / PEP'),
     ('blocked', 'Blocking origination / disbursement'),
 )
 
@@ -34,6 +35,8 @@ def compliance_queue_queryset(user, queue: str) -> Tuple[QuerySet, str]:
         qs = qs.filter(case_type=ComplianceCase.TYPE_FRAUD, status__in=OPEN_STATUSES)
     elif queue == 'aml':
         qs = qs.filter(case_type=ComplianceCase.TYPE_AML, status__in=OPEN_STATUSES)
+    elif queue == 'sanctions':
+        qs = qs.filter(case_type=ComplianceCase.TYPE_SANCTIONS, status__in=OPEN_STATUSES)
     elif queue == 'blocked':
         qs = qs.filter(status__in=OPEN_STATUSES).filter(
             Q(blocks_origination=True) | Q(blocks_disbursement=True),
@@ -55,5 +58,8 @@ def compliance_desk_counts(user) -> Dict[str, int]:
         'escalated': ComplianceCase.objects.filter(status=ComplianceCase.STATUS_ESCALATED).count(),
         'fraud': ComplianceCase.objects.filter(case_type=ComplianceCase.TYPE_FRAUD, status__in=OPEN_STATUSES).count(),
         'aml': ComplianceCase.objects.filter(case_type=ComplianceCase.TYPE_AML, status__in=OPEN_STATUSES).count(),
+        'sanctions': ComplianceCase.objects.filter(
+            case_type=ComplianceCase.TYPE_SANCTIONS, status__in=OPEN_STATUSES,
+        ).count(),
         'blocked': ComplianceCase.objects.filter(status__in=OPEN_STATUSES).filter(blocked_q).count(),
     }

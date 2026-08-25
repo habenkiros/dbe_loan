@@ -269,6 +269,21 @@ DECSI_DISBURSE_PATH = os.getenv(
 # When True, officer "Mark disbursed" books in CBS first (required success)
 DECSI_CBS_BOOK_ON_DISBURSE = os.getenv('DECSI_CBS_BOOK_ON_DISBURSE', 'True').lower() in ('1', 'true', 'yes')
 
+# Sanctions / PEP name screening → Fraud/AML compliance desk
+# mock = built-in demo watchlist; http = POST JSON to vendor URL; off = disabled
+SANCTIONS_PROVIDER = os.getenv('SANCTIONS_PROVIDER', 'mock').strip().lower()
+SANCTIONS_FORCE_MOCK = os.getenv('SANCTIONS_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
+SANCTIONS_HTTP_URL = os.getenv('SANCTIONS_HTTP_URL', '').rstrip('/')
+SANCTIONS_HTTP_PATH = os.getenv('SANCTIONS_HTTP_PATH', '/screen').strip()
+SANCTIONS_HTTP_API_KEY = os.getenv('SANCTIONS_HTTP_API_KEY', '').strip()
+SANCTIONS_HTTP_TIMEOUT = int(os.getenv('SANCTIONS_HTTP_TIMEOUT', '8'))
+SANCTIONS_HTTP_FALLBACK_MOCK = os.getenv('SANCTIONS_HTTP_FALLBACK_MOCK', 'True').lower() in (
+    '1', 'true', 'yes',
+)
+# Comma-separated extra demo names that always hit (offline UAT)
+SANCTIONS_DEMO_EXTRA_NAMES = os.getenv('SANCTIONS_DEMO_EXTRA_NAMES', '')
+SANCTIONS_KEEP_RAW = os.getenv('SANCTIONS_KEEP_RAW', '').lower() in ('1', 'true', 'yes')
+
 # Gebeta Maps — Ethiopia-local geocoding + map tiles (MapLibre / Gebeta styles)
 # Docs: https://docs.gebeta.app/docs · JS tiles: https://github.com/AfriGebeta/gebeta-tiles-js
 GEBETA_MAPS_API_KEY = os.getenv('GEBETA_MAPS_API_KEY', '').strip()

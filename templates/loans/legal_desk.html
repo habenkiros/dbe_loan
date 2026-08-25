@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Legal Administration{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <section class="dash-hero">
+    <div>
+      <h1>Legal Administration</h1>
+      <p>
+        After committee authorization — verify collateral legal papers and
+        <strong>clear for disbursement</strong>. Separate from credit Risk desk and Fraud/AML.
+      </p>
+    </div>
+    <div class="dash-hero-meta list-actions">
+      <a class="btn btn-gray" href="{% url 'post_approval_queue' %}">Post-approval pack</a>
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+    {% for key, label in queue_choices %}
+    <a href="?queue={{ key }}"
+       style="text-decoration:none;border:1px solid {% if queue == key %}#1a5c3a{% else %}#c9dbd1{% endif %};background:{% if queue == key %}#e8f5ee{% else %}#fff{% endif %};padding:0.4rem 0.7rem;border-radius:4px;font-size:0.9rem;color:#1a2e24;">
+      {{ label }} · <strong>
+        {% if key == 'awaiting' %}{{ counts.awaiting }}
+        {% elif key == 'in_review' %}{{ counts.in_review }}
+        {% elif key == 'ready_to_clear' %}{{ counts.ready_to_clear }}
+        {% elif key == 'cleared' %}{{ counts.cleared }}
+        {% elif key == 'returned' %}{{ counts.returned }}
+        {% else %}0{% endif %}
+      </strong>
+    </a>
+    {% endfor %}
+  </div>
+
+  <section class="lw-panel">
+    <h3>{{ scope_label }}</h3>
+    {% if page_obj.object_list %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Loan</th><th>Applicant</th><th>Branch</th><th>Legal status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lr in page_obj %}
+        <tr>
+          <td><strong>{{ lr.loan_request_id }}</strong></td>
+          <td>{{ lr.applicant_name }}</td>
+          <td>{{ lr.branch.name }}</td>
+          <td>
+            {% if lr.legal_cleared_at %}
+            <span class="lw-badge lw-ok">Cleared {{ lr.legal_cleared_at|date:"Y-m-d" }}</span>
+            {% else %}
+            <span class="lw-badge lw-warn">Pending clearance</span>
+            {% endif %}
+          </td>
+          <td>
+            <a class="btn btn-blue" href="{% url 'legal_loan_detail' lr.id %}">Open</a>
+            <a class="btn btn-gray" href="{% url 'post_approval_detail' lr.id %}">Closing pack</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages %}
+    <p class="help">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+    {% endif %}
+    {% else %}
+    <p class="help">No loans in this queue.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -27,7 +27,9 @@ That one script creates `.env`, applies the evaluation license, starts Docker, m
 
 Short handout: [`INSTALL_DECSI.md`](../../INSTALL_DECSI.md) at the repo root.
 
-Continue below only if you need manual steps, HTTPS tablets, backups, or hardening.
+Continue below only if you need manual steps, HTTPS tablets, backups, multi-server HA, or hardening.
+
+Related: [`MULTI_SERVER_HA.md`](MULTI_SERVER_HA.md) (shared Postgres + shared media), [`CBS_CUTOVER_CHECKLIST.md`](CBS_CUTOVER_CHECKLIST.md).
 
 ---
 
@@ -269,11 +271,22 @@ Use `https://<lan-ip>:8443` and update `SITE_URL` / `CSRF_TRUSTED_ORIGINS` accor
 
 ## 7. Backup and update
 
-**Backup**
+**Automatic (midnight)** — Compose service `backup` runs every night at **00:00 Africa/Addis_Ababa** and writes archives under `./backups/`:
+
+```bash
+docker compose up -d --build backup
+docker compose logs -f backup
+# Manual run now:
+docker compose run --rm backup /scripts/run_backup.sh
+```
+
+Each archive contains Postgres (`database.dump` + `database.sql`) and uploaded files (`media.tar.gz`). Retention defaults to **14 days** (`BACKUP_RETENTION_DAYS`). See `deploy/backup/README.md`.
+
+**Manual one-shot**
 
 ```bash
 docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" > backup_$(date +%F).sql
-# Also back up Docker media volume and a secure offline copy of `.env` + license.key
+# Or use the scheduled script above; also keep a secure offline copy of `.env` + license.key
 ```
 
 **Update**

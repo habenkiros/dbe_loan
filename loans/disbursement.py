@@ -130,14 +130,27 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
         blockers.append('Schedule principal does not match final approved amount — regenerate.')
     if not loan_request.schedule_confirmed_at:
         blockers.append('Confirm the repayment schedule.')
-    from loans.collateral_legal import collateral_legal_blockers
+    from loans.collateral_legal import collateral_legal_blockers, legal_clearance_blockers
     blockers.extend(collateral_legal_blockers(loan_request))
+    blockers.extend(legal_clearance_blockers(loan_request))
     from loans.agreement_signing import agreement_blockers
     blockers.extend(agreement_blockers(loan_request))
     if requirement_on(loan_request, 'own_contribution_required'):
         if not loan_request.own_contribution_verified_at:
             blockers.append('Borrower own-contribution / equity must be verified before disbursement.')
-    from loans.compliance.case_engine import disbursement_compliance_blocked, compliance_blockers
+    from loans.compliance.case_engine import (
+        disbursement_compliance_blocked,
+        compliance_blockers,
+        screen_loan_and_open_case,
+    )
+    from loans.models import ComplianceCase
+    try:
+        screen_loan_and_open_case(
+            loan_request,
+            source=ComplianceCase.SOURCE_DISBURSEMENT,
+        )
+    except Exception:
+        pass
     if disbursement_compliance_blocked(loan_request):
         blockers.extend(compliance_blockers(loan_request)[:3])
     return {

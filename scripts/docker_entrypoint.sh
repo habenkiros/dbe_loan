@@ -1,12 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Named volumes often mount as root; ensure appuser can write media/static.
-if [ "$(id -u)" = "0" ]; then
-  mkdir -p /app/media /app/staticfiles
-  chown -R appuser:appuser /app/media /app/staticfiles
-  exec gosu appuser "$0" "$@"
-fi
+mkdir -p /app/media /app/staticfiles
 
 echo "[entrypoint] Applying migrations..."
 python manage.py migrate --noinput

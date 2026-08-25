@@ -30,8 +30,10 @@ COPY . /app/
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 
-# Run the development server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Dev default: runserver. Production / on-prem: USE_GUNICORN=1 (migrate + collectstatic + gunicorn).
+COPY scripts/docker_entrypoint.sh /app/scripts/docker_entrypoint.sh
+RUN chmod +x /app/scripts/docker_entrypoint.sh
+CMD ["sh", "-c", "if [ \"${USE_GUNICORN:-0}\" = \"1\" ]; then exec /app/scripts/docker_entrypoint.sh; else exec python manage.py runserver 0.0.0.0:8000; fi"]
 
 # Budget based loans based on loan category
 

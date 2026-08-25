@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from django.db import transaction
@@ -287,6 +288,101 @@ def maybe_open_document_case(document, *, duplicate_other: bool = False, suspici
     if document.auth_status == LoanRequestDocument.AUTH_NEEDS_REVIEW and duplicate_other:
         return None
     return None
+
+
+def maybe_open_sanctions_case(
+    loan_request,
+    screening_result: Dict[str, Any],
+    *,
+    opened_by=None,
+    source: Optional[str] = None,
+) -> Optional[object]:
+    """Open a Sanctions/PEP case when screening hits and policy allows."""
+    from loans.compliance.policy import get_compliance_policy
+    from loans.compliance.sanctions_screen import persist_screening
+    from loans.models import ComplianceCase
+
+    policy = get_compliance_policy()
+    match_types = {
+        str(t).lower() for t in (screening_result.get('match_types') or [])
+    }
+    matches = screening_result.get('matches') or []
+    for m in matches:
+        if m.get('match_type'):
+            match_types.add(str(m['match_type']).lower())
+
+    wants_sanctions = bool(match_types & {'sanctions', 'sanction', 'ofac'})
+    wants_pep = bool(match_types & {'pep', 'politically_exposed'})
+    if not screening_result.get('hit'):
+        persist_screening(loan_request, screening_result, opened_case=None)
+        return None
+
+    open_sanctions = wants_sanctions and getattr(policy, 'auto_open_sanctions_hit', True)
+    open_pep = wants_pep and getattr(policy, 'auto_open_pep_hit', True)
+    # Unknown hit type: treat as sanctions when either auto flag is on
+    if not wants_sanctions and not wants_pep:
+        open_sanctions = getattr(policy, 'auto_open_sanctions_hit', True)
+
+    if not (open_sanctions or open_pep):
+        persist_screening(loan_request, screening_result, opened_case=None)
+        return None
+
+    labels = []
+    if wants_pep:
+        labels.append('PEP')
+    if wants_sanctions or not wants_pep:
+        labels.append('sanctions')
+    label = '/'.join(dict.fromkeys(labels)) or 'watchlist'
+    top = matches[0] if matches else {}
+    list_name = top.get('list_name') or 'watchlist'
+    matched = top.get('matched_name') or (screening_result.get('subject') or {}).get('name') or 'subject'
+    score = int(screening_result.get('score') or top.get('score') or 0)
+    src = source or ComplianceCase.SOURCE_NAME_SCREEN
+    case = open_case(
+        case_type=ComplianceCase.TYPE_SANCTIONS,
+        source=src,
+        summary=f'{label.title()} screening hit — {matched} on {list_name} (score {score})',
+        loan_request=loan_request,
+        opened_by=opened_by,
+        priority='critical' if score >= 90 or wants_sanctions else 'high',
+        metadata={
+            'fingerprint': f'sanctions:{loan_request.pk}:{_normalize_fp(matched)}',
+            'screening': {
+                'score': score,
+                'match_types': sorted(match_types),
+                'matches': matches[:10],
+                'provider': screening_result.get('provider'),
+            },
+        },
+        fingerprint=f'sanctions:{loan_request.pk}',
+    )
+    persist_screening(loan_request, screening_result, opened_case=case)
+    return case
+
+
+def _normalize_fp(value: str) -> str:
+    return re.sub(r'[^a-z0-9]+', '', (value or '').lower())[:40]
+
+
+def screen_loan_and_open_case(
+    loan_request,
+    *,
+    opened_by=None,
+    source: Optional[str] = None,
+) -> Optional[object]:
+    """Run sanctions/PEP screen and open a case on hit. Safe no-op when provider off."""
+    from loans.compliance.sanctions_screen import provider_mode, screen_loan_request
+
+    if provider_mode() == 'off':
+        return None
+    try:
+        result = screen_loan_request(loan_request)
+    except Exception:
+        logger.exception('Sanctions screen failed for loan %s', getattr(loan_request, 'pk', None))
+        return None
+    return maybe_open_sanctions_case(
+        loan_request, result, opened_by=opened_by, source=source,
+    )
 
 
 def _notify_case_opened(case) -> None:

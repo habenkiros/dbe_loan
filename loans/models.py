@@ -442,6 +442,7 @@ class CustomUser(AbstractUser):
         ('vp_customer_service', 'VP Customer Service'),
         ('board_member', 'Board Member'),
         ('risk_compliance', 'Risk & Compliance Officer'),
+        ('legal_officer', 'Legal Officer'),
         ('auditor', 'Auditor / Viewer'),
         # Legacy aliases (data-migrated; kept so old rows/forms do not crash).
         ('operation_manager', 'Operation Manager (legacy)'),
@@ -874,6 +875,21 @@ class LoanRequest(models.Model):
     risk_review_note = models.TextField(
         blank=True,
         help_text='Risk & Compliance note on credit / E&S / coverage concerns.',
+    )
+
+    # Legal Administration desk (after authorization — clears for disbursement)
+    legal_cleared_at = models.DateTimeField(null=True, blank=True)
+    legal_cleared_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_requests_legal_cleared',
+        limit_choices_to={'role': 'legal_officer'},
+    )
+    legal_clearance_note = models.TextField(
+        blank=True,
+        help_text='Legal Administration clearance or return note.',
     )
 
     # Post-committee disbursement track (conditions → schedule → ready → disbursed)
@@ -2142,6 +2158,13 @@ class LoanProcessPolicyConfig(models.Model):
         default=False,
         help_text='Bank-wide: borrower own-contribution / equity required before first disbursement.',
     )
+    require_legal_clearance = models.BooleanField(
+        default=True,
+        help_text=(
+            'Bank-wide: Legal Administration must clear the file before disbursement '
+            'when any collateral legal paper is required.'
+        ),
+    )
     enable_disbursement_tranches = models.BooleanField(
         default=True,
         help_text='Allow staged (tranche) disbursement on post-approval.',
@@ -3346,6 +3369,14 @@ class CompliancePolicy(models.Model):
         default=True,
         help_text='Open AML case when banking anomaly score exceeds threshold.',
     )
+    auto_open_sanctions_hit = models.BooleanField(
+        default=True,
+        help_text='Open sanctions case when name / customer number hits a sanctions list.',
+    )
+    auto_open_pep_hit = models.BooleanField(
+        default=True,
+        help_text='Open sanctions/PEP case when subject matches a PEP list.',
+    )
     require_compliance_clear_before_committee = models.BooleanField(
         default=True,
         help_text='Block committee submit while open fraud/AML cases block origination.',
@@ -3368,9 +3399,11 @@ class ComplianceCase(models.Model):
 
     TYPE_FRAUD = 'fraud'
     TYPE_AML = 'aml'
+    TYPE_SANCTIONS = 'sanctions'
     TYPE_CHOICES = [
         (TYPE_FRAUD, 'Fraud'),
         (TYPE_AML, 'AML / transaction monitoring'),
+        (TYPE_SANCTIONS, 'Sanctions / PEP'),
     ]
 
     STATUS_OPEN = 'open'
@@ -3391,12 +3424,14 @@ class ComplianceCase(models.Model):
     SOURCE_MANUAL = 'manual'
     SOURCE_DIGITAL_APPLY = 'digital_apply'
     SOURCE_DISBURSEMENT = 'disbursement'
+    SOURCE_NAME_SCREEN = 'name_screen'
     SOURCE_CHOICES = [
         (SOURCE_DOCUMENT, 'Document authentication'),
         (SOURCE_BANKING, 'Banking / transaction anomaly'),
         (SOURCE_MANUAL, 'Manual referral'),
         (SOURCE_DIGITAL_APPLY, 'Digital Apply'),
         (SOURCE_DISBURSEMENT, 'Disbursement'),
+        (SOURCE_NAME_SCREEN, 'Sanctions / PEP screening'),
     ]
 
     PRIORITY_LOW = 'low'
@@ -3543,4 +3578,36 @@ class TransactionAnomalyAssessment(models.Model):
 
     def __str__(self):
         return f'{self.loan_request.loan_request_id} score={self.score}'
+
+
+class SanctionsScreeningResult(models.Model):
+    """Persisted sanctions / PEP screen each time a subject is checked."""
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='sanctions_screenings',
+    )
+    hit = models.BooleanField(default=False, db_index=True)
+    score = models.PositiveSmallIntegerField(default=0)
+    match_types = models.JSONField(default=list, blank=True)
+    matches = models.JSONField(default=list, blank=True)
+    provider = models.CharField(max_length=24, blank=True)
+    subject = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    compliance_case = models.ForeignKey(
+        ComplianceCase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sanctions_screenings',
+    )
+    screened_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-screened_at']
+
+    def __str__(self):
+        flag = 'HIT' if self.hit else 'clear'
+        return f'{self.loan_request.loan_request_id} sanctions={flag}'
 

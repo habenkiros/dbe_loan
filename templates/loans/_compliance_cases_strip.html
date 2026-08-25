@@ -11,8 +11,14 @@
     </li>
     {% endfor %}
   </ul>
-  <p style="margin:0.75rem 0 0;">
+  <p style="margin:0.75rem 0 0;display:flex;flex-wrap:wrap;gap:0.5rem;">
     <a class="btn btn-gray" href="{% url 'compliance_desk' %}">Fraud / AML desk</a>
+    {% if can_open_compliance_case %}
+    <form method="post" action="{% url 'compliance_rescreen_loan' loan_request.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-blue">Re-run sanctions / PEP screen</button>
+    </form>
+    {% endif %}
   </p>
 </div>
 {% elif can_open_compliance_case %}
@@ -21,10 +27,21 @@
   <form method="post" action="{% url 'compliance_open_manual_case' %}">
     {% csrf_token %}
     <input type="hidden" name="loan_request_id" value="{{ loan_request.id }}">
-    <input type="hidden" name="case_type" value="fraud">
+    <label for="compliance-case-type">Case type</label>
+    <select name="case_type" id="compliance-case-type" class="form-control" style="max-width:16rem;margin-bottom:0.5rem;">
+      <option value="fraud">Fraud</option>
+      <option value="aml">AML / transaction monitoring</option>
+      <option value="sanctions">Sanctions / PEP</option>
+    </select>
     <label for="compliance-summary">Open investigation case</label>
-    <textarea name="summary" id="compliance-summary" rows="2" class="form-control" required placeholder="Describe suspected fraud or AML concern (min 10 characters)"></textarea>
-    <p style="margin-top:0.5rem;"><button type="submit" class="btn btn-blue">Open case</button></p>
+    <textarea name="summary" id="compliance-summary" rows="2" class="form-control" required placeholder="Describe suspected fraud, AML, or sanctions/PEP concern (min 10 characters)"></textarea>
+    <p style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.5rem;">
+      <button type="submit" class="btn btn-blue">Open case</button>
+    </p>
+  </form>
+  <form method="post" action="{% url 'compliance_rescreen_loan' loan_request.id %}" style="margin-top:0.75rem;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-gray">Run sanctions / PEP screen</button>
   </form>
 </div>
 {% endif %}

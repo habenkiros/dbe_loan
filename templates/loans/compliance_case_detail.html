@@ -26,6 +26,20 @@
   {% if case.metadata.anomaly_score %}
   <p class="help">Transaction anomaly score: <strong>{{ case.metadata.anomaly_score }}</strong> ({{ case.metadata.risk_band }})</p>
   {% endif %}
+  {% if case.metadata.screening %}
+  <p class="help" style="margin-top:0.5rem;">
+    Screening score: <strong>{{ case.metadata.screening.score }}</strong>
+    · Types: {{ case.metadata.screening.match_types|join:", " }}
+    · Provider: {{ case.metadata.screening.provider }}
+  </p>
+  {% if case.metadata.screening.matches %}
+  <ul class="help" style="margin:0.35rem 0 0;padding-left:1.1rem;">
+    {% for m in case.metadata.screening.matches %}
+    <li>{{ m.match_type }} · {{ m.list_name }} · {{ m.matched_name }} ({{ m.score }})</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endif %}
 </div>
 
 {% if can_manage and case.is_open %}

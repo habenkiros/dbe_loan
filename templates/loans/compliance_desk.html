@@ -10,7 +10,8 @@
     <div>
       <h1>Fraud &amp; AML desk</h1>
       <p>
-        Investigation cases for document fraud, transaction anomalies, and manual referrals.
+        Investigation cases for document fraud, transaction anomalies,
+        sanctions/PEP screening, and manual referrals.
         Separate from credit risk review and post-disbursement monitoring watchlist.
       </p>
     </div>
@@ -29,6 +30,7 @@
         {% elif key == 'escalated' %}{{ counts.escalated }}
         {% elif key == 'fraud' %}{{ counts.fraud }}
         {% elif key == 'aml' %}{{ counts.aml }}
+        {% elif key == 'sanctions' %}{{ counts.sanctions }}
         {% elif key == 'blocked' %}{{ counts.blocked }}
         {% else %}0{% endif %}
       </strong>

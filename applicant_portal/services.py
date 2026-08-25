@@ -191,6 +191,16 @@ def submit_online_application(application) -> object:
     ])
 
     try:
+        from loans.compliance.case_engine import screen_loan_and_open_case
+        from loans.models import ComplianceCase
+        screen_loan_and_open_case(
+            loan,
+            source=ComplianceCase.SOURCE_DIGITAL_APPLY,
+        )
+    except Exception:
+        pass
+
+    try:
         notify_staff_online_intake(loan)
     except Exception:
         pass

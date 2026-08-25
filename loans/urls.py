@@ -9,6 +9,7 @@ from . import views_risk
 from . import views_cooperative
 from . import views_book
 from . import views_compliance
+from . import views_legal
 from . import views_policy
 from applicant_portal import hub_views as applicant_hub_views
 
@@ -23,8 +24,16 @@ urlpatterns = [
     ),
     path('compliance/', views_compliance.compliance_desk, name='compliance_desk'),
     path('compliance/open/', views_compliance.compliance_open_manual_case, name='compliance_open_manual_case'),
+    path(
+        'compliance/loans/<int:loan_request_id>/rescreen/',
+        views_compliance.compliance_rescreen_loan,
+        name='compliance_rescreen_loan',
+    ),
     path('compliance/cases/<int:case_id>/', views_compliance.compliance_case_detail, name='compliance_case_detail'),
     path('compliance/cases/<int:case_id>/action/', views_compliance.compliance_case_action, name='compliance_case_action'),
+    path('legal/', views_legal.legal_desk, name='legal_desk'),
+    path('legal/loans/<int:loan_request_id>/', views_legal.legal_loan_detail, name='legal_loan_detail'),
+    path('legal/loans/<int:loan_request_id>/action/', views_legal.legal_loan_action, name='legal_loan_action'),
     path('monitoring/', views_book.monitoring_desk, name='monitoring_desk'),
     path(
         'monitoring/<int:loan_request_id>/',

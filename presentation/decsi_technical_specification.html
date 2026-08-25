@@ -128,14 +128,17 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
         <span class="badge">Docker</span>
         <span class="badge">CBS customer API</span>
         <span class="badge">OCR eng+amh</span>
+        <span class="badge">Digital Apply</span>
+        <span class="badge">Agentic Assist</span>
+        <span class="badge">Post-approval</span>
         <span class="badge">Offline field PWA</span>
       </div>
       <div class="meta">
         <div><div class="l">Document type</div><div class="v">Technical specification (TS)</div></div>
-        <div><div class="l">Version / date</div><div class="v">1.0 · 28 July 2026</div></div>
+        <div><div class="l">Version / date</div><div class="v">1.1 · 19 August 2026</div></div>
         <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
-        <div><div class="l">Reference</div><div class="v">SEQ/DECSI/TS/2026-07</div></div>
-        <div><div class="l">Companion</div><div class="v">Business proposal SEQ/DECSI/CAPH/2026-07</div></div>
+        <div><div class="l">Reference</div><div class="v">SEQ/DECSI/TS/2026-08</div></div>
+        <div><div class="l">Companion</div><div class="v">Business proposal SEQ/DECSI/CAPH/2026-08</div></div>
         <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
       </div>
     </div>
@@ -190,12 +193,17 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <li>Collateral catalog, field visit (online + offline PWA), coverage, lock/unlock, evidence pack</li>
     <li>Configurable Branch → District → Head Office → Management committee voting</li>
     <li>CBS customer number lookup / smart prefill (and optional transactions feed)</li>
+    <li>Digital Apply customer portal (<code>applicant_portal</code>) and staff online intake queue</li>
+    <li>Agentic Assist copilot and Credit Intelligence dashboards (hard rails — no auto-approve/disburse)</li>
+    <li>Post-approval closing pack, e-signatures, Finance disbursement queue, optional book ops</li>
+    <li>Seqela Market reporter portal (<code>partners</code>) for area price bands</li>
+    <li>MFA (TOTP), staff delegations, Risk Desk, on-prem Ed25519 license</li>
     <li>Docker-based deployment on DECSI infrastructure (on-prem or private cloud)</li>
   </ul>
   <h3>1.2 Out of scope (unless separately contracted)</h3>
   <ul>
     <li>Full Temenos/CBS rip-and-replace or account booking engine</li>
-    <li>Customer-facing retail mobile banking app</li>
+    <li>Full retail mobile/internet banking replacement (Digital Apply is loan self-service only)</li>
     <li>General ledger / IFRS reporting suite</li>
     <li>Hardware (tablets, GPS devices) procurement</li>
   </ul>
@@ -258,6 +266,8 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
         <li><code>decsi_loan/</code> — settings, URLs, WSGI</li>
         <li><code>loans/</code> — credit factory core</li>
         <li><code>collateral/</code> — valuation &amp; field PWA</li>
+        <li><code>applicant_portal/</code> — Digital Apply (customer self-service)</li>
+        <li><code>partners/</code> — Seqela Market reporter portal</li>
         <li><code>templates/</code>, <code>static/</code> — UI &amp; PWA assets</li>
       </ul>
     </div>
@@ -300,8 +310,13 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <tr><td><strong>C. Appraisal</strong></td><td>7-step wizard; MSME vs Corporate mode; qualitative ≥75% gate; DSCR/stress/capacity; E&amp;S 21 items; scorecard /100; analysis assist; amortization schedule; finish gates</td></tr>
     <tr><td><strong>D. Collateral</strong></td><td>Building BOQ catalog × woreda unit prices; land; movable; GPS site mark; photo rules; EXIF vs live GPS; lock after submit; supervised unlock; engineering QA; coverage vs ask; evidence pack (Print/PDF/JSON/ZIP)</td></tr>
     <tr><td><strong>E. Approvals</strong></td><td>Ops/finance queues; amount-routed committee levels; vote Approve/Decline; return-to-officer; notifications; read-only committee pack</td></tr>
-    <tr><td><strong>F. Post-approval</strong></td><td>Conditions clearance → schedule readiness → ready to disburse → disbursed flag (CBS booking external)</td></tr>
-    <tr><td><strong>G. Reporting</strong></td><td>Management report generation options by role</td></tr>
+    <tr><td><strong>F. Digital Apply</strong></td><td>Customer register/apply; document upload; Chapa fee or waived; Queue ID; notices; post-approval schedule view; staff online intake auto-assign</td></tr>
+    <tr><td><strong>G. Post-approval</strong></td><td>Conditions checklist → closing pack (restriction, POA, title, mortgage, notary) → e-signatures → schedule confirm → Finance disbursement queue → disbursed (CBS booking external); partial disburse</td></tr>
+    <tr><td><strong>H. Intelligence</strong></td><td>Agentic Assist (bootstrap draft, checklist coach; audited; cannot approve/disburse); Credit Intelligence KPIs, workspaces, scoped Q&amp;A</td></tr>
+    <tr><td><strong>I. Risk &amp; governance</strong></td><td>Risk Desk queues; optional committee-submit gate; MFA; staff delegations; on-prem license; security audit export</td></tr>
+    <tr><td><strong>J. Seqela Market</strong></td><td>Dealer/co-op price observations → recomputed area price bands for collateral/credit inputs</td></tr>
+    <tr><td><strong>K. Book ops</strong></td><td>Post-disbursement monitoring, collections, covenants, watchlist, arrears DPD, workout/reschedule, write-off</td></tr>
+    <tr><td><strong>L. Reporting</strong></td><td>Management report generation; in-app help manuals (HTML/PDF)</td></tr>
   </table>
   <h3>5.1 Appraisal mode</h3>
   <p>Mode is driven by <code>LoanCategory.appraisal_mode</code> (<code>msme</code> / <code>corporate</code>) and stamped on <code>LoanAppraisal</code>. Corporate mode changes Sheet 1 KYC depth, Sheet 2 qualitative factor set (governance), and Sheet 3 financial statement emphasis while keeping the same 7-step wizard and committee factory.</p>
@@ -343,16 +358,17 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <tr><td>3</td><td>Cashflow / DSCR / stress / 12-mo grid</td><td>FS + cashflow + ratios</td><td>Annual / stressed DSCR &lt;1.0 block</td></tr>
     <tr><td>4</td><td colspan="2">E&amp;S — 21 items, 5 sections</td><td>E&amp;S REJECT hard block</td></tr>
     <tr><td>5</td><td colspan="2">Collateral worksheet (from field valuation)</td><td>Coverage warning at policy min</td></tr>
-    <tr><td>6</td><td colspan="2">Summary, 4-pillar scorecard, recommendation</td><td>Incomplete sheets 1–6 cannot finish</td></tr>
+    <tr><td>6</td><td colspan="2">Summary, 5-pillar scorecard, recommendation</td><td>Incomplete sheets 1–6 cannot finish</td></tr>
     <tr><td>7</td><td colspan="2">Repayment &amp; amortization</td><td>Schedule for booking / pack</td></tr>
   </table>
   <h3>7.1 Scorecard pillars (explainable /100)</h3>
   <table>
     <tr><th>Pillar</th><th>Weight</th><th>Inputs</th></tr>
-    <tr><td>Qualitative / character</td><td>25</td><td>Sheet 2 totals</td></tr>
-    <tr><td>Financial / cashflow</td><td>35</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Qualitative / character</td><td>20</td><td>Sheet 2 totals (governance in corporate mode)</td></tr>
+    <tr><td>Financial / cashflow</td><td>30</td><td>DSCR, stress DSCR, capacity vs ask, ratios</td></tr>
+    <tr><td>Banking &amp; bureau conduct</td><td>20</td><td>CBS turnover/behaviour from Sheet 2 refresh; bureau flags</td></tr>
     <tr><td>Environmental &amp; social</td><td>15</td><td>Risk category &amp; eligibility</td></tr>
-    <tr><td>Collateral coverage</td><td>25</td><td>Coverage vs ask (e.g. ≥1.5× full points)</td></tr>
+    <tr><td>Collateral coverage</td><td>15</td><td>Coverage vs ask (policy minimums configurable)</td></tr>
   </table>
   <p>Bands: Strong ≥80 · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40. <strong>Analysis Assist</strong> surfaces thin pillars and hard blocks — decision support, not auto-approve.</p>
   <p class="small">Key modules: <code>loans/appraisal_mode.py</code>, <code>cashflow_utils.py</code>, <code>sheet_requirements.py</code>, <code>appraisal_scorecard.py</code>, <code>analysis_assist.py</code>.</p>
@@ -390,8 +406,15 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <li>Outcomes: Approve · Decline · Return to officer with notes</li>
     <li>Read-only appraisal pack for voters (Sheets 1–7 summary)</li>
   </ul>
-  <h3>9.2 Disbursement track (in-app)</h3>
-  <p>Post-final-approval states track conditions clearance, schedule readiness, ready-to-disburse, and disbursed. <strong>Fund release and account booking remain in CBS</strong> via operational handoff — the Hub does not replace the ledger.</p>
+  <h3>9.2 Post-approval, closing pack &amp; disbursement track</h3>
+  <ul>
+    <li>Conditions checklist clearance by officer/finance</li>
+    <li>Closing pack gates: collateral restriction, POA, title search, mortgage registration, notary/stamp verification</li>
+    <li>Digital agreement e-signatures (tablet pad; content-hash binding; borrower/officer/BM roles)</li>
+    <li>Schedule confirm → ready-to-disburse → Finance disbursement queue → disbursed flag</li>
+    <li>Optional partial disbursement and own-contribution verification</li>
+  </ul>
+  <p><strong>Fund release and account booking remain in CBS</strong> via operational handoff — the Hub does not replace the ledger.</p>
 </section>
 
 <section class="screen pagebreak">
@@ -416,6 +439,14 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
 
 <section class="screen pagebreak">
   <h2>11. Roles, Access Control &amp; Security</h2>
+  <p>Extended controls in the August 2026 release:</p>
+  <ul>
+    <li><strong>MFA</strong> — TOTP setup/verify; login lockout; security audit log export</li>
+    <li><strong>Staff delegations</strong> — Admin-approved scoped cover (committee vote, appraisal, finance disbursement, assign officer)</li>
+    <li><strong>Risk Desk</strong> — Pre-committee review queues; optional block on committee submit</li>
+    <li><strong>On-prem license</strong> — Ed25519 <code>SEQLA1</code> enforcement; no phone-home</li>
+    <li><strong>Agentic Assist</strong> — Tool allow-list; full run audit; no approve/disburse/valuation tools</li>
+  </ul>
   <h3>11.1 Role catalogue (out of the box)</h3>
   <table>
     <tr><th>Family</th><th>Roles</th></tr>
@@ -540,6 +571,11 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <li>Coverage ratio appears on Sheet 5 / evidence pack</li>
     <li>Submit to committee; voter sees pack; Approve/Decline/Return works; routing follows recommended amount</li>
     <li>Role isolation: auditor/risk read paths; officers cannot cast HO votes without eligibility</li>
+    <li>Digital Apply submission appears in staff online intake queue; customer sees Queue ID and status</li>
+    <li>Closing pack gates block Finance disbursement until required legal steps cleared</li>
+    <li>E-signature capture binds to agreement content hash</li>
+    <li>Agentic Assist cannot invoke approve/disburse tools (verified in audit log)</li>
+    <li>MFA required for configured roles; delegation cover works without password sharing</li>
   </ol>
   <h3>16.2 Non-functional acceptance</h3>
   <ul>
@@ -554,7 +590,7 @@ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-s
     <strong>Seqela</strong> · info@seqela.com · +251 964 790 724 · seqela.com
   </div>
   <div class="footer">
-    <p><strong>Seqela</strong> · Technical Specification SEQ/DECSI/TS/2026-07 · Companion business proposal SEQ/DECSI/CAPH/2026-07</p>
+    <p><strong>Seqela</strong> · Technical Specification SEQ/DECSI/TS/2026-08 · Companion business proposal SEQ/DECSI/CAPH/2026-08</p>
     <p>Confidential — for Dedebit Credit and Savings Institution S.C. evaluation only.</p>
   </div>
 </section>

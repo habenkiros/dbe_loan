@@ -384,7 +384,7 @@ docker compose exec web python manage.py createsuperuser
 docker compose -f docker-compose.yml -f docker-compose.https.yml up --build
 ```
 
-Open **https://YOUR-LAN-IP:8443** (accept self-signed cert once). Local laptop can stay on **http://localhost:8000**.
+Open **https://\<any-server-lan-ip\>:8443** (install the field CA on phones). The cert covers current LAN addresses and each private /24, so DHCP does not require a baked IP. Local laptop can stay on **http://localhost:8000**.
 
 Default DB (compose):
 
@@ -475,7 +475,8 @@ Create `.env` in the project root (and `deploy/https/.env.https` for field HTTPS
 | Variable | Description |
 |----------|-------------|
 | `USE_HTTPS_PROXY` | Set `1` behind nginx TLS |
-| `CSRF_TRUSTED_ORIGINS` | Comma-separated origins |
+| `HTTPS_ALLOW_ANY_HOST` | `1` (default): accept any server IP / Host on the overlay |
+| `CSRF_TRUSTED_ORIGINS` | Optional extra origins; do **not** pin a DHCP LAN IP |
 | `HTTPS_SECURE_COOKIES` | `1` only with trusted public cert |
 
 ### Agentic Assist LLM

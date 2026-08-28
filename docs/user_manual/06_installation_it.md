@@ -280,13 +280,12 @@ Browsers require a **secure context** for camera/GPS on many devices.
 
 ```bash
 ./scripts/gen_field_https_certs.sh
-# optionally pass LAN IP: ./scripts/gen_field_https_certs.sh 192.168.x.x
 docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d
 ```
 
-- App via proxy: `https://<lan-ip>:8443`  
-- Accept the self-signed certificate once (or install a bank-signed cert in `deploy/https/certs/`).  
-- Set HTTPS-related env vars as documented in `.env.example` / `deploy/https/.env.https`.
+- App via proxy: `https://<any-current-server-ip>:8443` (cert SAN includes current LAN IPs and each private /24; extra IPs can be passed as arguments).  
+- Install the field CA on phones (or a bank-signed cert in `deploy/https/certs/`).  
+- Do not pin `SITE_URL` / `CSRF_TRUSTED_ORIGINS` to one DHCP address. Re-run the cert script if the server moves to a **new subnet**.
 
 ---
 

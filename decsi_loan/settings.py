@@ -27,8 +27,23 @@ def _env_bool(name, default=False):
 
 DEBUG = _env_bool('DEBUG', default=False)
 
+
+def _https_allow_any_host():
+    """Field HTTPS overlay: accept whatever LAN IP DHCP assigned (not a baked Host)."""
+    if os.getenv('USE_HTTPS_PROXY', '') != '1':
+        return False
+    return os.getenv('HTTPS_ALLOW_ANY_HOST', '1').strip().lower() in (
+        '1',
+        'true',
+        'yes',
+        'on',
+    )
+
+
 _allowed = os.getenv('ALLOWED_HOSTS', '*').strip()
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] if _allowed else ['*']
+if _https_allow_any_host():
+    ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -322,8 +337,8 @@ if os.getenv('USE_HTTPS_PROXY', '') == '1':
 
 _csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS', '').strip()
 _csrf_origins = [o.strip() for o in _csrf_trusted.split(',') if o.strip()] if _csrf_trusted else []
-# Field HTTPS: always include SITE_URL + localhost so login/sync work after
-# regenerating deploy/https/.env.https (LAN IP changes with Wi‑Fi DHCP).
+# Field HTTPS: do not pin CSRF to a single LAN IP. Same-origin POSTs use the
+# request Host (whatever DHCP assigned). Localhost is listed for laptop tests.
 _site_url = os.getenv('SITE_URL', '').strip().rstrip('/')
 if _site_url.startswith(('https://', 'http://')) and _site_url not in _csrf_origins:
     _csrf_origins.append(_site_url)

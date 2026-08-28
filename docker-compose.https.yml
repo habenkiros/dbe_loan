@@ -1,9 +1,10 @@
 # Overlay: HTTPS reverse proxy for tablet GPS/camera (secure context).
 # Usage:
-#   ./scripts/gen_field_https_certs.sh [optional-lan-ip]
+#   ./scripts/gen_field_https_certs.sh          # all current LAN IPs + each private /24
 #   docker compose -f docker-compose.yml -f docker-compose.https.yml up --build
 #
-# App: https://localhost:8443  (or https://<lan-ip>:8443)
+# App: https://localhost:8443  or  https://<any-current-server-ip>:8443
+# (no need to bake a specific IP into env; re-run the cert script after a new subnet)
 
 services:
   web:

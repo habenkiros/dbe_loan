@@ -12,6 +12,8 @@ backups/
 
 deploy/https/certs/*.key
 deploy/https/certs/*.crt
+deploy/https/certs/*.cnf
+deploy/https/certs/*.srl
 deploy/https/certs/openssl.cnf
 !deploy/https/certs/.gitkeep
 deploy/https/.env.https

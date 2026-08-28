@@ -245,11 +245,11 @@ docker compose exec web python manage.py import_users <file>
 Camera / GPS often require HTTPS:
 
 ```bash
-./scripts/gen_field_https_certs.sh <lan-ip>
+./scripts/gen_field_https_certs.sh
 docker compose -f docker-compose.yml -f docker-compose.https.yml up --build -d
 ```
 
-Use `https://<lan-ip>:8443` and update `SITE_URL` / `CSRF_TRUSTED_ORIGINS` accordingly.
+Use `https://<any-current-server-ip>:8443`. The cert script discovers LAN addresses and covers each private /24 (DHCP). Do not bake a single IP into `SITE_URL` / `CSRF_TRUSTED_ORIGINS`. Re-run the script if the server moves to a new subnet.
 
 ---
 

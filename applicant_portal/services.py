@@ -97,7 +97,7 @@ def submit_online_application(application) -> object:
     """Create LoanRequest + copy documents; return loan."""
     from loans.models import LoanRequest, LoanRequestDocument
     from loans.services.document_auth import run_automated_document_checks
-    from loans.views import generate_incremental_loan_request_id
+    from loans.ids import generate_incremental_loan_request_id
     from applicant_portal.notify import (
         assign_default_officer,
         notify_applicant_loan_event,

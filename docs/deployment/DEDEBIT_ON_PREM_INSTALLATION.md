@@ -229,13 +229,11 @@ As superuser in the hub **Settings** (see Admin user manual):
 7. MFA enrollment for privileged accounts  
 8. SMTP for password reset (if used)
 
-Optional CSV imports:
+Optional Excel imports (templates in `docs/migration_templates/`):
 
 ```bash
-docker compose exec web python manage.py import_zones <file>
-docker compose exec web python manage.py import_branches <file>
-docker compose exec web python manage.py import_loan_categories <file>
-docker compose exec web python manage.py import_users <file>
+docker compose exec web python manage.py import_migration_pack docs/migration_templates/DECSI_Migration_Pack.xlsx --default-password "ChangeMeNow!"
+# or: import_districts, import_zones (geographic), import_branches, import_loan_categories, import_users, …
 ```
 
 ---

@@ -59,7 +59,7 @@ Optional AI layers assist staff without replacing policy gates:
 | **Post-approval** | Conditions checklist, schedule confirm, mark ready, Finance gate, mark disbursed (CBS optional) |
 | **Agentic Assist** | Floating chat + `/agent/`; draft **story**; branch manager bootstrap; document checklist; appraisal read-only; full run audit |
 | **Credit Intelligence** | Overview KPIs, officer/manager workspaces, portfolio & collateral analytics, CI assistant APIs |
-| **Administration** | Geography, departments, branches, committees UI, document types, bulk CSV imports |
+| **Administration** | Geography, departments, branches, committees UI, document types, bulk Excel imports |
 | **Reporting** | Scoped reports, branch dashboard, exports |
 
 ---
@@ -331,7 +331,6 @@ decsi_loan/
 │   ├── services/               # Document auth, notifications, customer
 │   └── tests/                  # Unit/integration suites
 ├── collateral/                 # Valuation, field, policy, eng. QA
-├── management/commands/        # CSV imports
 ├── templates/ / static/        # UI, agent widget, maps JS
 ├── deploy/https/               # nginx + cert config for field HTTPS
 ├── scripts/gen_field_https_certs.sh
@@ -410,12 +409,19 @@ python manage.py runserver
 Imports:
 
 ```bash
-python manage.py import_zones <file>
+python manage.py generate_migration_templates   # writes docs/migration_templates/
+python manage.py import_migration_pack docs/migration_templates/DECSI_Migration_Pack.xlsx --default-password 'ChangeMeNow!'
+# or one entity at a time:
+python manage.py import_regions <file>
+python manage.py import_zones <file>            # geographic zones (region + name)
+python manage.py import_cities <file>
+python manage.py import_districts <file>        # operational districts
 python manage.py import_branches <file>
 python manage.py import_loan_categories <file>
-python manage.py import_users <file>
+python manage.py import_collateral_types <file>
+python manage.py import_document_types <file>
+python manage.py import_users <file> --default-password 'ChangeMeNow!'
 python manage.py import_loan_requests <file>
-python manage.py import_collaterals <file>
 ```
 
 In admin / superadmin UI, set:
@@ -498,12 +504,22 @@ Compose uses DB host **`db`**. Local runs need host `localhost` (edit settings o
 
 | Command | Purpose |
 |---------|---------|
-| `import_zones` | Region / zone / city |
-| `import_branches` | Districts and branches |
-| `import_loan_categories` | Product categories |
-| `import_users` | Users and roles |
-| `import_loan_requests` | Historical requests |
-| `import_collaterals` | Construction catalog data |
+| `generate_migration_templates` | Write fillable Excel templates to `docs/migration_templates/` |
+| `import_migration_pack` | All sheets from `DECSI_Migration_Pack.xlsx` |
+| `import_regions` | Geographic regions |
+| `import_zones` | Geographic zones (`region` + `name`) |
+| `import_cities` | Cities / woredas (unit-price locations) |
+| `import_districts` | Operational districts (legacy name-only “zones” files) |
+| `import_branches` | Branches (`district` + `name`) |
+| `import_departments` | HO departments |
+| `import_loan_categories` | Products (`name`, `appraisal_mode`) |
+| `import_collateral_types` | Collateral types (`name`, `kind`) |
+| `import_document_types` | Application document catalog |
+| `import_category_documents` | Per-loan-type document packs |
+| `import_users` | Staff users and roles |
+| `import_committee_levels` / `import_committee_members` | Approval chain |
+| `import_construction_catalog` | BOQ catalog and woreda unit prices |
+| `import_loan_requests` | Historical / new loan files |
 
 ---
 
@@ -546,6 +562,7 @@ docker compose exec web python manage.py test
 
 | Path | Description |
 |------|-------------|
+| `docs/migration_templates/` | Fillable Excel pack for DECSI master data and loan migration |
 | `docs/user_manual/README.md` | User manuals index (admin, staff, customers, market) |
 | `docs/user_manual/01_admin.md` | Admin guide |
 | `docs/user_manual/02_staff.md` | Staff hub guide |

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>{{ spec.title }}</h2>
+  <p>Excel columns: <code>{{ spec.columns }}</code></p>
+  <p>Fill the DECSI templates in <code>docs/migration_templates/</code>, then upload the matching sheet here (superuser only).</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div>
+      <label for="file">Select Excel or CSV file:</label>
+      <input type="file" id="file" name="file" accept=".xlsx,.xlsm,.csv" required>
+    </div>
+    {% if spec.needs_password %}
+    <div>
+      <label for="default_password">Temporary password for new users (optional if the sheet has a password column):</label>
+      <input type="text" id="default_password" name="default_password" autocomplete="off">
+    </div>
+    {% endif %}
+    <div>
+      <label>
+        <input type="checkbox" name="update" value="1">
+        Update existing rows
+      </label>
+    </div>
+    <button type="submit">Upload</button>
+  </form>
+  {% for message in messages %}
+    <p class="message {{ message.tags }}">{{ message }}</p>
+  {% endfor %}
+{% endblock %}

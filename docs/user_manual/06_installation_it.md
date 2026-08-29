@@ -304,13 +304,11 @@ Complete in hub **Settings** (superuser) or Admin:
 9. Confirm **Delegations** works (staff request → admin approve)  
 10. If using Seqela Market, schedule `recompute_market_bands` (see §9.5)
 
-CSV imports (optional):
+CSV / Excel imports (optional — templates in `docs/migration_templates/`):
 
 ```bash
-docker compose exec web python manage.py import_zones <file>
-docker compose exec web python manage.py import_branches <file>
-docker compose exec web python manage.py import_loan_categories <file>
-docker compose exec web python manage.py import_users <file>
+docker compose exec web python manage.py import_migration_pack docs/migration_templates/DECSI_Migration_Pack.xlsx --default-password "ChangeMeNow!"
+# or: import_districts, import_zones (geographic), import_branches, import_loan_categories, import_users, …
 ```
 
 ---

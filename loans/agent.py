@@ -137,7 +137,7 @@ def resolve_officer(user, officer_id: Optional[int], branch):
 
 def tool_create_loan(user, req: AgentRequest) -> ToolResult:
     from loans.models import CollateralType, LoanCategory, LoanRequest
-    from loans.views import generate_incremental_loan_request_id
+    from loans.ids import generate_incremental_loan_request_id
     from loans.agent_permissions import user_can_create_loan_via_agent
 
     if not user_can_use_agent(user):

@@ -45,7 +45,7 @@ from .sheet_requirements import get_appraisal_sheet_status, sheets_blocking_comp
 from .models import (
     Region, Zone, City, District, Branch, Department, LoanCategory, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
-    LoanRequest, CustomUser, LatestLoanRequestID, CollateralEstimationConfig,
+    LoanRequest, CustomUser, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
     AppraisalAmortizationEntry, AppraisalESChecklistItem, ES_CHECKLIST_STRUCTURE,
     ApprovalCommitteeLevel,
@@ -73,9 +73,8 @@ from django.db.models import Q, Count, Sum
 import json
 from django.http import HttpResponse
 import csv
-from django.core.files.storage import FileSystemStorage
 from django.contrib import messages
-import pandas as pd
+from loans.ids import generate_incremental_loan_request_id
 
 
 def _user_is_cooperative_manager(user) -> bool:
@@ -505,15 +504,6 @@ def upload_loan_request_documents(request, loan_request_id):
         'document_requests': document_requests,
     })
 
-
-def generate_incremental_loan_request_id():
-    latest_id_instance, created = LatestLoanRequestID.objects.get_or_create(pk=1)
-    latest_id = latest_id_instance.latest_id + 1
-    latest_id_instance.latest_id = latest_id
-    latest_id_instance.save()
-    return f"HK-{latest_id:09d}"
-
-# loans/views.py
 
 @login_required
 @user_passes_test(_user_is_cooperative_manager)
@@ -4127,199 +4117,107 @@ def classic_home(request):
     }
     return render(request, 'home.html', context)
 
-def upload_zones(request):
-    """Upload districts (Excel column 'name'). Kept URL name for backward compatibility."""
-    if request.method == 'POST' and request.FILES.get('file'):
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            district, created = District.objects.get_or_create(name=row['name'])
-            if created:
-                messages.success(request, f'Successfully created district: {district.name}')
-            else:
-                messages.warning(request, f'District already exists: {district.name}')
-        return redirect('upload_zones')
-    return render(request, 'backup/upload_zones.html')
+EXCEL_UPLOAD_PAGES = {
+    'regions': {
+        'kind': 'regions',
+        'title': 'Upload regions',
+        'columns': 'name',
+        'url_name': 'upload_regions',
+    },
+    'zones': {
+        'kind': 'zones',
+        'title': 'Upload geographic zones',
+        'columns': 'region, name  —  for operational districts use Upload districts',
+        'url_name': 'upload_zones',
+    },
+    'cities': {
+        'kind': 'cities',
+        'title': 'Upload cities / woredas',
+        'columns': 'region, zone, name',
+        'url_name': 'upload_cities',
+    },
+    'districts': {
+        'kind': 'districts',
+        'title': 'Upload districts',
+        'columns': 'name  —  legacy name-only “zones” files belong here',
+        'url_name': 'upload_districts',
+    },
+    'branches': {
+        'kind': 'branches',
+        'title': 'Upload branches',
+        'columns': 'district, name  (legacy column “zone” is treated as district)',
+        'url_name': 'upload_branches',
+    },
+    'loan_categories': {
+        'kind': 'loan_categories',
+        'title': 'Upload loan categories',
+        'columns': 'name, appraisal_mode (msme or corporate)',
+        'url_name': 'upload_loan_categories',
+    },
+    'collateral_types': {
+        'kind': 'collateral_types',
+        'title': 'Upload collateral types',
+        'columns': 'name (or collateral), kind (building / land / movable / mixed)',
+        'url_name': 'upload_collaterals',
+    },
+    'users': {
+        'kind': 'users',
+        'title': 'Upload users',
+        'columns': 'username, email, phone_number, role, district, branch, department',
+        'url_name': 'upload_users',
+        'needs_password': True,
+    },
+    'loan_requests': {
+        'kind': 'loan_requests',
+        'title': 'Upload loan requests',
+        'columns': 'applicant_name, category, collateral, amount_requested, branch, …',
+        'url_name': 'upload_loan_requests',
+    },
+}
 
 
-def upload_branches(request):
-    if request.method == 'POST' and request.FILES.get('file'):
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            district_name = row.get('district', row.get('zone'))
-            branch_name = row['name']
+def _excel_upload_view(page_key):
+    spec = EXCEL_UPLOAD_PAGES[page_key]
+
+    @login_required
+    @user_passes_test(lambda u: u.is_superuser)
+    def view(request):
+        from loans.excel_import import import_pack, run_import
+
+        if request.method == 'POST' and request.FILES.get('file'):
+            uploaded = request.FILES['file']
+            update = request.POST.get('update') == '1'
+            default_password = (request.POST.get('default_password') or '').strip()
             try:
-                district = District.objects.get(name=district_name)
-                branch, created = Branch.objects.get_or_create(name=branch_name, district=district)
-                if created:
-                    messages.success(request, f'Successfully created branch: {branch.name} in district: {district.name}')
+                if spec.get('pack'):
+                    result = import_pack(uploaded, update=update, default_password=default_password)
                 else:
-                    messages.warning(request, f'Branch already exists: {branch.name} in district: {district.name}')
-            except District.DoesNotExist:
-                messages.error(request, f'District does not exist: {district_name}')
-        return redirect('upload_branches')
-    return render(request, 'backup/upload_branches.html')
+                    result = run_import(
+                        spec['kind'], uploaded,
+                        update=update, default_password=default_password,
+                    )
+            except Exception as exc:
+                messages.error(request, str(exc))
+                return redirect(spec['url_name'])
+            messages.info(request, result.summary())
+            for warning in result.warnings:
+                messages.warning(request, warning)
+            for error in result.errors:
+                messages.error(request, error)
+            return redirect(spec['url_name'])
+        return render(request, 'backup/upload_excel.html', {'spec': spec})
 
-def upload_loan_categories(request):
-    if request.method == 'POST' and request.FILES['file']:
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            category_name = row['name']
-
-            loan_category, created = LoanCategory.objects.get_or_create(name=category_name)
-            if created:
-                messages.success(request, f'Successfully created loan category: {loan_category.name}')
-            else:
-                messages.warning(request, f'Loan category already exists: {loan_category.name}')
-
-        return redirect('upload_loan_categories')
-
-    return render(request, 'backup/upload_loan_categories.html')
-
-def upload_users(request):
-    if request.method == 'POST' and request.FILES.get('file'):
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            username = row['username']
-            email = row['email']
-            phone_number = row['phone_number']
-            role = row['role']
-            district_name = row.get('district', row.get('zone'))
-            branch_name = row['branch']
-            if str(role).lower() == "loan_officer":
-                role = "branch_manager"
-            try:
-                district = District.objects.get(name=district_name)
-                branch = Branch.objects.get(name=branch_name, district=district)
-                user, created = CustomUser.objects.get_or_create(
-                    username=username,
-                    defaults={
-                        'email': email,
-                        'phone_number': phone_number,
-                        'role': role,
-                        'district': district,
-                        'branch': branch
-                    }
-                )
-                if created:
-                    user.set_password('Zemeo@zemeo10')
-                    user.save()
-                    messages.success(request, f'Successfully created user: {username}')
-                else:
-                    if getattr(user, 'role', None) == "loan_officer":
-                        user.role = "branch_manager"
-                        user.save()
-                        messages.info(request, f'Updated role for user: {username} → branch_manager')
-                    else:
-                        messages.warning(request, f'User already exists: {username}')
-            except District.DoesNotExist:
-                messages.error(request, f'District does not exist: {district_name}')
-            except Branch.DoesNotExist:
-                messages.error(request, f'Branch does not exist: {branch_name}')
-
-        return redirect('upload_users')
-
-    return render(request, 'backup/upload_users.html')
+    view.__name__ = f'upload_{page_key}'
+    view.__doc__ = spec['title']
+    return view
 
 
-def upload_loan_requests(request):
-    if request.method == 'POST' and request.FILES['file']:
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            try:
-                applicant_name = row['applicant_name']
-                email = row['email']
-                phone_number = row['phone_number']
-                category = LoanCategory.objects.get(name=row['category'])
-                collateral = CollateralType.objects.get(name=row['collateral'])
-                amount_requested = row['amount_requested']
-                reason = row['reason']
-                status = str(row['status']).strip().lower()  # normalize
-                district = District.objects.get(name=row.get('district', row.get('zone')))
-                branch = Branch.objects.get(name=row['branch'], district=district)
-                customer_history = row['customer_history']
-                date_requested = row['date_requested']
-
-                # Default approvals
-                operation_manager_approval = False
-                finance_approval = False
-
-                # If Excel says "Approved", mark both approvals True
-                if status == "approved":
-                    operation_manager_approval = True
-                    finance_approval = True
-
-                LoanRequest.objects.create(
-                    loan_request_id=generate_incremental_loan_request_id(),
-                    applicant_name=applicant_name,
-                    email=email,
-                    phone_number=phone_number,
-                    category=category,
-                    collateral=collateral,
-                    amount_requested=amount_requested,
-                    reason=reason,
-                    status=status.capitalize(),   # keep proper case
-                    district=district,
-                    branch=branch,
-                    customer_history=customer_history,
-                    date_requested=date_requested,
-                    operation_manager_approval=operation_manager_approval,
-                    finance_approval=finance_approval
-                )
-
-                messages.success(request, f'Successfully imported loan request for: {applicant_name}')
-
-            except LoanCategory.DoesNotExist:
-                messages.error(request, f'Loan category does not exist: {category}')
-            except CollateralType.DoesNotExist:
-                messages.error(request, f'Collateral does not exist: {collateral}')
-            except Branch.DoesNotExist:
-                messages.error(request, f'Branch does not exist: {branch}')
-
-        return redirect('upload_loan_requests')
-
-    return render(request, 'backup/upload_loan_requests.html')
-
-
-def upload_collaterals(request):
-    if request.method == 'POST' and request.FILES['file']:
-        file = request.FILES['file']
-        fs = FileSystemStorage(location='backup/')
-        filename = fs.save(file.name, file)
-        file_path = fs.path(filename)
-
-        data = pd.read_excel(file_path, engine='openpyxl')
-        for index, row in data.iterrows():
-            collateral_name = row['collateral']
-
-            collateral, created = CollateralType.objects.get_or_create(name=collateral_name)
-            if created:
-                messages.success(request, f'Successfully created collateral: {collateral}')
-            else:
-                messages.warning(request, f'Collateral already exists: {collateral}')
-
-        return redirect('upload_collaterals')
-
-    return render(request, 'backup/upload_collaterals.html')
+upload_regions = _excel_upload_view('regions')
+upload_zones = _excel_upload_view('zones')
+upload_cities = _excel_upload_view('cities')
+upload_districts = _excel_upload_view('districts')
+upload_branches = _excel_upload_view('branches')
+upload_loan_categories = _excel_upload_view('loan_categories')
+upload_users = _excel_upload_view('users')
+upload_loan_requests = _excel_upload_view('loan_requests')
+upload_collaterals = _excel_upload_view('collateral_types')

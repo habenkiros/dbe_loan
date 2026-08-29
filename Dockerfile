@@ -6,7 +6,11 @@ WORKDIR /app
 
 # Tesseract OCR for scanned document text extraction (optional checks)
 # WeasyPrint needs Pango/Cairo for HTML→PDF appraisal packs
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# compose.yml build.network=host + retries for flaky DNS during apt
+RUN for i in 1 2 3 4 5; do \
+      apt-get update && break || sleep 10; \
+    done \
+    && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-amh \

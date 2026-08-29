@@ -6,7 +6,10 @@
 
 services:
   web:
-    build: .
+    build:
+      context: .
+      # Use Docker VM network so apt can resolve deb.debian.org on flaky host DNS
+      network: host
     env_file:
       - .env
     environment:
@@ -45,6 +48,7 @@ services:
   backup:
     build:
       context: ./deploy/backup
+      network: host
     env_file:
       - .env
     environment:

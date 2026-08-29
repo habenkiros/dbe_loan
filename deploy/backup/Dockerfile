@@ -2,7 +2,9 @@
 # Uses the same postgres:16 image already pulled for the db service.
 FROM postgres:16
 
-RUN apt-get update \
+RUN for i in 1 2 3 4 5; do \
+      apt-get update && break || sleep 10; \
+    done \
     && apt-get install -y --no-install-recommends tar gzip tzdata \
     && rm -rf /var/lib/apt/lists/*
 

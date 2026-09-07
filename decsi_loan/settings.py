@@ -1,6 +1,7 @@
 # loan_system/settings.py
 
 import os
+import sys
 from pathlib import Path
 import environ
 import dj_database_url
@@ -26,6 +27,7 @@ def _env_bool(name, default=False):
 
 
 DEBUG = _env_bool('DEBUG', default=False)
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 
 def _https_allow_any_host():
@@ -100,6 +102,7 @@ TEMPLATES = [
                 'loans.context_processors.agent_assistant',
                 'loans.context_processors.staff_nav',
                 'loans.context_processors.product_license',
+                'loans.context_processors.institution_branding',
                 'collateral.context_processors.gebeta_maps',
                 'applicant_portal.context_processors.portal_notices',
             ],
@@ -199,11 +202,17 @@ LOGIN_URL = '/hub/login/'
 LOGIN_REDIRECT_URL = '/hub/'
 LOGOUT_REDIRECT_URL = '/hub/login/'
 
+# This instance: Development Bank of Ethiopia (not DECSI production).
+INSTITUTION_NAME = os.getenv('INSTITUTION_NAME', 'Development Bank of Ethiopia').strip() or 'Development Bank of Ethiopia'
+INSTITUTION_SHORT = os.getenv('INSTITUTION_SHORT', 'DBE').strip() or 'DBE'
+PRODUCT_NAME = os.getenv('PRODUCT_NAME', 'Credit Intelligence').strip() or 'Credit Intelligence'
+
 # Auth hardening (read from .env — see .env.example)
 LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv('LOGIN_MAX_FAILED_ATTEMPTS', '5') or '5')
 LOGIN_LOCKOUT_MINUTES = int(os.getenv('LOGIN_LOCKOUT_MINUTES', '15') or '15')
 MFA_REQUIRED = os.getenv('MFA_REQUIRED', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
-MFA_TOTP_ISSUER = os.getenv('MFA_TOTP_ISSUER', 'DECSI Loan Hub').strip() or 'DECSI Loan Hub'
+_mfa_issuer = os.getenv('MFA_TOTP_ISSUER', '').strip()
+MFA_TOTP_ISSUER = _mfa_issuer or f'{INSTITUTION_SHORT} {PRODUCT_NAME}'
 SESSION_IDLE_TIMEOUT = int(os.getenv('SESSION_IDLE_TIMEOUT', '1800') or '1800')
 SESSION_IDLE_WARNING_SECONDS = int(os.getenv('SESSION_IDLE_WARNING_SECONDS', '120') or '120')
 _session_age = os.getenv('SESSION_COOKIE_AGE', '').strip()
@@ -227,22 +236,31 @@ APPLICANT_SMS_API_KEY = os.getenv('APPLICANT_SMS_API_KEY', '').strip()
 
 # Committee notifications (optional email; in-app always created)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@decsi.local')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@dbe.local')
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@decsi.local')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@dbe.local')
 # After Chapa marks fee paid, create LoanRequest + branch queue when docs are complete.
 DECSI_AUTO_QUEUE_ON_PAID = os.getenv('DECSI_AUTO_QUEUE_ON_PAID', 'True').lower() in ('1', 'true', 'yes')
 
 # Document OCR (Tesseract language packs: eng, amh, or eng+amh)
 DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
 
-# Core banking / party customer lookup (Sheet 1 intake)
-DECSI_BASE_URL = os.getenv('DECSI_BASE_URL', '').rstrip('/')
+# Applicant KYC identity rails (Fayda FAN / TIN). off | mock | http
+IDENTITY_VERIFY_PROVIDER = os.getenv('IDENTITY_VERIFY_PROVIDER', 'mock').strip().lower()
+IDENTITY_VERIFY_FORCE_MOCK = os.getenv('IDENTITY_VERIFY_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
+FAYDA_VERIFY_URL = os.getenv('FAYDA_VERIFY_URL', '').strip()
+TIN_VERIFY_URL = os.getenv('TIN_VERIFY_URL', '').strip()
+IDENTITY_VERIFY_TIMEOUT = int(os.getenv('IDENTITY_VERIFY_TIMEOUT', '8'))
+
+# Core banking / party customer lookup (Sheet 1 intake).
+# BANK_CBS_* is the DBE name; DECSI_* remains an alias for the live factory.
+BANK_CBS_BASE_URL = os.getenv('BANK_CBS_BASE_URL', '').rstrip('/')
+DECSI_BASE_URL = BANK_CBS_BASE_URL or os.getenv('DECSI_BASE_URL', '').rstrip('/')
 DECSI_CUSTOMER_TIMEOUT = int(os.getenv('DECSI_CUSTOMER_TIMEOUT', '8'))
 DECSI_CUSTOMER_FORCE_MOCK = os.getenv('DECSI_CUSTOMER_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
 # Silent mock fallback after live failure:
@@ -254,7 +272,7 @@ if _fallback_raw in ('1', 'true', 'yes'):
 elif _fallback_raw in ('0', 'false', 'no'):
     DECSI_CUSTOMER_FALLBACK_MOCK = False
 else:
-    DECSI_CUSTOMER_FALLBACK_MOCK = not bool(os.getenv('DECSI_BASE_URL', '').strip())
+    DECSI_CUSTOMER_FALLBACK_MOCK = not bool(DECSI_BASE_URL)
 DECSI_CUSTOMER_DETAIL_PATH = os.getenv(
     'DECSI_CUSTOMER_DETAIL_PATH',
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/custdets',
@@ -272,7 +290,7 @@ DECSI_CBS_ENABLED = os.getenv('DECSI_CBS_ENABLED', 'True').lower() in ('1', 'tru
 DECSI_CBS_USE_MOCK_LEDGER = os.getenv('DECSI_CBS_USE_MOCK_LEDGER', 'True').lower() in ('1', 'true', 'yes')
 DECSI_CBS_FORCE_MOCK = os.getenv('DECSI_CBS_FORCE_MOCK', '').lower() in ('1', 'true', 'yes')
 DECSI_CBS_TIMEOUT = int(os.getenv('DECSI_CBS_TIMEOUT', os.getenv('DECSI_CUSTOMER_TIMEOUT', '8')))
-DECSI_CBS_API_KEY = os.getenv('DECSI_CBS_API_KEY', '').strip()
+DECSI_CBS_API_KEY = (os.getenv('BANK_CBS_API_KEY') or os.getenv('DECSI_CBS_API_KEY') or '').strip()
 DECSI_OUTSTANDING_PATH = os.getenv(
     'DECSI_OUTSTANDING_PATH',
     '/getCusByCusNo/api/v1.0.0/party/custid/{cid}/outstanding',

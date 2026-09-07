@@ -1,0 +1,12 @@
+{% load static %}
+<form method="post" id="loan-category-form" data-policy-url="{{ family_policy_url }}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <p class="help">
+      Select a <strong>product family</strong> and the appraisal method plus matching collateral
+      fill in automatically. Uncheck <strong>requires collateral</strong> for unsecured products
+      (wholesale, idea/equity, or a special line). You can still change the appraisal desk.
+    </p>
+    <button type="submit">{{ submit_label|default:"Save" }}</button>
+</form>
+<script src="{% static 'js/loan_category_form.js' %}"></script>

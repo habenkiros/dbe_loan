@@ -37,6 +37,19 @@
     {% endif %}
   </p>
   {% endif %}
+  {% if doc.automated_checks.forensics %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Forensics:</strong>
+    quality {{ doc.quality_score|default:doc.automated_checks.forensics.quality.score }}
+    · authenticity {{ doc.authenticity_score|default:doc.automated_checks.forensics.authenticity_score }}
+    {% if doc.automated_checks.forensics.reasons %}
+    — {{ doc.automated_checks.forensics.reasons|join:", " }}
+    {% endif %}
+    {% if doc.automated_checks.forensics.near_duplicates %}
+    · near-duplicate on another file
+    {% endif %}
+  </p>
+  {% endif %}
   {% if doc.automated_checks.identity_match %}
   {% with identity=doc.automated_checks.identity_match %}
   <p style="margin:0.35rem 0 0;">

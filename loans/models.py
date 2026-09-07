@@ -7,6 +7,8 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.utils import timezone
 
+from loans.product_family import FAMILY_CHOICES, FAMILY_GENERAL, parse_product_family
+
 
 # --- Geography: Region → Zone → City (woreda) ---
 class Region(models.Model):
@@ -57,18 +59,38 @@ class Branch(models.Model):
 
 
 class Department(models.Model):
-    """Head-office / governance departments (Cooperative, Finance, Credit, Management, Board)."""
+    """Head-office work unit. DECSI keys stay; DBE prototyping desks are additive."""
     KEY_COOPERATIVE = 'cooperative'
     KEY_FINANCE = 'finance'
     KEY_CREDIT = 'credit'
     KEY_MANAGEMENT = 'management'
     KEY_BOARD = 'board'
+    KEY_CRM = 'crm'
+    KEY_APPRAISAL = 'appraisal'
+    KEY_ENGINEERING = 'engineering'
+    KEY_LEGAL = 'legal'
+    KEY_HRM = 'hrm'
+    KEY_ONGOING_CONCERN = 'ongoing_concern'
+    KEY_SCAN_ADMIN = 'scan_admin'
+    KEY_ITS = 'its'
+    KEY_MIS = 'mis'
+    KEY_EXTERNAL_FUND = 'external_fund'
     KEY_CHOICES = [
         (KEY_COOPERATIVE, 'Branch Cooperative'),
         (KEY_FINANCE, 'Finance'),
         (KEY_CREDIT, 'Credit'),
         (KEY_MANAGEMENT, 'Management'),
         (KEY_BOARD, 'Board of Directors'),
+        (KEY_CRM, 'Credit Relation Management (CRM)'),
+        (KEY_APPRAISAL, 'Appraisal Directorate'),
+        (KEY_ENGINEERING, 'Engineering Directorate'),
+        (KEY_LEGAL, 'Legal Affairs Directorate'),
+        (KEY_HRM, 'Human Resource Management'),
+        (KEY_ONGOING_CONCERN, 'Ongoing Concern & Acquired Assets'),
+        (KEY_SCAN_ADMIN, 'Scanning / Admin Unit'),
+        (KEY_ITS, 'ITS Directorate'),
+        (KEY_MIS, 'PM & MIS Directorate'),
+        (KEY_EXTERNAL_FUND, 'External Fund & Wholesale Financing'),
     ]
 
     key = models.CharField(max_length=30, unique=True, choices=KEY_CHOICES)
@@ -85,9 +107,23 @@ class Department(models.Model):
 class LoanCategory(models.Model):
     MODE_MSME = 'msme'
     MODE_CORPORATE = 'corporate'
+    MODE_PROJECT = 'project'
+    MODE_WHOLESALE = 'wholesale'
+    MODE_LEASE = 'lease'
+    MODE_MURABAHA = 'ifb_murabaha'
+    MODE_IJARAH = 'ifb_ijarah'
+    MODE_IDEA = 'idea_equity'
+    MODE_CONSUMER = 'consumer'
     APPRAISAL_MODE_CHOICES = [
-        (MODE_MSME, 'MSME / cashflow'),
-        (MODE_CORPORATE, 'Corporate'),
+        (MODE_MSME, 'MSME / cashflow sheets'),
+        (MODE_CORPORATE, 'Corporate / financial statements'),
+        (MODE_PROJECT, 'Project desk (viability, equity, plant)'),
+        (MODE_WHOLESALE, 'Wholesale / PFI institution desk'),
+        (MODE_LEASE, 'Lease / hire-purchase asset desk'),
+        (MODE_MURABAHA, 'Murabaha cost-plus desk'),
+        (MODE_IJARAH, 'Ijarah rental desk'),
+        (MODE_IDEA, 'Idea / quasi-equity desk'),
+        (MODE_CONSUMER, 'Consumer / HRM scorecard'),
     ]
 
     name = models.CharField(max_length=255, unique=True)
@@ -95,11 +131,128 @@ class LoanCategory(models.Model):
         max_length=20,
         choices=APPRAISAL_MODE_CHOICES,
         default=MODE_MSME,
-        help_text='Which appraisal wizard content to use for loans in this category.',
+        help_text='Appraisal modality. MSME/corporate = 7-sheet wizard. Other values use the product desk.',
+    )
+    allowed_funds = models.ManyToManyField(
+        'FinancingFund',
+        blank=True,
+        related_name='eligible_categories',
+        help_text='Empty = any unrestricted window. Donor lines are usually attached here.',
+    )
+    allowed_collateral = models.ManyToManyField(
+        'CollateralType',
+        blank=True,
+        related_name='loan_categories',
+        help_text='Security types this product may use. Ignored when collateral is not required.',
+    )
+    requires_collateral = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text='Blank = use the family default. Off = unsecured. On = matching collateral types required.',
+    )
+    product_family = models.CharField(
+        max_length=20,
+        choices=FAMILY_CHOICES,
+        default=FAMILY_GENERAL,
+        db_index=True,
+        help_text='Lifecycle overlay (project, lease, IFB, …). MSME/corporate sheets apply only to general.',
     )
 
     def __str__(self):
         return self.name
+
+    @property
+    def needs_collateral(self) -> bool:
+        from loans.family_policy import category_requires_collateral
+        return category_requires_collateral(self)
+
+    def save(self, *args, **kwargs):
+        from loans.appraisal_mode import MODE_CORPORATE, MODE_MSME
+        from loans.family_policy import default_appraisal_for_family
+
+        allowed = {k for k, _ in FAMILY_CHOICES}
+        self.product_family = parse_product_family(self.product_family)
+        if self.product_family not in allowed:
+            self.product_family = FAMILY_GENERAL
+        default_mode = default_appraisal_for_family(self.product_family)
+        if self.product_family == FAMILY_GENERAL:
+            if self.appraisal_mode not in (MODE_MSME, MODE_CORPORATE):
+                self.appraisal_mode = MODE_MSME
+        elif not self.appraisal_mode or self.appraisal_mode == MODE_MSME:
+            if default_mode:
+                self.appraisal_mode = default_mode
+        super().save(*args, **kwargs)
+
+
+class FinancingFund(models.Model):
+    """Donor / government / own-book window sitting on a financing file."""
+
+    KIND_OWN = 'own_book'
+    KIND_GOVERNMENT = 'government'
+    KIND_DONOR = 'donor'
+    KIND_OTHER = 'other'
+    KIND_CHOICES = [
+        (KIND_OWN, 'Own book'),
+        (KIND_GOVERNMENT, 'Government / MoF line'),
+        (KIND_DONOR, 'Donor / DFI line'),
+        (KIND_OTHER, 'Other'),
+    ]
+
+    code = models.CharField(max_length=40, unique=True)
+    name = models.CharField(max_length=255)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_OWN, db_index=True)
+    source_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='e.g. KfW / EU, IFAD, EIB, Ministry of Finance.',
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    notes = models.TextField(blank=True)
+    envelope_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Total line from the donor / MoF agreement.',
+    )
+    max_tenor_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    dbe_to_pfi_rate_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='218.26: 4.5% DBE → PFI.',
+    )
+    max_end_user_rate_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='218.26: PFI → MSME ≤ 11%.',
+    )
+    eligible_regions = models.CharField(
+        max_length=400, blank=True,
+        help_text='Comma-separated, e.g. Tigray, Amhara, Afar.',
+    )
+    eligible_sectors = models.CharField(max_length=400, blank=True)
+    women_min_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='On-lending cut, e.g. 30 for 218.26.',
+    )
+    youth_min_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='On-lending cut, e.g. 20 for 218.26.',
+    )
+    require_climate_cut = models.BooleanField(default=False)
+    require_fx_window = models.BooleanField(default=False)
+    par90_max_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='218.26: PFI PAR>90 ≤ 10%.',
+    )
+    agreement_ref = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return f'{self.code} — {self.name}'
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or '').strip().upper().replace(' ', '_')
+        super().save(*args, **kwargs)
 
 
 class LoanCategoryDocumentRequirement(models.Model):
@@ -145,11 +298,13 @@ class CollateralType(models.Model):
     KIND_LAND = 'land'
     KIND_MOVABLE = 'movable'
     KIND_MIXED = 'mixed'
+    KIND_FINANCED = 'financed'
     KIND_CHOICES = [
         (KIND_BUILDING, 'Building / house (BOQ)'),
         (KIND_LAND, 'Land (size × price)'),
-        (KIND_MOVABLE, 'Vehicle / machinery / other movable'),
+        (KIND_MOVABLE, 'Vehicle / machinery / other movable (already owned)'),
         (KIND_MIXED, 'Mixed (sum engines that apply)'),
+        (KIND_FINANCED, 'Financed by this loan (machinery / vehicle / plant to be bought)'),
     ]
 
     name = models.CharField(max_length=255, unique=True)
@@ -180,6 +335,38 @@ class CollateralType(models.Model):
     def uses_movable(self) -> bool:
         from loans.collateral_kind import uses_movable
         return uses_movable(self)
+
+
+class ProductFamilyPolicy(models.Model):
+    """Editable defaults: family → appraisal desk + whether collateral is required."""
+
+    family = models.CharField(max_length=20, unique=True, choices=FAMILY_CHOICES, db_index=True)
+    name = models.CharField(max_length=120, blank=True)
+    default_appraisal_mode = models.CharField(
+        max_length=20,
+        choices=LoanCategory.APPRAISAL_MODE_CHOICES,
+        default=LoanCategory.MODE_MSME,
+        help_text='Pre-selected when a loan type uses this family. Can still be changed per category.',
+    )
+    requires_collateral = models.BooleanField(
+        default=True,
+        help_text='Default for new loan types in this family. Uncheck for unsecured products.',
+    )
+    default_collateral = models.ManyToManyField(
+        'CollateralType',
+        blank=True,
+        related_name='family_policies',
+        help_text='Suggested security types when the family requires collateral.',
+    )
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['family']
+        verbose_name = 'Product family default'
+        verbose_name_plural = 'Product family defaults'
+
+    def __str__(self):
+        return self.name or self.get_family_display()
 
 
 class LoanApplicationDocumentType(models.Model):
@@ -261,12 +448,8 @@ class LoanApplicationDocumentType(models.Model):
         max_length=20,
         blank=True,
         default='',
-        choices=[
-            ('', 'All modes'),
-            ('msme', 'MSME only'),
-            ('corporate', 'Corporate only'),
-        ],
-        help_text='Limit this document type to MSME or Corporate loans (blank = both).',
+        choices=[('', 'All modes')] + list(LoanCategory.APPRAISAL_MODE_CHOICES),
+        help_text='Limit this document type to one appraisal desk (blank = every product).',
     )
     reference_sample = models.FileField(
         upload_to='document_type_samples/%Y/%m/',
@@ -462,7 +645,7 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         related_name='users',
-        help_text='Head-office department (Cooperative, Finance, Credit, Management, Board).',
+        help_text='Head-office work unit (DECSI departments or DBE CRM / Appraisal / …).',
     )
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     lockout_until = models.DateTimeField(blank=True, null=True, db_index=True)
@@ -605,6 +788,14 @@ class LoanRequest(models.Model):
         help_text='Important core-banking / party API fields (subset) for staff display.',
     )
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
+    financing_fund = models.ForeignKey(
+        'FinancingFund',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='loan_requests',
+        help_text='Optional donor / government / own-book window this file is booked against.',
+    )
     collateral = models.ForeignKey(CollateralType, on_delete=models.CASCADE)
     amount_requested = models.DecimalField(max_digits=20, decimal_places=2)
     reason = models.TextField()
@@ -795,9 +986,11 @@ class LoanRequest(models.Model):
     COMMITTEE_APPROVED = 'committee_approved'
     COMMITTEE_DECLINED = 'committee_declined'
     COMMITTEE_RETURNED = 'returned_to_officer'
+    COMMITTEE_PENDED = 'committee_pended'
     COMMITTEE_STATUS_CHOICES = [
         (COMMITTEE_NOT_SUBMITTED, 'Not submitted'),
         (COMMITTEE_PENDING, 'Pending committee'),
+        (COMMITTEE_PENDED, 'Committee pended'),
         (COMMITTEE_APPROVED, 'Committee approved'),
         (COMMITTEE_DECLINED, 'Committee declined'),
         (COMMITTEE_RETURNED, 'Returned to loan officer'),
@@ -1097,6 +1290,8 @@ class LoanRequest(models.Model):
             return ''
         if self.committee_status == self.COMMITTEE_PENDING:
             return 'Loan is still in the approval committee workflow.'
+        if self.committee_status == self.COMMITTEE_PENDED:
+            return 'Committee pended this file — waiting for more information.'
         if self.committee_status == self.COMMITTEE_RETURNED:
             return 'Loan was returned to the loan officer — resubmit to committee after corrections.'
         if self.committee_status == self.COMMITTEE_DECLINED:
@@ -1171,6 +1366,18 @@ class LoanRequestDocument(models.Model):
     auth_verdict = models.CharField(max_length=20, choices=AUTH_VERDICT_CHOICES, null=True, blank=True)
     auth_notes = models.TextField(blank=True)
     automated_checks = models.JSONField(default=dict, blank=True)
+    quality_score = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Scan quality 0–100 (resolution, blur, OCR readability).',
+    )
+    authenticity_score = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Composite authenticity 0–100 (quality, identity, reuse, layout).',
+    )
+    perceptual_hash = models.CharField(
+        max_length=64, blank=True, db_index=True,
+        help_text='Average-hash of the first page/image for near-duplicate warnings.',
+    )
     authenticated_by = models.ForeignKey(
         CustomUser,
         on_delete=models.SET_NULL,
@@ -1412,13 +1619,10 @@ class LoanAppraisal(models.Model):
     # Locked at appraisal create from LoanCategory.appraisal_mode
     appraisal_mode = models.CharField(
         max_length=20,
-        choices=[
-            ('msme', 'MSME / cashflow'),
-            ('corporate', 'Corporate'),
-        ],
+        choices=LoanCategory.APPRAISAL_MODE_CHOICES,
         default='msme',
         db_index=True,
-        help_text='MSME vs Corporate sheet content (copied from category at create).',
+        help_text='Copied from the loan type. Product desks are not the 7-sheet wizard.',
     )
 
     # Financial / cashflow analysis
@@ -2183,6 +2387,13 @@ class DocumentAuthenticationPolicy(models.Model):
     allowed_extensions = models.CharField(max_length=255, default='pdf,jpg,jpeg,png,doc,docx')
     max_file_size_mb = models.PositiveIntegerField(default=15)
     require_verified_documents_for_collateral = models.BooleanField(default=True)
+    block_fee_on_strict_identity_fail = models.BooleanField(
+        default=True,
+        help_text=(
+            'Digital Apply: National ID / TIN uploads that fail quality or identity '
+            'cannot proceed to the processing fee.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Document authentication policy'
@@ -2512,9 +2723,11 @@ class LoanCommitteeVote(models.Model):
     """One member vote per loan per approval level."""
     VOTE_APPROVE = 'approve'
     VOTE_DECLINE = 'decline'
+    VOTE_PEND = 'pend'
     VOTE_CHOICES = [
         (VOTE_APPROVE, 'Approve'),
         (VOTE_DECLINE, 'Decline'),
+        (VOTE_PEND, 'Pend'),
     ]
 
     loan_request = models.ForeignKey(
@@ -3271,7 +3484,16 @@ class LoanDisbursementTranche(models.Model):
     sequence = models.PositiveSmallIntegerField(default=1)
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     note = models.CharField(max_length=400, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True,
+    )
+    purpose_code = models.CharField(
+        max_length=20, blank=True,
+        help_text='Project draws: civil / machinery / working_capital / insurance / other.',
+    )
+    utilization_note = models.TextField(blank=True)
+    utilization_recorded_at = models.DateTimeField(null=True, blank=True)
+    lc_status = models.CharField(max_length=20, blank=True)
     disbursed_at = models.DateTimeField(null=True, blank=True)
     disbursed_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
@@ -3288,7 +3510,14 @@ class LoanDisbursementTranche(models.Model):
 
 
 class LoanMonitoringVisit(models.Model):
-    """Post-disbursement follow-up visit."""
+    """Post-disbursement follow-up visit. Project files may record implementation visits."""
+
+    KIND_FOLLOWUP = 'followup'
+    KIND_IMPLEMENTATION = 'implementation'
+    KIND_CHOICES = [
+        (KIND_FOLLOWUP, 'Follow-up'),
+        (KIND_IMPLEMENTATION, 'Implementation'),
+    ]
 
     loan_request = models.ForeignKey(
         LoanRequest, on_delete=models.CASCADE, related_name='monitoring_visits',
@@ -3297,6 +3526,28 @@ class LoanMonitoringVisit(models.Model):
     notes = models.TextField()
     gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
     gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    visit_kind = models.CharField(
+        max_length=20, choices=KIND_CHOICES, default=KIND_FOLLOWUP, db_index=True,
+    )
+    percent_complete = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='Physical progress 0–100. Used on project implementation visits.',
+    )
+    purpose_code = models.CharField(
+        max_length=20, blank=True,
+        help_text='civil / machinery / working_capital / insurance / other.',
+    )
+    unlocks_next_tranche = models.BooleanField(
+        default=False,
+        help_text='When set on a project file, this visit may release the next draw.',
+    )
+    unlocked_tranche = models.ForeignKey(
+        'LoanDisbursementTranche',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='unlocking_visits',
+    )
     recorded_by = models.ForeignKey(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='monitoring_visits_recorded',
@@ -3308,6 +3559,833 @@ class LoanMonitoringVisit(models.Model):
 
     def __str__(self):
         return f'Visit {self.loan_request.loan_request_id} {self.visited_at}'
+
+
+class ProjectProfile(models.Model):
+    """DBE project overlay on a financing file. DECSI general files do not use this."""
+
+    SECTOR_AGRI = 'agriculture'
+    SECTOR_INDUSTRY = 'industry'
+    SECTOR_INFRA = 'infrastructure'
+    SECTOR_OTHER = 'other'
+    SECTOR_CHOICES = [
+        (SECTOR_AGRI, 'Commercial agriculture / agro-processing'),
+        (SECTOR_INDUSTRY, 'Manufacturing / industry'),
+        (SECTOR_INFRA, 'Infrastructure'),
+        (SECTOR_OTHER, 'Other'),
+    ]
+
+    DE_75_25 = '75_25'
+    DE_50_50 = '50_50'
+    DE_70_30 = '70_30'
+    DE_CUSTOM = 'custom'
+    DEBT_EQUITY_CHOICES = [
+        (DE_75_25, '75 : 25 (domestic new project)'),
+        (DE_50_50, '50 : 50 (FDI / industrial park)'),
+        (DE_70_30, '70 : 30 (export linkage)'),
+        (DE_CUSTOM, 'Custom / other'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='project_profile',
+    )
+    project_title = models.CharField(max_length=255, blank=True)
+    sector = models.CharField(max_length=20, choices=SECTOR_CHOICES, default=SECTOR_OTHER)
+    location = models.CharField(max_length=255, blank=True)
+    implementation_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    grace_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    debt_equity_policy = models.CharField(
+        max_length=12, choices=DEBT_EQUITY_CHOICES, default=DE_75_25,
+    )
+    total_project_cost = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    promoter_equity = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    requested_debt = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    EQUITY_LUMP = 'lump'
+    EQUITY_STAGGERED = 'staggered'
+    EQUITY_PLAN_CHOICES = [
+        (EQUITY_LUMP, 'Lump — full promoter equity before first loan release'),
+        (EQUITY_STAGGERED, 'Staggered — 1/3, then 2/3, then 100%'),
+    ]
+
+    purpose_summary = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    discount_rate_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    npv = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    irr_pct = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    project_dscr = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    equity_plan = models.CharField(
+        max_length=12, choices=EQUITY_PLAN_CHOICES, default=EQUITY_LUMP,
+    )
+    equity_stage = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='0 = none; 1 = 1/3; 2 = 2/3; 3 = 100%. Used when equity is staggered.',
+    )
+    current_account_opened = models.BooleanField(
+        default=False,
+        help_text='DBE current account opened before equity or loan release.',
+    )
+    other_bank_name = models.CharField(max_length=255, blank=True)
+    other_bank_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    other_bank_note = models.CharField(max_length=400, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='project_profiles_updated',
+    )
+
+    def __str__(self):
+        return f'Project {self.loan_request.loan_request_id}'
+
+
+class ProjectSourceUseLine(models.Model):
+    """One sources-and-uses row on a project file."""
+
+    SIDE_SOURCE = 'source'
+    SIDE_USE = 'use'
+    SIDE_CHOICES = [
+        (SIDE_SOURCE, 'Source'),
+        (SIDE_USE, 'Use'),
+    ]
+
+    PURPOSE_PROMOTER = 'promoter_cash'
+    PURPOSE_DBE = 'dbe_loan'
+    PURPOSE_OTHER_BANK = 'other_bank'
+    PURPOSE_GRANT = 'grant'
+    PURPOSE_CIVIL = 'civil'
+    PURPOSE_MACHINERY = 'machinery'
+    PURPOSE_WC = 'working_capital'
+    PURPOSE_INSURANCE = 'insurance'
+    PURPOSE_OTHER = 'other'
+    PURPOSE_CHOICES = [
+        (PURPOSE_PROMOTER, 'Promoter cash / in-kind'),
+        (PURPOSE_DBE, 'DBE loan'),
+        (PURPOSE_OTHER_BANK, 'Other bank / tripartite WC'),
+        (PURPOSE_GRANT, 'Grant / donor'),
+        (PURPOSE_CIVIL, 'Civil works'),
+        (PURPOSE_MACHINERY, 'Machinery / equipment'),
+        (PURPOSE_WC, 'Working capital'),
+        (PURPOSE_INSURANCE, 'Insurance / ancillary'),
+        (PURPOSE_OTHER, 'Other'),
+    ]
+
+    profile = models.ForeignKey(
+        ProjectProfile, on_delete=models.CASCADE, related_name='lines',
+    )
+    side = models.CharField(max_length=8, choices=SIDE_CHOICES, db_index=True)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES, default=PURPOSE_OTHER)
+    label = models.CharField(max_length=255, blank=True)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    sequence = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ['side', 'sequence', 'id']
+
+    def __str__(self):
+        return f'{self.side} {self.purpose} {self.amount}'
+
+
+class ProjectCashflowYear(models.Model):
+    """Annual project operating CF vs debt service — not MSME Sheet 3."""
+
+    profile = models.ForeignKey(
+        ProjectProfile, on_delete=models.CASCADE, related_name='cashflows',
+    )
+    year_number = models.PositiveSmallIntegerField()
+    operating_cf = models.DecimalField(max_digits=20, decimal_places=2)
+    debt_service = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ['year_number', 'id']
+        unique_together = [('profile', 'year_number')]
+
+    def __str__(self):
+        return f'Y{self.year_number} {self.profile_id}'
+
+
+class ProjectTechnicalReview(models.Model):
+    """Plant desk (civil / mechanical / electrical), not collateral BOQ."""
+
+    DESK_CIVIL = 'civil'
+    DESK_MECH = 'mechanical'
+    DESK_ELEC = 'electrical'
+    DESK_CHOICES = [
+        (DESK_CIVIL, 'Civil'),
+        (DESK_MECH, 'Mechanical'),
+        (DESK_ELEC, 'Electrical'),
+    ]
+    STATUS_PENDING = 'pending'
+    STATUS_CLEARED = 'cleared'
+    STATUS_RETURNED = 'returned'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_CLEARED, 'Cleared'),
+        (STATUS_RETURNED, 'Returned'),
+    ]
+
+    profile = models.ForeignKey(
+        ProjectProfile, on_delete=models.CASCADE, related_name='technical_reviews',
+    )
+    desk = models.CharField(max_length=16, choices=DESK_CHOICES)
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True,
+    )
+    note = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='project_technical_reviews',
+    )
+
+    class Meta:
+        ordering = ['desk']
+        unique_together = [('profile', 'desk')]
+
+    def __str__(self):
+        return f'{self.desk} {self.status}'
+
+
+class CreditDeskScreening(models.Model):
+    """Parallel KYC packs (CRM / Engineering / Legal) plus Scan/Admin intake."""
+
+    STAGE_KYC = 'kyc'
+    STAGE_CHOICES = [(STAGE_KYC, 'Document screening & KYC')]
+
+    DESK_SCAN = 'scan_admin'
+    DESK_CRM = 'crm'
+    DESK_ENGINEERING = 'engineering'
+    DESK_LEGAL = 'legal'
+    DESK_CHOICES = [
+        (DESK_SCAN, 'Scanning / Admin'),
+        (DESK_CRM, 'CRM — financial / KYC'),
+        (DESK_ENGINEERING, 'Engineering — technical pack'),
+        (DESK_LEGAL, 'Legal — legal pack'),
+    ]
+    STATUS_PENDING = 'pending'
+    STATUS_CLEARED = 'cleared'
+    STATUS_RETURNED = 'returned'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_CLEARED, 'Cleared'),
+        (STATUS_RETURNED, 'Returned'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='desk_screenings',
+    )
+    stage = models.CharField(max_length=16, choices=STAGE_CHOICES, default=STAGE_KYC, db_index=True)
+    desk = models.CharField(max_length=16, choices=DESK_CHOICES, db_index=True)
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True,
+    )
+    note = models.TextField(blank=True)
+    checklist = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Required KYC ticks for this desk, e.g. {"identity_docs": true}.',
+    )
+    findings = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Identity / sanctions snapshot captured when the pack is cleared.',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='credit_desk_screenings',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['desk', 'id']
+        unique_together = [('loan_request', 'stage', 'desk')]
+
+    def __str__(self):
+        return f'{self.loan_request_id} {self.desk} {self.status}'
+
+
+class KycIdentityCase(models.Model):
+    """Living identity / document-auth case shared by Digital Apply and staff desks."""
+
+    BAND_CLEAR = 'clear'
+    BAND_REVIEW = 'review'
+    BAND_BLOCKED = 'blocked'
+    BAND_CHOICES = [
+        (BAND_CLEAR, 'Clear'),
+        (BAND_REVIEW, 'Review'),
+        (BAND_BLOCKED, 'Blocked'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='kyc_identity_case',
+        null=True,
+        blank=True,
+    )
+    band = models.CharField(
+        max_length=12, choices=BAND_CHOICES, default=BAND_REVIEW, db_index=True,
+    )
+    score = models.PositiveSmallIntegerField(default=0)
+    blockers = models.JSONField(default=list, blank=True)
+    findings = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'KYC identity case'
+        verbose_name_plural = 'KYC identity cases'
+
+    def __str__(self):
+        ref = getattr(self.loan_request, 'loan_request_id', None) or self.pk
+        return f'KYC {ref} {self.band}'
+
+
+class KycParty(models.Model):
+    """A person or entity on a KYC identity case (applicant, later UBO / director)."""
+
+    ROLE_APPLICANT = 'applicant'
+    ROLE_DIRECTOR = 'director'
+    ROLE_UBO = 'ubo'
+    ROLE_GUARANTOR = 'guarantor'
+    ROLE_SPOUSE = 'spouse'
+    ROLE_CHOICES = [
+        (ROLE_APPLICANT, 'Applicant'),
+        (ROLE_DIRECTOR, 'Director'),
+        (ROLE_UBO, 'Beneficial owner'),
+        (ROLE_GUARANTOR, 'Guarantor'),
+        (ROLE_SPOUSE, 'Spouse'),
+    ]
+
+    KIND_FAYDA = 'fayda_fan'
+    KIND_NATIONAL_ID = 'national_id'
+    KIND_KEBELE = 'kebele'
+    KIND_PASSPORT = 'passport'
+    KIND_TIN = 'tin'
+    KIND_LICENSE = 'license'
+    KIND_CHOICES = [
+        (KIND_FAYDA, 'Fayda (FAN)'),
+        (KIND_NATIONAL_ID, 'National ID'),
+        (KIND_KEBELE, 'Kebele ID'),
+        (KIND_PASSPORT, 'Passport'),
+        (KIND_TIN, 'TIN'),
+        (KIND_LICENSE, 'Business license'),
+    ]
+
+    VERIFY_PENDING = 'pending'
+    VERIFY_CONFIRMED = 'confirmed'
+    VERIFY_NOT_FOUND = 'not_found'
+    VERIFY_MISMATCH = 'mismatch'
+    VERIFY_ERROR = 'provider_error'
+    VERIFY_SKIPPED = 'skipped'
+    VERIFY_CHOICES = [
+        (VERIFY_PENDING, 'Not verified'),
+        (VERIFY_CONFIRMED, 'Confirmed'),
+        (VERIFY_NOT_FOUND, 'Not found'),
+        (VERIFY_MISMATCH, 'Mismatch'),
+        (VERIFY_ERROR, 'Provider error'),
+        (VERIFY_SKIPPED, 'Skipped'),
+    ]
+
+    BIOMETRIC_NONE = ''
+    BIOMETRIC_PENDING = 'pending'
+    BIOMETRIC_MATCHED = 'matched'
+    BIOMETRIC_FAILED = 'failed'
+    BIOMETRIC_CHOICES = [
+        (BIOMETRIC_NONE, 'Not captured'),
+        (BIOMETRIC_PENDING, 'Pending'),
+        (BIOMETRIC_MATCHED, 'Matched'),
+        (BIOMETRIC_FAILED, 'Failed'),
+    ]
+
+    identity_case = models.ForeignKey(
+        KycIdentityCase, on_delete=models.CASCADE, related_name='parties',
+    )
+    role = models.CharField(
+        max_length=16, choices=ROLE_CHOICES, default=ROLE_APPLICANT, db_index=True,
+    )
+    legal_name_en = models.CharField(max_length=255, blank=True)
+    legal_name_am = models.CharField(max_length=255, blank=True)
+    identity_kind = models.CharField(
+        max_length=20, choices=KIND_CHOICES, default=KIND_NATIONAL_ID,
+    )
+    fan = models.CharField(max_length=40, blank=True)
+    tin = models.CharField(max_length=40, blank=True)
+    id_number = models.CharField(max_length=80, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=20, blank=True)
+    verify_status = models.CharField(
+        max_length=20, choices=VERIFY_CHOICES, default=VERIFY_PENDING, db_index=True,
+    )
+    verify_payload = models.JSONField(default=dict, blank=True)
+    biometric_status = models.CharField(
+        max_length=16, choices=BIOMETRIC_CHOICES, default=BIOMETRIC_NONE, blank=True,
+    )
+    face_match_score = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+    )
+    liveness_ref = models.CharField(max_length=80, blank=True)
+    share_percent = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Ownership share for UBO / director (phase 3).',
+    )
+    capacity = models.CharField(max_length=80, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'KYC party'
+        verbose_name_plural = 'KYC parties'
+
+    def __str__(self):
+        name = self.legal_name_en or self.legal_name_am or self.role
+        return f'{name} ({self.role})'
+
+
+class FundFileTag(models.Model):
+    """Per-file covenant tags when a loan sits on a donor / MoF window."""
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='fund_tag',
+    )
+    women_owned = models.BooleanField(default=False)
+    youth_owned = models.BooleanField(default=False)
+    climate_tagged = models.BooleanField(default=False)
+    fx_window = models.BooleanField(default=False)
+    region = models.CharField(max_length=120, blank=True)
+    sector = models.CharField(max_length=120, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='fund_file_tags_updated',
+    )
+
+    def __str__(self):
+        return f'Fund tags {self.loan_request.loan_request_id}'
+
+
+class PfiInstitutionProfile(models.Model):
+    """Wholesale file: the borrower is an institution, not an SME."""
+
+    KIND_BANK = 'bank'
+    KIND_MFI = 'mfi'
+    KIND_LEASE = 'lease'
+    KIND_RUSACCO = 'rusacco'
+    KIND_CHOICES = [
+        (KIND_BANK, 'Commercial bank'),
+        (KIND_MFI, 'Microfinance institution'),
+        (KIND_LEASE, 'Leasing company'),
+        (KIND_RUSACCO, 'RUSACCO / union'),
+    ]
+    PURPOSE_WC = 'wc_onlending'
+    PURPOSE_LEASE = 'lease_onlending'
+    PURPOSE_CHOICES = [
+        (PURPOSE_WC, 'Working-capital on-lending'),
+        (PURPOSE_LEASE, 'Lease on-lending'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='pfi_profile',
+    )
+    institution_name = models.CharField(max_length=255, blank=True)
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_MFI)
+    license_number = models.CharField(max_length=80, blank=True)
+    ownership = models.CharField(max_length=120, blank=True)
+    footprint_regions = models.CharField(
+        max_length=400, blank=True,
+        help_text='Regions where the PFI has branches.',
+    )
+    branch_count = models.PositiveIntegerField(null=True, blank=True)
+    has_adequate_mis = models.BooleanField(
+        default=False,
+        help_text='218.26 asks for adequate MIS before a facility.',
+    )
+    capital = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    liquidity_ratio_pct = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    npl_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    par30_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    par90_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    audited_year = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Latest audited financial year on the PFI file.',
+    )
+    credit_policy_on_file = models.BooleanField(
+        default=False,
+        help_text='PFI credit policy is on this pack.',
+    )
+    on_lending_policy_on_file = models.BooleanField(
+        default=False,
+        help_text='On-lending / sub-borrower policy is on this pack.',
+    )
+    has_governance = models.BooleanField(default=False)
+    has_esms = models.BooleanField(default=False)
+    existing_dbe_exposure = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    other_lender_exposure = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    facility_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    tenor_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    facility_purpose = models.CharField(
+        max_length=20, choices=PURPOSE_CHOICES, default=PURPOSE_WC,
+    )
+    pfi_match_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='Share the PFI matches from its own book.',
+    )
+    end_user_rate_ceiling_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    dbe_to_pfi_rate_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    target_sectors = models.CharField(max_length=400, blank=True)
+    target_regions = models.CharField(max_length=400, blank=True)
+    target_women_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    target_youth_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pfi_profiles_updated',
+    )
+
+    def __str__(self):
+        return f'PFI {self.loan_request.loan_request_id}'
+
+
+class PfiUtilizationReport(models.Model):
+    """Sub-portfolio report after a wholesale facility is approved — not a factory visit."""
+
+    profile = models.ForeignKey(
+        PfiInstitutionProfile, on_delete=models.CASCADE, related_name='utilization_reports',
+    )
+    as_of = models.DateField()
+    amount_onlent = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    pfi_repaid_to_dbe = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    sub_par30_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    sub_par90_pct = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    women_onlent_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    youth_onlent_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    note = models.CharField(max_length=400, blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pfi_utilization_reports',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-as_of', '-id']
+
+    def __str__(self):
+        return f'PFI util {self.profile_id} {self.as_of}'
+
+
+class LeaseAssetProfile(models.Model):
+    """Hire-purchase / Ijarah register. The bank owns the machine until paid."""
+
+    STATUS_ON_LEASE = 'on_lease'
+    STATUS_BUYOUT = 'buyout'
+    STATUS_EXPANSION = 'expansion'
+    STATUS_CHOICES = [
+        (STATUS_ON_LEASE, 'On lease — bank holds title'),
+        (STATUS_BUYOUT, 'Buyout / title passed'),
+        (STATUS_EXPANSION, 'Expansion after two good years'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='lease_asset',
+    )
+    supplier_name = models.CharField(max_length=255, blank=True)
+    supplier_invoice_ref = models.CharField(max_length=80, blank=True)
+    is_new_goods = models.BooleanField(
+        default=True,
+        help_text='DBE lease is new capital goods only.',
+    )
+    asset_description = models.CharField(max_length=255, blank=True)
+    make_model = models.CharField(max_length=255, blank=True)
+    serial_number = models.CharField(max_length=80, blank=True)
+    asset_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    price_checked = models.BooleanField(default=False)
+    price_check_note = models.CharField(max_length=400, blank=True)
+    ancillary_amount = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Insurance, transport, install — at most 15% of asset price.',
+    )
+    lessee_contribution = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Lessee own contribution — at least 20% of asset price.',
+    )
+    other_bank_wc_name = models.CharField(max_length=255, blank=True)
+    other_bank_wc_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    commissioning_date = models.DateField(null=True, blank=True)
+    delivery_date = models.DateField(null=True, blank=True)
+    commencement_date = models.DateField(
+        null=True, blank=True,
+        help_text='Timing follows delivery / commencement, not approval day.',
+    )
+    insurance_in_force = models.BooleanField(default=False)
+    insurance_policy = models.CharField(max_length=80, blank=True)
+    insurance_expiry = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
+    residual_value = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    bank_holds_title = models.BooleanField(default=True)
+    asset_status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_ON_LEASE,
+    )
+    monthly_rent = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Ijarah rental — not hire-purchase interest.',
+    )
+    rent_term_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='lease_assets_updated',
+    )
+
+    def __str__(self):
+        return f'Lease asset {self.loan_request.loan_request_id}'
+
+
+class IjarahRentLine(models.Model):
+    """Rental installment on an Ijarah file — not Sheet 7 interest."""
+
+    profile = models.ForeignKey(
+        LeaseAssetProfile, on_delete=models.CASCADE, related_name='rent_lines',
+    )
+    period_number = models.PositiveSmallIntegerField()
+    due_date = models.DateField(null=True, blank=True)
+    rent_amount = models.DecimalField(max_digits=20, decimal_places=2)
+
+    class Meta:
+        ordering = ['period_number', 'id']
+        unique_together = [('profile', 'period_number')]
+
+    def __str__(self):
+        return f'Rent {self.period_number} {self.rent_amount}'
+
+
+class ShariaReview(models.Model):
+    """Sharia trail for Ijarah (and later Murabaha)."""
+
+    KIND_IJARAH = 'ijarah'
+    KIND_MURABAHA = 'murabaha'
+    KIND_CHOICES = [
+        (KIND_IJARAH, 'Ijarah'),
+        (KIND_MURABAHA, 'Murabaha'),
+    ]
+    STATUS_PENDING = 'pending'
+    STATUS_CLEARED = 'cleared'
+    STATUS_RETURNED = 'returned'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_CLEARED, 'Cleared'),
+        (STATUS_RETURNED, 'Returned'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='sharia_reviews',
+    )
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_IJARAH)
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True,
+    )
+    note = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sharia_reviews',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.kind} {self.status} {self.loan_request_id}'
+
+
+class MurabahaContract(models.Model):
+    """Cost-plus sale. Not an interest schedule with the label peeled off."""
+
+    SCOPE_DOMESTIC = 'domestic'
+    SCOPE_EXPORT = 'export'
+    SCOPE_CHOICES = [
+        (SCOPE_DOMESTIC, 'Domestic'),
+        (SCOPE_EXPORT, 'Export — lower markup'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='murabaha',
+    )
+    DELIVERY_ORDERED = 'ordered'
+    DELIVERY_RECEIVED = 'received'
+    DELIVERY_SOLD = 'sold'
+    DELIVERY_CHOICES = [
+        (DELIVERY_ORDERED, 'Ordered — goods not yet received'),
+        (DELIVERY_RECEIVED, 'Received by the bank / customer'),
+        (DELIVERY_SOLD, 'Sold — cost-plus complete'),
+    ]
+
+    goods_description = models.CharField(max_length=255, blank=True)
+    supplier_name = models.CharField(max_length=255, blank=True)
+    supplier_offer_ref = models.CharField(
+        max_length=80, blank=True,
+        help_text='Supplier offer / invoice reference.',
+    )
+    delivery_status = models.CharField(
+        max_length=16, choices=DELIVERY_CHOICES, default=DELIVERY_ORDERED,
+    )
+    cost_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    markup_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Export Murabaha uses a lower markup than domestic.',
+    )
+    scope = models.CharField(max_length=12, choices=SCOPE_CHOICES, default=SCOPE_DOMESTIC)
+    selling_price = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    tenor_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    routed_to_ifb_ho = models.BooleanField(
+        default=False,
+        help_text='Project-scale Murabaha is routed to IFB Directorate / HO.',
+    )
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='murabaha_contracts_updated',
+    )
+
+    def __str__(self):
+        return f'Murabaha {self.loan_request.loan_request_id}'
+
+
+class AppraisalCrmRound(models.Model):
+    """One appraisal pack version sent to CRM for comment."""
+
+    STATUS_DRAFT = 'draft'
+    STATUS_WITH_CRM = 'with_crm'
+    STATUS_RETURNED = 'returned'
+    STATUS_CLEARED = 'cleared'
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Draft'),
+        (STATUS_WITH_CRM, 'With CRM'),
+        (STATUS_RETURNED, 'Returned to appraisal'),
+        (STATUS_CLEARED, 'Cleared for committee'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='appraisal_crm_rounds',
+    )
+    version = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True,
+    )
+    appraisal_note = models.TextField(blank=True)
+    crm_note = models.TextField(blank=True)
+    sent_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='appraisal_packs_sent',
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    crm_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='appraisal_packs_reviewed',
+    )
+    crm_at = models.DateTimeField(null=True, blank=True)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-version', '-id']
+        unique_together = [('loan_request', 'version')]
+        verbose_name = 'Appraisal / CRM round'
+
+    def __str__(self):
+        return f'{self.loan_request_id} v{self.version} {self.status}'
+
+
+class ConsumerProfile(models.Model):
+    """HRM consumer scorecard — salary, DTI, LTV. Not MSME cashflow."""
+
+    PURPOSE_HOUSING = 'housing'
+    PURPOSE_VEHICLE = 'vehicle'
+    PURPOSE_CHOICES = [
+        (PURPOSE_HOUSING, 'Housing'),
+        (PURPOSE_VEHICLE, 'Vehicle'),
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='consumer_profile',
+    )
+    purpose = models.CharField(
+        max_length=12, choices=PURPOSE_CHOICES, default=PURPOSE_HOUSING, db_index=True,
+    )
+    employer_name = models.CharField(max_length=255, blank=True)
+    occupation = models.CharField(max_length=120, blank=True)
+    monthly_salary = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    monthly_obligations = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    asset_value = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='House or vehicle value for LTV.',
+    )
+    term_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='consumer_profiles_updated',
+    )
+
+    def __str__(self):
+        return f'Consumer {self.loan_request.loan_request_id}'
+
+
+class IdeaProfile(models.Model):
+    """Quasi-equity file. Not a loan — DBE takes a share."""
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='idea_profile',
+    )
+    venture_name = models.CharField(max_length=255, blank=True)
+    founded_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    implements_in_ethiopia = models.BooleanField(default=True)
+    has_ip = models.BooleanField(default=False)
+    has_mols_training = models.BooleanField(default=False)
+    has_startup_label = models.BooleanField(default=False)
+    proposed_dbe_share_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    sector = models.CharField(max_length=120, blank=True)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='idea_profiles_updated',
+    )
+
+    def __str__(self):
+        return f'Idea {self.loan_request.loan_request_id}'
+
+
+class CapTableEntry(models.Model):
+    """Post-approval ownership. DBE share lives here, not on Sheet 7."""
+
+    ROLE_FOUNDER = 'founder'
+    ROLE_DBE = 'dbe'
+    ROLE_OTHER = 'other'
+    ROLE_CHOICES = [
+        (ROLE_FOUNDER, 'Founder / promoter'),
+        (ROLE_DBE, 'DBE'),
+        (ROLE_OTHER, 'Other investor'),
+    ]
+
+    profile = models.ForeignKey(
+        IdeaProfile, on_delete=models.CASCADE, related_name='cap_table',
+    )
+    holder_name = models.CharField(max_length=255)
+    role = models.CharField(max_length=12, choices=ROLE_CHOICES, default=ROLE_FOUNDER)
+    share_pct = models.DecimalField(max_digits=5, decimal_places=2)
+    note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['role', 'id']
+
+    def __str__(self):
+        return f'{self.holder_name} {self.share_pct}%'
 
 
 class LoanCollectionAction(models.Model):
@@ -3340,6 +4418,165 @@ class LoanCollectionAction(models.Model):
 
     def __str__(self):
         return f'{self.kind} {self.loan_request.loan_request_id}'
+
+
+class RehabCase(models.Model):
+    """Named Project Rehabilitation and Loan Recovery — NPL rescue before foreclosure."""
+
+    STAGE_WATCHLIST = 'watchlist'
+    STAGE_RESTRUCTURE = 'restructure'
+    STAGE_TA = 'technical_assistance'
+    STAGE_RECOVER = 'recover'
+    STAGE_FORECLOSURE = 'foreclosure'
+    STAGE_CLOSED = 'closed'
+    STAGE_CHOICES = [
+        (STAGE_WATCHLIST, 'Watchlist'),
+        (STAGE_RESTRUCTURE, 'Restructure'),
+        (STAGE_TA, 'Technical assistance'),
+        (STAGE_RECOVER, 'Recover'),
+        (STAGE_FORECLOSURE, 'Foreclosure (last)'),
+        (STAGE_CLOSED, 'Closed'),
+    ]
+    STAGE_ORDER = [
+        STAGE_WATCHLIST, STAGE_RESTRUCTURE, STAGE_TA,
+        STAGE_RECOVER, STAGE_FORECLOSURE, STAGE_CLOSED,
+    ]
+
+    loan_request = models.OneToOneField(
+        LoanRequest, on_delete=models.CASCADE, related_name='rehab',
+    )
+    stage = models.CharField(
+        max_length=24, choices=STAGE_CHOICES, default=STAGE_WATCHLIST, db_index=True,
+    )
+    note = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='rehab_cases_updated',
+    )
+
+    def __str__(self):
+        return f'Rehab {self.loan_request.loan_request_id} {self.stage}'
+
+
+class RehabEvent(models.Model):
+    case = models.ForeignKey(RehabCase, on_delete=models.CASCADE, related_name='events')
+    from_stage = models.CharField(max_length=24, blank=True)
+    to_stage = models.CharField(max_length=24)
+    note = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='rehab_events',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.from_stage} → {self.to_stage}'
+
+
+class InsurancePolicy(models.Model):
+    """Insurance calendar. DBE as co-beneficiary."""
+
+    KIND_ASSET = 'asset'
+    KIND_PROJECT = 'project'
+    KIND_LIFE = 'life'
+    KIND_CHOICES = [
+        (KIND_ASSET, 'Asset / machinery'),
+        (KIND_PROJECT, 'Project / works'),
+        (KIND_LIFE, 'Life / credit life'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='insurance_policies',
+    )
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_ASSET)
+    insurer = models.CharField(max_length=255)
+    policy_number = models.CharField(max_length=80, blank=True)
+    dbe_co_beneficiary = models.BooleanField(default=True)
+    starts_on = models.DateField(null=True, blank=True)
+    expires_on = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=400, blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='insurance_policies_recorded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['expires_on', 'id']
+
+    def __str__(self):
+        return f'{self.insurer} {self.loan_request.loan_request_id}'
+
+
+class RevaluationDiary(models.Model):
+    """Periodic collateral / inventory revaluation."""
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='revaluations',
+    )
+    due_on = models.DateField()
+    completed_on = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=400, blank=True)
+    recorded_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='revaluations_recorded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['due_on', 'id']
+
+    def __str__(self):
+        return f'Reval {self.loan_request.loan_request_id} {self.due_on}'
+
+
+class LoanAppeal(models.Model):
+    """Written appeal to President or Board."""
+
+    LEVEL_PRESIDENT = 'president'
+    LEVEL_BOARD = 'board'
+    LEVEL_CHOICES = [
+        (LEVEL_PRESIDENT, 'President'),
+        (LEVEL_BOARD, 'Board'),
+    ]
+    STATUS_OPEN = 'open'
+    STATUS_UPHELD = 'upheld'
+    STATUS_DISMISSED = 'dismissed'
+    STATUS_CHOICES = [
+        (STATUS_OPEN, 'Open'),
+        (STATUS_UPHELD, 'Upheld'),
+        (STATUS_DISMISSED, 'Dismissed'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest, on_delete=models.CASCADE, related_name='appeals',
+    )
+    level = models.CharField(max_length=16, choices=LEVEL_CHOICES, default=LEVEL_PRESIDENT)
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True,
+    )
+    grounds = models.TextField()
+    decision_note = models.TextField(blank=True)
+    filed_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='appeals_filed',
+    )
+    filed_at = models.DateTimeField(auto_now_add=True)
+    decided_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='appeals_decided',
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-filed_at', '-id']
+
+    def __str__(self):
+        return f'Appeal {self.level} {self.loan_request.loan_request_id}'
 
 
 class CompliancePolicy(models.Model):

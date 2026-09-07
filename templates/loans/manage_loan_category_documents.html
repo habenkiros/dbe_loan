@@ -7,7 +7,8 @@
   Checklist order and required/optional here drive staff upload and (later) applicant portal for this product.
 </p>
 <p class="help">
-  Appraisal mode: <strong>{{ category.get_appraisal_mode_display }}</strong>.
+  Appraisal mode: <strong>{{ category.get_appraisal_mode_display }}</strong>
+  · Product family: <strong>{{ category.get_product_family_display }}</strong>.
   {% if pack_count %}
   Pack configured: <strong>{{ pack_count }}</strong> type(s).
   {% else %}

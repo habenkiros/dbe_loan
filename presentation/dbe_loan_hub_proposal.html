@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI-powered Credit Intelligence — Partnership Proposal for Development Bank of Ethiopia</title>
+  <title>DBE iBOC — Integrated Back Office Automation &amp; Credit Intelligence | Seqela × Development Bank of Ethiopia</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
 
@@ -90,7 +90,7 @@
         linear-gradient(165deg, #053820 0%, #0b6b3a 42%, #064528 100%);
     }
     .title-slide::before { background: linear-gradient(90deg, transparent, var(--ob-gold-soft), transparent); }
-    .title-slide h1 { color: #fff; font-size: 2.7rem; max-width: 18ch; margin-left: auto; margin-right: auto; }
+    .title-slide h1 { color: #fff; font-size: 3.1rem; max-width: 12ch; margin-left: auto; margin-right: auto; }
     .title-slide .for {
       font-size: 0.85rem; color: var(--ob-gold-soft); text-transform: uppercase;
       letter-spacing: 0.22em; margin-bottom: 0.45rem; font-weight: 600;
@@ -331,9 +331,22 @@
     }
 
     @media print {
-      html, body { overflow: visible; height: auto; background: #fff; }
-      .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; animation: none; }
-      .nav, .slide-counter { display: none; }
+      @page { size: A4 landscape; margin: 0; }
+      html, body { overflow: visible !important; height: auto !important; background: #fff; }
+      .slide {
+        display: flex !important;
+        position: relative !important;
+        inset: auto;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        height: 210mm;
+        min-height: 0;
+        overflow: hidden;
+        animation: none;
+      }
+      .slide:last-of-type { page-break-after: auto; break-after: auto; }
+      .nav, .slide-counter { display: none !important; }
     }
   </style>
 </head>
@@ -343,51 +356,52 @@
   <div class="slide title-slide active" data-slide="1">
     <p class="for">Confidential proposal prepared for</p>
     <p class="bank-name">Development Bank of Ethiopia</p>
-    <h1>AI-powered Credit Intelligence</h1>
+    <h1>DBE iBOC</h1>
     <p class="tagline">
-      DBE shared the Cashflow-based MSME appraisal Excel with banks and MFIs.
-      Seqela digitized it completely — and asks DBE to help push affordable adoption across the sector.
+      Integrated Back Office Automation &amp; Credit Intelligence —
+      one credit lifecycle, seven financing product engines, Credit Intelligence as the decision layer.
+      Core banking stays DBE’s.
     </p>
     <div class="badge-row">
-      <span class="badge">Built on DBE Excel</span>
-      <span class="badge">Banks &amp; MFIs</span>
-      <span class="badge">Excel-faithful appraisal</span>
-      <span class="badge">NBE-ready controls</span>
-      <span class="badge">Proven at DECSI scale</span>
+      <span class="badge">Extend, don’t rebuild</span>
+      <span class="badge">Live at DECSI</span>
+      <span class="badge">Project · Lease · Wholesale</span>
+      <span class="badge">IFB · Idea · External fund</span>
+      <span class="badge">Powered by Seqela AI Credit Intelligence</span>
     </div>
-    <p class="meta">Presented by Seqela · July 2026</p>
+    <p class="meta">Presented by Seqela · September 2026</p>
   </div>
 
   <!-- 2 The ask -->
   <div class="slide" data-slide="2">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">The opportunity in one slide</p>
+    <p class="eyebrow">The decision in one slide</p>
     <h2>What We Are Asking DBE To Decide</h2>
     <p class="hook">
-      Champion digitization of DBE’s cashflow MSME methodology — and help make it affordable for banks and MFIs.
+      Deploy iBOC as DBE’s credit back-office system of record — not another origination app.
     </p>
     <div class="grid-3">
       <div class="card">
         <span class="tag">Outcome 1</span>
-        <strong>Faster decisions</strong>
-        <p>Compress multi-level approvals from weeks toward days — without weakening credit standards.</p>
+        <strong>One lifecycle for every product</strong>
+        <p>Sourcing → KYC → appraisal → review → approval → contract → disbursement → implementation → monitoring → collection → rehab → write-off.</p>
       </div>
       <div class="card">
         <span class="tag">Outcome 2</span>
-        <strong>Stronger portfolio</strong>
-        <p>Enforce DSCR, qualitative, E&amp;S, and collateral coverage gates before a file reaches committee.</p>
+        <strong>Seven product engines, not seven systems</strong>
+        <p>Project, lease, wholesale, consumer, Murabaha, Ijarah, idea/equity, plus donor fund windows — on the same spine.</p>
       </div>
       <div class="card">
         <span class="tag">Outcome 3</span>
-        <strong>Audit-ready files</strong>
-        <p>One dossier: documents, scores, GPS evidence, votes, and lock history — ready for NBE and internal audit.</p>
+        <strong>How a DFI actually releases money</strong>
+        <p>Equity before loan, purpose-coded drawdowns after site proof, family-matched collateral, named rehab before foreclosure.</p>
       </div>
     </div>
     <div class="stats" style="margin-top:1.1rem;">
-      <div class="stat big"><span class="value">50–70%</span><br><span class="label">Wait-time reduction target</span></div>
-      <div class="stat big"><span class="value">Weeks → Days</span><br><span class="label">Approval cycle</span></div>
-      <div class="stat big"><span class="value">95%+</span><br><span class="label">Document completeness goal</span></div>
-      <div class="stat big"><span class="value">~1 month</span><br><span class="label">Pilot start after requirements</span></div>
+      <div class="stat big"><span class="value">7+</span><br><span class="label">Financing engines</span></div>
+      <div class="stat big"><span class="value">12</span><br><span class="label">Credit-book stages</span></div>
+      <div class="stat big"><span class="value">45-day</span><br><span class="label">Origination SLA clock</span></div>
+      <div class="stat big"><span class="value">DECSI</span><br><span class="label">Live factory we extend</span></div>
     </div>
   </div>
 
@@ -397,13 +411,12 @@
     <div class="slide-content">
       <h2>Agenda</h2>
       <ol class="agenda-list">
-        <li><span class="ix">01</span> Why now — Excel intent vs digital factory</li>
-        <li><span class="ix">02</span> A day in the life: today vs with the Hub</li>
-        <li><span class="ix">03</span> Problems → solutions → bank benefits (detail)</li>
-        <li><span class="ix">04</span> Full feature deep-dive (appraisal, docs, collateral, committee)</li>
-        <li><span class="ix">05</span> Digital Apply, post-approval, intelligence &amp; market</li>
-        <li><span class="ix">06</span> Controls, roles, CBS integration &amp; compliance</li>
-        <li><span class="ix">07</span> Proof, ROI, roadmap &amp; decision path</li>
+        <li><span class="ix">01</span> Why a development bank needs more than MSME Excel</li>
+        <li><span class="ix">02</span> Architecture: shared spine + product engines + desks</li>
+        <li><span class="ix">03</span> Seven financing products — what each engine does</li>
+        <li><span class="ix">04</span> Credit Intelligence stays the brain (live at DECSI)</li>
+        <li><span class="ix">05</span> Family → appraisal, collateral, KYC, rehab</li>
+        <li><span class="ix">06</span> Proof, business case, implementation path</li>
       </ol>
     </div>
   </div>
@@ -414,433 +427,412 @@
     <p class="eyebrow">Strategic fit</p>
     <h2>Why This Matters for DBE Now</h2>
     <p class="big-message">
-      You already lead in digital retail credit. The next competitive edge is digitizing
-      <em>secured, cashflow-based institutional lending</em> — where most portfolio risk and most operational cost still live.
+      DBE is a policy development bank. The credit factory that works for an MFI cashflow book must grow into
+      <em>project viability, lease assets the bank owns, PFI wholesale, donor covenants, and IFB</em>.
     </p>
     <div class="grid-3">
       <div class="card">
-        <strong>Digital strategy 2026–2028</strong>
-        <p>Corporate strategy prioritizes digital expansion, operational excellence, and inclusion beyond brick-and-mortar growth.</p>
+        <strong>DFI, not retail MSME only</strong>
+        <p>Priority sectors, debt–equity bands, tenor to 20 years, grace covering implementation — policy that must be gates, not memos.</p>
       </div>
       <div class="card">
-        <strong>Two lending realities</strong>
-        <p>DBE’s Excel set the national cashflow standard. Banks and MFIs still run fragile spreadsheet versions — without gates, evidence, or committee workflow.</p>
+        <strong>World Bank FSSP / NPL reform</strong>
+        <p>Governance, risk, and MIS for a sound DFI. iBOC is the credit case, conditions, and rehabilitation file — CBS still posts money.</p>
       </div>
       <div class="card">
-        <strong>Regulatory confidence</strong>
-        <p>NBE expectations demand consistent methodology, E&amp;S screening, identity assurance, and full decision audit trails.</p>
+        <strong>Donor &amp; PFI books</strong>
+        <p>KfW/EU 218.26, RUFIP, SMEFP already demand utilization, women/youth cuts, PAR, and a reconstructable MIS — not Excel.</p>
       </div>
     </div>
     <div class="quote">
-      “We have reached a point where physical expansion alone is no longer sufficient.
-      The future lies in digital transformation and mindset change.”
-      <div class="sub" style="font-style:normal;margin-top:0.4rem;">— Direction reflected in DBE’s MSME development mandate</div>
+      Seqela will extend the AI-Powered Credit Intelligence platform already live at DECSI into an enterprise
+      Integrated Back Office Automation and Credit Management System for DBE.
     </div>
   </div>
 
-  <!-- 5 DBE Excel complement -->
+  <!-- 5 Not greenfield -->
   <div class="slide" data-slide="5">
     <span class="confidential">Confidential</span>
-    <h2>Digitizes DBE’s Excel — Does Not Replace DBE</h2>
-    <p class="big-message">DBE owns the methodology. Seqela runs the digital factory. Banks and MFIs adopt one affordable standard.</p>
+    <h2>Extend the Live Factory — Do Not Rebuild</h2>
+    <p class="big-message">DECSI stays AI-Powered Credit Intelligence. DBE iBOC is the same platform with DFI engines and desks.</p>
     <div class="compare">
       <div class="side milkii">
-        <h3>DBE Excel — existing strength</h3>
+        <h3>Already live at DECSI</h3>
         <ul>
-          <li>Cashflow-based MSME workbook shared to FIs</li>
-          <li>Character, DSCR, stress, E&amp;S sheets</li>
-          <li>Loyalty &amp; data-driven scoring</li>
-          <li>Standard credit language for MSME projects</li>
-          <li>Speed &amp; inclusion at massive scale</li>
+          <li>Documents / OCR English + Amharic</li>
+          <li>7-step MSME and corporate appraisal</li>
+          <li>GPS collateral, BOQ, field visit, engineering QA</li>
+          <li>Multi-level committees, MFA, delegations</li>
+          <li>Digital Apply, Assist, Credit Intelligence</li>
+          <li>Post-approval → Finance disbursement</li>
         </ul>
       </div>
-      <div class="vs">AND</div>
+      <div class="vs">PLUS</div>
       <div class="side hub">
-        <h3>AI-powered Credit Intelligence — proposed</h3>
+        <h3>What iBOC adds for DBE</h3>
         <ul>
-          <li>Secured MSME &amp; corporate facilities</li>
-          <li>Cashflow / DSCR appraisal methodology</li>
-          <li>GPS collateral valuation &amp; evidence packs</li>
-          <li>Officer → manager → committee workflow</li>
-          <li>Policy gates, E&amp;S, and audit governance</li>
+          <li>Product families + dedicated engines</li>
+          <li>CRM, Appraisal, Engineering, Legal, Scan desks</li>
+          <li>Project: NPV/IRR, equity, plant, tranche unlock</li>
+          <li>Lease/Ijarah asset register (bank title)</li>
+          <li>Wholesale PFI file + donor fund covenants</li>
+          <li>Rehab path + 45-day origination SLA</li>
         </ul>
       </div>
     </div>
     <p class="sub" style="margin-top:0.9rem;max-width:46rem;">
-      Message to the board: DBE’s methodology defines the standard; AI-powered Credit Intelligence professionalizes the institutional credit factory —
-      protecting asset quality while accelerating turnaround.
+      53,901 files · ETB 17.03B approved · ETB 13B+ disbursed at DECSI. Same operational DNA — configured for a development bank.
     </p>
   </div>
 
-  <!-- 6 Day in life before/after -->
+  <!-- 6 How DFI releases money -->
   <div class="slide" data-slide="6">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Make it real</p>
-    <h2>A Day in the Life of One MSME Loan</h2>
+    <p class="eyebrow">The DFI sentence</p>
+    <h2>How a Development Bank Actually Releases Money</h2>
     <div class="before-after">
       <div class="ba before">
-        <h3>Today — without the Hub</h3>
+        <h3>A generic loan-origination system</h3>
         <ul>
-          <li>Customer returns 2–3 times with missing documents</li>
-          <li>Officer re-keys CBS data into Excel appraisal</li>
-          <li>Different officers apply different spreadsheet logic</li>
-          <li>Field photos on WhatsApp; GPS unclear; coverage debated</li>
-          <li>File sits on desks waiting for sign-offs</li>
-          <li>“Where is my loan?” — no single answer</li>
-          <li>Committee gets incomplete packs; asks for more info</li>
-          <li>Audit reconstruction takes days of file hunting</li>
+          <li>One borrower, one loan, one disbursement</li>
+          <li>MSME cashflow wizard for every product</li>
+          <li>Collateral = land or building the customer already owns</li>
+          <li>“Finance clicks book” after committee</li>
+          <li>Collections as an afterthought</li>
         </ul>
-        <div class="time">Typical cycle: <strong>2–6+ weeks</strong></div>
+        <div class="time">Wrong model for DBE</div>
       </div>
       <div class="ba after">
-        <h3>With the AI-powered Credit Intelligence</h3>
+        <h3>iBOC — encoded DBE credit policy</h3>
         <ul>
-          <li>Guided checklist + OCR blocks incomplete packs early</li>
-          <li>Customer number prefills Sheet 1 from core banking</li>
-          <li>One enforced 7-step cashflow methodology for all branches</li>
-          <li>GPS-attested field visits; evidence pack for committee</li>
-          <li>Digital queues: ops → finance → amount-routed committee</li>
-          <li>Live status for staff; fewer customer callbacks</li>
-          <li>Committee sees scorecard, DSCR, E&amp;S, collateral in one pack</li>
-          <li>Full audit trail: who did what, when, and why</li>
+          <li>Equity contribution first; staggered 1/3–2/3–100% on large files</li>
+          <li>Purpose-coded draws: civil, machinery, WC, insurance</li>
+          <li>Next tranche only after utilization proof + site visit</li>
+          <li>Lease: bank owns the machine until the last installment</li>
+          <li>Named Project Rehabilitation before foreclosure</li>
         </ul>
-        <div class="time">Target cycle: <strong>days, not weeks</strong></div>
+        <div class="time">This is the product</div>
       </div>
     </div>
   </div>
 
-  <!-- 7 Problem solution matrix -->
+  <!-- 7 Pain matrix -->
   <div class="slide" data-slide="7">
     <span class="confidential">Confidential</span>
-    <h2>How AI-powered Credit Intelligence Solves Your Exact Pain Points</h2>
+    <h2>How iBOC Solves DBE’s Exact Pain Points</h2>
     <p class="sub" style="margin-bottom:0.4rem;">Problem → Platform response → Bank benefit</p>
     <div class="ps">
-      <div class="ps-head"><div>Problem</div><div>How AI-powered Credit Intelligence solves it</div><div>Benefit</div></div>
+      <div class="ps-head"><div>Problem</div><div>How iBOC solves it</div><div>Benefit</div></div>
       <div class="ps-row">
-        <div class="prob">Slow multi-level approvals</div>
-        <div class="sol">Digital queues, notifications, amount-based committee routing, return-to-officer with notes</div>
-        <div class="ben">Weeks → days</div>
+        <div class="prob">One Excel / MSME wizard for every product</div>
+        <div class="sol">Product family selects the engine: project desk, lease register, PFI file, Murabaha, idea — sheets only where they belong</div>
+        <div class="ben">Right appraisal, every file</div>
       </div>
       <div class="ps-row">
-        <div class="prob">Inconsistent Excel appraisal</div>
-        <div class="sol">Mandatory 7-step wizard (MSME + corporate) with completeness gates before progression</div>
-        <div class="ben">One standard bank-wide</div>
+        <div class="prob">~45 days to first disbursement on industrial files</div>
+        <div class="sol">Named desks + 45-day SLA clock: screening, technical, appraisal, review, committee, legal, first release</div>
+        <div class="ben">President-level KPI</div>
       </div>
       <div class="ps-row">
-        <div class="prob">Incomplete / fake documents</div>
-        <div class="sol">Eng+Amharic OCR, identity match (name/phone/TIN), integrity checks, verify/reject trail</div>
-        <div class="ben">Fewer rejections &amp; fraud gaps</div>
+        <div class="prob">Equity and drawdowns live in paper</div>
+        <div class="sol">Debt–equity gates, current-account / equity rules, purpose-coded tranches unlocked by implementation visits</div>
+        <div class="ben">Policy as software</div>
       </div>
       <div class="ps-row">
-        <div class="prob">Weak collateral evidence</div>
-        <div class="sol">GPS rules, min photos, EXIF vs live location, lock after submit, evidence pack + eng QA</div>
-        <div class="ben">Committee-ready proof</div>
+        <div class="prob">Lease treated as ordinary collateral</div>
+        <div class="sol">Financed-asset kind: supplier, serial, bank title, insurance — not the customer’s existing land</div>
+        <div class="ben">True hire-purchase</div>
       </div>
       <div class="ps-row">
-        <div class="prob">No pipeline visibility</div>
-        <div class="sol">Role dashboards: totals, pending, approved, rejected; status by branch</div>
-        <div class="ben">Manage by exception</div>
+        <div class="prob">Donor / PFI reporting in spreadsheets</div>
+        <div class="sol">Funding windows (218.26, RUFIP, SMEFP) with envelope, women/youth, PAR covenants on every tagged file</div>
+        <div class="ben">Donor-ready MIS</div>
       </div>
       <div class="ps-row">
-        <div class="prob">Audit &amp; NBE exposure</div>
-        <div class="sol">Scorecard, E&amp;S, votes, field audit log, dossier export — one reconstructable file</div>
-        <div class="ben">Audit in hours, not days</div>
+        <div class="prob">NPL rescue after the fact</div>
+        <div class="sol">Watchlist → restructure → technical assistance → recovery → foreclosure last — on the same dossier</div>
+        <div class="ben">Rehab before write-off</div>
       </div>
     </div>
   </div>
 
-  <!-- 8 Platform overview -->
+  <!-- 8 Architecture -->
   <div class="slide" data-slide="8">
     <span class="confidential">Confidential</span>
-    <h2>The Platform — End-to-End Credit Factory</h2>
+    <h2>Architecture — One Spine, Product Engines Plugged In</h2>
     <div class="pill-row">
-      <span class="pill">Intake</span>
-      <span class="pill">Documents</span>
-      <span class="pill">7-Step Appraisal</span>
-      <span class="pill">Collateral GPS</span>
-      <span class="pill">Lock &amp; QA</span>
-      <span class="pill">Manager Queues</span>
-      <span class="pill">Committee</span>
-      <span class="pill">CBS Booking</span>
+      <span class="pill">Customer &amp; KYC</span>
+      <span class="pill">Credit Intelligence</span>
+      <span class="pill">Product engines</span>
+      <span class="pill">Committees</span>
+      <span class="pill">Legal &amp; contract</span>
+      <span class="pill">Disbursement</span>
+      <span class="pill">Implementation</span>
+      <span class="pill">Rehab</span>
     </div>
     <div class="step-list">
-      <div class="row"><div class="num">01</div><div><div class="title">Create request &amp; assign officer</div><div class="desc">Product, amount, customer number; CBS profile pull; branch ownership clear from minute one.</div></div></div>
-      <div class="row"><div class="num">02</div><div><div class="title">Document authentication</div><div class="desc">Checklist by loan type → OCR eng+amh → identity match → Pending / Auto-passed / Needs review / Verified / Rejected.</div></div></div>
-      <div class="row"><div class="num">03</div><div><div class="title">Cashflow appraisal (7 sheets)</div><div class="desc">Character, DSCR, E&amp;S, collateral worksheet, explainable scorecard, amortization — gates block weak files early.</div></div></div>
-      <div class="row"><div class="num">04</div><div><div class="title">Field collateral valuation</div><div class="desc">Building BOQ / land / movable; GPS photos; offline tablet sync for weak connectivity.</div></div></div>
-      <div class="row"><div class="num">05</div><div><div class="title">Submit, lock, engineering QA</div><div class="desc">Immutable after submit; supervised unlock; optional engineering approval before progression.</div></div></div>
-      <div class="row"><div class="num">06</div><div><div class="title">Ops &amp; finance queues → committee</div><div class="desc">Pre-committee controls, then Branch → District → HO → Management voting by amount thresholds.</div></div></div>
-      <div class="row"><div class="num">07</div><div><div class="title">Decision &amp; CBS handoff</div><div class="desc">Approve / decline / return with notes; disbursement &amp; booking remain in core banking.</div></div></div>
+      <div class="row"><div class="num">01</div><div><div class="title">Shared credit lifecycle</div><div class="desc">Application → KYC → appraisal slot → review → committee → contract → disbursement → monitor → collect → recover. Do not fork seven banks.</div></div></div>
+      <div class="row"><div class="num">02</div><div><div class="title">Product family on the loan type</div><div class="desc">Selecting the category selects the engine, appraisal method, allowed collateral, and intake desk — automatically.</div></div></div>
+      <div class="row"><div class="num">03</div><div><div class="title">Credit Intelligence as the brain</div><div class="desc">MSME/corporate 7-sheet wizard, GPS, scorecard, Assist, committees — live at DECSI; still used for working-capital and general files.</div></div></div>
+      <div class="row"><div class="num">04</div><div><div class="title">Desks, not extra user roles</div><div class="desc">Job stays officer / VP / board. Desk is CRM, Appraisal, Engineering, Legal, Scan, External Fund, Ongoing Concern.</div></div></div>
+      <div class="row"><div class="num">05</div><div><div class="title">CBS remains the book</div><div class="desc">Hub owns the case, conditions, visits, and recommendation. Core banking posts disbursement, repayments, and write-off accounting.</div></div></div>
     </div>
   </div>
 
-  <!-- 9 Documents deep dive -->
+  <!-- 9 Lifecycle -->
   <div class="slide" data-slide="9">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 01</p>
-    <h2>Documents That Defend the Bank</h2>
-    <p class="big-message">Stop incomplete and suspicious files before appraisal burns officer time.</p>
-    <div class="grid-2">
-      <div class="card">
-        <strong>Bilingual OCR (English + Amharic)</strong>
-        <p>PDFs and images extracted with Tesseract eng+amh — critical for Ethiopian KYC packs, licenses, and IDs.</p>
-      </div>
-      <div class="card">
-        <strong>Identity field matching</strong>
-        <p>Compares OCR text to applicant name, phone, TIN (and optional business name). Weighted score; strict mode can block upload.</p>
-      </div>
-      <div class="card">
-        <strong>Integrity automation</strong>
-        <p>File type/MIME checks, size limits, SHA-256 duplicate detection, content keyword validation — less “trust the attachment.”</p>
-      </div>
-      <div class="card">
-        <strong>Clear auth statuses</strong>
-        <p>Pending → Auto-passed → Needs manual review → Verified authentic → Rejected. Verdicts: Authentic / Suspicious / Not authentic / Inconclusive.</p>
-      </div>
-    </div>
-    <div class="grid-2" style="margin-top:0.75rem;">
-      <div class="solution-item"><span class="n">→</span><div><strong>Problem solved</strong><p>Customers bouncing between branch visits; officers wasting days on incomplete packs; weak identity assurance.</p></div></div>
-      <div class="solution-item"><span class="n">✓</span><div><strong>Bank benefit</strong><p>Higher first-time completeness (target 95%+), fewer fraud gaps, cleaner files entering credit analysis.</p></div></div>
+    <h2>The 12-Stage Credit Book — Every Product Uses It</h2>
+    <p class="sub" style="margin-bottom:0.35rem;">DBE’s own lifecycle. Product-specific work happens inside the appraisal, security, and drawdown slots.</p>
+    <div class="grid-4">
+      <div class="card"><span class="tag">01</span><strong>Customer sourcing</strong><p>Walk-in, Digital Apply, CRM pipeline.</p></div>
+      <div class="card"><span class="tag">02</span><strong>Application, screening, KYC</strong><p>Scan/Admin + CRM, Engineering, Legal in parallel.</p></div>
+      <div class="card"><span class="tag">03</span><strong>Appraisal</strong><p>Engine for that family — not one Excel for all.</p></div>
+      <div class="card"><span class="tag">04</span><strong>Loan review</strong><p>Risk / review committee vs policy.</p></div>
+      <div class="card"><span class="tag">05</span><strong>Approval</strong><p>Amount-banded multi-level committees.</p></div>
+      <div class="card"><span class="tag">06</span><strong>Contract &amp; registration</strong><p>Legal desk, mortgage, e-sign, conditions.</p></div>
+      <div class="card"><span class="tag">07</span><strong>Equity release / disbursement</strong><p>Tranches gated by equity and site proof.</p></div>
+      <div class="card"><span class="tag">08</span><strong>Implementation</strong><p>Physical progress vs drawdown.</p></div>
+      <div class="card"><span class="tag">09</span><strong>Follow-up &amp; monitoring</strong><p>Output, jobs, visits — not only arrears.</p></div>
+      <div class="card"><span class="tag">10</span><strong>Collection</strong><p>Case file on the hub; cash in CBS.</p></div>
+      <div class="card"><span class="tag">11</span><strong>Workout / rehab</strong><p>Reschedule, TA, recovery.</p></div>
+      <div class="card"><span class="tag">12</span><strong>Write-off / write-back</strong><p>Status on the dossier; accounting in CBS.</p></div>
     </div>
   </div>
 
-  <!-- 10 Appraisal deep dive -->
+  <!-- 10 Seven engines -->
   <div class="slide" data-slide="10">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 02</p>
-    <h2>7-Step Cashflow Appraisal — The Core Engine</h2>
-    <p class="big-message">Your methodology — digitized, enforced, and auditable. MSME and corporate modes in one wizard.</p>
-    <table class="feature-table">
-      <thead><tr><th>Step</th><th>MSME</th><th>Corporate</th><th>What it locks in</th></tr></thead>
-      <tbody>
-        <tr><td class="f">1</td><td>Basic info &amp; loan request</td><td>Entity KYC / legal registration</td><td>CBS/OCR provenance; no silent re-keying</td></tr>
-        <tr><td class="f">2</td><td>Business &amp; character (10 factors)</td><td>Governance &amp; character</td><td>≥75% qualitative pass gate</td></tr>
-        <tr><td class="f">3</td><td>Cashflow / monthly grid / DSCR</td><td>Financial statements &amp; ratios</td><td>Capacity vs ask; stress DSCR</td></tr>
-        <tr><td class="f">4</td><td colspan="2">E&amp;S — 21 items, 5 sections</td><td>PASS / PASS WITH ACTIONS / REJECT</td></tr>
-        <tr><td class="f">5</td><td colspan="2">Collateral worksheet</td><td>Coverage from field valuation</td></tr>
-        <tr><td class="f">6</td><td colspan="2">Summary, scorecard, recommendation</td><td>Approve / Decline / Escalate + amount</td></tr>
-        <tr><td class="f">7</td><td colspan="2">Repayment &amp; amortization</td><td>Schedule ready for booking</td></tr>
-      </tbody>
-    </table>
-    <p class="sub">Result: every branch speaks the same credit language — no shadow Excel files.</p>
+    <h2>Seven Financing Engines — Already on the Platform</h2>
+    <div class="grid-4">
+      <div class="card"><span class="tag">Project</span><strong>Project financing</strong><p>Sources &amp; uses, NPV/IRR, 75:25 / 50:50, civil/mech/electrical desks, visit-gated tranches.</p></div>
+      <div class="card"><span class="tag">Lease</span><strong>Lease / hire-purchase</strong><p>New capital goods, supplier, serial, ≥20% contribution, bank owns until paid.</p></div>
+      <div class="card"><span class="tag">Wholesale</span><strong>Wholesale / PFI</strong><p>Institution file: capital, NPL/PAR, governance, on-lending — not “can this person repay?”</p></div>
+      <div class="card"><span class="tag">IFB</span><strong>Murabaha</strong><p>Cost-plus, financed goods, Sharia trail — not interest amortization with the label peeled off.</p></div>
+      <div class="card"><span class="tag">IFB</span><strong>Ijarah</strong><p>Shares the lease asset engine; rental math and Sharia board log.</p></div>
+      <div class="card"><span class="tag">Idea</span><strong>Idea / quasi-equity</strong><p>Promoter file, stake with DBE, no installment table. Start-up gates, not Sheet 7.</p></div>
+      <div class="card"><span class="tag">Fund</span><strong>External fund windows</strong><p>Donor line, envelope, women/youth/climate covenants on any family that is tagged.</p></div>
+      <div class="card"><span class="tag">Retail</span><strong>Consumer</strong><p>Housing / vehicle path; confirm with Credit. Not Wave 1 unless the book exists.</p></div>
+    </div>
+    <p class="sub" style="margin-top:0.75rem;">General (MSME / corporate) remains for working capital and DECSI-style files. Family on the category selects the rest automatically.</p>
   </div>
 
-  <!-- 11 Scorecard and gates -->
+  <!-- 11 Project -->
   <div class="slide" data-slide="11">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 03</p>
-    <h2>Explainable Scorecard + Hard Policy Gates</h2>
-    <div class="grid-2">
-      <div>
-        <h3 style="text-align:left;margin-bottom:0.5rem;">5-pillar score (/100)</h3>
-        <div class="grid-2" style="max-width:none;margin:0;">
-          <div class="card"><strong>Qualitative — 20</strong><p>Character &amp; business quality from Sheet 2.</p></div>
-          <div class="card"><strong>Financial — 30</strong><p>DSCR, stress, capacity vs ask, ratios.</p></div>
-          <div class="card"><strong>Banking — 20</strong><p>CBS turnover, behaviour, bureau flags.</p></div>
-          <div class="card"><strong>E&amp;S — 15</strong><p>Risk category &amp; eligibility outcome.</p></div>
-          <div class="card"><strong>Collateral — 15</strong><p>Coverage vs ask (policy minimums).</p></div>
-        </div>
-        <p class="sub" style="text-align:left;margin-top:0.55rem;">Bands: Strong ≥80 · Acceptable ≥60 · Weak ≥40 · Unacceptable &lt;40</p>
-      </div>
-      <div>
-        <h3 style="text-align:left;margin-bottom:0.5rem;">Gates that protect portfolio quality</h3>
-        <ul style="display:block;padding-left:1.1rem;text-align:left;">
-          <li>Qualitative &lt;75% → hard block (configurable)</li>
-          <li>E&amp;S REJECT → hard block</li>
-          <li>Annual / stressed DSCR &lt;1.0 → hard block</li>
-          <li>Bureau defaults → hard block option</li>
-          <li>Incomplete sheets 1–6 → cannot finish</li>
-          <li>Collateral coverage warn at policy min (default 1.0×)</li>
-        </ul>
-        <div class="card" style="margin-top:0.55rem;">
-          <strong>Analysis Assist (not auto-approve)</strong>
-          <p>Surfaces weak pillars, ask vs capacity, bureau flags, and hard blocks — so officers fix issues before committee waste.</p>
-        </div>
-      </div>
+    <p class="eyebrow">Product desk</p>
+    <h2>Project Financing — The DFI Core</h2>
+    <div class="grid-3">
+      <div class="card"><span class="tag">File</span><strong>Project profile</strong><p>Title, cost, promoter equity, sources &amp; uses that must balance before committee.</p></div>
+      <div class="card"><span class="tag">Policy</span><strong>Debt–equity &amp; tenor</strong><p>75:25 domestic, 50:50 FDI/park, grace up to 5 years, envelope up to 20 years — illegal ratios fail before vote.</p></div>
+      <div class="card"><span class="tag">Viability</span><strong>NPV · IRR · DSCR</strong><p>Project metrics on the pack, not MSME monthly cashflow forced onto a plant.</p></div>
+      <div class="card"><span class="tag">Plant</span><strong>Technical desks</strong><p>Civil, mechanical, electrical as named queues on the investment — engineering for the plant, not only collateral BOQ.</p></div>
+      <div class="card"><span class="tag">Security</span><strong>Site + financed plant</strong><p>Land/building and/or machinery this loan will buy. Mix is per file.</p></div>
+      <div class="card"><span class="tag">Draws</span><strong>Visit unlocks the next tranche</strong><p>Purpose: civil / machinery / WC / insurance. Last draw must be evidenced before the next release.</p></div>
     </div>
   </div>
 
-  <!-- 12 Collateral deep dive -->
+  <!-- 12 Lease IFB -->
   <div class="slide" data-slide="12">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 04</p>
-    <h2>GPS-Governed Collateral That Committees Trust</h2>
-    <div class="grid-3">
-      <div class="card">
-        <strong>Three asset classes</strong>
-        <p>Buildings (construction BOQ × woreda unit prices), land (m² × unit price), other/movable with required photo types.</p>
+    <h2>Lease and Ijarah Share the Asset — Not the Contract Math</h2>
+    <div class="compare">
+      <div class="side milkii">
+        <h3>Conventional lease (hire-purchase)</h3>
+        <ul>
+          <li>New capital goods only</li>
+          <li>Supplier, serial, commissioning</li>
+          <li>Lessee contribution (policy ≥20%)</li>
+          <li>Ancillary (insurance, transport, install) capped</li>
+          <li>Bank holds title until last installment</li>
+          <li>GPS on the asset location</li>
+        </ul>
       </div>
-      <div class="card">
-        <strong>Field GPS rules</strong>
-        <p>Min photos (e.g. 5 building / 3 land); weak GPS &gt;100m needs attestation; photo distance &amp; EXIF mismatch warnings.</p>
-      </div>
-      <div class="card">
-        <strong>Offline tablet PWA</strong>
-        <p>Work without signal; sync site GPS, photos, BOQ later — built for rural and weak-connectivity branches.</p>
-      </div>
-      <div class="card">
-        <strong>Lock &amp; unlock</strong>
-        <p>Submit locks valuation; corrections need supervised unlock request — no silent edits after the fact.</p>
-      </div>
-      <div class="card">
-        <strong>Engineering QA</strong>
-        <p>Pipeline: assigned → in progress → submitted → pending eng QA → approved or returned for correction.</p>
-      </div>
-      <div class="card">
-        <strong>Evidence pack</strong>
-        <p>Totals, coverage, readiness, maps, photos, last 100 audit events — exportable for committee &amp; audit.</p>
+      <div class="vs">AND</div>
+      <div class="side hub">
+        <h3>Ijarah (TA’AWUN)</h3>
+        <ul>
+          <li>Same asset / supplier register</li>
+          <li>Rental, not interest schedule</li>
+          <li>Sharia board review log</li>
+          <li>Bank as lessor until transfer</li>
+          <li>Insurance with DBE as co-beneficiary</li>
+          <li>SME Ijarah at branches; Murabaha projects at IFB / HO</li>
+        </ul>
       </div>
     </div>
-    <div class="solution-item" style="max-width:56rem;margin-top:0.75rem;width:100%;">
-      <span class="n">✓</span>
-      <div><strong>Problem → benefit</strong>
-        <p>Ends WhatsApp photo chaos and “was the officer really at the site?” debates. Committee sees verified coverage and location proof in one pack.</p>
-      </div>
-    </div>
+    <p class="sub" style="margin-top:0.85rem;max-width:46rem;">Murabaha is a separate engine: cost-plus on financed goods. IFB is not a conventional loan with the interest label removed.</p>
   </div>
 
-  <!-- 13 Committee deep dive -->
+  <!-- 13 Wholesale fund -->
   <div class="slide" data-slide="13">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 05</p>
-    <h2>Committees That Decide Faster — With Better Packs</h2>
+    <h2>Wholesale and External Fund Are Two Different Questions</h2>
     <div class="grid-2">
       <div class="card">
-        <strong>Amount-routed levels (configurable)</strong>
-        <p style="margin-bottom:0.45rem;">Default model — mapped to each FI hierarchy:</p>
-        <ul style="padding-left:1.1rem;margin:0;display:block;">
-          <li><strong>Branch</strong> — officer, branch manager, accountant</li>
-          <li><strong>District</strong> — district manager + peers</li>
-          <li><strong>Head office</strong> — ops, finance, credit committee</li>
-          <li><strong>Management</strong> — CEO / VP / board as configured</li>
-        </ul>
-        <p style="margin-top:0.45rem;">Min votes to approve or decline per level (default 2). Levels can be skipped by amount band with explicit reason.</p>
+        <span class="tag">Wholesale engine</span>
+        <strong>Can this PFI manage and repay a facility?</strong>
+        <p>Institution profile, capital, liquidity, NPL/PAR, governance, existing DBE exposure, on-lending strategy, sector/geo limits. No physical collateral — the book is the security.</p>
       </div>
       <div class="card">
-        <strong>One-screen committee pack</strong>
-        <p style="margin-bottom:0.45rem;">Read-only, print/PDF-ready:</p>
-        <ul style="padding-left:1.1rem;margin:0;display:block;">
-          <li>Sheets 1–7 summary</li>
-          <li>5-pillar scorecard &amp; credit history</li>
-          <li>E&amp;S risk + eligibility</li>
-          <li>Collateral totals &amp; coverage</li>
-          <li>Risks, conditions, amortization</li>
-          <li>Link to GPS evidence pack</li>
-        </ul>
-        <p style="margin-top:0.45rem;">Outcomes: <strong>Approve</strong> · <strong>Decline</strong> · <strong>Return to officer</strong> with feedback for rework.</p>
+        <span class="tag">Fund overlay</span>
+        <strong>Which donor line, and are covenants held?</strong>
+        <p>KfW/EU 218.26, RUFIP III, SMEFP as funding windows. Envelope, 4.5% / ≤11%, 30% women / 20% youth, PAR90, eligible regions — tagged on any product family.</p>
       </div>
     </div>
-    <p class="sub" style="margin-top:0.85rem;">No more incomplete paper packs. Voters see the same truth. Returns create a coaching loop, not a black hole.</p>
+    <p class="big-message" style="margin-top:1rem;">SMEFP already splits lease retail vs WC wholesale. Pretending they are one object would fail donor audit.</p>
   </div>
 
-  <!-- 14 CBS integration -->
+  <!-- 14 Idea Murabaha consumer -->
   <div class="slide" data-slide="14">
     <span class="confidential">Confidential</span>
-    <p class="eyebrow">Feature deep-dive · 06</p>
-    <h2>Works With Core Banking — Does Not Replace It</h2>
-    <p class="big-message">AI-powered Credit Intelligence is the credit factory. CBS remains the system of record for accounts and disbursement.</p>
+    <h2>Idea, Murabaha, Consumer — Not Forced Into Sheet 7</h2>
     <div class="grid-3">
       <div class="card">
-        <strong>Customer lookup</strong>
-        <p>Enter customer number → Temenos-style party API returns name, phone, TIN, address, gender, status.</p>
+        <span class="tag">Idea / quasi-equity</span>
+        <strong>Stake, not installment</strong>
+        <p>Promoter file, start-up ≤5 years, implement in Ethiopia, IP / MoLS / start-up label gates, DBE share %. Same spine until approval, then investment monitoring.</p>
       </div>
       <div class="card">
-        <strong>Smart prefill</strong>
-        <p>Fills empty Sheet 1 fields. Conflicts listed for officer Accept (banking wins) — full provenance retained.</p>
+        <span class="tag">Murabaha</span>
+        <strong>Cost-plus on goods</strong>
+        <p>Financed movable / goods as security. Markup disclosed. Sharia trail. Export Murabaha at a lower markup when policy says so.</p>
       </div>
       <div class="card">
-        <strong>Disbursement handoff</strong>
-        <p>After final approval, booking &amp; fund release stay in CBS. Optional e-notification / agreement workflow.</p>
+        <span class="tag">Consumer</span>
+        <strong>Confirm the book with Credit</strong>
+        <p>Housing / vehicle in DBE’s process note. Likely developer/housing-supply, not retail mortgages. Engine exists; Wave 1 only if Credit confirms volume.</p>
       </div>
-    </div>
-    <div class="grid-2" style="margin-top:0.75rem;">
-      <div class="solution-item"><span class="n">→</span><div><strong>Problem solved</strong><p>Double data entry, typos, CBS vs appraisal mismatches that delay approvals.</p></div></div>
-      <div class="solution-item"><span class="n">✓</span><div><strong>Bank benefit</strong><p>Less re-keying, cleaner KYC, faster start of appraisal — without a risky CBS rip-and-replace.</p></div></div>
     </div>
   </div>
 
-  <!-- 15 Roles -->
+  <!-- 15 CI brain -->
   <div class="slide" data-slide="15">
     <span class="confidential">Confidential</span>
-    <h2>Every Stakeholder Gets the Right Work Queue</h2>
+    <h2>Credit Intelligence Remains the Brain</h2>
+    <p class="big-message">We did not throw away the 7-step factory. It is the appraisal slot for general / MSME / corporate and for fund-window files until Credit gives that window its own pack.</p>
     <div class="grid-4">
-      <div class="card"><strong>Loan officer</strong><p>Docs, 7-step appraisal, committee submit.</p></div>
-      <div class="card"><strong>Branch manager</strong><p>Create requests, assign officers, escalate.</p></div>
-      <div class="card"><strong>Engineer / head</strong><p>Catalog, unit prices, field visits, QA.</p></div>
-      <div class="card"><strong>Ops / finance</strong><p>Pre-committee approval queues.</p></div>
-      <div class="card"><strong>District manager</strong><p>District-level review &amp; oversight.</p></div>
-      <div class="card"><strong>Committee / execs</strong><p>Vote by level; full appraisal pack.</p></div>
-      <div class="card"><strong>Risk / auditor</strong><p>Review access, trails, dossiers.</p></div>
-      <div class="card"><strong>Admin</strong><p>Users, products, geography, policy.</p></div>
+      <div class="card"><strong>Sheet 1</strong><p>CBS / OCR provenance. Gender &amp; age for 30% / 20% reporting.</p></div>
+      <div class="card"><strong>Sheet 2</strong><p>Character / governance. Pass gate ≥75%.</p></div>
+      <div class="card"><strong>Sheet 3</strong><p>Cashflow, DSCR, stress, capacity vs ask.</p></div>
+      <div class="card"><strong>Sheet 4</strong><p>E&amp;S 21 items. PASS / ACTIONS / REJECT.</p></div>
+      <div class="card"><strong>Sheet 5</strong><p>Collateral worksheet from GPS field.</p></div>
+      <div class="card"><strong>Sheet 6</strong><p>Explainable scorecard + recommendation.</p></div>
+      <div class="card"><strong>Sheet 7</strong><p>Amortization for conventional books.</p></div>
+      <div class="card"><strong>Assist</strong><p>Hard rails: cannot approve or disburse.</p></div>
     </div>
-    <p class="sub" style="margin-top:0.9rem;max-width:48rem;">
-      16 role types out of the box — renamed and scoped to each FI’s Branch → District/Region → Head Office model.
-      Home dashboard shows Total / Approved / Pending / Rejected with branch visibility for management.
-    </p>
   </div>
 
-  <!-- 16 Compliance -->
+  <!-- 16 Family matching -->
   <div class="slide" data-slide="16">
     <span class="confidential">Confidential</span>
-    <h2>Controls Leadership &amp; Risk Will Respect</h2>
-    <ul class="checklist">
-      <li>Role-based access on every screen</li>
-      <li>Document authentication status trail</li>
-      <li>Field-source provenance (banking / OCR / officer)</li>
-      <li>Hard &amp; soft policy gates (configurable)</li>
-      <li>Collateral lock + supervised unlock</li>
-      <li>Field audit log (GPS, photos, unlocks, QA)</li>
-      <li>Engineering dual control when enabled</li>
-      <li>Committee votes with thresholds &amp; return notes</li>
-      <li>Evidence pack / dossier export</li>
-      <li>E&amp;S screening with eligibility decisions</li>
-      <li>NBE credit-report / bureau flags on file</li>
-      <li>Aligned to NBE credit governance expectations</li>
-    </ul>
-    <p class="sub" style="margin-top:0.9rem;">Designed for reconstructability: if audit asks “why was this approved?”, the answer is in the system — not in someone’s drawer.</p>
-  </div>
-
-  <!-- 17 Modules F-J -->
-  <div class="slide" data-slide="17">
-    <span class="confidential">Confidential</span>
-    <h2>Modules F–J — Beyond Origination</h2>
-    <p class="sub" style="margin-bottom:0.55rem;">Full credit factory for banks &amp; MFIs — DBE’s cashflow sheets remain the underwriting core.</p>
-    <div class="grid-3">
-      <div class="card"><span class="tag">Customers</span><strong>Digital Apply</strong><p>Register, apply, upload docs, pay/waive fee, Queue ID, notices, schedule after approval.</p></div>
-      <div class="card"><span class="tag">Post-approval</span><strong>Closing → Finance</strong><p>Conditions, legal collateral pack, e-signatures, Finance disbursement queue, optional CBS booking.</p></div>
-      <div class="card"><span class="tag">Staff AI</span><strong>Agentic Assist</strong><p>Copilot with hard rails — checklist coach, draft bootstrap; cannot approve or disburse.</p></div>
-      <div class="card"><span class="tag">Management</span><strong>Credit Intelligence</strong><p>Portfolio KPIs, officer workspaces, collateral analytics, scoped Q&amp;A.</p></div>
-      <div class="card"><span class="tag">Risk &amp; IT</span><strong>MFA · Delegations · Risk Desk</strong><p>TOTP, audit export, admin-approved cover, pre-committee risk gate.</p></div>
-      <div class="card"><span class="tag">Market · Book</span><strong>Seqela Market + book ops</strong><p>Dealer/co-op price bands; monitoring, collections, covenants after disbursement.</p></div>
-    </div>
-  </div>
-
-  <!-- 18 Feature catalog -->
-  <div class="slide" data-slide="18">
-    <span class="confidential">Confidential</span>
-    <h2>Complete Capability Catalog</h2>
+    <h2>Product Family Selects Appraisal and Collateral</h2>
+    <p class="sub" style="margin-bottom:0.4rem;">Officers do not pick a mismatched pack. Categories without security are allowed — wholesale and idea have none.</p>
     <table class="feature-table">
-      <thead><tr><th>Area</th><th>What banks &amp; MFIs get</th></tr></thead>
+      <thead><tr><th>Family</th><th>Appraisal</th><th>Security the file may use</th></tr></thead>
       <tbody>
-        <tr><td class="f">Intake</td><td>Staff queue + Digital Apply + online intake with auto-assign</td></tr>
-        <tr><td class="f">Documents</td><td>Per-product packs, OCR eng+amh + extraction, identity match, verify/reject</td></tr>
-        <tr><td class="f">Appraisal</td><td>DBE Excel-faithful 7-step MSME + corporate; 5-pillar scorecard; DSCR; E&amp;S; Assist</td></tr>
-        <tr><td class="f">Collateral</td><td>BOQ building, land, movable; GPS PWA; Gebeta maps; evidence pack; engineering QA</td></tr>
-        <tr><td class="f">Market</td><td>Seqela Market — dealer/co-op quotes → area price bands</td></tr>
-        <tr><td class="f">Governance</td><td>MFA, delegations, Risk Desk, lock/audit, on-prem license</td></tr>
-        <tr><td class="f">Approvals</td><td>Ops/finance queues; multi-level committee; notifications; return-to-officer</td></tr>
-        <tr><td class="f">Post-approval</td><td>Closing pack, e-signatures, Finance disbursement, partial disburse, book ops</td></tr>
-        <tr><td class="f">Intelligence</td><td>Credit Intelligence dashboards; Agentic Assist (hard rails)</td></tr>
-        <tr><td class="f">Tech</td><td>Django + PostgreSQL + Docker; on-prem; CBS customer API; optional REST</td></tr>
+        <tr><td class="f">General</td><td>Officer chooses MSME or corporate sheets</td><td>Building, land, movable, mixed</td></tr>
+        <tr><td class="f">Project</td><td>Project desk (NPV, equity, plant)</td><td>Site and/or plant financed by this loan</td></tr>
+        <tr><td class="f">Lease / Ijarah</td><td>Asset register — not Sheet 3</td><td>The machine/vehicle this loan buys (bank title)</td></tr>
+        <tr><td class="f">Wholesale</td><td>PFI institution file</td><td>None required</td></tr>
+        <tr><td class="f">Murabaha</td><td>Cost-plus desk</td><td>Financed goods / movable</td></tr>
+        <tr><td class="f">Idea / equity</td><td>Investment desk</td><td>None — stake, not pledge</td></tr>
+        <tr><td class="f">Consumer</td><td>Sheets until a retail pack exists</td><td>Building and/or financed vehicle</td></tr>
       </tbody>
     </table>
   </div>
 
-  <!-- 19 DECSI proof -->
+  <!-- 17 Desks -->
+  <div class="slide" data-slide="17">
+    <span class="confidential">Confidential</span>
+    <h2>DBE Desks — Work Units, Not Extra Job Titles</h2>
+    <p class="sub" style="margin-bottom:0.4rem;">A user is job + desk + place. Files route by product family to the owning desk. DECSI departments stay valid.</p>
+    <div class="grid-4">
+      <div class="card"><strong>CRM</strong><p>Originates project, lease, IFB, idea. Owns monitoring after booking.</p></div>
+      <div class="card"><strong>Appraisal Directorate</strong><p>Credit assessment on the family engine.</p></div>
+      <div class="card"><strong>Engineering</strong><p>Plant technical + GPS/BOQ QA. Parallel KYC on DBE files.</p></div>
+      <div class="card"><strong>Legal Affairs</strong><p>Pack, contract, registration. Parallel KYC.</p></div>
+      <div class="card"><strong>Scan / Admin</strong><p>Online apply landing; document intake.</p></div>
+      <div class="card"><strong>External Fund &amp; Wholesale</strong><p>PFI facilities and donor windows.</p></div>
+      <div class="card"><strong>HRM</strong><p>Consumer intake where that book exists.</p></div>
+      <div class="card"><strong>Ongoing Concern</strong><p>Acquired assets and foreclosure last.</p></div>
+    </div>
+  </div>
+
+  <!-- 18 KYC docs -->
+  <div class="slide" data-slide="18">
+    <span class="confidential">Confidential</span>
+    <h2>Documents That Defend the Bank — KYC on DBE Desks</h2>
+    <div class="grid-3">
+      <div class="card"><span class="tag">Intake</span><strong>Party follows the family</strong><p>Person, promoter, or PFI institution on the same registration form. DECSI keeps CBS customer lookup.</p></div>
+      <div class="card"><span class="tag">Authentication</span><strong>OCR English + Amharic</strong><p>Identity match on name / phone / TIN. Pending → Auto-passed → Review → Verified / Rejected.</p></div>
+      <div class="card"><span class="tag">DBE KYC</span><strong>Three desks in parallel</strong><p>CRM, Engineering, Legal clear their slice. Scan/Admin queues Digital Apply. General files keep the existing auth path.</p></div>
+    </div>
+    <div class="stats" style="margin-top:1rem;">
+      <div class="stat"><span class="value">Eng + አማ</span><br><span class="label">Bilingual OCR</span></div>
+      <div class="stat"><span class="value">3 desks</span><br><span class="label">Parallel KYC</span></div>
+      <div class="stat"><span class="value">Per type</span><br><span class="label">Document packs</span></div>
+      <div class="stat"><span class="value">95%+</span><br><span class="label">Completeness goal</span></div>
+    </div>
+  </div>
+
+  <!-- 19 GPS financed -->
   <div class="slide" data-slide="19">
     <span class="confidential">Confidential</span>
+    <h2>GPS Collateral — Including Assets This Loan Will Buy</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>What committees already trust (DECSI)</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li>Building BOQ × woreda unit prices</li>
+          <li>Land size × price; movable / machinery already owned</li>
+          <li>GPS accuracy, EXIF vs live location, min photos</li>
+          <li>Offline tablet sync; lock after submit; engineering QA</li>
+          <li>Evidence pack: map, photos, coverage, audit log</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>What DBE files add</strong>
+        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
+          <li><strong>Financed</strong> kind — plant or vehicle purchased with this loan</li>
+          <li>Bank title, not a pledged used machine</li>
+          <li>Lease/Ijarah restricted to that kind</li>
+          <li>Project may mix site + financed plant</li>
+          <li>Wholesale / idea: no physical security required</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 20 Committee CBS -->
+  <div class="slide" data-slide="20">
+    <span class="confidential">Confidential</span>
+    <h2>Committees Decide. Core Banking Keeps the Book.</h2>
+    <div class="grid-3">
+      <div class="card"><span class="tag">Review &amp; approval</span><strong>Amount-routed votes</strong><p>Branch → District → HO → Management. Return-to-officer with notes. Risk desk can block weak files.</p></div>
+      <div class="card"><span class="tag">Legal</span><strong>Contract &amp; registration</strong><p>Restriction, POA, title, mortgage, notary, e-sign. Conditions precedent on the same dossier.</p></div>
+      <div class="card"><span class="tag">Finance</span><strong>Handoff, not replacement</strong><p>Tranches, partial release, optional CBS booking. iBOC never silently disburses.</p></div>
+    </div>
+    <div class="quote">Hub = credit case + policy + intelligence. CBS = money. That line does not move.</div>
+  </div>
+
+  <!-- 21 Rehab SLA -->
+  <div class="slide" data-slide="21">
+    <span class="confidential">Confidential</span>
+    <h2>After Booking — Implementation, Rehab, 45-Day SLA</h2>
+    <div class="grid-3">
+      <div class="card"><span class="tag">Implementation</span><strong>Progress vs drawdown</strong><p>Site visits after disbursement. % complete. Next purpose-coded tranche unlocks only when the visit clears.</p></div>
+      <div class="card"><span class="tag">Rehab</span><strong>Named like DBE</strong><p>Watchlist → restructure → technical assistance → recover → foreclosure last. Appeals up to President / Board.</p></div>
+      <div class="card"><span class="tag">SLA</span><strong>~45 days to first release</strong><p>Clock on screening, technical, appraisal, review, committee, legal, first equity/loan release. Informational KPI — not a fake committee gate.</p></div>
+    </div>
+    <p class="sub" style="margin-top:0.9rem;">Follow-up frequency and implementation delay are proven drivers of poor recovery. Post-disbursement is the DFI product, not a module to skip.</p>
+  </div>
+
+  <!-- 22 DECSI -->
+  <div class="slide" data-slide="22">
+    <span class="confidential">Confidential</span>
     <h2>Proven at Scale — DECSI Reference</h2>
-    <p class="sub" style="margin-bottom:0.55rem;">Dedebit Credit and Savings Institution · Mekelle · Branch → District → HO</p>
+    <p class="sub" style="margin-bottom:0.55rem;">Dedebit Credit and Savings Institution · Mekelle · Branch → District → HO · AI-Powered Credit Intelligence in production</p>
     <div class="stats">
       <div class="stat big"><span class="value">53,901</span><br><span class="label">Applications processed</span></div>
       <div class="stat big"><span class="value">ETB 17.03B</span><br><span class="label">Amount approved</span></div>
@@ -854,172 +846,126 @@
       <div class="bar-row"><div class="bar-label"><span>Document completeness target</span><span>95%+</span></div><div class="bar-track"><div class="bar-fill" style="width:95%;"></div></div></div>
     </div>
     <p class="sub" style="margin-top:0.75rem;">Reference: Tsige Bayray, Vice Chief of IT, DECSI · +251 914 701 978</p>
-    <p class="sub">Same operational DNA — adapted to each FI’s products, policy, hierarchy, and CBS.</p>
   </div>
 
-  <!-- 20 ROI -->
-  <div class="slide" data-slide="20">
+  <!-- 23 Business case -->
+  <div class="slide" data-slide="23">
     <span class="confidential">Confidential</span>
     <h2>Business Case — Why Leadership Says Yes</h2>
     <div class="grid-2">
       <div class="card">
-        <strong>Revenue &amp; growth</strong>
+        <strong>Cycle time &amp; control</strong>
         <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>Faster turnaround → higher conversion of MSME applicants</li>
-          <li>More files processed per officer without proportional headcount</li>
-          <li>Competitive edge vs banks still stuck in paper/Excel</li>
+          <li>Compress industrial files toward the 45-day first-release target</li>
+          <li>Illegal debt–equity / tenor / lease contribution fail before committee</li>
+          <li>One reconstructable dossier for NBE, donors, and internal audit</li>
         </ul>
       </div>
       <div class="card">
-        <strong>Cost &amp; risk</strong>
+        <strong>Portfolio &amp; recovery</strong>
         <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>Less courier, printing, rework, and overtime</li>
-          <li>Fewer weak approvals via DSCR / E&amp;S / coverage gates</li>
-          <li>Lower audit cost — reconstructable digital dossiers</li>
+          <li>Implementation visits tied to money — fewer stalled plants</li>
+          <li>Rehab path before foreclosure, named as DBE already works</li>
+          <li>PFI and donor books visible: utilization, women/youth, PAR</li>
         </ul>
       </div>
       <div class="card">
         <strong>Strategic</strong>
         <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>Extends DBE cashflow methodology story into institutional credit</li>
-          <li>Supports NBE confidence and internal risk appetite</li>
-          <li>Creates data foundation for future credit analytics</li>
+          <li>FSSP / DFI reform: MIS and credit process, not another LOS</li>
+          <li>Same factory later available to PFIs on wholesale lines</li>
+          <li>DBE methodology (cashflow sheets) preserved where it belongs</li>
         </ul>
       </div>
       <div class="card">
-        <strong>Indicative ROI framing</strong>
+        <strong>Risk of waiting</strong>
         <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>Projected break-even window: <strong>12–18 months</strong></li>
-          <li>Pilot in ~1 month after requirements → measure cycle time &amp; completeness KPIs</li>
-          <li>Scale network once pilot gates are proven</li>
+          <li>Project files stay in Excel while policy lives in PDFs</li>
+          <li>Donor MIS stays a reporting scramble</li>
+          <li>Build-from-scratch is 12–24 months to parity with a live factory</li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- 21 Cost of inaction -->
-  <div class="slide" data-slide="21">
+  <!-- 24 Implementation -->
+  <div class="slide" data-slide="24">
     <span class="confidential">Confidential</span>
-    <h2>The Cost of Waiting</h2>
-    <p class="big-message">Every month without a credit factory, FIs pay in cycle time, rework, and inconsistent risk.</p>
-    <div class="grid-2">
-      <div class="problem-item"><span class="n">1</span><div><strong>Competitors digitize first</strong><p>MSME customers choose banks that answer in days, not weeks.</p></div></div>
-      <div class="problem-item"><span class="n">2</span><div><strong>Portfolio quality drift</strong><p>Excel variance across branches creates invisible underwriting gaps.</p></div></div>
-      <div class="problem-item"><span class="n">3</span><div><strong>Staff burnout &amp; cost</strong><p>Volume grows; headcount and overtime grow with it — without better control.</p></div></div>
-      <div class="problem-item"><span class="n">4</span><div><strong>Audit &amp; regulation pressure</strong><p>Reconstructing decisions from paper gets harder as volume rises.</p></div></div>
-    </div>
-    <div class="quote" style="margin-top:1rem;">
-      DBE’s Excel proves the standard. Digitization makes it stick. AI-powered Credit Intelligence is how that leadership reaches secured credit —
-      before the gap becomes a strategic liability.
-    </div>
-  </div>
-
-  <!-- 22 Implementation -->
-  <div class="slide" data-slide="22">
-    <span class="confidential">Confidential</span>
-    <h2>~1 Month to Pilot — Once Requirements Are Delivered</h2>
-    <p class="sub" style="margin-bottom:0.55rem;">The factory is already built. Once you deliver requirements, pilot go-live is about <strong>~1 month</strong> — not a six-month wait to first production use.</p>
+    <h2>Implementation — Configure DBE on a Working Platform</h2>
+    <p class="sub" style="margin-bottom:0.45rem;">Product engines, desks, family–collateral matching, KYC, rehab, and fund windows are already prototyped on the live factory. The work is policy, data, and go-live — not a greenfield build.</p>
     <div class="timeline">
       <div class="phase">
-        <div class="when">Day 0</div>
-        <h3>You deliver requirements</h3>
-        <p>Policy packs, products, hierarchy, pilot branches, success KPIs, CBS customer-API contact.</p>
+        <div class="when">Already built</div>
+        <h3>iBOC overlay</h3>
+        <p>Families, engines, desks, project/lease/wholesale/IFB/idea, funds, rehab SLA, financed collateral.</p>
       </div>
       <div class="phase">
         <div class="when">Weeks 1–3</div>
-        <h3>We configure</h3>
-        <p>Appraisal modes, collateral catalog, committees, customer API, notifications, bank branding.</p>
+        <h3>DBE configuration</h3>
+        <p>Committees, document packs, debt–equity bands, fund windows, branding, CBS customer API.</p>
       </div>
       <div class="phase">
         <div class="when">~Month 1</div>
         <h3>Pilot go-live</h3>
-        <p>Selected products &amp; branches live; role training; hypercare; KPI baseline.</p>
+        <p>Selected products (project + one other) and desks; training; hypercare; SLA baseline.</p>
       </div>
       <div class="phase">
-        <div class="when">Months 2–3+</div>
-        <h3>Scale readiness</h3>
-        <p>Broader UAT, remaining integrations, network rollout plan, SLAs &amp; support.</p>
+        <div class="when">Months 2–4</div>
+        <h3>Scale the book</h3>
+        <p>Remaining engines, PFI/donor MIS, optional PFI cohort on wholesale lines.</p>
       </div>
     </div>
     <div class="grid-3" style="margin-top:0.85rem;">
-      <div class="card"><strong>Hosting</strong><p>On-prem or private cloud (Docker / PostgreSQL). Bank-controlled data residency.</p></div>
-      <div class="card"><strong>What we configure</strong><p>Products, thresholds, catalog, CBS hooks, policy gates, roles, branding.</p></div>
-      <div class="card"><strong>Success metrics</strong><p>Cycle time, completeness %, return rate, coverage adequacy, audit retrieval time.</p></div>
+      <div class="card"><strong>Hosting</strong><p>On-prem or private cloud. DBE-controlled data residency. CBS stays DBE’s.</p></div>
+      <div class="card"><strong>Reuse / configure / build</strong><p>Intelligence layer: reuse. Desks &amp; engines: configure. Policy numbers: DBE Credit.</p></div>
+      <div class="card"><strong>Success metrics</strong><p>Days to first release, visit-gated draws, covenant hits, rehab vs foreclosure, audit retrieval.</p></div>
     </div>
   </div>
 
-  <!-- 23 Why this vs build -->
-  <div class="slide" data-slide="23">
-    <span class="confidential">Confidential</span>
-    <h2>Why Buy This — Not Build From Scratch</h2>
-    <div class="grid-2">
-      <div class="card">
-        <strong>Build yourself</strong>
-        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>12–24+ months to reach parity</li>
-          <li>Credit + GPS + committee edge cases rediscovered the hard way</li>
-          <li>Opportunity cost: delayed digital credit factory</li>
-          <li>Uncertain audit/control maturity at go-live</li>
-        </ul>
-      </div>
-      <div class="card" style="border-top:3px solid var(--ob-green);">
-        <strong>Deploy AI-powered Credit Intelligence with Seqela</strong>
-        <ul style="padding-left:1.1rem;margin:0.35rem 0 0;display:block;font-size:0.88rem;">
-          <li>Working system already proven in Ethiopian MFI operations</li>
-          <li>Excel-faithful appraisal + GPS governance already built</li>
-          <li>Pilot within ~1 month of requirements; learn from DECSI-scale patterns</li>
-          <li>Configure to OB policy — don’t reinvent credit ops software</li>
-        </ul>
-      </div>
-    </div>
-    <p class="sub" style="margin-top:0.9rem;">You keep control of policy and data. We accelerate time-to-value with a battle-tested credit factory.</p>
-  </div>
-
-  <!-- 24 Decision path -->
-  <div class="slide" data-slide="24">
+  <!-- 25 Decision -->
+  <div class="slide" data-slide="25">
     <span class="confidential">Confidential</span>
     <h2>A Low-Risk Path to “Yes”</h2>
     <div class="grid-2">
       <div class="card">
         <strong>Recommended engagement</strong>
         <ol style="padding-left:1.2rem;margin:0.4rem 0 0;display:block;">
-          <li>90-minute live demo (Credit + IT + Risk)</li>
-          <li>2–3 week discovery &amp; solution blueprint</li>
-          <li>Fixed-scope pilot (selected products &amp; branches)</li>
-          <li>KPI review → network rollout with SLAs</li>
+          <li>Live demo: project file + lease asset + wholesale/fund window</li>
+          <li>Discovery: policy bands, desks, CBS contact, pilot products</li>
+          <li>Fixed-scope DBE pilot (not a PFI-only Excel rollout)</li>
+          <li>KPI review → network + optional PFI adoption</li>
         </ol>
       </div>
       <div class="card">
         <strong>What we need from DBE</strong>
         <ul style="padding-left:1.2rem;margin:0.4rem 0 0;display:block;">
-          <li>Executive sponsor (Credit / MSME / Partnerships)</li>
-          <li>Confirm Excel sheet mapping &amp; policy gates</li>
-          <li>Endorse / co-brand for FI adoption</li>
-          <li>Shortlist 2–4 pilot banks &amp; MFIs</li>
-          <li>Agree affordability principle for smaller FIs</li>
+          <li>Executive sponsors: Credit, IT, External Fund, Legal</li>
+          <li>Confirm product catalog and committee names/bands</li>
+          <li>Debt–equity, lease contribution, IFB markup rules</li>
+          <li>CBS customer-API counterpart</li>
+          <li>Pilot branches / directorates</li>
         </ul>
       </div>
     </div>
-    <p class="sub" style="margin-top:0.85rem;">Detailed commercial proposal (license, implementation, support) issued after discovery confirms scope.</p>
+    <p class="sub" style="margin-top:0.85rem;">Detailed commercial proposal (license, implementation, support) issued after discovery confirms scope. Price does not belong in this product pack.</p>
   </div>
 
-  <!-- 25 Close -->
-  <div class="slide" data-slide="25">
+  <!-- 26 Close -->
+  <div class="slide" data-slide="26">
     <span class="confidential">Confidential</span>
     <div class="slide-content">
       <p class="eyebrow">Call to action</p>
-      <h2>Let’s Scale DBE’s Methodology Nationally</h2>
-      <p class="hook" style="font-size:1.35rem;">
-        DBE’s Excel showed the method Ethiopia needs.
-        Seqela’s platform makes that method everyday practice in banks and MFIs.
+      <h2>Automate How DBE Releases Money</h2>
+      <p class="hook" style="font-size:1.28rem;">
+        One lifecycle. Seven engines. Credit Intelligence on every file.
+        Equity before loan. Proof before the next draw. Rehab before write-off.
       </p>
       <div class="cta-box">
         <p style="font-size:1rem;font-weight:600;color:var(--ob-green-deep);margin-bottom:0.65rem;">Decide this week</p>
         <ol style="text-align:left;display:inline-block;margin:0;font-size:0.95rem;">
-          <li>Book the live demo for Credit, MSME/Lease, IT, and Partnerships</li>
-          <li>Confirm Excel → digital field mapping with DBE Credit</li>
-          <li>Shortlist pilot banks &amp; MFIs + affordability path</li>
-          <li>Receive partnership SOW / MoU draft</li>
+          <li>Book the live iBOC demo for Credit, Engineering, Legal, External Fund, and IT</li>
+          <li>Name sponsors and the first two product families for pilot</li>
+          <li>Receive configuration SOW / MoU draft</li>
         </ol>
         <p style="margin-top:1.1rem;">
           <a href="mailto:info@seqela.com">info@seqela.com</a>
@@ -1030,8 +976,8 @@
         </p>
       </div>
       <p class="sub" style="margin-top:1.25rem;">
-        Companion detailed document (~22 pages with live system UI screenshots):
-        <em>oromia_bank_loan_hub_proposal_document.html</em> — open in Chrome → Print → Save as PDF.
+        Companion document with live UI evidence:
+        <em>dbe_loan_hub_proposal_document.html</em> — open in Chrome → Print → Save as PDF.
       </p>
     </div>
   </div>

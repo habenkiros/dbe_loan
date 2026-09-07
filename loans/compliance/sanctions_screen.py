@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # customers are not poisoned. Names are for explicit test strings.
 _DEFAULT_WATCHLIST: List[Dict[str, Any]] = [
     {
-        'list_name': 'DECSI demo sanctions list',
+        'list_name': 'Demo sanctions list',
         'match_type': 'sanctions',
         'customer_number': 'SANCTIONED001',
         'name': 'Sanctioned Demo Person',
@@ -27,7 +27,7 @@ _DEFAULT_WATCHLIST: List[Dict[str, Any]] = [
         'notes': 'Offline demo hit — replace with bank watchlist / vendor API.',
     },
     {
-        'list_name': 'DECSI demo PEP list',
+        'list_name': 'Demo PEP list',
         'match_type': 'pep',
         'customer_number': 'PEP0000001',
         'name': 'PEP Demo Official',
@@ -35,7 +35,7 @@ _DEFAULT_WATCHLIST: List[Dict[str, Any]] = [
         'notes': 'Offline demo PEP hit.',
     },
     {
-        'list_name': 'DECSI demo sanctions list',
+        'list_name': 'Demo sanctions list',
         'match_type': 'sanctions',
         'name': 'Aliased Sanction Subject',
         'score': 88,

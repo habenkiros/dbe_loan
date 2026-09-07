@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Edit funding window{% endblock %}
+{% block content %}
+<h1>Edit funding window: {{ fund.code }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Changes</button>
+</form>
+<p><a href="{% url 'manage_financing_funds' %}">← Back to funding windows</a></p>
+{% endblock %}

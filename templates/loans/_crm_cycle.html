@@ -1,0 +1,51 @@
+{% if crm_cycle %}
+<section class="lw-panel" style="margin:0.75rem 0;">
+  <h3>Appraisal pack · CRM comments</h3>
+  <p class="help">
+    After KYC, Appraisal sends a pack. CRM comments, then clears it for committee.
+    Each send is a new version.
+  </p>
+  {% if crm_cycle.latest %}
+  <p>
+    Version {{ crm_cycle.latest.version }} ·
+    <strong>{{ crm_cycle.latest.get_status_display }}</strong>
+  </p>
+  {% if crm_cycle.latest.appraisal_note %}
+  <p class="help"><strong>Appraisal:</strong> {{ crm_cycle.latest.appraisal_note }}</p>
+  {% endif %}
+  {% if crm_cycle.latest.crm_note %}
+  <p class="help"><strong>CRM:</strong> {{ crm_cycle.latest.crm_note }}</p>
+  {% endif %}
+  {% endif %}
+  {% if crm_cycle.can_send %}
+  <form method="post" action="{% url 'crm_cycle_action' loan_request.id %}" style="margin:0.5rem 0;">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <label for="crm-send-note">Note for CRM</label>
+    <textarea id="crm-send-note" name="note" rows="2" class="form-control" required></textarea>
+    <p><button type="submit" name="action" value="send" class="btn btn-green">Send pack to CRM</button></p>
+  </form>
+  {% endif %}
+  {% if crm_cycle.can_comment %}
+  <form method="post" action="{% url 'crm_cycle_action' loan_request.id %}" style="display:flex;gap:0.4rem;align-items:flex-end;flex-wrap:wrap;">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <input type="text" name="note" placeholder="CRM comment" style="min-width:14rem;">
+    <button type="submit" name="action" value="clear" class="btn btn-green">Clear for committee</button>
+    <button type="submit" name="action" value="return" class="btn btn-gray">Return to Appraisal</button>
+  </form>
+  {% endif %}
+  {% if crm_cycle.history|length > 1 %}
+  <p class="help">Earlier versions</p>
+  <ul>
+    {% for row in crm_cycle.history %}
+    {% if crm_cycle.latest and row.id != crm_cycle.latest.id %}
+    <li>v{{ row.version }} · {{ row.get_status_display }}
+      {% if row.crm_note %} — {{ row.crm_note }}{% endif %}
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}

@@ -52,7 +52,14 @@ def build_appraisal_features(loan_request, appraisal=None, basic_info=None) -> D
         'banking': {},
         'scorecard': {},
         'outcomes': {},
+        'product_desk': {},
     }
+
+    try:
+        from loans.product_intel import compact_product_desk
+        features['product_desk'] = compact_product_desk(loan_request)
+    except Exception:
+        features['product_desk'] = {}
 
     if basic_info:
         features['basic_info'] = {

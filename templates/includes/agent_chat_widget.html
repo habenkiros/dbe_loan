@@ -10,11 +10,11 @@
   data-provider="{{ agent_chat_provider }}"
   {% if agent_chat_auto_open %}data-auto-open="1"{% endif %}
 >
-  <div class="decsi-agent-panel" role="dialog" aria-label="DECSI Assist chat">
+  <div class="decsi-agent-panel" role="dialog" aria-label="{{ product_name|default:'Credit Intelligence' }} Assist chat">
     <header class="decsi-agent-header">
       <div class="decsi-agent-header-avatar" aria-hidden="true">AI</div>
       <div class="decsi-agent-header-text">
-        <strong>DECSI Assist</strong>
+        <strong>{{ product_name|default:"Credit Intelligence" }} Assist</strong>
         <span>
           {% if agent_chat_provider == 'openai' %}Online · story + reports
           {% else %}Offline · story + reports (add OPENAI_API_KEY for full AI)
@@ -54,7 +54,7 @@
     <div class="decsi-agent-status"></div>
   </div>
 
-  <button type="button" class="decsi-agent-launcher" aria-label="Open DECSI Assist chatbot">
+  <button type="button" class="decsi-agent-launcher" aria-label="Open Assist chatbot">
     <span class="decsi-agent-launcher-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     </span>

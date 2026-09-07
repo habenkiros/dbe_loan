@@ -13,18 +13,22 @@ KIND_BUILDING = 'building'
 KIND_LAND = 'land'
 KIND_MOVABLE = 'movable'
 KIND_MIXED = 'mixed'
+KIND_FINANCED = 'financed'
 
 KIND_CHOICES = [
     (KIND_BUILDING, 'Building / house (BOQ)'),
     (KIND_LAND, 'Land (size × price)'),
-    (KIND_MOVABLE, 'Vehicle / machinery / other movable'),
+    (KIND_MOVABLE, 'Vehicle / machinery / other movable (already owned)'),
     (KIND_MIXED, 'Mixed (sum engines that apply)'),
+    (KIND_FINANCED, 'Financed by this loan (asset to be bought)'),
 ]
 
 
 def infer_kind_from_name(name: str) -> str:
     """Best-effort map from the display name (used to backfill existing rows)."""
     n = (name or '').lower()
+    if 'financed' in n or 'from this loan' in n:
+        return KIND_FINANCED
     has_building = any(x in n for x in ('building', 'house', 'construction'))
     has_land = 'land' in n
     has_movable = any(x in n for x in ('vehicle', 'machinery', 'equipment', 'movable'))
@@ -47,7 +51,7 @@ def resolve_type_kind(collateral_type) -> str:
     if collateral_type is None:
         return KIND_MIXED
     kind = (getattr(collateral_type, 'kind', None) or '').strip()
-    if kind in (KIND_BUILDING, KIND_LAND, KIND_MOVABLE, KIND_MIXED):
+    if kind in (KIND_BUILDING, KIND_LAND, KIND_MOVABLE, KIND_MIXED, KIND_FINANCED):
         return kind
     return infer_kind_from_name(getattr(collateral_type, 'name', '') or '')
 
@@ -61,13 +65,22 @@ def engines_for_kind(kind: str) -> Dict[str, bool]:
         return {'building': True, 'land': False, 'movable': False}
     if kind == KIND_LAND:
         return {'building': False, 'land': True, 'movable': False}
-    if kind == KIND_MOVABLE:
+    if kind == KIND_MOVABLE or kind == KIND_FINANCED:
         return {'building': False, 'land': False, 'movable': True}
     return {'building': True, 'land': True, 'movable': True}
 
 
 def engines_for_loan(loan_request) -> Dict[str, bool]:
     return engines_for_kind(resolve_loan_kind(loan_request))
+
+
+def is_financed_asset(obj) -> bool:
+    """True when the security *is* the asset this loan will buy (lease/project plant)."""
+    if obj is None:
+        return False
+    if hasattr(obj, 'collateral') and not hasattr(obj, 'kind'):
+        return resolve_loan_kind(obj) == KIND_FINANCED
+    return resolve_type_kind(obj) == KIND_FINANCED
 
 
 def uses_building(obj) -> bool:

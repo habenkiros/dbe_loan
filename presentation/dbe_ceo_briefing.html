@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seqela × DBE — AI-Powered Credit Intelligence | Pitch Deck</title>
+  <title>Seqela × DBE — iBOC &amp; Credit Intelligence | Pitch Deck</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
 
@@ -315,9 +315,22 @@
       .slide { padding: 1.15rem 1.05rem 4.4rem; }
     }
     @media print {
-      html, body { overflow: visible; height: auto; background: #fff; }
-      .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; animation: none; }
-      .nav, .slide-counter { display: none; }
+      @page { size: A4 landscape; margin: 0; }
+      html, body { overflow: visible !important; height: auto !important; background: #fff; }
+      .slide {
+        display: flex !important;
+        position: relative !important;
+        inset: auto;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        height: 210mm;
+        min-height: 0;
+        overflow: hidden;
+        animation: none;
+      }
+      .slide:last-of-type { page-break-after: auto; break-after: auto; }
+      .nav, .slide-counter { display: none !important; }
     }
   </style>
 </head>
@@ -333,18 +346,19 @@
       <div>
         <p class="for-line">Prepared for Development Bank of Ethiopia</p>
         <p class="project-name">Seqela · Digital solutions for banks, MFIs &amp; SACCOs</p>
-        <h1>Company. Products. Partnership. Credit Intelligence.</h1>
+        <h1>Company. Products. iBOC. Credit Intelligence.</h1>
         <p class="lede">
-          Who we are, what we build, how we work with DBE — then the credit factory
-          aligned to the EU/KfW MSME recovery credit line (DBE 218.26).
+          Who we are, what we build, then DBE iBOC — Integrated Back Office Automation &amp; Credit Intelligence —
+          one lifecycle, seven product engines, extending the factory already live at DECSI. 218.26 is a fund window on that platform.
         </p>
         <div class="chips">
           <span>Addis Ababa</span>
           <span>8 platforms</span>
           <span>Credit Intelligence live at DECSI</span>
-          <span>DBE 218.26 alignment</span>
+          <span>DBE iBOC overlay</span>
+          <span>218.26 fund window</span>
         </div>
-        <p class="meta">14 August 2026 · Head Office, Addis Ababa · seqela.com</p>
+        <p class="meta">September 2026 · Head Office, Addis Ababa · seqela.com</p>
       </div>
       <div class="device">
         <div class="chrome"><i></i><i></i><i></i></div>
@@ -361,7 +375,7 @@
     </div>
     <div class="stage">
       <p class="kicker">Four chapters</p>
-      <h2>Seqela first. Credit Intelligence where it meets DBE’s live project.</h2>
+      <h2>Seqela first. iBOC where it meets DBE’s credit book.</h2>
       <div class="rule"></div>
       <div class="chapters">
         <div class="panel chapter">
@@ -378,15 +392,15 @@
         </div>
         <div class="panel chapter">
           <span class="cn">03</span>
-          <span class="tag">Partnership</span>
-          <h3>How we work with DBE</h3>
-          <p>DBE owns the standard. Seqela operates the factory. PFIs adopt. CBS stays DBE’s.</p>
+          <span class="tag">DBE iBOC</span>
+          <h3>Back office + seven engines</h3>
+          <p>Extend the live factory: project, lease, wholesale, IFB, idea, funds. CBS stays DBE’s.</p>
         </div>
         <div class="panel chapter dark">
           <span class="cn">04</span>
-          <span class="tag">Focus</span>
-          <h3>Credit Intelligence × 218.26</h3>
-          <p>AI-powered credit factory aligned to the MSME recovery credit line in Tigray, Amhara, and Afar.</p>
+          <span class="tag">Fund window</span>
+          <h3>218.26 on the same spine</h3>
+          <p>KfW/EU MSME recovery as a tagged funding window — covenants, women/youth, PAR — not a separate system.</p>
         </div>
       </div>
     </div>
@@ -441,7 +455,7 @@
       <table class="rich">
         <thead><tr><th>#</th><th>Product</th><th>What it is</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="k">01</td><td><strong>AI-powered Credit Intelligence</strong></td><td>Origination factory: docs, cashflow appraisal, GPS collateral, committees, CBS handoff, Agentic Assist</td><td>Production · DECSI</td></tr>
+          <tr><td class="k">01</td><td><strong>AI-powered Credit Intelligence / DBE iBOC</strong></td><td>Credit factory + DFI overlay: product engines, desks, GPS, committees, CBS handoff, Assist</td><td>Production · DECSI · DBE overlay prototyped</td></tr>
           <tr><td class="k">02</td><td>Seqela Digital Equb</td><td>Rotating savings &amp; credit — family to bank-integrated and marketplace</td><td>equb.seqela.com</td></tr>
           <tr><td class="k">03</td><td>Degaf Crowdfunding</td><td>Causes, creators, and funders on one platform</td><td>degaf.et</td></tr>
           <tr><td class="k">04</td><td>Multipurpose Core Banking</td><td>Members, savings, loans, shares for unions, SACCOs, cooperatives</td><td>Institution deploy</td></tr>
@@ -467,8 +481,8 @@
       <div class="g2">
         <div class="panel dark">
           <span class="tag">Lending &amp; credit quality</span>
-          <h3>AI-powered Credit Intelligence</h3>
-          <p>MSME and corporate origination factory. GPS collateral, document authentication, committees, Agentic Assist. Works with DBE’s existing core systems.</p>
+          <h3>AI-powered Credit Intelligence → DBE iBOC</h3>
+          <p>MSME/corporate factory live at DECSI. For DBE: project, lease, wholesale, IFB, idea engines on the same spine. GPS, documents, committees, Assist. Works with DBE’s existing core systems.</p>
         </div>
         <div class="panel">
           <span class="tag">Liabilities &amp; inclusion</span>
@@ -486,7 +500,7 @@
           <p>Education operations; vehicle history for asset-backed lending and institutional fleet control.</p>
         </div>
       </div>
-      <p class="source">For DBE the first wedge is Credit Intelligence. Equb, PLSA, and core remain available for PFI and inclusion programs.</p>
+      <p class="source">For DBE the first wedge is iBOC internally. Equb, PLSA, and core remain available for PFI and inclusion programs. 218.26 is a fund window, not a separate product.</p>
     </div>
   </div>
 
@@ -498,30 +512,30 @@
     </div>
     <div class="stage">
       <p class="kicker">Operating model</p>
-      <h2>DBE owns the methodology. Seqela runs the digital factory.</h2>
+      <h2>DBE runs iBOC. Seqela extends the live factory. CBS stays DBE’s.</h2>
       <div class="rule"></div>
       <div class="g3" style="margin-bottom:0.8rem;">
         <div class="panel dark">
           <span class="tag">DBE</span>
-          <h3>Champion &amp; standard owner</h3>
-          <p>Cashflow MSME Excel, wholesale lines, TA, policy thresholds. Endorse, co-brand, optionally use internally. Core banking stays with DBE.</p>
+          <h3>Credit-book owner</h3>
+          <p>Policy bands, product families, desks, committees. Pilot iBOC internally. Core banking stays with DBE.</p>
         </div>
         <div class="panel">
           <span class="tag">Seqela</span>
           <h3>Technology operator</h3>
-          <p>Host or private deploy. Configure products, gates, hierarchy. Train credit and field teams. CBS customer prefill. Keep sheets Excel-faithful as DBE updates them.</p>
+          <p>Extend the DECSI factory. Configure engines, desks, funds, gates. Train CRM, Appraisal, Engineering, Legal, Finance. CBS customer prefill.</p>
         </div>
         <div class="panel">
-          <span class="tag">Banks &amp; MFIs</span>
-          <h3>Adopting PFIs</h3>
-          <p>Pilot selected branches and products. Align committees to policy. Measure cycle time and file quality. Scale after the pilot.</p>
+          <span class="tag">Second wave</span>
+          <h3>PFIs on wholesale lines</h3>
+          <p>Same factory on 218.26 / RUFIP / SMEFP after DBE’s own book is live. Shared instance for small MFIs.</p>
         </div>
       </div>
       <div class="g4">
-        <div class="panel"><span class="tag">01</span><h3>Recommend</h3><p>Letter / circular that the digital factory is the preferred implementation of DBE’s cashflow workbook.</p></div>
-        <div class="panel"><span class="tag">02</span><h3>Co-brand</h3><p>“DBE methodology · Seqela platform” for PFI buy-in and donor visibility.</p></div>
-        <div class="panel"><span class="tag">03</span><h3>Bundle with TA</h3><p>Configuration and training ride EU/KfW technical assistance already in the project.</p></div>
-        <div class="panel"><span class="tag">04</span><h3>Afford</h3><p>Shared instance for small MFIs; dedicated / private deploy for large banks and DBE.</p></div>
+        <div class="panel"><span class="tag">01</span><h3>Pilot internally</h3><p>Project + one other family (lease or wholesale). Measure 45-day first-release SLA.</p></div>
+        <div class="panel"><span class="tag">02</span><h3>Encode policy</h3><p>Debt–equity, lease contribution, IFB markup, fund covenants as gates — not memos.</p></div>
+        <div class="panel"><span class="tag">03</span><h3>Donor MIS</h3><p>218.26 women/youth/envelope/PAR on tagged files. Same spine, not a sidecar.</p></div>
+        <div class="panel"><span class="tag">04</span><h3>Then PFIs</h3><p>Optional: the Credit Intelligence layer on partner books once DBE is live.</p></div>
       </div>
     </div>
   </div>
@@ -530,22 +544,22 @@
   <div class="slide" data-slide="7">
     <div class="topbar">
       <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
-      <div class="doc">04 · AI-powered Credit Intelligence</div>
+      <div class="doc">03 · DBE iBOC</div>
     </div>
     <div class="stage">
       <p class="kicker">The product</p>
-      <h2>A credit factory PFIs can run every day</h2>
+      <h2>One credit lifecycle. Product engines plugged in.</h2>
       <div class="rule"></div>
       <div class="flow-pills">
-        <span>Intake</span><span>Documents · OCR eng+amh</span><span>7-step appraisal</span>
-        <span>GPS collateral</span><span>Lock &amp; QA</span><span>Committee</span><span>CBS booking</span>
+        <span>KYC desks</span><span>Family engine</span><span>GPS / financed asset</span>
+        <span>Committee</span><span>Equity / drawdown</span><span>Implementation</span><span>Rehab</span>
       </div>
       <div class="split-top">
         <div class="steps">
-          <div class="row"><div class="num">01</div><div><div class="title">Branch intake + CBS prefill</div><div class="desc">Create request, assign officer, pull customer from core banking.</div></div></div>
-          <div class="row"><div class="num">02</div><div><div class="title">Document authentication</div><div class="desc">Type-driven checklist. OCR English + Amharic. Identity match. Verify or reject with a trail.</div></div></div>
-          <div class="row"><div class="num">03</div><div><div class="title">DBE-faithful appraisal with hard gates</div><div class="desc">Character, DSCR, E&amp;S, collateral, explainable scorecard. Weak files never reach committee.</div></div></div>
-          <div class="row"><div class="num">04</div><div><div class="title">GPS field + multi-level vote</div><div class="desc">Offline tablet, evidence pack, amount routing Branch → District → HO → Management.</div></div></div>
+          <div class="row"><div class="num">01</div><div><div class="title">Family selects the desk</div><div class="desc">Project, lease, wholesale, Murabaha, Ijarah, idea — or MSME/corporate sheets where they belong.</div></div></div>
+          <div class="row"><div class="num">02</div><div><div class="title">Parallel KYC + documents</div><div class="desc">Scan/Admin plus CRM, Engineering, Legal. OCR English + Amharic. Identity match.</div></div></div>
+          <div class="row"><div class="num">03</div><div><div class="title">Policy as gates</div><div class="desc">Debt–equity, tenor, lease contribution, fund covenants. Weak files never reach committee.</div></div></div>
+          <div class="row"><div class="num">04</div><div><div class="title">Proof before the next draw</div><div class="desc">Purpose-coded tranches; implementation visits unlock release. CBS still posts money.</div></div></div>
         </div>
         <div class="device">
           <div class="chrome"><i></i><i></i><i></i></div>
@@ -562,8 +576,8 @@
       <div class="doc">04 · DBE cashflow MSME workbook</div>
     </div>
     <div class="stage">
-      <p class="kicker">Excel-faithful</p>
-      <h2>DBE’s seven sheets, enforced in software</h2>
+      <p class="kicker">General engine — still live</p>
+      <h2>DBE’s seven sheets, where they still belong</h2>
       <div class="rule"></div>
       <div class="sheets">
         <div class="sheet"><span class="sn">1</span><h4>Basic info</h4><p>CBS / OCR provenance. Gender &amp; age for 30% / 20% reporting.</p></div>
@@ -694,14 +708,14 @@
   <div class="slide" data-slide="12">
     <div class="topbar">
       <div class="wordmark"><div class="chevrons"><span></span><span></span></div> Seqela</div>
-      <div class="doc">04 · Alignment · 218.26 × Credit Intelligence</div>
+      <div class="doc">04 · Alignment · 218.26 × iBOC fund window</div>
     </div>
     <div class="stage">
       <p class="kicker">Fit</p>
       <h2>The factory covers the tests this credit line already requires of PFIs</h2>
       <div class="rule"></div>
       <table class="rich">
-        <thead><tr><th>218.26 / donor need</th><th>Credit Intelligence in production</th></tr></thead>
+        <thead><tr><th>218.26 / donor need</th><th>iBOC / Credit Intelligence</th></tr></thead>
         <tbody>
           <tr><td class="k">xii · Adequate MIS</td><td>Single pipeline, role dashboards, reconstructable dossier — not Excel and paper</td></tr>
           <tr><td class="k">xiii · Credit risk &amp; control</td><td>Mandatory 7-step appraisal, lock after submit, dual control, amount-routed committees</td></tr>
@@ -753,32 +767,32 @@
     </div>
     <div class="stage">
       <p class="kicker">Next</p>
-      <h2>Three decisions to start the partnership</h2>
+      <h2>Three decisions to start iBOC at DBE</h2>
       <div class="rule"></div>
       <div class="g3">
         <div class="panel ask">
           <span class="giant">01</span>
           <span class="tag">Sponsors</span>
-          <h3>Name Credit, MSME, IT, Partnerships</h3>
-          <p>90-minute live walkthrough of the DBE sheets in the running system.</p>
+          <h3>Name Credit, Engineering, Legal, External Fund, IT</h3>
+          <p>Live walkthrough of a project file, a lease asset, and a fund/wholesale window.</p>
         </div>
         <div class="panel ask dark">
           <span class="giant">02</span>
           <span class="tag">Pilot</span>
-          <h3>2–4 PFIs on the recovery line</h3>
-          <p>DECSI (live, Tigray) plus at least one Amhara and/or Afar PFI. Parallel-run vs Excel.</p>
+          <h3>DBE internal — two families first</h3>
+          <p>Project plus lease or wholesale. Measure days to first release. CBS stays DBE’s.</p>
         </div>
         <div class="panel ask">
           <span class="giant">03</span>
-          <span class="tag">Affordability</span>
-          <h3>Shared instance + TA bundling</h3>
-          <p>Smaller PFIs are not priced out of the standard DBE already published.</p>
+          <span class="tag">Policy</span>
+          <h3>Debt–equity, lease, IFB, fund covenants</h3>
+          <p>Give us the bands. We encode them as gates before committee.</p>
         </div>
       </div>
       <div class="panel" style="margin-top:0.8rem;">
-        <span class="tag">Optional</span>
-        <h3>DBE internal MSME / lease appraisal</h3>
-        <p>Same factory inside the bank if Credit wants one language for DBE files and PFI files. Pilot go-live ≈ 1 month after requirements. Does not replace DBE core banking.</p>
+        <span class="tag">Second wave</span>
+        <h3>PFIs on 218.26 / wholesale lines</h3>
+        <p>Same Credit Intelligence layer for partner books after DBE’s own dossier is live. Shared instance so smaller PFIs are not priced out. Pilot go-live ≈ 1 month after requirements.</p>
       </div>
     </div>
   </div>
@@ -791,16 +805,16 @@
     </div>
     <div class="stage" style="justify-content:center;max-width:40rem;">
       <p class="kicker">Close</p>
-      <h2 style="font-size:2.45rem;max-width:16ch;">Seqela builds the platforms. Credit Intelligence makes DBE’s MSME standard the default on the recovery line.</h2>
+      <h2 style="font-size:2.45rem;max-width:16ch;">Seqela extends the live factory. iBOC is how DBE releases money.</h2>
       <div class="rule"></div>
       <p class="lede">
-        53,901 files already processed at DECSI in Tigray.
-        Next: the same factory across PFIs in Tigray, Amhara, and Afar.
+        53,901 files already processed at DECSI.
+        Next: one lifecycle, seven engines, equity before loan, proof before the next draw.
       </p>
       <p class="meta">
         Seqela · info@seqela.com · +251 964 790 724 · seqela.com<br>
         equb.seqela.com · degaf.et<br>
-        Leave-behind: DBE_AI_Credit_Intelligence_Partnership_Proposal.pdf
+        Leave-behind: dbe_loan_hub_proposal_document.html
       </p>
     </div>
   </div>

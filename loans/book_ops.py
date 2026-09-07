@@ -62,3 +62,10 @@ def set_watchlist(loan_request, user, *, flagged: bool, reason: str = '') -> Non
     loan_request.save(update_fields=[
         'watchlist', 'watchlist_reason', 'watchlist_at', 'watchlist_by',
     ])
+    if flagged:
+        from loans.models import RehabCase
+        from loans.rehab import ensure_rehab_stage
+        ensure_rehab_stage(
+            loan_request, RehabCase.STAGE_WATCHLIST, user,
+            note=reason or 'Watchlist',
+        )

@@ -7,7 +7,7 @@ Fill these Excel files from the **live queue / admin system** or with **new** li
 | File | What to put in it |
 |------|-------------------|
 | `DECSI_Migration_Pack.xlsx` | All sheets in one workbook (preferred) |
-| `01_Regions.xlsx` … `15_Loan_Requests.xlsx` | Same columns, one file per import command |
+| `01_Regions.xlsx` … `16_Funding_Windows.xlsx` | Same columns, one file per import command |
 
 Yellow rows are examples. Overwrite or delete them before import. Do not rename sheet tabs or header row 1.
 
@@ -15,7 +15,7 @@ Yellow rows are examples. Overwrite or delete them before import. Do not rename 
 
 Geography for unit prices: **Regions → Zones → Cities (woredas)**  
 Operations: **Districts → Branches**  
-Then: **Departments → Loan categories → Collateral types → Document types → Category document packs → Users → Committee levels → Committee members → Construction catalog → Loan requests**
+Then: **Departments → Loan categories → Funding windows → Collateral types → Document types → Category document packs → Users → Committee levels → Committee members → Construction catalog → Loan requests**
 
 The live DECSI queue system’s “zone” is usually an **operational district**. Put those names on **04_Districts**, not on geographic **02_Zones**.
 
@@ -33,6 +33,7 @@ docker compose exec web python manage.py import_districts path/to/04_Districts.x
 docker compose exec web python manage.py import_branches path/to/05_Branches.xlsx
 docker compose exec web python manage.py import_departments path/to/06_Departments.xlsx
 docker compose exec web python manage.py import_loan_categories path/to/07_Loan_Categories.xlsx
+docker compose exec web python manage.py import_financing_funds path/to/16_Funding_Windows.xlsx
 docker compose exec web python manage.py import_collateral_types path/to/08_Collateral_Types.xlsx
 docker compose exec web python manage.py import_document_types path/to/09_Document_Types.xlsx
 docker compose exec web python manage.py import_category_documents path/to/10_Category_Documents.xlsx

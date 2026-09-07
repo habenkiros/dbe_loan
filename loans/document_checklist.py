@@ -31,20 +31,26 @@ class DocumentChecklistItem:
         return getattr(self.document_type, name)
 
 
-def _mode_allows(document_type, appraisal_mode: str) -> bool:
-    mode = (getattr(document_type, 'for_appraisal_mode', None) or '').strip()
-    if not mode:
+def _mode_allows(document_type, appraisal_mode: str, product_family: str = '') -> bool:
+    scoped = (getattr(document_type, 'for_appraisal_mode', None) or '').strip()
+    if not scoped:
         return True
-    return mode == (appraisal_mode or '').strip()
+    appraisal_mode = (appraisal_mode or '').strip()
+    product_family = (product_family or '').strip()
+    if scoped == appraisal_mode:
+        return True
+    if product_family and scoped == product_family:
+        return True
+    return False
 
 
-def _fallback_global_items(appraisal_mode: str = '') -> List[DocumentChecklistItem]:
+def _fallback_global_items(appraisal_mode: str = '', product_family: str = '') -> List[DocumentChecklistItem]:
     from loans.models import LoanApplicationDocumentType
 
     qs = LoanApplicationDocumentType.objects.order_by('order', 'name', 'id')
     items = []
     for dt in qs:
-        if not _mode_allows(dt, appraisal_mode):
+        if not _mode_allows(dt, appraisal_mode, product_family):
             continue
         items.append(DocumentChecklistItem(
             document_type=dt,
@@ -68,8 +74,10 @@ def checklist_for_category(
     from loans.models import LoanCategoryDocumentRequirement
 
     mode = appraisal_mode
+    family = ''
     if category is not None:
         mode = mode or getattr(category, 'appraisal_mode', '') or ''
+        family = getattr(category, 'product_family', '') or ''
 
     if category is not None and getattr(category, 'pk', None):
         reqs = (
@@ -82,7 +90,7 @@ def checklist_for_category(
             items = []
             for r in reqs:
                 dt = r.document_type
-                if not _mode_allows(dt, mode):
+                if not _mode_allows(dt, mode, family):
                     continue
                 items.append(DocumentChecklistItem(
                     document_type=dt,
@@ -91,7 +99,7 @@ def checklist_for_category(
                 ))
             return items
 
-    return _fallback_global_items(mode)
+    return _fallback_global_items(mode, family)
 
 
 def checklist_for_loan(loan_request) -> List[DocumentChecklistItem]:
@@ -130,9 +138,10 @@ def ensure_default_requirements_for_category(category) -> int:
     if LoanCategoryDocumentRequirement.objects.filter(category=category).exists():
         return 0
     mode = getattr(category, 'appraisal_mode', '') or ''
+    family = getattr(category, 'product_family', '') or ''
     created = 0
     for dt in LoanApplicationDocumentType.objects.order_by('order', 'id'):
-        if not _mode_allows(dt, mode):
+        if not _mode_allows(dt, mode, family):
             continue
         _, was_created = LoanCategoryDocumentRequirement.objects.get_or_create(
             category=category,

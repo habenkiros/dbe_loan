@@ -48,6 +48,9 @@
 .ci-decision-card.dec-approve { border-left-color: #0f8a55; }
 .ci-decision-card.dec-approve_with_conditions { border-left-color: #2d6a4f; }
 .ci-decision-card.dec-manual_review { border-left-color: #c98a12; }
+.ci-decision-card.dec-review { border-left-color: #c98a12; }
+.ci-decision-card.dec-ready { border-left-color: #0f8a55; }
+.ci-decision-card.dec-blocked { border-left-color: #c0392b; }
 .ci-decision-card.dec-reject { border-left-color: #c0392b; }
 
 .ci-decision-head {

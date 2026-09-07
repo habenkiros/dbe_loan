@@ -164,10 +164,10 @@
     </section>
 
     <section class="da-panel">
-      <h2><span>6</span> DECSI customer account API</h2>
+      <h2><span>6</span> Core banking customer API</h2>
       <p class="da-note" style="margin-top:0;">
         Digital Apply registration is driven by <strong>customer number</strong>.
-        Set <code>DECSI_BASE_URL</code> (and optionally <code>DECSI_CBS_API_KEY</code>) when DECSI grants API access.
+        Set <code>BANK_CBS_BASE_URL</code> or <code>DECSI_BASE_URL</code> (and optionally the CBS API key) when the bank grants API access.
         Live lookups use <code>/getCusByCusNo/.../custdets</code> and prefill name, phone, address, TIN, and status.
         When the API is live, unknown customer numbers are rejected automatically
         (or always if “Require core-banking customer match” is on).

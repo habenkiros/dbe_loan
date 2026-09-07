@@ -10,6 +10,14 @@ from django.db.models import Q
 from django.utils import timezone
 
 
+def _committee_is_open(loan_request) -> bool:
+    from loans.models import LoanRequest
+    return loan_request.committee_status in (
+        LoanRequest.COMMITTEE_PENDING,
+        LoanRequest.COMMITTEE_PENDED,
+    )
+
+
 # When approve == decline, these roles cast the deciding vote (by amount level).
 # Order within a tuple = priority (first matching cast vote wins).
 DEFAULT_LEVEL_TIEBREAKER_ROLES = {
@@ -94,6 +102,8 @@ def resolve_level_vote_decision(loan_request, level, tally) -> Tuple[Optional[st
         if thresholds_both or all_voted:
             tb = find_tiebreaker_vote(loan_request, level, votes)
             if tb is not None:
+                if tb.vote == LoanCommitteeVote.VOTE_PEND:
+                    return None, f'Tie {approve}–{decline}: chair pended — waiting for a deciding vote.'
                 decision = (
                     'approve'
                     if tb.vote == LoanCommitteeVote.VOTE_APPROVE
@@ -159,7 +169,7 @@ def reconcile_approval_routing(loan_request) -> bool:
     """
     from loans.models import LoanApprovalLevelProgress, LoanRequest
 
-    if loan_request.committee_status != LoanRequest.COMMITTEE_PENDING:
+    if not _committee_is_open(loan_request):
         return False
 
     applicable = get_levels_for_loan(loan_request)
@@ -359,7 +369,7 @@ def get_eligible_voters(loan_request, level) -> List:
 
 def _user_can_vote_as_member(user, loan_request, level) -> bool:
     """Eligibility for `user` as the vote member (no delegation expansion)."""
-    if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
+    if not _committee_is_open(loan_request):
         return False
     if loan_request.current_approval_level_id != level.id:
         return False
@@ -367,7 +377,7 @@ def _user_can_vote_as_member(user, loan_request, level) -> bool:
 
     if LoanCommitteeVote.objects.filter(
         loan_request=loan_request, member=user, approval_level=level,
-    ).exists():
+    ).exclude(vote=LoanCommitteeVote.VOTE_PEND).exists():
         return False
     return any(u.id == user.id for u in get_eligible_voters(loan_request, level))
 
@@ -572,10 +582,12 @@ def committee_queue_queryset(user):
     from loans.models import LoanRequest
 
     if getattr(user, 'is_superuser', False) or user.role in ('superadmin', 'admin'):
-        return LoanRequest.objects.filter(committee_status=LoanRequest.COMMITTEE_PENDING)
+        return LoanRequest.objects.filter(
+            committee_status__in=(LoanRequest.COMMITTEE_PENDING, LoanRequest.COMMITTEE_PENDED),
+        )
 
     pending = LoanRequest.objects.filter(
-        committee_status=LoanRequest.COMMITTEE_PENDING,
+        committee_status__in=(LoanRequest.COMMITTEE_PENDING, LoanRequest.COMMITTEE_PENDED),
         current_approval_level__isnull=False,
     ).select_related('branch', 'current_approval_level', 'category')
 
@@ -594,6 +606,7 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
     )
     approve_count = sum(1 for v in votes if v.vote == LoanCommitteeVote.VOTE_APPROVE)
     decline_count = sum(1 for v in votes if v.vote == LoanCommitteeVote.VOTE_DECLINE)
+    pend_count = sum(1 for v in votes if v.vote == LoanCommitteeVote.VOTE_PEND)
     eligible = get_eligible_voters(loan_request, level)
     _, branch_override = get_member_rules_for_level(loan_request, level)
     min_approvals, min_declines = get_level_vote_thresholds(loan_request, level)
@@ -615,6 +628,7 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
         'eligible_count': len(eligible),
         'approve_count': approve_count,
         'decline_count': decline_count,
+        'pend_count': pend_count,
         'min_approvals': min_approvals,
         'min_declines': min_declines,
         'approvals_needed': max(0, min_approvals - approve_count),
@@ -653,7 +667,11 @@ def get_approval_pipeline(loan_request, current_user=None) -> List[Dict[str, Any
 def get_committee_tally(loan_request, current_user=None) -> Dict[str, Any]:
     """Summary for templates: current level + full pipeline."""
     # Auto-repair loans stuck on levels that no longer match amount bands.
-    if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
+    if not _committee_is_open(loan_request):
+        reconcile_skip = True
+    else:
+        reconcile_skip = False
+    if not reconcile_skip:
         reconcile_approval_routing(loan_request)
         loan_request.refresh_from_db()
     level = loan_request.current_approval_level
@@ -670,16 +688,19 @@ def get_committee_tally(loan_request, current_user=None) -> Dict[str, Any]:
 
 def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
     errors = []
-    if not loan_request.appraisal_completed_at:
-        errors.append('Finish the appraisal on Sheet 6 (Summary & decision) before submitting to committee.')
+    from loans.engines import get_engine
+    engine = get_engine(loan_request)
     appraisal = get_appraisal_for_loan(loan_request)
-    if not appraisal:
-        errors.append('No appraisal record found — complete Sheets 1–6 first.')
-    else:
-        if not appraisal.amount_approved or appraisal.amount_approved <= 0:
-            errors.append('Enter the recommended amount on Sheet 6 (Summary & decision).')
-        if appraisal.recommendation not in ('approve', 'escalate'):
-            errors.append('Sheet 6 recommendation must be Approve or Escalate to send to committee.')
+    if engine.requires_appraisal_sheets():
+        if not loan_request.appraisal_completed_at:
+            errors.append('Finish the appraisal on Sheet 6 (Summary & decision) before submitting to committee.')
+        if not appraisal:
+            errors.append('No appraisal record found — complete Sheets 1–6 first.')
+        else:
+            if not appraisal.amount_approved or appraisal.amount_approved <= 0:
+                errors.append('Enter the recommended amount on Sheet 6 (Summary & decision).')
+            if appraisal.recommendation not in ('approve', 'escalate'):
+                errors.append('Sheet 6 recommendation must be Approve or Escalate to send to committee.')
     if not get_levels_for_loan(loan_request):
         errors.append('No approval committee levels are configured (Settings → Approval committees).')
     from loans.appraisal_policy import get_loan_analysis_policy
@@ -692,12 +713,21 @@ def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
     if origination_compliance_blocked(loan_request):
         for msg in compliance_blockers(loan_request)[:2]:
             errors.append(f'Fraud/AML case open — {msg}')
-    if loan_request.committee_status == loan_request.COMMITTEE_PENDING:
+    from loans.kyc_desk import kyc_committee_blockers
+    from loans.crm_cycle import crm_committee_blockers
+    from loans.services.document_auth import document_committee_blockers
+    errors.extend(kyc_committee_blockers(loan_request))
+    errors.extend(crm_committee_blockers(loan_request))
+    errors.extend(document_committee_blockers(loan_request))
+    if loan_request.committee_status in (
+        loan_request.COMMITTEE_PENDING, loan_request.COMMITTEE_PENDED,
+    ):
         errors.append('This loan is already in the approval committee workflow.')
     if loan_request.committee_status == loan_request.COMMITTEE_APPROVED:
         errors.append('Committee has already approved this loan.')
     if loan_request.committee_status == loan_request.COMMITTEE_DECLINED:
         errors.append('Committee declined this loan — contact an administrator to reopen.')
+    errors.extend(engine.committee_blockers())
     routing = get_approval_routing_summary(loan_request)
     return {
         'ok': not errors,
@@ -710,9 +740,9 @@ def officer_can_submit_to_committee(loan_request) -> Dict[str, Any]:
 def user_can_return_to_officer(user, loan_request) -> bool:
     """Eligible voter at current level, or admin, may return loan for corrections."""
     if getattr(user, 'is_superuser', False) or user.role in ('superadmin', 'admin'):
-        return loan_request.committee_status == loan_request.COMMITTEE_PENDING
+        return _committee_is_open(loan_request)
     level = loan_request.current_approval_level
-    if not level or loan_request.committee_status != loan_request.COMMITTEE_PENDING:
+    if not level or not _committee_is_open(loan_request):
         return False
     return user_can_vote_at_level(user, loan_request, level)
 
@@ -1030,13 +1060,13 @@ def _advance_after_level_decision(loan_request, level, decision: str) -> bool:
 
 def try_finalize_level_decision(loan_request, level) -> bool:
     """Check votes at current level; advance or finalize if thresholds met (or tie broken)."""
-    if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
+    if not _committee_is_open(loan_request):
         return False
     # Repair stuck routing before tallying (e.g. district pending after band change).
     if reconcile_approval_routing(loan_request):
         return True
     loan_request.refresh_from_db()
-    if loan_request.committee_status != loan_request.COMMITTEE_PENDING:
+    if not _committee_is_open(loan_request):
         return True
     if loan_request.current_approval_level_id != level.id:
         return False
@@ -1045,6 +1075,9 @@ def try_finalize_level_decision(loan_request, level) -> bool:
     decision, _reason = resolve_level_vote_decision(loan_request, level, tally)
     if decision in ('approve', 'decline'):
         return _advance_after_level_decision(loan_request, level, decision)
+    if tally.get('pend_count') and loan_request.committee_status != loan_request.COMMITTEE_PENDED:
+        loan_request.committee_status = loan_request.COMMITTEE_PENDED
+        loan_request.save(update_fields=['committee_status'])
     return False
 
 

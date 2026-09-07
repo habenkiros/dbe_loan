@@ -157,6 +157,8 @@ def _read_license_key_from_env_or_file() -> str:
 
 def license_enforced() -> bool:
     """Enforce when LICENSE_ENFORCE is on, or when DEBUG is off (on-prem default)."""
+    if getattr(settings, 'TESTING', False):
+        return False
     raw = (os.getenv('LICENSE_ENFORCE') or getattr(settings, 'LICENSE_ENFORCE', '') or '').strip().lower()
     if raw in ('1', 'true', 'yes', 'on'):
         return True

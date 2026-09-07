@@ -1,0 +1,45 @@
+{% extends "applicant_portal/base.html" %}
+{% block title %}Register — {{ actor_kind|title }}{% endblock %}
+{% block wrap_class %}ap-narrow{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <div class="ap-auth-intro">
+    <p class="ap-lp-hero-kicker" style="color:var(--accent);margin-bottom:0.5rem;">Digital Apply</p>
+    <h1 class="ap-hero-title">
+      {% if actor_kind == 'institution' %}Institution account{% else %}Promoter account{% endif %}
+    </h1>
+    <p class="ap-sub">
+      {% if actor_kind == 'institution' %}
+      For banks, MFIs, leasing companies, and RUSACCOs applying for a wholesale / PFI facility.
+      You will fill the institution file yourself — the same dossier DBE officers use.
+      {% else %}
+      For project sponsors and idea / quasi-equity ventures.
+      You will fill the project or idea file yourself — sources &amp; uses, cap table — not only a one-page request.
+      {% endif %}
+    </p>
+    <p class="ap-help">
+      Retail customers should
+      <a href="{% url 'applicant_portal:register' %}">register with a customer number</a> instead.
+    </p>
+  </div>
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% if password_hints %}<p class="ap-help">{{ password_hints }}</p>{% endif %}
+    {% for field in form %}
+      {% if field.is_hidden %}
+        {{ field }}
+      {% else %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="ap-help">{{ field.help_text }}</p>{% endif %}
+        {{ field.errors }}
+      {% endif %}
+    {% endfor %}
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-primary" type="submit">Create account</button>
+      <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:login' %}">Sign in</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

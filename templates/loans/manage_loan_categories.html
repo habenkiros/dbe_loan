@@ -5,18 +5,28 @@
 
 {% block content %}
 <h1>Manage Loan Categories</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Add Loan Category</button>
-</form>
+<p class="help">
+  Each loan type picks a product family. The family default fills appraisal method and
+  collateral; you can change them, or turn collateral off for unsecured products.
+</p>
+<ul class="help" style="margin:0.5rem 0 1rem;padding-left:1.2rem;">
+  <li>Project financing — promoter, debt–equity, equity before first release</li>
+  <li>Lease / Ijarah — new asset, 20% contribution, bank holds title</li>
+  <li>Wholesale / PFI — institution file, not MSME cashflow (usually no collateral)</li>
+  <li>Murabaha — cost-plus sale (TA’AWUN)</li>
+  <li>Idea — quasi-equity, DBE share, start-up ≤ 5 years (usually no collateral)</li>
+  <li>External fund — same credit file, tagged to a donor window</li>
+</ul>
+{% include "loans/_loan_category_form.html" with submit_label="Add Loan Category" %}
 <div class="table-container">
     <table>
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Product family</th>
                 <th>Appraisal mode</th>
+                <th>Collateral</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -25,7 +35,9 @@
             <tr>
                 <td>{{ category.id }}</td>
                 <td>{{ category.name }}</td>
+                <td>{{ category.get_product_family_display }}</td>
                 <td>{{ category.get_appraisal_mode_display }}</td>
+                <td>{% if category.needs_collateral %}Required{% else %}Not required{% endif %}</td>
                 <td>
                     <div class="list-actions">
                     {% url 'edit_loan_category' category.id as edit_url %}

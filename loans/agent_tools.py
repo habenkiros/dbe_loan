@@ -654,6 +654,11 @@ def _tool_register_collateral(user, args: Dict[str, Any], conversation) -> Dict[
     return out
 
 
+def _project_overlay_brief(loan) -> Optional[Dict[str, Any]]:
+    from loans.engines import get_engine
+    return get_engine(loan).assist_brief()
+
+
 def _tool_read_appraisal(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
     if not user_can_work_appraisal_via_agent(user):
         return {'ok': False, 'error': 'Not allowed to work appraisal via Assist.'}
@@ -752,6 +757,15 @@ def _tool_read_appraisal(user, args: Dict[str, Any], conversation) -> Dict[str, 
         else:
             sheets_brief[str(k)] = v
 
+    _engine_brief = _project_overlay_brief(loan)
+    from loans.rehab import postbook_brief
+    desk_compact = {}
+    try:
+        from loans.product_intel import compact_product_desk
+        desk_compact = compact_product_desk(loan) or {}
+    except Exception:
+        desk_compact = {}
+
     return {
         'ok': True,
         'loan_request_code': loan.loan_request_id,
@@ -760,6 +774,14 @@ def _tool_read_appraisal(user, args: Dict[str, Any], conversation) -> Dict[str, 
         'amount_requested': float(loan.amount_requested or 0),
         'appraisal_mode': mode,
         'mode_label': mode_label(mode),
+        'product_family': getattr(getattr(loan, 'category', None), 'product_family', 'general'),
+        'product_family_label': (
+            loan.category.get_product_family_display() if getattr(loan, 'category_id', None) else ''
+        ),
+        'engine': _engine_brief,
+        'project_overlay': _engine_brief,
+        'product_desk': desk_compact,
+        'postbook': postbook_brief(loan),
         'officer_checklist': officer_checklist_for_mode(mode),
         'analysis_assist': {
             'score_total': assist.get('score_total'),

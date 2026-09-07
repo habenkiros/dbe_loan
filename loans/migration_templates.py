@@ -17,9 +17,11 @@ from loans.models import (
     CollateralType,
     CustomUser,
     Department,
+    FinancingFund,
     LoanCategory,
     LoanRequest,
 )
+from loans.product_family import FAMILY_CHOICES
 
 # (header, width, comment, dropdown_key or None)
 Col = Tuple[str, int, str, str]
@@ -103,10 +105,34 @@ SHEET_SPECS: List[Dict] = [
         'columns': [
             ('name', 36, 'Product / loan type name', None),
             ('appraisal_mode', 18, 'msme (cashflow) or corporate', 'appraisal_mode'),
+            ('product_family', 18, 'general (DECSI default) or project/lease/wholesale/…', 'product_family'),
         ],
         'examples': [
-            {'name': 'MSME Trade', 'appraisal_mode': 'msme'},
-            {'name': 'Corporate Working Capital', 'appraisal_mode': 'corporate'},
+            {'name': 'MSME Trade', 'appraisal_mode': 'msme', 'product_family': 'general'},
+            {'name': 'Corporate Working Capital', 'appraisal_mode': 'corporate', 'product_family': 'general'},
+            {'name': 'Project Financing', 'appraisal_mode': 'corporate', 'product_family': 'project'},
+        ],
+    },
+    {
+        'kind': 'financing_funds',
+        'title': '16_Funding_Windows',
+        'columns': [
+            ('code', 16, 'Unique short id, e.g. KFW21826', None),
+            ('name', 36, 'Display name', None),
+            ('kind', 14, 'own_book | government | donor | other', 'fund_kind'),
+            ('source_name', 24, 'KfW / EU, IFAD, EIB, MoF, …', None),
+            ('is_active', 12, 'TRUE or FALSE', 'yesno'),
+            ('notes', 40, 'Optional', None),
+        ],
+        'examples': [
+            {
+                'code': 'OWN', 'name': 'Own book', 'kind': 'own_book',
+                'source_name': '', 'is_active': 'TRUE', 'notes': '',
+            },
+            {
+                'code': 'KFW21826', 'name': 'EU/KfW MSME recovery', 'kind': 'donor',
+                'source_name': 'KfW / EU', 'is_active': 'TRUE', 'notes': 'Tigray, Amhara, Afar PFIs',
+            },
         ],
     },
     {
@@ -134,7 +160,7 @@ SHEET_SPECS: List[Dict] = [
             ('max_file_size_mb', 16, 'Blank = bank default', None),
             ('enable_ocr_match', 16, 'TRUE to match name/phone/TIN from OCR', 'yesno'),
             ('require_officer_verification', 24, 'TRUE = officer must confirm', 'yesno'),
-            ('for_appraisal_mode', 18, 'blank = both, or msme / corporate', 'appraisal_mode_or_all'),
+            ('for_appraisal_mode', 22, 'blank = all, or msme / corporate / project / lease / wholesale / ifb_murabaha / ifb_ijarah / idea_equity / consumer', 'appraisal_mode_or_all'),
             ('auth_notes', 40, 'Hint shown at upload', None),
         ],
         'examples': [
@@ -266,6 +292,7 @@ SHEET_SPECS: List[Dict] = [
             ('customer_number', 18, 'CBS / Temenos customer id', None),
             ('customer_history', 16, 'new or existing', 'customer_history'),
             ('category', 28, 'Must match 07_Loan_Categories.name', None),
+            ('financing_fund', 16, 'Optional. Must match 16_Funding_Windows.code', None),
             ('collateral', 24, 'Must match 08_Collateral_Types.name', None),
             ('amount_requested', 18, 'ETB', None),
             ('reason', 40, 'Purpose / remarks', None),
@@ -286,7 +313,7 @@ SHEET_SPECS: List[Dict] = [
                 'loan_request_id': '', 'applicant_name': 'Hagos Tesfay',
                 'phone_number': '0914111222', 'email': '', 'customer_number': 'CIF001',
                 'customer_history': 'existing', 'category': 'MSME Trade',
-                'collateral': 'Building / House', 'amount_requested': 250000,
+                'financing_fund': '', 'collateral': 'Building / House', 'amount_requested': 250000,
                 'reason': 'Working capital', 'status': 'Pending',
                 'district': 'Mekelle District', 'branch': 'Mekelle Main Branch',
                 'date_requested': '2026-01-15', 'origin_level': 'branch',
@@ -305,6 +332,8 @@ def _dropdowns() -> Dict[str, List[str]]:
         'role': roles,
         'department_key': [k for k, _ in Department.KEY_CHOICES],
         'appraisal_mode': [LoanCategory.MODE_MSME, LoanCategory.MODE_CORPORATE],
+        'product_family': [k for k, _ in FAMILY_CHOICES],
+        'fund_kind': [k for k, _ in FinancingFund.KIND_CHOICES],
         'appraisal_mode_or_all': ['', LoanCategory.MODE_MSME, LoanCategory.MODE_CORPORATE],
         'collateral_kind': [k for k, _ in CollateralType.KIND_CHOICES],
         'yesno': ['TRUE', 'FALSE'],

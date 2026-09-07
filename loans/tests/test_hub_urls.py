@@ -34,9 +34,44 @@ class StaffHubRedirectTests(TestCase):
         self.assertTrue(reverse('home').startswith('/hub'))
         self.assertTrue(reverse('login').startswith('/hub/login'))
         self.assertTrue(reverse('agent_chat_api').startswith('/hub/agent/chat'))
+        self.assertTrue(reverse('appraisal_desk').startswith('/hub/appraisal'))
+        self.assertTrue(reverse('its_desk').startswith('/hub/its'))
+        self.assertTrue(reverse('mis_desk').startswith('/hub/mis'))
 
     def test_applicant_login_stays_on_root(self):
         resp = self.client.get('/login/')
         self.assertEqual(resp.status_code, 200)
         # Must NOT redirect to hub login
         self.assertEqual(resp.request['PATH_INFO'], '/login/')
+
+
+class HubAdminRoleTests(TestCase):
+    """admin.sys is role=admin, often without Django is_superuser."""
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(
+            username='admin.sys',
+            password='Demo@12345',
+            phone_number='0911000001',
+            role='admin',
+            is_staff=True,
+            is_superuser=False,
+        )
+
+    def test_hub_admin_sees_workbench_and_settings(self):
+        self.client.login(username='admin.sys', password='Demo@12345')
+        home = self.client.get(reverse('home'))
+        self.assertEqual(home.status_code, 200)
+        self.assertContains(home, 'System workbench')
+        self.assertContains(home, 'Users')
+        self.assertContains(home, 'Settings')
+
+        users = self.client.get(reverse('manage_users'))
+        self.assertEqual(users.status_code, 200)
+
+        cats = self.client.get(reverse('manage_loan_categories'))
+        self.assertEqual(cats.status_code, 200)
+
+        districts = self.client.get(reverse('manage_districts'))
+        self.assertEqual(districts.status_code, 200)

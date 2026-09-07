@@ -67,7 +67,8 @@ def mfa_required() -> bool:
 
 
 def mfa_issuer() -> str:
-    return getattr(settings, 'MFA_TOTP_ISSUER', 'DECSI Loan Hub') or 'DECSI Loan Hub'
+    from loans.branding import mfa_issuer_default
+    return getattr(settings, 'MFA_TOTP_ISSUER', None) or mfa_issuer_default()
 
 
 def _fernet() -> Optional[Any]:

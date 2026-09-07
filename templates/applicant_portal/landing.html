@@ -16,7 +16,9 @@
       pay the processing fee online, and keep a queue ID for branch follow-up.
     </p>
     <div class="ap-btn-row">
-      <a class="ap-btn ap-btn-light" href="{% url 'applicant_portal:register' %}">Create account</a>
+      <a class="ap-btn ap-btn-light" href="{% url 'applicant_portal:register' %}">I am a customer</a>
+      <a class="ap-btn ap-btn-outline-light" href="{% url 'applicant_portal:register' %}?kind=institution">I am a bank / MFI</a>
+      <a class="ap-btn ap-btn-outline-light" href="{% url 'applicant_portal:register' %}?kind=promoter">I have a project / idea</a>
       <a class="ap-btn ap-btn-outline-light" href="{% url 'applicant_portal:login' %}">I already have an account</a>
     </div>
     <p class="ap-lp-scroll">Scroll for how it works</p>
@@ -30,7 +32,7 @@
     <ol class="ap-journey">
       <li>
         <strong>Register once</strong>
-        <p>Use your mobile number and DECSI customer number so we can match your core-banking profile when available.</p>
+        <p>Customers use a mobile number and {{ institution_short|default:"DBE" }} customer number. Banks, MFIs, and project promoters use a separate door — no retail customer number.</p>
       </li>
       <li>
         <strong>Choose your loan</strong>
@@ -57,7 +59,7 @@
         <span class="ap-need-icon" aria-hidden="true">1</span>
         <div>
           <h3>Customer number</h3>
-          <p>Your DECSI customer number from the branch or passbook — used to look up your registered name and phone.</p>
+          <p>Your {{ institution_short|default:"DBE" }} customer number from the branch or passbook — used to look up your registered name and phone.</p>
         </div>
       </li>
       <li>

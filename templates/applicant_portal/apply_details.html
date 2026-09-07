@@ -1,70 +1,116 @@
 {% extends "applicant_portal/base.html" %}
-{% block title %}Application details{% endblock %}
+{% block title %}Financing details{% endblock %}
 {% block content %}
 {% include "applicant_portal/_steps.html" with step=1 %}
 <div class="ap-card">
-  <h1 class="ap-hero-title">Loan details</h1>
-  <p class="ap-sub">Choose district and branch carefully. Only branches in the selected district are shown. Documents depend on loan type.</p>
+  <h1 class="ap-hero-title">Financing details</h1>
+  <p class="ap-sub">
+    Choose the DBE product first. District and branch next. Documents and the product file follow the loan type.
+  </p>
   <form method="post" id="ap-details-form">
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% for field in form %}
+      {% if field.name == 'category' %}
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>
       {{ field }}
       {% if field.help_text %}<p class="ap-help">{{ field.help_text }}</p>{% endif %}
       {{ field.errors }}
+      <div id="dbe-family-guide" class="ap-card" style="display:none;margin:0.5rem 0 1rem;padding:0.85rem 1rem;background:#fffdf5;box-shadow:none;">
+        <strong id="dbe-family-title"></strong>
+        <p id="dbe-family-text" class="ap-help" style="margin:0.4rem 0 0;"></p>
+      </div>
+      {% else %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="ap-help">{{ field.help_text }}</p>{% endif %}
+      {{ field.errors }}
+      {% endif %}
     {% endfor %}
     <div class="ap-btn-row">
-      <button class="ap-btn ap-btn-primary" type="submit">Save &amp; continue to documents</button>
+      <button class="ap-btn ap-btn-primary" type="submit">Save &amp; continue to {{ next_label|default:"documents" }}</button>
       <a class="ap-btn ap-btn-ghost" href="{% url 'applicant_portal:home' %}">Back</a>
     </div>
   </form>
 </div>
+{{ family_payload|json_script:"dbe-family-payload" }}
 <script>
 (function () {
   var district = document.getElementById('id_district');
   var branch = document.getElementById('id_branch');
-  if (!district || !branch) return;
-  var branchesUrl = '{% url "applicant_portal:ajax_branches" %}';
-  var selectedBranch = branch.value || '';
+  if (district && branch) {
+    var branchesUrl = '{% url "applicant_portal:ajax_branches" %}';
+    var selectedBranch = branch.value || '';
 
-  function setBranches(items, keepId) {
-    branch.innerHTML = '';
-    var opt0 = document.createElement('option');
-    opt0.value = '';
-    opt0.textContent = '— Select branch —';
-    branch.appendChild(opt0);
-    (items || []).forEach(function (b) {
-      var o = document.createElement('option');
-      o.value = String(b.id);
-      o.textContent = b.name;
-      if (keepId && String(b.id) === String(keepId)) o.selected = true;
-      branch.appendChild(o);
+    function setBranches(items, keepId) {
+      branch.innerHTML = '';
+      var opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = '— Select branch —';
+      branch.appendChild(opt0);
+      (items || []).forEach(function (b) {
+        var o = document.createElement('option');
+        o.value = String(b.id);
+        o.textContent = b.name;
+        if (keepId && String(b.id) === String(keepId)) o.selected = true;
+        branch.appendChild(o);
+      });
+    }
+
+    function loadBranches(districtId, keepId) {
+      if (!districtId) {
+        setBranches([], '');
+        return;
+      }
+      fetch(branchesUrl + '?district_id=' + encodeURIComponent(districtId), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { setBranches(data.branches || data || [], keepId); })
+        .catch(function () { setBranches([], ''); });
+    }
+
+    district.addEventListener('change', function () {
+      loadBranches(district.value, '');
+    });
+    if (district.value && branch.options.length <= 1) {
+      loadBranches(district.value, selectedBranch);
+    }
+  }
+
+  var payloadEl = document.getElementById('dbe-family-payload');
+  var cat = document.getElementById('id_category');
+  var guide = document.getElementById('dbe-family-guide');
+  var title = document.getElementById('dbe-family-title');
+  var text = document.getElementById('dbe-family-text');
+  if (!payloadEl || !cat || !guide) return;
+  var byId = {};
+  JSON.parse(payloadEl.textContent).forEach(function (row) { byId[String(row.id)] = row; });
+  function filterCollateral(ids) {
+    var sel = document.getElementById('id_collateral');
+    if (!sel) return;
+    var allow = {};
+    (ids || []).forEach(function (id) { allow[String(id)] = true; });
+    var restrict = (ids || []).length > 0;
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      if (!opt.value) { opt.hidden = false; opt.disabled = false; return; }
+      var ok = !restrict || allow[String(opt.value)];
+      opt.hidden = !ok;
+      opt.disabled = !ok;
+      if (!ok && opt.selected) opt.selected = false;
     });
   }
-
-  function loadBranches(districtId, keepId) {
-    if (!districtId) {
-      setBranches([], '');
-      return;
-    }
-    fetch(branchesUrl + '?district_id=' + encodeURIComponent(districtId), {
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) { setBranches(data.branches || data || [], keepId); })
-      .catch(function () { setBranches([], ''); });
+  function apply() {
+    var row = byId[cat.value];
+    if (!row) { guide.style.display = 'none'; return; }
+    title.textContent = row.family_label;
+    text.textContent = row.guide;
+    guide.style.display = 'block';
+    filterCollateral(row.collateral_ids);
   }
-
-  district.addEventListener('change', function () {
-    loadBranches(district.value, '');
-  });
-
-  // On first load, ensure options match district if branch was preselected server-side
-  if (district.value && branch.options.length <= 1) {
-    loadBranches(district.value, selectedBranch);
-  }
+  cat.addEventListener('change', apply);
+  apply();
 })();
 </script>
 {% endblock %}

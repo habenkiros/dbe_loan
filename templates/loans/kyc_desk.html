@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}KYC desk{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <section class="dash-hero">
+    <div>
+      <h1>Scan / KYC desk</h1>
+      <p>
+        Parallel screening for DBE product files: Scan/Admin for digital apply,
+        then CRM, Engineering, and Legal on their own packs.
+        {% if my_desk %}<strong>Your work unit: {{ my_desk }}</strong>.{% endif %}
+      </p>
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+    {% for key, label in queue_choices %}
+    <a href="?queue={{ key }}"
+       style="text-decoration:none;border:1px solid {% if queue == key %}#1a5c3a{% else %}#c9dbd1{% endif %};background:{% if queue == key %}#e8f5ee{% else %}#fff{% endif %};padding:0.4rem 0.7rem;border-radius:4px;font-size:0.9rem;color:#1a2e24;">
+      {{ label }} · <strong>
+        {% if key == 'mine' %}{{ counts.mine }}
+        {% elif key == 'scan' %}{{ counts.scan }}
+        {% elif key == 'crm' %}{{ counts.crm }}
+        {% elif key == 'appraisal' %}{{ counts.appraisal }}
+        {% elif key == 'engineering' %}{{ counts.engineering }}
+        {% elif key == 'legal' %}{{ counts.legal }}
+        {% elif key == 'cleared' %}{{ counts.cleared }}
+        {% else %}0{% endif %}
+      </strong>
+    </a>
+    {% endfor %}
+  </div>
+
+  <section class="lw-panel">
+    <h3>{{ scope_label }}</h3>
+    {% if page_obj and page_obj.object_list %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Queue ID</th>
+          <th>Applicant</th>
+          <th>Product</th>
+          <th>Branch</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in page_obj %}
+        <tr>
+          <td>{{ loan.loan_request_id }}</td>
+          <td>{{ loan.applicant_name }}</td>
+          <td>{{ loan.category.get_product_family_display }}</td>
+          <td>{{ loan.branch }}</td>
+          <td><a href="{% url 'loan_request_detail' loan.id %}">Open file</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="help">No files in this queue.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

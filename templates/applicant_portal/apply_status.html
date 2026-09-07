@@ -77,6 +77,9 @@
     {% if status.can_continue_draft and continue_url %}
     <a class="ap-btn ap-btn-primary" href="{{ continue_url }}">Continue application</a>
     {% endif %}
+    {% if application.category and application.category.product_family != 'general' and application.category.product_family != 'consumer' %}
+    <a class="ap-btn ap-btn-primary" href="{% url 'applicant_portal:apply_product' application.public_id %}">Open product file</a>
+    {% endif %}
     {% if status.has_repayment_schedule %}
     <a class="ap-btn {% if status.schedule_ready %}ap-btn-primary{% else %}ap-btn-ghost{% endif %}"
        href="{% url 'applicant_portal:apply_schedule' application.public_id %}">

@@ -138,6 +138,8 @@ def disbursement_readiness(loan_request) -> Dict[str, Any]:
     if requirement_on(loan_request, 'own_contribution_required'):
         if not loan_request.own_contribution_verified_at:
             blockers.append('Borrower own-contribution / equity must be verified before disbursement.')
+    from loans.engines import get_engine
+    blockers.extend(get_engine(loan_request).disbursement_blockers())
     from loans.compliance.case_engine import (
         disbursement_compliance_blocked,
         compliance_blockers,
@@ -415,7 +417,7 @@ def verify_own_contribution(loan_request, user, *, amount=None, note='') -> None
     ])
 
 
-def add_disbursement_tranche(loan_request, amount, *, note='', sequence=None):
+def add_disbursement_tranche(loan_request, amount, *, note='', sequence=None, purpose_code='', lc_status=''):
     from loans.models import LoanDisbursementTranche
 
     if sequence is None:
@@ -426,6 +428,8 @@ def add_disbursement_tranche(loan_request, amount, *, note='', sequence=None):
         sequence=sequence,
         amount=amount,
         note=note or '',
+        purpose_code=(purpose_code or '').strip(),
+        lc_status=(lc_status or '').strip(),
     )
 
 
@@ -443,6 +447,10 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
         return False, ['Loan must be marked ready for disbursement first.']
     if not loan_request.finance_disbursement_approval:
         return False, ['Finance department must approve disbursement before confirmation.']
+    from loans.engines import get_engine
+    engine_blockers = get_engine(loan_request).disbursement_blockers()
+    if engine_blockers:
+        return False, engine_blockers
 
     booking_note = ''
     book_cbs = (
@@ -509,6 +517,8 @@ def mark_disbursed(loan_request, user, *, notes: str = '') -> Tuple[bool, List[s
         next_t.disbursed_at = timezone.now()
         next_t.disbursed_by = user
         next_t.save(update_fields=['status', 'disbursed_at', 'disbursed_by'])
+        from loans.engines import get_engine
+        get_engine(loan_request).consume_draw(next_t)
         if next_pending_tranche(loan_request):
             loan_request.disbursement_status = loan_request.DISBURSE_PARTIAL
             note_parts = [p for p in (notes.strip() if notes else '', booking_note, f'Tranche {next_t.sequence} released') if p]

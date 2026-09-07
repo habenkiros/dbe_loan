@@ -11,6 +11,16 @@ from . import views_book
 from . import views_compliance
 from . import views_legal
 from . import views_policy
+from . import views_project
+from . import views_wholesale
+from . import views_fund
+from . import views_lease
+from . import views_murabaha
+from . import views_idea
+from . import views_consumer
+from . import views_kyc
+from . import views_directorate
+from . import views_rehab
 from applicant_portal import hub_views as applicant_hub_views
 
 urlpatterns = [
@@ -31,6 +41,15 @@ urlpatterns = [
     ),
     path('compliance/cases/<int:case_id>/', views_compliance.compliance_case_detail, name='compliance_case_detail'),
     path('compliance/cases/<int:case_id>/action/', views_compliance.compliance_case_action, name='compliance_case_action'),
+    path('kyc/', views_kyc.kyc_desk, name='kyc_desk'),
+    path(
+        'kyc/loans/<int:loan_request_id>/action/',
+        views_kyc.kyc_screening_action,
+        name='kyc_screening_action',
+    ),
+    path('appraisal/', views_directorate.appraisal_desk, name='appraisal_desk'),
+    path('its/', views_directorate.its_desk, name='its_desk'),
+    path('mis/', views_directorate.mis_desk, name='mis_desk'),
     path('legal/', views_legal.legal_desk, name='legal_desk'),
     path('legal/loans/<int:loan_request_id>/', views_legal.legal_loan_detail, name='legal_loan_detail'),
     path('legal/loans/<int:loan_request_id>/action/', views_legal.legal_loan_action, name='legal_loan_action'),
@@ -54,6 +73,42 @@ urlpatterns = [
         'monitoring/<int:loan_request_id>/watchlist/',
         views_book.monitoring_watchlist,
         name='monitoring_watchlist',
+    ),
+    path('rehab/', views_rehab.rehab_desk, name='rehab_desk'),
+    path(
+        'rehab/<int:loan_request_id>/',
+        views_rehab.rehab_loan,
+        name='rehab_loan',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/stage/',
+        views_rehab.rehab_set_stage,
+        name='rehab_set_stage',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/insurance/',
+        views_rehab.rehab_add_insurance,
+        name='rehab_add_insurance',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/revaluation/',
+        views_rehab.rehab_add_revaluation,
+        name='rehab_add_revaluation',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/revaluation/<int:row_id>/complete/',
+        views_rehab.rehab_complete_revaluation,
+        name='rehab_complete_revaluation',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/appeal/',
+        views_rehab.rehab_file_appeal,
+        name='rehab_file_appeal',
+    ),
+    path(
+        'rehab/<int:loan_request_id>/appeal/<int:appeal_id>/',
+        views_rehab.rehab_decide_appeal,
+        name='rehab_decide_appeal',
     ),
     path('collections/', views_book.collections_desk, name='collections_desk'),
     path(
@@ -124,6 +179,7 @@ urlpatterns = [
     path('edit_user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('create_loan_request/', views.create_loan_request, name='create_loan_request'),
     path('ajax/customer_lookup/', views.ajax_staff_lookup_customer, name='ajax_staff_lookup_customer'),
+    path('ajax/registration/', views.ajax_staff_registration_options, name='ajax_staff_registration_options'),
     path('delegations/', views_delegation.manage_delegations, name='manage_delegations'),
     path('delegations/<int:delegation_id>/approve/', views_delegation.approve_delegation, name='approve_delegation'),
     path('delegations/<int:delegation_id>/reject/', views_delegation.reject_delegation, name='reject_delegation'),
@@ -244,6 +300,136 @@ urlpatterns = [
         name='post_approval_add_tranche',
     ),
     path(
+        'loan_request/<int:loan_request_id>/project/',
+        views_project.project_file,
+        name='project_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/seed-lines/',
+        views_project.project_seed_lines,
+        name='project_seed_lines',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/line/',
+        views_project.project_add_line,
+        name='project_add_line',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/line/<int:line_id>/delete/',
+        views_project.project_delete_line,
+        name='project_delete_line',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/visit/',
+        views_project.project_implementation_visit,
+        name='project_implementation_visit',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/cashflow/',
+        views_project.project_add_cashflow,
+        name='project_add_cashflow',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/cashflow/<int:year_id>/delete/',
+        views_project.project_delete_cashflow,
+        name='project_delete_cashflow',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/desk/<str:desk>/',
+        views_project.project_desk_review,
+        name='project_desk_review',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/tranche/<int:tranche_id>/utilization/',
+        views_project.project_record_utilization,
+        name='project_record_utilization',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/project/equity-stage/',
+        views_project.project_set_equity_stage,
+        name='project_set_equity_stage',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/pfi/',
+        views_wholesale.wholesale_file,
+        name='wholesale_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/pfi/utilization/',
+        views_wholesale.wholesale_add_utilization,
+        name='wholesale_add_utilization',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/fund-tag/',
+        views_fund.fund_file_tag,
+        name='fund_file_tag',
+    ),
+    path(
+        'funding-windows/mis/',
+        views_fund.financing_fund_dashboard,
+        name='financing_fund_dashboard',
+    ),
+    path(
+        'funding-windows/<int:fund_id>/export/',
+        views_fund.financing_fund_export,
+        name='financing_fund_export',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/lease/',
+        views_lease.lease_file,
+        name='lease_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/lease/rent/',
+        views_lease.lease_add_rent,
+        name='lease_add_rent',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/lease/rent/<int:line_id>/delete/',
+        views_lease.lease_delete_rent,
+        name='lease_delete_rent',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/lease/sharia/',
+        views_lease.lease_sharia_review,
+        name='lease_sharia_review',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/murabaha/',
+        views_murabaha.murabaha_file,
+        name='murabaha_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/murabaha/sharia/',
+        views_murabaha.murabaha_sharia_review,
+        name='murabaha_sharia_review',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/idea/',
+        views_idea.idea_file,
+        name='idea_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/idea/cap/',
+        views_idea.idea_add_cap_row,
+        name='idea_add_cap_row',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/idea/cap/<int:row_id>/delete/',
+        views_idea.idea_delete_cap_row,
+        name='idea_delete_cap_row',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/consumer/',
+        views_consumer.consumer_file,
+        name='consumer_file',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/crm-cycle/',
+        views_kyc.crm_cycle_action,
+        name='crm_cycle_action',
+    ),
+    path(
         'loan_request/<int:loan_request_id>/post_approval/collateral_flags/',
         views.post_approval_collateral_flags,
         name='post_approval_collateral_flags',
@@ -300,7 +486,10 @@ urlpatterns = [
     path('manage_branches/', views.manage_branches, name='manage_branches'),
     path('edit_branch/<int:branch_id>/', views.edit_branch, name='edit_branch'),
     path('manage_loan_categories/', views.manage_loan_categories, name='manage_loan_categories'),
+    path('ajax/family-policy/', views.ajax_family_policy, name='ajax_family_policy'),
     path('edit_loan_category/<int:category_id>/', views.edit_loan_category, name='edit_loan_category'),
+    path('manage_financing_funds/', views.manage_financing_funds, name='manage_financing_funds'),
+    path('edit_financing_fund/<int:fund_id>/', views.edit_financing_fund, name='edit_financing_fund'),
     path(
         'manage_loan_category/<int:category_id>/documents/',
         views.manage_loan_category_documents,

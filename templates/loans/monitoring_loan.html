@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Monitor {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
-<p class="help"><a href="{% url 'monitoring_desk' %}">← Monitoring</a> · <a href="{% url 'collections_loan' loan_request.id %}">Collections</a> · <a href="{% url 'loan_request_detail' loan_request.id %}">Loan detail</a></p>
+<p class="help"><a href="{% url 'monitoring_desk' %}">← Monitoring</a> · <a href="{% url 'collections_loan' loan_request.id %}">Collections</a> · <a href="{% url 'rehab_loan' loan_request.id %}">Rehab / SLA</a> · <a href="{% url 'loan_request_detail' loan_request.id %}">Loan detail</a>{% if is_project %} · <a href="{% url 'project_file' loan_request.id %}">Project file</a>{% endif %}{% if is_wholesale %} · <a href="{% url 'wholesale_file' loan_request.id %}">PFI file</a>{% endif %}{% if is_lease %} · <a href="{% url 'lease_file' loan_request.id %}">{% if is_ijarah %}Ijarah{% else %}Lease{% endif %} file</a>{% endif %}{% if is_murabaha %} · <a href="{% url 'murabaha_file' loan_request.id %}">Murabaha file</a>{% endif %}{% if is_idea %} · <a href="{% url 'idea_file' loan_request.id %}">Idea file</a>{% endif %}</p>
 <h1>{{ loan_request.loan_request_id }}</h1>
-<p>{{ loan_request.applicant_name }} · {{ loan_request.branch.name }}</p>
+<p>{{ loan_request.applicant_name }} · {{ loan_request.branch.name }}
+  {% if postbook.has_rehab %} · Rehab: <strong>{{ postbook.rehab_stage_label }}</strong>{% endif %}
+  {% if postbook.sla.breached %} · <strong>SLA breach</strong>{% endif %}
+</p>
+{% if postbook %}{% include "loans/_sla_panel.html" with sla=postbook.sla %}{% endif %}
 
 <div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
   <h2 style="font-size:1.1rem;margin-top:0;">Watchlist</h2>
@@ -52,6 +56,28 @@
 
 <div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
   <h2 style="font-size:1.1rem;margin-top:0;">Visit diary</h2>
+  {% if is_project %}
+  <form method="post" action="{% url 'project_implementation_visit' loan_request.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="monitoring">
+    <label>Date</label>
+    <input type="date" name="visited_at" class="form-control" style="max-width:12rem;">
+    <label>Percent complete</label>
+    <input type="number" name="percent_complete" step="0.01" min="0" max="100" class="form-control" style="max-width:8rem;">
+    <label>Purpose</label>
+    <select name="purpose_code" class="form-control" style="max-width:16rem;">
+      <option value="civil">Civil works</option>
+      <option value="machinery">Machinery / equipment</option>
+      <option value="working_capital">Working capital</option>
+      <option value="insurance">Insurance / ancillary</option>
+      <option value="other">Other</option>
+    </select>
+    <label>Notes</label>
+    <textarea name="notes" class="form-control" rows="3" required></textarea>
+    <p><label><input type="checkbox" name="unlocks_next_tranche" value="1"> Unlock next tranche</label></p>
+    <p><button type="submit" class="btn btn-green">Record implementation visit</button></p>
+  </form>
+  {% else %}
   <form method="post" action="{% url 'monitoring_add_visit' loan_request.id %}">
     {% csrf_token %}
     <label>Date</label>
@@ -60,8 +86,13 @@
     <textarea name="notes" class="form-control" rows="3" required></textarea>
     <p><button type="submit" class="btn btn-green">Record visit</button></p>
   </form>
+  {% endif %}
   {% for v in visits %}
-  <p><strong>{{ v.visited_at }}</strong> {% if v.recorded_by %}· {{ v.recorded_by.username }}{% endif %}<br>{{ v.notes }}</p>
+  <p><strong>{{ v.visited_at }}</strong>
+    {% if v.visit_kind == 'implementation' %}· implementation{% endif %}
+    {% if v.percent_complete is not None %}· {{ v.percent_complete }}%{% endif %}
+    {% if v.unlocks_next_tranche and not v.unlocked_tranche_id %}· unlocks next tranche{% endif %}
+    {% if v.recorded_by %}· {{ v.recorded_by.username }}{% endif %}<br>{{ v.notes }}</p>
   {% empty %}
   <p class="help">No visits yet.</p>
   {% endfor %}

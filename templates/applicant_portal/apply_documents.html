@@ -3,11 +3,41 @@
 {% block content %}
 {% include "applicant_portal/_steps.html" with step=2 %}
 <div class="ap-card">
-  <h1 class="ap-hero-title">Upload documents</h1>
+  <h1 class="ap-hero-title">Identity and documents</h1>
   <p class="ap-sub">
     Checklist for <strong>{{ application.category.name }}</strong>.
-    Required items must be uploaded before payment.
+    Enter your ID details, then upload clear scans. Required items must pass a readable check before payment.
   </p>
+
+  <form method="post" style="margin-bottom:1.25rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="identity">
+    <h2 style="font-size:1.05rem;margin:0 0 0.5rem;">Your identity</h2>
+    <p class="ap-help">Used to match National ID / TIN scans. Fayda confirmation runs when the bank has a verify service configured.</p>
+    <label for="id_identity_kind">ID type</label>
+    <select class="ap-input" id="id_identity_kind" name="identity_kind">
+      {% for value, label in identity_kinds %}
+      <option value="{{ value }}"{% if kyc_party and kyc_party.identity_kind == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label for="id_legal_name_en">Full name (English)</label>
+    <input class="ap-input" id="id_legal_name_en" name="legal_name_en" value="{% if kyc_party %}{{ kyc_party.legal_name_en }}{% else %}{{ application.applicant_name }}{% endif %}">
+    <label for="id_legal_name_am">Full name (Amharic)</label>
+    <input class="ap-input" id="id_legal_name_am" name="legal_name_am" value="{% if kyc_party %}{{ kyc_party.legal_name_am }}{% endif %}">
+    <label for="id_fan">Fayda FAN</label>
+    <input class="ap-input" id="id_fan" name="fan" value="{% if kyc_party %}{{ kyc_party.fan }}{% endif %}" placeholder="Optional">
+    <label for="id_id_number">ID / passport number</label>
+    <input class="ap-input" id="id_id_number" name="id_number" value="{% if kyc_party %}{{ kyc_party.id_number }}{% endif %}">
+    <label for="id_tin">TIN</label>
+    <input class="ap-input" id="id_tin" name="tin" value="{% if kyc_party %}{{ kyc_party.tin }}{% endif %}">
+    {% if kyc_party %}
+    <p class="ap-help">Verification: {{ kyc_party.get_verify_status_display }}</p>
+    {% endif %}
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-ghost" type="submit">Save identity</button>
+    </div>
+  </form>
+
   {% if missing %}
   <p class="ap-help" style="color:var(--warn);">Still missing: {{ missing|join:", " }}</p>
   {% endif %}
@@ -28,7 +58,20 @@
         <tr>
           <td>{{ row.item.name }}</td>
           <td>{% if row.is_required %}<span class="ap-badge ap-badge-warn">Required</span>{% else %}<span class="ap-badge">Optional</span>{% endif %}</td>
-          <td>{% if row.have %}<span class="ap-badge ap-badge-ok">Uploaded</span>{% else %}—{% endif %}</td>
+          <td>
+            {% if row.have %}
+              {% if row.facing.retake %}
+              <span class="ap-badge ap-badge-warn">Retake</span>
+              {% elif row.facing.identity_match %}
+              <span class="ap-badge ap-badge-ok">Identity match</span>
+              {% elif row.facing.readable %}
+              <span class="ap-badge ap-badge-ok">Readable</span>
+              {% else %}
+              <span class="ap-badge ap-badge-ok">Uploaded</span>
+              {% endif %}
+              {% if row.facing.message %}<p class="ap-help">{{ row.facing.message }}</p>{% endif %}
+            {% else %}—{% endif %}
+          </td>
           <td>
             <input type="file" name="doc_type_{{ row.item.id }}" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
             {% if row.document %}

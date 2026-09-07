@@ -54,11 +54,25 @@ def monitoring_loan(request, loan_request_id):
             appraisal.conditions.filter(condition_type=AppraisalCondition.TYPE_COVENANT).order_by('due_date', 'id')
         )
     visits = loan.monitoring_visits.select_related('recorded_by')[:20]
+    from loans.rehab import postbook_summary
+    from loans.engines import get_engine
+    from loans.product_family import (
+        FAMILY_IDEA_EQUITY, FAMILY_IFB_IJARAH, FAMILY_IFB_MURABAHA,
+        FAMILY_LEASE, FAMILY_PROJECT, FAMILY_WHOLESALE,
+    )
+    engine = get_engine(loan)
     return render(request, 'loans/monitoring_loan.html', {
         'loan_request': loan,
         'covenants': covenants,
         'overdue': overdue_covenants(loan),
         'visits': visits,
+        'is_project': engine.family == FAMILY_PROJECT,
+        'is_wholesale': engine.family == FAMILY_WHOLESALE,
+        'is_lease': engine.family in (FAMILY_LEASE, FAMILY_IFB_IJARAH),
+        'is_ijarah': engine.family == FAMILY_IFB_IJARAH,
+        'is_murabaha': engine.family == FAMILY_IFB_MURABAHA,
+        'is_idea': engine.family == FAMILY_IDEA_EQUITY,
+        'postbook': postbook_summary(loan),
     })
 
 
@@ -148,11 +162,13 @@ def collections_desk(request):
 def collections_loan(request, loan_request_id):
     loan = _get_disbursed_loan(request.user, loan_request_id)
     actions = loan.collection_actions.select_related('recorded_by')[:30]
+    from loans.rehab import postbook_summary
     return render(request, 'loans/collections_loan.html', {
         'loan_request': loan,
         'actions': actions,
         'arrears_choices': LoanRequest.ARREARS_CHOICES,
         'can_decide': user_can_decide_workout(request.user),
+        'postbook': postbook_summary(loan),
     })
 
 
@@ -216,6 +232,12 @@ def collections_workout(request, loan_request_id):
         loan.save(update_fields=[
             'workout_status', 'workout_note', 'workout_proposed_amount', 'workout_proposed_term_months',
         ])
+        from loans.models import RehabCase
+        from loans.rehab import ensure_rehab_stage
+        ensure_rehab_stage(
+            loan, RehabCase.STAGE_RESTRUCTURE, request.user,
+            note=note,
+        )
         messages.success(request, 'Reschedule request submitted.')
         return redirect('collections_loan', loan_request_id=loan.id)
     if action in ('approve', 'reject') and user_can_decide_workout(request.user):

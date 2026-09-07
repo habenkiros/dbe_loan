@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Funding windows{% endblock %}
+{% block content %}
+<h1>Funding windows</h1>
+<p class="help">
+  Donor, government, and own-book lines that a loan file can be tagged against
+  (for example KfW/EU MSME recovery, RUFIP, or DBE own book). Leave files untagged if unused.
+  <a href="{% url 'financing_fund_dashboard' %}">Open envelope / covenant MIS →</a>
+</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add funding window</button>
+</form>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Kind</th>
+                <th>Source</th>
+                <th>Envelope</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fund in funds %}
+            <tr>
+                <td><code>{{ fund.code }}</code></td>
+                <td>{{ fund.name }}</td>
+                <td>{{ fund.get_kind_display }}</td>
+                <td>{{ fund.source_name|default:"—" }}</td>
+                <td>{{ fund.envelope_amount|default:"—" }}</td>
+                <td>{% if fund.is_active %}Yes{% else %}No{% endif %}</td>
+                <td>
+                    <div class="list-actions">
+                    {% url 'edit_financing_fund' fund.id as edit_url %}
+                    {% include "includes/list_action.html" with href=edit_url icon="edit" label="Edit funding window" tone="blue" only %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No funding windows yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

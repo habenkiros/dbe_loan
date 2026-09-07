@@ -61,7 +61,7 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
           &nbsp;· Current: <strong>{{ committee_tally.current_level.name }}</strong>
         {% endif %}
         {% if committee_tally.current_tally %}
-          &nbsp;· Votes {{ committee_tally.current_tally.approve_count }}✓ / {{ committee_tally.current_tally.decline_count }}✗
+          &nbsp;· Votes {{ committee_tally.current_tally.approve_count }}✓ / {{ committee_tally.current_tally.decline_count }}✗{% if committee_tally.current_tally.pend_count %} / {{ committee_tally.current_tally.pend_count }} pend{% endif %}
           {% if committee_tally.current_tally.approvals_needed %}
             · Need {{ committee_tally.current_tally.approvals_needed }} more approval{{ committee_tally.current_tally.approvals_needed|pluralize }}
           {% endif %}

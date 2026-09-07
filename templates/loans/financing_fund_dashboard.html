@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Funding-window MIS{% endblock %}
+{% block content %}
+<p class="help">
+  <a href="{% url 'manage_financing_funds' %}">← Funding windows</a>
+</p>
+<h1>Funding-window MIS</h1>
+<p class="help">
+  Envelope vs committed files, and women / youth / climate mix for donor reporting.
+  A wholesale facility is usually booked on a window; the PFI file is a different object.
+</p>
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th><th>Name</th><th>Envelope</th><th>Committed</th>
+        <th>Remaining</th><th>Files</th><th>Women / youth</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in funds %}
+      <tr>
+        <td><code>{{ row.fund.code }}</code></td>
+        <td>{{ row.fund.name }}</td>
+        <td>{{ row.book.envelope|default:"—" }}</td>
+        <td>{{ row.book.committed|floatformat:2 }}</td>
+        <td>{{ row.book.remaining|default:"—" }}</td>
+        <td>{{ row.book.file_count }}</td>
+        <td>{{ row.book.women_pct|default:"—" }} / {{ row.book.youth_pct|default:"—" }}</td>
+        <td>
+          <a href="{% url 'financing_fund_export' row.fund.id %}">Export</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8">No funding windows.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

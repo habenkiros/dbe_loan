@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Consumer file — {{ loan_request.loan_request_id }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+{% block content %}
+<p class="help">
+  <a href="{% url 'loan_request_detail' loan_request.id %}">← Loan detail</a>
+  {% if loan_request.committee_status == 'committee_approved' %}
+  · <a href="{% url 'post_approval_detail' loan_request.id %}">Post-approval</a>
+  {% endif %}
+</p>
+<h1>Consumer / HRM · {{ loan_request.loan_request_id }}</h1>
+<p>{{ loan_request.applicant_name }} · {{ loan_request.category.get_product_family_display }}</p>
+<p class="help">
+  Housing or vehicle. Salary, DTI (obligations ÷ pay), and LTV (amount ÷ asset).
+  Not MSME Sheet 3.
+</p>
+
+{% include "loans/_product_intel_panel.html" %}
+
+{% if overlay %}
+<p>
+  DTI
+  <strong>{% if overlay.dti_pct %}{{ overlay.dti_pct }}%{% else %}—{% endif %}</strong>
+  / cap {{ overlay.dti_cap }}%
+  · LTV
+  <strong>{% if overlay.ltv_pct %}{{ overlay.ltv_pct }}%{% else %}—{% endif %}</strong>
+  / cap {{ overlay.ltv_cap }}%
+</p>
+{% endif %}
+
+{% if overlay.committee_blockers %}
+<div class="pa-panel" style="background:#fffdf5;border:1px solid #c4a035;border-radius:8px;padding:0.85rem 1rem;margin:1rem 0;">
+  <strong>Gates — blocks committee</strong>
+  <ul>{% for b in overlay.committee_blockers %}<li>{{ b }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if can_edit %}
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <p><button type="submit" class="btn btn-green">Save consumer file</button></p>
+</form>
+{% else %}
+{{ form.as_p }}
+<p class="help">Read only.</p>
+{% endif %}
+{% endblock %}

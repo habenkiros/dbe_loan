@@ -24,7 +24,7 @@ def _can_view_online_intake(user):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('admin', 'superadmin'))
 def manage_applicant_portal_settings(request):
     """Settings → Digital apply (hub), not Django admin."""
     from applicant_portal.chapa import chapa_live_enabled, chapa_public_key

@@ -32,8 +32,8 @@
         <div class="hub-top-inner">
             <a class="hub-brand" href="{% url 'home' %}">
                 <span class="hub-brand-text">
-                    <span class="hub-brand-product">AI-powered Credit Intelligence</span>
-                    <span class="hub-brand-line">Staff hub</span>
+                    <span class="hub-brand-product">{{ product_name|default:"Credit Intelligence" }}</span>
+                    <span class="hub-brand-line">{{ institution_short|default:"DBE" }} staff hub</span>
                 </span>
                 <img class="hub-brand-logo" src="{% static 'logo_green.png' %}" alt="Seqela">
             </a>
@@ -115,6 +115,14 @@
                     Add HO loan
                 </a>
                 {% endif %}
+                <a href="{% url 'kyc_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    Scan / KYC
+                </a>
+                <a href="{% url 'appraisal_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="book" only %}
+                    Appraisal
+                </a>
                 <a href="{% url 'collateral:dashboard' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="building" only %}
                     Collateral
@@ -146,6 +154,10 @@
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Collections
                 </a>
+                <a href="{% url 'rehab_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Rehab
+                </a>
                 {% endif %}
                 {% if user.role == 'credit_head' %}
                 <a href="{% url 'manage_approval_committees' %}" class="nav-link">
@@ -153,10 +165,6 @@
                     Approval committees
                 </a>
                 {% endif %}
-                <a href="{% url 'loan_notifications_list' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="notifications" only %}
-                    Notifications{% if unread_notification_count %} ({{ unread_notification_count }}){% endif %}
-                </a>
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="report" only %}
@@ -187,6 +195,10 @@
                 <a href="{% url 'collections_desk' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Collections
+                </a>
+                <a href="{% url 'rehab_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Rehab
                 </a>
                 {% endif %}
                 {% if nav_show_approval_votes %}
@@ -228,6 +240,10 @@
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Collections
                 </a>
+                <a href="{% url 'rehab_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Rehab
+                </a>
                 {% endif %}
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
@@ -254,6 +270,10 @@
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Collections
                 </a>
+                <a href="{% url 'rehab_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Rehab
+                </a>
                 {% endif %}
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
@@ -263,6 +283,10 @@
                 {% endif %}
 
             {% elif user.role == 'legal_officer' %}
+                <a href="{% url 'kyc_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    KYC pack
+                </a>
                 <a href="{% url 'legal_desk' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="shield" only %}
                     Legal desk
@@ -308,6 +332,10 @@
                     {% include "includes/nav_icon.html" with icon="money" only %}
                     Collections
                 </a>
+                <a href="{% url 'rehab_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="report" only %}
+                    Rehab
+                </a>
                 {% endif %}
                 {% if nav_show_reports %}
                 <a href="{% url 'view_report_options' %}" class="nav-link">
@@ -317,6 +345,10 @@
                 {% endif %}
 
             {% elif user.role == 'engineering_head' or user.role == 'Engineering Head' %}
+                <a href="{% url 'kyc_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    KYC pack
+                </a>
                 <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="catalog" only %}
                     Catalog
@@ -345,6 +377,10 @@
                 {% endif %}
 
             {% elif user.role == 'engineer' %}
+                <a href="{% url 'kyc_desk' %}" class="nav-link">
+                    {% include "includes/nav_icon.html" with icon="loan" only %}
+                    KYC pack
+                </a>
                 <a href="{% url 'collateral:catalog_index' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="catalog" only %}
                     Catalog
@@ -382,6 +418,14 @@
                         {% include "includes/dropdown_link.html" with href=checkup_post_url icon="money" label="Post-approval" only %}
                         {% url 'legal_desk' as checkup_legal_url %}
                         {% include "includes/dropdown_link.html" with href=checkup_legal_url icon="shield" label="Legal desk" only %}
+                        {% url 'kyc_desk' as checkup_kyc_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_kyc_url icon="loan" label="Scan / KYC" only %}
+                        {% url 'appraisal_desk' as checkup_app_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_app_url icon="book" label="Appraisal Directorate" only %}
+                        {% url 'its_desk' as checkup_its_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_its_url icon="shield" label="ITS Directorate" only %}
+                        {% url 'mis_desk' as checkup_mis_url %}
+                        {% include "includes/dropdown_link.html" with href=checkup_mis_url icon="report" label="PM & MIS" only %}
                         {% url 'view_report_options' as checkup_reports_url %}
                         {% include "includes/dropdown_link.html" with href=checkup_reports_url icon="report" label="Reports" only %}
                         {% url 'branch_report_dashboard' as checkup_dash_url %}
@@ -429,7 +473,7 @@
                 </a>
             {% endif %}
 
-            {% if user.is_authenticated and user.is_superuser %}
+            {% if user.is_superuser or user.role == 'admin' or user.role == 'superadmin' %}
                 <a href="{% url 'manage_users' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="users" only %}
                     Users
@@ -470,6 +514,10 @@
                     <div class="dropdown-content">
                         {% url 'manage_loan_categories' as categories_url %}
                         {% include "includes/dropdown_link.html" with href=categories_url icon="catalog" label="Loan categories" only %}
+                        {% url 'manage_financing_funds' as funds_url %}
+                        {% include "includes/dropdown_link.html" with href=funds_url icon="money" label="Funding windows" only %}
+                        {% url 'financing_fund_dashboard' as fund_mis_url %}
+                        {% include "includes/dropdown_link.html" with href=fund_mis_url icon="money" label="Funding-window MIS" only %}
                         {% url 'manage_collateral_types' as collateral_types_url %}
                         {% include "includes/dropdown_link.html" with href=collateral_types_url icon="book" label="Collateral types" only %}
                         {% url 'manage_loan_application_document_types' as doc_types_url %}

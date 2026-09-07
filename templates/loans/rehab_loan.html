@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Rehab {{ loan_request.loan_request_id }}{% endblock %}
+{% block content %}
+<p class="help">
+  <a href="{% url 'rehab_desk' %}">← Rehab / recovery</a>
+  · <a href="{% url 'loan_request_detail' loan_request.id %}">Loan detail</a>
+  {% if loan_request.disbursement_status == 'disbursed' or loan_request.disbursement_status == 'partially_disbursed' %}
+  · <a href="{% url 'collections_loan' loan_request.id %}">Collections</a>
+  · <a href="{% url 'monitoring_loan' loan_request.id %}">Monitoring</a>
+  {% endif %}
+</p>
+<h1>{{ loan_request.loan_request_id }}</h1>
+<p>{{ loan_request.applicant_name }} · {{ loan_request.branch.name }}</p>
+<p>
+  Rehab stage:
+  {% if postbook.has_rehab %}
+  <strong>{{ postbook.rehab_stage_label }}</strong>
+  {% else %}
+  <strong>None</strong> — optional. Watchlist or a stage below opens the case.
+  {% endif %}
+  {% if loan_request.arrears_status %}
+  · Arrears: {{ loan_request.get_arrears_status_display }}
+  {% endif %}
+</p>
+
+{% include "loans/_sla_panel.html" with sla=postbook.sla %}
+
+<div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Named rehabilitation stage</h2>
+  <p class="help">Foreclosure is last. It is blocked from watchlist.</p>
+  <form method="post" action="{% url 'rehab_set_stage' loan_request.id %}">
+    {% csrf_token %}
+    <select name="stage" class="form-control" style="max-width:18rem;">
+      {% for val, label in stage_choices %}
+      <option value="{{ val }}" {% if postbook.rehab_stage == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label>Note</label>
+    <textarea name="note" class="form-control" rows="2"></textarea>
+    <p><button type="submit" class="btn btn-green">Set stage</button></p>
+  </form>
+  {% for ev in events %}
+  <p>
+    <strong>{% if ev.from_stage %}{{ ev.from_stage }} → {% endif %}{{ ev.to_stage }}</strong>
+    · {{ ev.created_at|date:"Y-m-d H:i" }}
+    {% if ev.recorded_by %} · {{ ev.recorded_by.username }}{% endif %}
+    {% if ev.note %}<br>{{ ev.note }}{% endif %}
+  </p>
+  {% empty %}
+  <p class="help">No stage events yet.</p>
+  {% endfor %}
+</div>
+
+<div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Insurance calendar</h2>
+  <p class="help">DBE as co-beneficiary. Expired cover is an audit finding.</p>
+  {% if postbook.insurance_overdue %}
+  <p class="help" style="color:#c62828;">{{ postbook.insurance_overdue|length }} policy past expiry.</p>
+  {% endif %}
+  <form method="post" action="{% url 'rehab_add_insurance' loan_request.id %}">
+    {% csrf_token %}
+    <label>Kind</label>
+    <select name="kind" class="form-control" style="max-width:16rem;">
+      {% for val, label in kind_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+    <label>Insurer</label>
+    <input type="text" name="insurer" class="form-control" required>
+    <label>Policy no.</label>
+    <input type="text" name="policy_number" class="form-control">
+    <label>Starts</label>
+    <input type="date" name="starts_on" class="form-control" style="max-width:12rem;">
+    <label>Expires</label>
+    <input type="date" name="expires_on" class="form-control" style="max-width:12rem;">
+    <p><label><input type="checkbox" name="dbe_co_beneficiary" value="1" checked> DBE is co-beneficiary</label></p>
+    <label>Note</label>
+    <input type="text" name="note" class="form-control">
+    <p><button type="submit" class="btn btn-gray">Add policy</button></p>
+  </form>
+  {% for p in policies %}
+  <p>
+    <strong>{{ p.get_kind_display }}</strong> · {{ p.insurer }}
+    {% if p.policy_number %} · {{ p.policy_number }}{% endif %}
+    · expires {{ p.expires_on|default:"—" }}
+    {% if p.dbe_co_beneficiary %} · co-beneficiary{% else %} · <span style="color:#c62828;">DBE not named</span>{% endif %}
+  </p>
+  {% empty %}
+  <p class="help">No policies on this file.</p>
+  {% endfor %}
+</div>
+
+<div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Revaluation diary</h2>
+  <form method="post" action="{% url 'rehab_add_revaluation' loan_request.id %}">
+    {% csrf_token %}
+    <label>Due</label>
+    <input type="date" name="due_on" class="form-control" style="max-width:12rem;" required>
+    <label>Note</label>
+    <input type="text" name="note" class="form-control">
+    <p><button type="submit" class="btn btn-gray">Add due date</button></p>
+  </form>
+  {% for r in revaluations %}
+  <p>
+    Due {{ r.due_on }}
+    {% if r.completed_on %} · done {{ r.completed_on }}
+    {% else %}
+    <form method="post" action="{% url 'rehab_complete_revaluation' loan_request.id r.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-gray" style="font-size:0.8rem;">Mark complete</button>
+    </form>
+    {% endif %}
+    {% if r.note %} · {{ r.note }}{% endif %}
+  </p>
+  {% empty %}
+  <p class="help">No revaluation dates.</p>
+  {% endfor %}
+</div>
+
+<div class="pa-panel" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
+  <h2 style="font-size:1.1rem;margin-top:0;">Appeal to President / Board</h2>
+  <form method="post" action="{% url 'rehab_file_appeal' loan_request.id %}">
+    {% csrf_token %}
+    <label>Level</label>
+    <select name="level" class="form-control" style="max-width:16rem;">
+      {% for val, label in appeal_levels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+    <label>Grounds</label>
+    <textarea name="grounds" class="form-control" rows="3" required></textarea>
+    <p><button type="submit" class="btn btn-gray">File appeal</button></p>
+  </form>
+  {% for a in appeals %}
+  <p>
+    <strong>{{ a.get_level_display }}</strong> · {{ a.get_status_display }}
+    · {{ a.filed_at|date:"Y-m-d" }}
+    <br>{{ a.grounds }}
+    {% if a.decision_note %}<br>Decision: {{ a.decision_note }}{% endif %}
+  </p>
+  {% if can_decide_appeal and a.status == 'open' %}
+  <form method="post" action="{% url 'rehab_decide_appeal' loan_request.id a.id %}" style="margin-bottom:1rem;">
+    {% csrf_token %}
+    <input type="text" name="decision_note" class="form-control" placeholder="Decision note">
+    <p>
+      <button type="submit" name="action" value="upheld" class="btn btn-green">Uphold</button>
+      <button type="submit" name="action" value="dismissed" class="btn btn-gray">Dismiss</button>
+    </p>
+  </form>
+  {% endif %}
+  {% empty %}
+  <p class="help">No appeals filed.</p>
+  {% endfor %}
+</div>
+{% endblock %}

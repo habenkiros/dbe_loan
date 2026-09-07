@@ -26,7 +26,7 @@
     <div class="msg">{{ license_status.message }}</div>
     <p>Ask your Seqela account manager for a renewal key, then set <code>LICENSE_KEY</code> in <code>.env</code> (or update <code>deploy/license/license.key</code>) and restart the web service.</p>
     <p><a class="btn" href="{{ license_url }}">View license status</a></p>
-    <p class="foot">Dedebit / DECSI IT · Seqela Technologies support</p>
+    <p class="foot">{{ institution_short|default:"DBE" }} IT · Seqela Technologies support</p>
   </div>
 </body>
 </html>

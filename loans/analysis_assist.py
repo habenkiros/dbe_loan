@@ -167,23 +167,78 @@ def _pillar_sheet(key: Optional[str]) -> int:
 
 def officer_checklist_for_mode(mode: str) -> List[str]:
     """Short mode-specific officer checklist (ops polish)."""
-    common = [
+    from loans.appraisal_mode import (
+        MODE_CONSUMER, MODE_CORPORATE, MODE_IDEA, MODE_IJARAH, MODE_LEASE,
+        MODE_MURABAHA, MODE_PROJECT, MODE_WHOLESALE,
+    )
+
+    common_sheets = [
         'Confirm identity / TIN (banking or documents) matches Sheet 1',
         'Complete Sheets 1–6; resolve hard blocks before finish',
         'On Sheet 6: recommend approve/escalate, then finish and submit to committee',
         'Sheet 7 repayment schedule is optional (for the pack / disbursement)',
     ]
-    if mode == 'corporate':
+    if mode == MODE_CORPORATE:
         return [
             'Confirm legal entity name + CR / registration number',
             'Enter directors / UBO summary',
             'Complete governance factors (Sheet 2) to ≥75%',
             'Enter annual revenue / operating profit and BS ratios (Sheet 3)',
             'Verify audited accounts (or equivalent) document when available',
-        ] + common
+        ] + common_sheets
+    if mode == MODE_PROJECT:
+        return [
+            'Clear CRM / Engineering / Legal KYC packs with the checklist',
+            'Authenticate the project document pack (feasibility, site, equity)',
+            'Balance sources and uses; promoter equity before first release',
+            'Record NPV / IRR / DSCR on the project desk (not Sheet 3)',
+            'CRM comments on the appraisal pack must clear before committee',
+        ]
+    if mode == MODE_LEASE:
+        return [
+            'Clear KYC packs and authenticate supplier / asset documents',
+            'Complete the lease asset register (supplier, serial, price)',
+            'Confirm lessee contribution and insurance co-beneficiary',
+            'CRM comments must clear before committee',
+        ]
+    if mode == MODE_IJARAH:
+        return [
+            'Clear KYC packs including Sharia questionnaire',
+            'Complete the Ijarah asset register and rent schedule',
+            'Record a Sharia trail before release',
+            'CRM comments must clear before committee',
+        ]
+    if mode == MODE_MURABAHA:
+        return [
+            'Clear KYC packs including Sharia questionnaire',
+            'Enter cost, markup, and computed selling price (not Sheet 7)',
+            'Authenticate goods specification and supplier offer',
+            'Record a Sharia trail before confirm / release',
+        ]
+    if mode == MODE_WHOLESALE:
+        return [
+            'Treat this as a PFI institution file, not an SME LOS',
+            'Clear KYC packs; authenticate license, AFS, ESMS, PAR',
+            'Enter PAR 90 / NPL and facility amount on the PFI desk',
+            'CRM comments must clear before committee',
+        ]
+    if mode == MODE_IDEA:
+        return [
+            'Clear KYC packs; authenticate start-up / IP / cap-table evidence',
+            'Complete the idea desk (venture, proposed DBE share)',
+            'Cap table after approval — not an installment schedule',
+            'CRM comments must clear before committee',
+        ]
+    if mode == MODE_CONSUMER:
+        return [
+            'Clear KYC packs; authenticate ID, salary, employer letter',
+            'Enter employer, salary, DTI and LTV on the consumer desk',
+            'DTI cap 50%; housing LTV 80% / vehicle LTV 70%',
+            'CRM comments must clear before committee',
+        ]
     return [
         'Confirm personal + business details and purpose lines',
         'Complete MSME character factors (Sheet 2) to ≥75%',
         'Enter cashflow / DSCR and stress test (Sheet 3)',
         'Confirm collateral coverage (Sheet 5)',
-    ] + common
+    ] + common_sheets

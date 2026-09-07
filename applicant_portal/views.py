@@ -14,11 +14,13 @@ from applicant_portal.auth import (
     login_applicant,
     logout_applicant,
 )
+from applicant_portal.access import is_queued, needs_applicant_product
 from applicant_portal.forms import (
     ApplicantChangePasswordForm,
     ApplicantLoginForm,
     ApplicantRegisterForm,
     ApplicationDetailsForm,
+    ExternalActorRegisterForm,
     PasswordResetConfirmForm,
     PasswordResetRequestForm,
 )
@@ -65,14 +67,16 @@ def _get_owned_app(request, public_id) -> OnlineApplication:
 def _draft_continue_url(app) -> str:
     from django.urls import reverse
 
-    if app.loan_request_id:
+    if is_queued(app):
+        if needs_applicant_product(app):
+            return reverse('applicant_portal:apply_product', args=[app.public_id])
         return ''
-    if app.status == OnlineApplication.STATUS_DOCUMENTS and app.category_id:
-        return reverse('applicant_portal:apply_documents', args=[app.public_id])
     if app.status == OnlineApplication.STATUS_PAYMENT:
         return reverse('applicant_portal:apply_payment', args=[app.public_id])
-    if app.status == OnlineApplication.STATUS_SUBMITTED and not app.loan_request_id:
-        return reverse('applicant_portal:apply_submit', args=[app.public_id])
+    if app.status == OnlineApplication.STATUS_DOCUMENTS and app.category_id:
+        return reverse('applicant_portal:apply_documents', args=[app.public_id])
+    if needs_applicant_product(app) and app.category_id:
+        return reverse('applicant_portal:apply_product', args=[app.public_id])
     return reverse('applicant_portal:apply_details', args=[app.public_id])
 
 
@@ -94,14 +98,24 @@ def register(request):
     if get_portal_applicant(request):
         return redirect('applicant_portal:home')
 
-    form = ApplicantRegisterForm(request.POST or None)
+    kind = (request.POST.get('actor_kind') or request.GET.get('kind') or 'person').strip()
+    if kind in ('institution', 'promoter'):
+        form = ExternalActorRegisterForm(
+            request.POST or None,
+            initial={'actor_kind': kind},
+        )
+        template = 'applicant_portal/register_external.html'
+    else:
+        form = ApplicantRegisterForm(request.POST or None)
+        template = 'applicant_portal/register.html'
     if request.method == 'POST':
         ok, rate_msg = check_register_rate(request)
         if not ok:
             messages.error(request, rate_msg)
-            return render(request, 'applicant_portal/register.html', {
+            return render(request, template, {
                 'form': form,
                 'password_hints': form.fields['password'].help_text,
+                'actor_kind': kind,
             })
         note_register_attempt(request)
         if form.is_valid():
@@ -113,11 +127,12 @@ def register(request):
                 phone=account.phone_number,
             )
             login_applicant(request, account)
-            messages.success(request, 'Account created. Start your loan application when ready.')
+            messages.success(request, 'Account created. Start your application when ready.')
             return redirect('applicant_portal:home')
-    return render(request, 'applicant_portal/register.html', {
+    return render(request, template, {
         'form': form,
         'password_hints': form.fields['password'].help_text,
+        'actor_kind': kind,
     })
 
 
@@ -237,7 +252,9 @@ def apply_start(request):
         profile = account.customer_profile_snapshot or {}
         app = OnlineApplication.objects.create(
             applicant=account,
-            applicant_name=(profile.get('name') or account.full_name or '')[:255],
+            applicant_name=(
+                account.institution_name or profile.get('name') or account.full_name or ''
+            )[:255],
             phone_number=account.phone_number,
             email=(profile.get('email') or account.email or '')[:254],
             customer_number=account.customer_number or '',
@@ -339,21 +356,29 @@ def apply_details(request, public_id):
     if closed:
         return closed
     app = _get_owned_app(request, public_id)
-    if app.loan_request_id or app.status == OnlineApplication.STATUS_SUBMITTED:
+    if is_queued(app):
         return redirect('applicant_portal:apply_status', public_id=app.public_id)
 
     form = ApplicationDetailsForm(request.POST or None, instance=app)
     if request.method == 'POST' and form.is_valid():
         form.save()
         app.refresh_from_db()
+        if needs_applicant_product(app):
+            messages.success(request, 'Details saved. Complete the product file next.')
+            return redirect('applicant_portal:apply_product', public_id=app.public_id)
         app.status = OnlineApplication.STATUS_DOCUMENTS
         app.save(update_fields=['status', 'updated_at'])
         messages.success(request, 'Details saved. Upload your documents next.')
         return redirect('applicant_portal:apply_documents', public_id=app.public_id)
+    from loans.registration import category_family_payload
+
     return render(request, 'applicant_portal/apply_details.html', {
         'application': app,
         'form': form,
         'step': 1,
+        'has_product': needs_applicant_product(app),
+        'next_label': 'product file' if needs_applicant_product(app) else 'documents',
+        'family_payload': category_family_payload(form.fields['category'].queryset),
     })
 
 
@@ -364,15 +389,26 @@ def apply_documents(request, public_id):
     if closed:
         return closed
     app = _get_owned_app(request, public_id)
-    if app.loan_request_id:
+    if is_queued(app):
         return redirect('applicant_portal:apply_status', public_id=app.public_id)
     if not app.category_id:
         messages.warning(request, 'Choose a loan product first.')
         return redirect('applicant_portal:apply_details', public_id=app.public_id)
 
     from loans.document_checklist import checklist_for_category
-    from loans.models import LoanApplicationDocumentType
-    from loans.services.document_auth import _read_upload_bytes, validate_upload_bytes
+    from loans.models import KycParty, LoanApplicationDocumentType
+    from loans.services.document_auth import (
+        _read_upload_bytes, run_portal_document_checks, validate_upload_bytes,
+    )
+    from loans.kyc_identity import (
+        ensure_identity_case, save_applicant_identity,
+    )
+    from loans.services.document_forensics import applicant_facing
+    from applicant_portal.services import ensure_working_loan, sync_portal_document_to_loan
+
+    loan = ensure_working_loan(app)
+    case = ensure_identity_case(loan_request=loan, online_application=app)
+    party = case.parties.filter(role=KycParty.ROLE_APPLICANT).first()
 
     checklist = checklist_for_category(app.category)
     existing = {
@@ -382,6 +418,20 @@ def apply_documents(request, public_id):
 
     if request.method == 'POST':
         action = (request.POST.get('action') or 'upload').strip()
+        if action == 'identity':
+            save_applicant_identity(
+                loan_request=loan,
+                online_application=app,
+                identity_kind=request.POST.get('identity_kind') or '',
+                legal_name_en=request.POST.get('legal_name_en') or app.applicant_name,
+                legal_name_am=request.POST.get('legal_name_am') or '',
+                fan=request.POST.get('fan') or '',
+                tin=request.POST.get('tin') or '',
+                id_number=request.POST.get('id_number') or '',
+                verify=True,
+            )
+            messages.success(request, 'Identity details saved.')
+            return redirect('applicant_portal:apply_documents', public_id=app.public_id)
         if action == 'continue':
             ok, reason = can_proceed_to_payment(app)
             if not ok:
@@ -410,7 +460,7 @@ def apply_documents(request, public_id):
                 if not raw:
                     messages.error(request, f'{doc_type.name}: could not read file.')
                     continue
-                ok, errs = validate_upload_bytes(raw, f.name, doc_type, loan_request=None)
+                ok, errs = validate_upload_bytes(raw, f.name, doc_type, loan_request=loan)
                 if not ok:
                     for err in errs:
                         messages.error(request, f'{doc_type.name}: {err}')
@@ -426,6 +476,21 @@ def apply_documents(request, public_id):
                 )
                 doc.file.save(f.name, ContentFile(raw), save=False)
                 doc.save()
+                try:
+                    run_portal_document_checks(doc, loan_request=loan)
+                    doc.refresh_from_db()
+                    facing = applicant_facing({
+                        **(doc.automated_checks or {}),
+                        'auth_status': doc.auth_status,
+                    })
+                    if facing.get('retake'):
+                        messages.warning(request, f'{doc_type.name}: {facing.get("message")}')
+                    sync_portal_document_to_loan(doc, loan)
+                except Exception:
+                    messages.warning(
+                        request,
+                        f'{doc_type.name}: uploaded, but automatic checks could not finish.',
+                    )
                 uploaded += 1
             if uploaded:
                 app.status = OnlineApplication.STATUS_DOCUMENTS
@@ -436,19 +501,30 @@ def apply_documents(request, public_id):
     rows = []
     for item in checklist:
         doc = existing.get(item.id)
+        facing = {}
+        if doc is not None:
+            facing = applicant_facing({
+                **(doc.automated_checks or {}),
+                'auth_status': doc.auth_status,
+            })
         rows.append({
             'item': item,
             'document': doc,
             'is_required': item.is_required,
             'have': doc is not None,
+            'facing': facing,
         })
     missing = missing_required_documents(app)
+    ok_pay, _reason = can_proceed_to_payment(app)
     return render(request, 'applicant_portal/apply_documents.html', {
         'application': app,
         'rows': rows,
         'missing': missing,
-        'step': 2,
-        'can_continue': not missing,
+        'step': 3 if needs_applicant_product(app) else 2,
+        'has_product': needs_applicant_product(app),
+        'can_continue': ok_pay,
+        'kyc_party': party,
+        'identity_kinds': KycParty.KIND_CHOICES,
     })
 
 
@@ -468,7 +544,7 @@ def apply_payment(request, public_id):
     if closed:
         return closed
     app = _get_owned_app(request, public_id)
-    if app.loan_request_id:
+    if is_queued(app):
         return redirect('applicant_portal:apply_status', public_id=app.public_id)
 
     ok, reason = can_proceed_to_payment(app)
@@ -528,7 +604,8 @@ def apply_payment(request, public_id):
         'pending': app.payment_status == OnlineApplication.PAY_PENDING,
         'chapa_live': chapa_live_enabled(),
         'chapa_inline': inline_checkout_config(app, request=request) if not app.payment_satisfied() else None,
-        'step': 3,
+        'step': 4 if needs_applicant_product(app) else 3,
+        'has_product': needs_applicant_product(app),
     })
 
 
@@ -640,7 +717,7 @@ def apply_submit(request, public_id):
     if closed:
         return closed
     app = _get_owned_app(request, public_id)
-    if app.loan_request_id:
+    if is_queued(app):
         return redirect('applicant_portal:apply_status', public_id=app.public_id)
 
     ok, reason = can_submit(app)
@@ -667,7 +744,8 @@ def apply_submit(request, public_id):
         'application': app,
         'can_submit': ok,
         'block_reason': reason,
-        'step': 4,
+        'step': 5 if needs_applicant_product(app) else 4,
+        'has_product': needs_applicant_product(app),
     })
 
 

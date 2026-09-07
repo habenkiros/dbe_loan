@@ -25,7 +25,7 @@
     · <a href="javascript:window.print()">Print</a>
   </p>
   {% endif %}
-  <h1>DECSI — Loan Agreement</h1>
+  <h1>{{ institution_short|default:"DBE" }} — Loan Agreement</h1>
   <p class="meta">
     {{ agreement.title }}<br>
     {{ loan_request.applicant_name }} · {{ loan_request.loan_request_id }}

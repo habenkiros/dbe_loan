@@ -4,7 +4,13 @@
 <div class="ap-card ap-home-hero">
   <h1 class="ap-hero-title">Hello, {{ applicant.full_name }}</h1>
   <p class="ap-sub">
-    Manage drafts, track submitted files, and open any application for a full status timeline — on phone or desktop.
+    {% if applicant.actor_kind == 'institution' %}
+    Institution door — wholesale / PFI facilities. You file the institution dossier and utilization reports.
+    {% elif applicant.actor_kind == 'promoter' %}
+    Promoter door — project financing and idea / quasi-equity. You fill the project or cap-table file.
+    {% else %}
+    Customer door — MSME / retail products. Manage drafts and track submitted files.
+    {% endif %}
   </p>
   <div class="ap-btn-row" style="margin-top:0;">
     <a class="ap-btn ap-btn-light" href="{% url 'applicant_portal:apply_start' %}">Start new application</a>
@@ -39,6 +45,12 @@
            href="{% url 'applicant_portal:apply_status' row.application.public_id %}">
           View status
         </a>
+        {% if row.application.category and row.application.category.product_family != 'general' and row.application.category.product_family != 'consumer' %}
+        <a class="ap-btn ap-btn-ghost" style="padding:0.5rem 0.95rem;font-size:0.9rem;"
+           href="{% url 'applicant_portal:apply_product' row.application.public_id %}">
+          Product file
+        </a>
+        {% endif %}
         {% if row.status.has_repayment_schedule %}
         <a class="ap-btn ap-btn-ghost" style="padding:0.5rem 0.95rem;font-size:0.9rem;"
            href="{% url 'applicant_portal:apply_schedule' row.application.public_id %}">

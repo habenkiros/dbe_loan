@@ -493,19 +493,47 @@ def _match_name_tokens(name: str, text_norm: str) -> Tuple[bool, str]:
     return matched, 'Full-name substring match.' if matched else 'Name not found in document.'
 
 
+def _applicant_party(loan_request):
+    if loan_request is None:
+        return None
+    try:
+        from loans.kyc_identity import get_identity_case
+        case = get_identity_case(loan_request=loan_request)
+        if case is None:
+            return None
+        from loans.models import KycParty
+        return case.parties.filter(role=KycParty.ROLE_APPLICANT).first()
+    except Exception:
+        return None
+
+
 def _loan_identity_match(loan_request, extracted_text: str, field_names: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Compare loan registration data against OCR text from an upload."""
+    """Compare loan registration / KYC party data against OCR text from an upload."""
+    party = _applicant_party(loan_request)
     fields = field_names or ['applicant_name', 'phone_number', 'tin_number']
+    if party is not None:
+        extra = []
+        if (party.fan or '').strip() and 'fan' not in fields:
+            extra.append('fan')
+        if (party.id_number or '').strip() and 'id_number' not in fields:
+            extra.append('id_number')
+        if (party.legal_name_am or '').strip() and 'legal_name_am' not in fields:
+            extra.append('legal_name_am')
+        fields = list(fields) + extra
     text_norm = _normalize(extracted_text)
     text_digits = _digits_only(extracted_text)
-    basic_info = _get_loan_basic_info(loan_request)
+    basic_info = _get_loan_basic_info(loan_request) if loan_request is not None else None
 
     checks: Dict[str, Any] = {}
     for field in fields:
         if field == 'applicant_name':
-            value = getattr(loan_request, 'applicant_name', '') or ''
+            value = ''
+            if party is not None:
+                value = (party.legal_name_en or '').strip()
+            if not value and loan_request is not None:
+                value = getattr(loan_request, 'applicant_name', '') or ''
             if not value:
-                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No applicant name on loan request.', 'value': None}
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No applicant name on file.', 'value': None}
             else:
                 matched, detail = _match_name_tokens(value, text_norm)
                 checks[field] = {'matched': matched, 'skipped': False, 'detail': detail, 'value': value}
@@ -525,6 +553,8 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
         elif field == 'tin_number':
             value = getattr(basic_info, 'tin_number', '') if basic_info else ''
             value = value or ''
+            if not value and party is not None:
+                value = party.tin or ''
             digits = _digits_only(value)
             if not digits:
                 checks[field] = {'matched': None, 'skipped': True, 'detail': 'No TIN on loan request.', 'value': None}
@@ -536,6 +566,39 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
                     'detail': 'TIN found in document.' if matched else 'TIN not found in document.',
                     'value': value,
                 }
+        elif field == 'fan':
+            value = (party.fan if party is not None else '') or ''
+            digits = _digits_only(value)
+            if not digits:
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No FAN on KYC party.', 'value': None}
+            else:
+                matched = digits in text_digits or _normalize(value) in text_norm
+                checks[field] = {
+                    'matched': matched,
+                    'skipped': False,
+                    'detail': 'FAN found in document.' if matched else 'FAN not found in document.',
+                    'value': value,
+                }
+        elif field == 'id_number':
+            value = (party.id_number if party is not None else '') or ''
+            digits = _digits_only(value)
+            if not value.strip():
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No ID number on KYC party.', 'value': None}
+            else:
+                matched = bool(digits and digits in text_digits) or _normalize(value) in text_norm
+                checks[field] = {
+                    'matched': matched,
+                    'skipped': False,
+                    'detail': 'ID number found in document.' if matched else 'ID number not found in document.',
+                    'value': value,
+                }
+        elif field == 'legal_name_am':
+            value = (party.legal_name_am if party is not None else '') or ''
+            if not value.strip():
+                checks[field] = {'matched': None, 'skipped': True, 'detail': 'No Amharic name on KYC party.', 'value': None}
+            else:
+                matched, detail = _match_name_tokens(value, text_norm)
+                checks[field] = {'matched': matched, 'skipped': False, 'detail': detail, 'value': value}
         elif field == 'business_name':
             value = ''
             if basic_info:
@@ -571,6 +634,12 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
         score += 25
     if checks.get('business_name', {}).get('matched'):
         score += 35
+    if checks.get('fan', {}).get('matched'):
+        score += 40
+    if checks.get('id_number', {}).get('matched'):
+        score += 40
+    if checks.get('legal_name_am', {}).get('matched'):
+        score += 25
     min_score = int(getattr(settings, 'DOCUMENT_OCR_MATCH_MIN_SCORE', 60) or 60)
 
     return {
@@ -727,7 +796,7 @@ def _external_id_verification(document) -> Dict[str, Any]:
         return {"enabled": True, "provider": "decsi_party_api", "status": "error", "error": str(exc)}
 
 
-def run_automated_document_checks(document) -> Dict[str, Any]:
+def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] = None) -> Dict[str, Any]:
     from loans.models import LoanRequestDocument
 
     rules = get_type_auth_rules(document)
@@ -743,6 +812,12 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
     name = document.original_filename or os.path.basename(file_field.name)
     ext = (os.path.splitext(name)[1] or "").lower().lstrip(".")
     allowed = rules['allowed_extensions']
+    raw_all = prefetched_raw if prefetched_raw is not None else None
+    if raw_all is None:
+        try:
+            raw_all = _read_upload_bytes(file_field)
+        except Exception:
+            raw_all = b''
 
     try:
         size = file_field.size
@@ -896,6 +971,21 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
                 report["messages"].append("External ID verification did not confirm identity.")
                 ocr_failed_needs_review = True
 
+    if 'identity_match' not in report and (doc_text or extracted_text_preview):
+        from loans.kyc_identity import is_strict_identity_type
+        if is_strict_identity_type(document.document_type):
+            identity = _loan_identity_match(
+                document.loan_request,
+                doc_text or extracted_text_preview,
+                document.document_type.get_identity_match_field_list(),
+            )
+            report['identity_match'] = identity
+            if identity.get('passed') is False:
+                ocr_failed_needs_review = True
+                report['messages'].append(
+                    'Identity match failed — document does not match applicant KYC data.'
+                )
+
     if not document.original_filename:
         document.original_filename = name
 
@@ -906,7 +996,14 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
         document.auth_status = LoanRequestDocument.AUTH_NEEDS_REVIEW
         report["messages"].append("This document type requires manual officer verification.")
     elif ocr_failed_needs_review:
-        document.auth_status = LoanRequestDocument.AUTH_NEEDS_REVIEW
+        if getattr(document.document_type, 'identity_match_strict', False):
+            ident = report.get('identity_match') or {}
+            if ident.get('passed') is False:
+                document.auth_status = LoanRequestDocument.AUTH_REJECTED
+            else:
+                document.auth_status = LoanRequestDocument.AUTH_NEEDS_REVIEW
+        else:
+            document.auth_status = LoanRequestDocument.AUTH_NEEDS_REVIEW
     elif duplicate_other:
         document.auth_status = LoanRequestDocument.AUTH_NEEDS_REVIEW
         if not report["messages"]:
@@ -916,18 +1013,209 @@ def run_automated_document_checks(document) -> Dict[str, Any]:
     else:
         document.auth_status = LoanRequestDocument.AUTH_AUTO_PASSED
 
-    document.save(update_fields=["file_sha256", "file_size", "original_filename", "auth_status", "automated_checks"])
+    try:
+        _apply_forensics_and_persist(document, report, ext=ext, raw=raw_all)
+    except Exception:
+        logger.exception('Forensics failed for doc %s', getattr(document, 'pk', None))
+        document.automated_checks = report
+        document.save(update_fields=[
+            "file_sha256", "file_size", "original_filename", "auth_status", "automated_checks",
+        ])
+    _touch_identity_case_after_document(document)
 
     try:
-        from loans.compliance.case_engine import maybe_open_document_case
-        maybe_open_document_case(
-            document,
-            duplicate_other=duplicate_other,
-            opened_by=getattr(document, 'uploaded_by', None),
-        )
+        if getattr(document, 'pk', None):
+            from loans.compliance.case_engine import maybe_open_document_case
+            maybe_open_document_case(
+                document,
+                duplicate_other=duplicate_other,
+                opened_by=getattr(document, 'uploaded_by', None),
+            )
     except Exception:
         logger.exception('Compliance document case hook failed for doc %s', document.pk)
 
+    return report
+
+
+def _apply_forensics_and_persist(document, report: Dict[str, Any], *, ext: str, raw: Optional[bytes] = None) -> None:
+    from loans.services.document_forensics import (
+        authenticity_score,
+        find_near_duplicates,
+        perceptual_hash_hex,
+        quality_report,
+        applicant_facing,
+    )
+
+    if not raw:
+        try:
+            file_field = document.file
+            file_field.open('rb')
+            try:
+                raw = file_field.read()
+            finally:
+                file_field.close()
+        except Exception:
+            raw = b''
+    text = report.get('extracted_text_preview') or ''
+    quality = quality_report(raw, ext, text)
+    phash = perceptual_hash_hex(raw, ext)
+    loan_id = getattr(document, 'loan_request_id', None)
+    near = find_near_duplicates(
+        phash, exclude_loan_id=loan_id, exclude_pk=getattr(document, 'pk', None),
+    )
+    near_other = [n for n in near if not n.get('same_loan')]
+    ident = report.get('identity_match') or {}
+    content_failed = bool((report.get('content_validation') or {}).get('passed') is False)
+    from loans.kyc_identity import is_strict_identity_type
+    layout_fail = False
+    if is_strict_identity_type(document.document_type) and ident.get('passed') is False:
+        layout_fail = True
+    score, reasons = authenticity_score(
+        base_passed=bool(report.get('passed')),
+        quality=int(quality.get('score') or 0),
+        identity_passed=ident.get('passed') if ident else None,
+        duplicate_other=bool(report.get('duplicate_other')),
+        near_dup_other=bool(near_other),
+        content_failed=content_failed,
+        layout_fail=layout_fail,
+        extra_reasons=list(quality.get('reasons') or []),
+    )
+    from loans.models import KycParty
+    party = _applicant_party(getattr(document, 'loan_request', None))
+    if party is not None and party.verify_status in (
+        KycParty.VERIFY_NOT_FOUND, KycParty.VERIFY_MISMATCH,
+    ):
+        reasons.append('provider_unconfirmed')
+        score = max(0, score - 15)
+    elif party is not None and party.verify_status == KycParty.VERIFY_ERROR:
+        reasons.append('provider_unconfirmed')
+
+    report['forensics'] = {
+        'quality': quality,
+        'authenticity_score': score,
+        'reasons': sorted(set(reasons)),
+        'perceptual_hash': phash,
+        'near_duplicates': near_other,
+    }
+    report['applicant_facing'] = applicant_facing({**report, 'auth_status': document.auth_status})
+    report['auth_status'] = document.auth_status
+
+    if score < 30 and document.auth_status == document.AUTH_AUTO_PASSED:
+        document.auth_status = document.AUTH_NEEDS_REVIEW
+        report['messages'].append('Scan quality is too low — officer review required.')
+        report['auth_status'] = document.auth_status
+        report['applicant_facing'] = applicant_facing({**report, 'auth_status': document.auth_status})
+
+    document.automated_checks = report
+    document.quality_score = int(quality.get('score') if quality.get('score') is not None else 0)
+    document.authenticity_score = score
+    if hasattr(document, 'perceptual_hash'):
+        document.perceptual_hash = phash
+    update = [
+        'file_sha256', 'file_size', 'original_filename', 'auth_status',
+        'automated_checks', 'quality_score', 'authenticity_score',
+    ]
+    if hasattr(document, 'perceptual_hash'):
+        update.append('perceptual_hash')
+    document.save(update_fields=update)
+
+    extracted = report.get('extracted_fields') or {}
+    if party is not None and extracted:
+        from loans.kyc_identity import apply_extracted_fields_to_party
+        apply_extracted_fields_to_party(party, extracted)
+
+
+def _touch_identity_case_after_document(document) -> None:
+    try:
+        from loans.kyc_identity import ensure_identity_case, recompute_identity_case
+        loan = getattr(document, 'loan_request', None)
+        if loan is None:
+            return
+        case = ensure_identity_case(loan_request=loan)
+        recompute_identity_case(case)
+    except Exception:
+        logger.exception('KYC identity case recompute failed for doc %s', getattr(document, 'pk', None))
+
+
+def apply_saved_checks_to_loan_document(loan_doc, source_checks: Dict[str, Any], *, sha256: str = '') -> None:
+    """Copy portal automated_checks onto a staff document without re-OCR."""
+    report = dict(source_checks or {})
+    loan_doc.automated_checks = report
+    loan_doc.file_sha256 = sha256 or report.get('sha256') or loan_doc.file_sha256
+    loan_doc.auth_status = report.get('auth_status') or loan_doc.auth_status
+    forensics = report.get('forensics') or {}
+    if forensics.get('authenticity_score') is not None:
+        loan_doc.authenticity_score = int(forensics['authenticity_score'])
+    if (forensics.get('quality') or {}).get('score') is not None:
+        loan_doc.quality_score = int(forensics['quality']['score'])
+    if forensics.get('perceptual_hash'):
+        loan_doc.perceptual_hash = forensics['perceptual_hash']
+    loan_doc.save(update_fields=[
+        'automated_checks', 'file_sha256', 'auth_status',
+        'quality_score', 'authenticity_score', 'perceptual_hash',
+    ])
+    _touch_identity_case_after_document(loan_doc)
+
+
+def run_portal_document_checks(online_doc, loan_request=None) -> Dict[str, Any]:
+    """Run the same forensic/identity pipeline on a Digital Apply upload."""
+    from loans.models import LoanRequestDocument
+
+    raw = _read_upload_bytes(online_doc.file)
+    name = online_doc.original_filename or (
+        online_doc.file.name.split('/')[-1] if online_doc.file else ''
+    )
+    ext = (os.path.splitext(name)[1] or '').lower().lstrip('.')
+    sha256 = hashlib.sha256(raw).hexdigest() if raw else ''
+    online_doc.file_sha256 = sha256
+    online_doc.file_size = len(raw) if raw else online_doc.file_size
+
+    class _Proxy:
+        AUTH_PENDING = LoanRequestDocument.AUTH_PENDING
+        AUTH_AUTO_PASSED = LoanRequestDocument.AUTH_AUTO_PASSED
+        AUTH_NEEDS_REVIEW = LoanRequestDocument.AUTH_NEEDS_REVIEW
+        AUTH_REJECTED = LoanRequestDocument.AUTH_REJECTED
+        AUTH_VERIFIED = LoanRequestDocument.AUTH_VERIFIED
+
+        def __init__(self):
+            self.file = online_doc.file
+            self.document_type = online_doc.document_type
+            self.loan_request = loan_request
+            self.loan_request_id = getattr(loan_request, 'pk', None)
+            self.pk = None
+            self.original_filename = name
+            self.file_sha256 = sha256
+            self.file_size = online_doc.file_size
+            self.auth_status = LoanRequestDocument.AUTH_PENDING
+            self.automated_checks = {}
+            self.quality_score = None
+            self.authenticity_score = None
+            self.perceptual_hash = ''
+            self.uploaded_by = None
+
+        def save(self, update_fields=None):
+            online_doc.file_sha256 = self.file_sha256
+            online_doc.file_size = self.file_size
+            online_doc.original_filename = self.original_filename
+            online_doc.auth_status = self.auth_status
+            online_doc.automated_checks = self.automated_checks
+            online_doc.quality_score = self.quality_score
+            online_doc.authenticity_score = self.authenticity_score
+            online_doc.save(update_fields=[
+                'file_sha256', 'file_size', 'original_filename',
+                'auth_status', 'automated_checks', 'quality_score', 'authenticity_score',
+            ])
+
+    proxy = _Proxy()
+    report = run_automated_document_checks(proxy, prefetched_raw=raw)
+    online_doc.refresh_from_db()
+    try:
+        from loans.kyc_identity import ensure_identity_case, recompute_identity_case
+        app = online_doc.application
+        case = ensure_identity_case(loan_request=loan_request, online_application=app)
+        recompute_identity_case(case)
+    except Exception:
+        logger.exception('Portal KYC case recompute failed for online doc %s', online_doc.pk)
     return report
 
 
@@ -992,3 +1280,57 @@ def loan_documents_collateral_readiness(loan_request) -> Dict[str, Any]:
         "pending_review": pending_review,
         "checklist_count": len(checklist),
     }
+
+
+def loan_documents_committee_readiness(loan_request) -> Dict[str, Any]:
+    """Same pack checks used before committee on DBE product files."""
+    return loan_documents_collateral_readiness(loan_request)
+
+
+def document_identity_findings(loan_request) -> List[Dict[str, Any]]:
+    """OCR identity-match results already stored on uploaded documents."""
+    docs = loan_request.application_documents.select_related('document_type').all()
+    out: List[Dict[str, Any]] = []
+    for d in docs:
+        ident = (d.automated_checks or {}).get('identity_match') or {}
+        if not ident:
+            continue
+        out.append({
+            'document': d.document_type.name,
+            'passed': bool(ident.get('passed')),
+            'summary': ident.get('summary') or '',
+            'auth_status': d.auth_status,
+        })
+    return out[:12]
+
+
+def document_committee_blockers(loan_request) -> List[str]:
+    """Gate committee on authenticated KYC packs for DBE product files."""
+    from loans.kyc_desk import kyc_applies
+    from loans.kyc_identity import identity_committee_blockers
+
+    msgs: List[str] = list(identity_committee_blockers(loan_request))
+
+    if not kyc_applies(loan_request):
+        return msgs
+    ready = loan_documents_committee_readiness(loan_request)
+    if not ready.get('checklist_count'):
+        return msgs
+    if ready.get('ready') and not msgs:
+        return []
+    missing = ready.get('missing_required') or []
+    if missing:
+        msgs.append('Required documents missing: ' + ', '.join(missing[:4]) + '.')
+    unauth = ready.get('not_authenticated') or []
+    if unauth:
+        msgs.append('Documents not authenticated: ' + ', '.join(unauth[:4]) + '.')
+    rejected = ready.get('rejected') or []
+    if rejected:
+        msgs.append('Rejected documents must be replaced: ' + ', '.join(rejected[:3]) + '.')
+    pending = ready.get('pending_review') or []
+    if pending and not any('not authenticated' in m.lower() for m in msgs):
+        msgs.append('Documents still pending review: ' + ', '.join(sorted(set(pending))[:4]) + '.')
+    if msgs:
+        return msgs
+    return ['Required documents must be uploaded and authenticated before committee.']
+

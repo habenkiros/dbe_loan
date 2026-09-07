@@ -1,0 +1,50 @@
+{% if kyc_identity %}
+<section class="lw-panel" style="margin:0.75rem 0;">
+  <h3>Identity case</h3>
+  <p class="help">
+    Shared Digital Apply + staff evidence.
+    Band: <strong>{{ kyc_identity.band_label }}</strong>
+    · score {{ kyc_identity.score }}
+  </p>
+  {% if kyc_identity.blockers %}
+  <ul style="margin:0.35rem 0 0.5rem;padding-left:1.2rem;">
+    {% for b in kyc_identity.blockers %}
+    <li>{{ b }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if kyc_identity.parties %}
+  <p class="help" style="margin:0.35rem 0 0;">Parties</p>
+  <ul style="margin:0.2rem 0 0.5rem;padding-left:1.2rem;">
+    {% for p in kyc_identity.parties %}
+    <li>
+      {{ p.role }} — {{ p.name|default:"—" }}
+      · {{ p.kind }}
+      · verify {{ p.verify }}
+      {% if p.fan %} · FAN {{ p.fan }}{% endif %}
+      {% if p.tin %} · TIN {{ p.tin }}{% endif %}
+      {% if p.biometric %} · biometric {{ p.biometric }}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if kyc_identity.documents %}
+  <p class="help" style="margin:0.35rem 0 0;">Document scores</p>
+  <ul style="margin:0.2rem 0 0.5rem;padding-left:1.2rem;">
+    {% for d in kyc_identity.documents %}
+    <li>
+      {{ d.name }} — {{ d.auth }}
+      {% if d.quality != None %} · quality {{ d.quality }}{% endif %}
+      {% if d.authenticity != None %} · authenticity {{ d.authenticity }}{% endif %}
+      {% if d.reuse %} · reuse warning{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if kyc_identity.scan_override %}
+  <p class="help">Scan/Admin override: {{ kyc_identity.scan_override.note }}
+    {% if kyc_identity.scan_override.username %} ({{ kyc_identity.scan_override.username }}){% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endif %}

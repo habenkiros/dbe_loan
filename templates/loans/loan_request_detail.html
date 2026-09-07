@@ -20,6 +20,10 @@
   {% include "loans/_loan_amount_milestones.html" %}
   {% include "loans/_loan_risk_strip.html" %}
   {% include "loans/_compliance_cases_strip.html" %}
+  {% include "loans/_kyc_identity_case.html" %}
+  {% include "loans/_kyc_packs.html" %}
+  {% include "loans/_crm_cycle.html" %}
+  {% include "loans/_product_intel_panel.html" %}
 
   <div class="lw-strip">
     <div class="lw-row">
@@ -60,6 +64,32 @@
           {% url 'upload_loan_request_documents' loan_request.id as docs_url %}
           {% include "includes/list_action.html" with href=docs_url icon="list" label="Documents" tone="blue" only %}
         {% endif %}
+        {% if project_overlay.is_project %}
+          {% url 'project_file' loan_request.id as proj_url %}
+          {% include "includes/list_action.html" with href=proj_url icon="catalog" label="Project file" tone="blue" only %}
+        {% endif %}
+        {% if project_overlay.is_wholesale %}
+          {% url 'wholesale_file' loan_request.id as pfi_url %}
+          {% include "includes/list_action.html" with href=pfi_url icon="catalog" label="PFI file" tone="blue" only %}
+        {% endif %}
+        {% if project_overlay.is_lease %}
+          {% url 'lease_file' loan_request.id as lease_url %}
+          {% include "includes/list_action.html" with href=lease_url icon="catalog" label=project_overlay.is_ijarah|yesno:'Ijarah file,Lease file' tone="blue" only %}
+        {% endif %}
+        {% if project_overlay.is_murabaha %}
+          {% url 'murabaha_file' loan_request.id as mur_url %}
+          {% include "includes/list_action.html" with href=mur_url icon="catalog" label="Murabaha file" tone="blue" only %}
+        {% endif %}
+        {% if project_overlay.is_idea %}
+          {% url 'idea_file' loan_request.id as idea_url %}
+          {% include "includes/list_action.html" with href=idea_url icon="catalog" label="Idea file" tone="blue" only %}
+        {% endif %}
+        {% if project_overlay.is_consumer %}
+          {% url 'consumer_file' loan_request.id as cons_url %}
+          {% include "includes/list_action.html" with href=cons_url icon="catalog" label="Consumer file" tone="blue" only %}
+        {% endif %}
+        {% url 'rehab_loan' loan_request.id as rehab_url %}
+        {% include "includes/list_action.html" with href=rehab_url icon="report" label="Rehab / SLA" tone="blue" only %}
       </div>
     </div>
   </div>
@@ -69,7 +99,8 @@
     <div class="lw-facts">
       <span class="lbl">Phone</span><span>{{ loan_request.phone_number|default:"—" }}</span>
       <span class="lbl">Customer no.</span><span>{{ loan_request.customer_number|default:"—" }}</span>
-      <span class="lbl">Category</span><span>{{ loan_request.category.name }}</span>
+      <span class="lbl">Category</span><span>{{ loan_request.category.name }}{% if loan_request.category.product_family != 'general' %} · {{ loan_request.category.get_product_family_display }}{% endif %}</span>
+      <span class="lbl">Funding window</span><span>{% if loan_request.financing_fund %}{{ loan_request.financing_fund.code }} — {{ loan_request.financing_fund.name }}{% else %}Own book / not tagged{% endif %}</span>
       <span class="lbl">Collateral type</span><span>{{ loan_request.collateral.name }}</span>
       <span class="lbl">Reason</span><span>{{ loan_request.reason|default:"—" }}</span>
       <span class="lbl">District / branch</span><span>{{ loan_request.branch.district.name }} / {{ loan_request.branch.name }}</span>
@@ -105,6 +136,170 @@
     {% endif %}
     {% endwith %}
   </div>
+
+  {% if postbook %}
+  {% include "loans/_sla_panel.html" with sla=postbook.sla %}
+  {% if postbook.has_rehab or postbook.sla.breached or postbook.open_appeals %}
+  <div class="lw-panel">
+    <h3>Rehab / recovery</h3>
+    <div class="lw-facts">
+      <span class="lbl">Stage</span>
+      <span>{% if postbook.has_rehab %}{{ postbook.rehab_stage_label }}{% else %}None — optional{% endif %}</span>
+      {% if postbook.open_appeals %}
+      <span class="lbl">Appeals</span><span>{{ postbook.open_appeals }} open</span>
+      {% endif %}
+    </div>
+    <p><a href="{% url 'rehab_loan' loan_request.id %}">Open rehab / recovery →</a></p>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if project_overlay.is_project %}
+  <div class="lw-panel">
+    <h3>Project desk</h3>
+    <p class="help" style="margin-top:0;">
+      Identity, debt–equity, sources &amp; uses, plant desks, then implementation visits that unlock the next draw.
+    </p>
+    <div class="lw-facts">
+      <span class="lbl">Project</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.project_title %}{{ project_overlay.profile.project_title }}{% else %}Not titled{% endif %}</span>
+      <span class="lbl">Cost / equity / debt</span>
+      <span>
+        {% if project_overlay.profile and project_overlay.profile.total_project_cost %}{{ project_overlay.profile.total_project_cost|floatformat:0 }}{% else %}—{% endif %}
+        /
+        {% if project_overlay.profile and project_overlay.profile.promoter_equity %}{{ project_overlay.profile.promoter_equity|floatformat:0 }}{% else %}—{% endif %}
+        /
+        {% if project_overlay.profile and project_overlay.profile.requested_debt %}{{ project_overlay.profile.requested_debt|floatformat:0 }}{% else %}—{% endif %}
+      </span>
+      <span class="lbl">Sources / uses</span>
+      <span>{{ project_overlay.totals.sources|floatformat:0 }} / {{ project_overlay.totals.uses|floatformat:0 }}{% if project_overlay.totals.balanced %} · balanced{% endif %}</span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|slice:":2"|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'project_file' loan_request.id %}">Open project desk →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_wholesale %}
+  <div class="lw-panel">
+    <h3>PFI institution file</h3>
+    <p class="help" style="margin-top:0;">
+      The borrower is an institution. DBE takes PFI risk; the PFI on-lends. Not Sheet 3.
+    </p>
+    <div class="lw-facts">
+      <span class="lbl">Institution</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.institution_name %}{{ project_overlay.profile.institution_name }}{% else %}Not started{% endif %}</span>
+      <span class="lbl">Facility</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.facility_amount %}{{ project_overlay.profile.facility_amount|floatformat:2 }}{% else %}—{% endif %}</span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'wholesale_file' loan_request.id %}">Open PFI file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_lease %}
+  <div class="lw-panel">
+    <h3>{% if project_overlay.is_ijarah %}Ijarah{% else %}Lease{% endif %} asset register</h3>
+    <p class="help" style="margin-top:0;">
+      The bank owns the machine until the last installment.
+      {% if project_overlay.is_ijarah %}Rental + Sharia trail — not Sheet 7 interest.{% endif %}
+    </p>
+    <div class="lw-facts">
+      <span class="lbl">Supplier</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.supplier_name %}{{ project_overlay.profile.supplier_name }}{% else %}Not started{% endif %}</span>
+      <span class="lbl">Serial</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.serial_number %}{{ project_overlay.profile.serial_number }}{% else %}—{% endif %}</span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'lease_file' loan_request.id %}">Open asset register →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_murabaha %}
+  <div class="lw-panel">
+    <h3>Murabaha contract</h3>
+    <p class="help" style="margin-top:0;">Cost-plus sale — not Sheet 7 interest.</p>
+    <div class="lw-facts">
+      <span class="lbl">Goods</span>
+      <span>{% if project_overlay.contract and project_overlay.contract.goods_description %}{{ project_overlay.contract.goods_description }}{% else %}Not started{% endif %}</span>
+      <span class="lbl">Selling price</span>
+      <span>{{ project_overlay.selling_price|default:"—" }}</span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'murabaha_file' loan_request.id %}">Open Murabaha file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_idea %}
+  <div class="lw-panel">
+    <h3>Idea / quasi-equity</h3>
+    <p class="help" style="margin-top:0;">Not a loan. After approval the file is a cap table.</p>
+    <div class="lw-facts">
+      <span class="lbl">Venture</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.venture_name %}{{ project_overlay.profile.venture_name }}{% else %}Not started{% endif %}</span>
+      <span class="lbl">Proposed DBE share</span>
+      <span>{% if project_overlay.profile and project_overlay.profile.proposed_dbe_share_pct %}{{ project_overlay.profile.proposed_dbe_share_pct }}%{% else %}—{% endif %}</span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'idea_file' loan_request.id %}">Open idea file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_consumer %}
+  <div class="lw-panel">
+    <h3>Consumer / HRM</h3>
+    <p class="help" style="margin-top:0;">Salary, DTI, and LTV — not MSME cashflow.</p>
+    <div class="lw-facts">
+      <span class="lbl">Employer</span>
+      <span>{% if project_overlay.profile %}{{ project_overlay.profile.employer_name|default:"Not started" }}{% else %}Not started{% endif %}</span>
+      <span class="lbl">DTI / LTV</span>
+      <span>
+        {% if project_overlay.dti_pct %}{{ project_overlay.dti_pct }}%{% else %}—{% endif %}
+        /
+        {% if project_overlay.ltv_pct %}{{ project_overlay.ltv_pct }}%{% else %}—{% endif %}
+      </span>
+    </div>
+    {% if project_overlay.committee_blockers %}
+    <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
+    {% endif %}
+    <p><a href="{% url 'consumer_file' loan_request.id %}">Open consumer file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if loan_request.financing_fund %}
+  <div class="lw-panel">
+    <h3>Funding window · {{ loan_request.financing_fund.code }}</h3>
+    <p class="help" style="margin-top:0;">
+      {{ loan_request.financing_fund.name }}
+      {% if loan_request.financing_fund.women_min_pct %} · women ≥ {{ loan_request.financing_fund.women_min_pct }}%{% endif %}
+      {% if loan_request.financing_fund.youth_min_pct %} · youth ≥ {{ loan_request.financing_fund.youth_min_pct }}%{% endif %}
+      · <a href="{% url 'financing_fund_dashboard' %}">Envelope / covenant MIS</a>
+    </p>
+    <form method="post" action="{% url 'fund_file_tag' loan_request.id %}">
+      {% csrf_token %}
+      <p>
+        <label><input type="checkbox" name="women_owned" value="on" {% if loan_request.fund_tag.women_owned %}checked{% endif %}> Women-owned</label>
+        <label><input type="checkbox" name="youth_owned" value="on" {% if loan_request.fund_tag.youth_owned %}checked{% endif %}> Youth-owned</label>
+        <label><input type="checkbox" name="climate_tagged" value="on" {% if loan_request.fund_tag.climate_tagged %}checked{% endif %}> Climate</label>
+        <label><input type="checkbox" name="fx_window" value="on" {% if loan_request.fund_tag.fx_window %}checked{% endif %}> FX window</label>
+      </p>
+      <label>Region</label>
+      <input type="text" name="region" class="form-control" style="max-width:16rem;" value="{{ loan_request.fund_tag.region|default:'' }}">
+      <label>Sector</label>
+      <input type="text" name="sector" class="form-control" style="max-width:16rem;" value="{{ loan_request.fund_tag.sector|default:'' }}">
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Save fund tags</button></p>
+    </form>
+  </div>
+  {% endif %}
 
   <div class="lw-panel">
     <h3>Application documents</h3>
@@ -238,7 +433,7 @@
     {% endif %}
   </div>
 
-  {% include "loans/_ci_decision_card.html" %}
+    {% include "loans/_ci_decision_card.html" %}
 
   <div class="lw-panel">
     <h3>Approval committee</h3>

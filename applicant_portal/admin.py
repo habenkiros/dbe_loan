@@ -16,7 +16,7 @@ from applicant_portal.models import (
 class OnlineApplicationDocumentInline(admin.TabularInline):
     model = OnlineApplicationDocument
     extra = 0
-    readonly_fields = ('uploaded_at', 'file_size', 'original_filename')
+    readonly_fields = ('uploaded_at', 'file_size', 'original_filename', 'file_sha256', 'auth_status', 'automated_checks')
 
 
 @admin.register(ApplicantPortalSettings)

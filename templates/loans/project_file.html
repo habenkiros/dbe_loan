@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ profile.project_title|default:loan_request.loan_request_id }} — Project desk{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/project_desk.css' %}">
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="pf-desk">
+  <header class="pf-hero">
+    <div>
+      <p class="pf-kicker">DBE project financing</p>
+      <h1>{{ profile.project_title|default:"Untitled project" }}</h1>
+      <p class="pf-hero-sub">
+        {{ loan_request.loan_request_id }}
+        · {{ loan_request.applicant_name }}
+        · {{ loan_request.branch.name }}
+        · {{ profile.get_sector_display }}
+      </p>
+    </div>
+    <div class="pf-hero-actions list-actions list-actions-lg">
+      {% url 'loan_request_detail' loan_request.id as detail_url %}
+      {% include "includes/list_action.html" with href=detail_url icon="loan" label="Loan file" tone="blue" only %}
+      {% url 'loan_appraisal_edit' loan_request.id as app_url %}
+      {% include "includes/list_action.html" with href=app_url icon="appraisal" label="Appraisal" tone="green" only %}
+      {% if loan_request.committee_status == 'committee_approved' %}
+      {% url 'post_approval_detail' loan_request.id as pa_url %}
+      {% include "includes/list_action.html" with href=pa_url icon="money" label="Drawdowns" tone="orange" only %}
+      {% endif %}
+    </div>
+  </header>
+
+  <nav class="pf-journey" aria-label="Project journey">
+    {% for step in journey %}
+    <a class="pf-step{% if step.done %} is-done{% endif %}" href="#{{ step.key }}">
+      <strong>{% if step.done %}Done{% else %}Open{% endif %}</strong>
+      <span>{{ step.label }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <section class="pf-kpis" aria-label="Project numbers">
+    <article class="pf-kpi">
+      <em>Project cost</em>
+      <strong>{% if structure.cost %}{{ structure.cost|floatformat:0 }}{% else %}—{% endif %}</strong>
+      <small>ETB total investment</small>
+    </article>
+    <article class="pf-kpi">
+      <em>Promoter equity</em>
+      <strong>{% if structure.equity %}{{ structure.equity|floatformat:0 }}{% else %}—{% endif %}</strong>
+      <small>{% if structure.equity_pct %}{{ structure.equity_pct }}% of cost{% else %}Before first release{% endif %}</small>
+    </article>
+    <article class="pf-kpi">
+      <em>DBE debt</em>
+      <strong>{% if structure.debt %}{{ structure.debt|floatformat:0 }}{% else %}—{% endif %}</strong>
+      <small>{% if structure.debt_pct %}{{ structure.debt_pct }}% · {{ profile.get_debt_equity_policy_display }}{% else %}Policy band{% endif %}</small>
+    </article>
+    <article class="pf-kpi{% if totals.balanced %} is-ok{% elif totals.sources or totals.uses %} is-warn{% endif %}">
+      <em>Sources / uses</em>
+      <strong>{{ totals.sources|floatformat:0 }} / {{ totals.uses|floatformat:0 }}</strong>
+      <small>{% if totals.balanced %}Balanced{% elif totals.sources or totals.uses %}Gap {{ totals.gap|floatformat:0 }}{% else %}Not started{% endif %}</small>
+    </article>
+    <article class="pf-kpi">
+      <em>NPV</em>
+      <strong>{% if metrics.npv is not None %}{{ metrics.npv|floatformat:0 }}{% elif profile.npv is not None %}{{ profile.npv|floatformat:0 }}{% else %}—{% endif %}</strong>
+      <small>From annual cashflows</small>
+    </article>
+    <article class="pf-kpi{% if metrics.dscr and metrics.dscr < 1 %} is-warn{% elif metrics.dscr %} is-ok{% endif %}">
+      <em>Project DSCR</em>
+      <strong>{% if metrics.dscr is not None %}{{ metrics.dscr }}{% elif profile.project_dscr is not None %}{{ profile.project_dscr }}{% else %}—{% endif %}</strong>
+      <small>Must be ≥ 1.00 for committee</small>
+    </article>
+  </section>
+
+  {% include "loans/_product_intel_panel.html" %}
+
+  {% if postbook %}
+  {% include "loans/_sla_panel.html" with sla=postbook.sla %}
+  {% endif %}
+
+  {% if overlay.committee_blockers %}
+  <aside class="pf-blockers">
+    <h2>Still required before committee</h2>
+    <ol>
+      {% for b in overlay.committee_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ol>
+  </aside>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <section class="pf-panel" id="identity">
+      <h2>Identity</h2>
+      <p class="help">What is being built, where, and why. This is the face of the file.</p>
+      <div class="pf-fields">
+        {% include "loans/_pf_field.html" with field=form.project_title %}
+        {% include "loans/_pf_field.html" with field=form.sector %}
+        {% include "loans/_pf_field.html" with field=form.location %}
+        {% include "loans/_pf_field.html" with field=form.implementation_months %}
+        {% include "loans/_pf_field.html" with field=form.grace_months %}
+        {% include "loans/_pf_field.html" with field=form.purpose_summary wide=True %}
+      </div>
+    </section>
+
+    <section class="pf-panel" id="structure">
+      <h2>Cost &amp; equity</h2>
+      <p class="help">
+        Typical bands: 75:25 domestic new, 50:50 FDI / industrial park, 70:30 export linkage.
+        Equity is verified before the first loan release.
+      </p>
+      <div class="pf-fields">
+        {% include "loans/_pf_field.html" with field=form.debt_equity_policy %}
+        {% include "loans/_pf_field.html" with field=form.equity_plan %}
+        {% include "loans/_pf_field.html" with field=form.total_project_cost %}
+        {% include "loans/_pf_field.html" with field=form.promoter_equity %}
+        {% include "loans/_pf_field.html" with field=form.requested_debt %}
+        {% include "loans/_pf_field.html" with field=form.discount_rate_pct %}
+        {% include "loans/_pf_field.html" with field=form.npv %}
+        {% include "loans/_pf_field.html" with field=form.irr_pct %}
+        {% include "loans/_pf_field.html" with field=form.project_dscr %}
+      </div>
+      {% if structure.policy_blockers %}
+      <p class="help" style="color:#9a3412;">{{ structure.policy_blockers|join:" " }}</p>
+      {% endif %}
+    </section>
+
+    <section class="pf-panel" id="account">
+      <h2>DBE account &amp; other bank</h2>
+      <p class="help">A current account at DBE is required before any equity or loan release. Short-term WC often sits with another bank.</p>
+      <div class="pf-fields">
+        {% include "loans/_pf_field.html" with field=form.current_account_opened %}
+        {% include "loans/_pf_field.html" with field=form.other_bank_name %}
+        {% include "loans/_pf_field.html" with field=form.other_bank_amount %}
+        {% include "loans/_pf_field.html" with field=form.other_bank_note %}
+        {% include "loans/_pf_field.html" with field=form.notes wide=True %}
+      </div>
+    </section>
+
+    {% if can_edit %}
+    <div class="pf-actions">
+      <button type="submit" class="btn btn-green">Save project profile</button>
+    </div>
+    {% else %}
+    <p class="help">Read only on this file.</p>
+    {% endif %}
+  </form>
+
+  <section class="pf-panel" id="su">
+    <h2>Sources &amp; uses</h2>
+    <p class="help">
+      Every birr in must have a use. Civil, machinery, WC, and insurance are the purposes that later unlock drawdowns.
+    </p>
+    {% if can_edit and not lines %}
+    <form method="post" action="{% url 'project_seed_lines' loan_request.id %}" class="pf-actions" style="margin-top:0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-gray">Draft lines from cost &amp; equity</button>
+    </form>
+    {% endif %}
+    <div class="pf-grid-2">
+      <div class="pf-ledger">
+        <h3>Sources · {{ totals.sources|floatformat:2 }}</h3>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>From</th><th>Amount</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+            <tbody>
+              {% for line in source_lines %}
+              <tr>
+                <td>{{ line.get_purpose_display }}{% if line.label %} · {{ line.label }}{% endif %}</td>
+                <td>{{ line.amount|floatformat:2 }}</td>
+                {% if can_edit %}
+                <td>
+                  <form method="post" action="{% url 'project_delete_line' loan_request.id line.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-gray" style="font-size:0.75rem;">Remove</button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% empty %}
+              <tr><td colspan="3">No sources yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if can_edit %}
+        <form method="post" action="{% url 'project_add_line' loan_request.id %}" class="pf-add">
+          {% csrf_token %}
+          <input type="hidden" name="side" value="source">
+          <div>
+            <label>Source</label>
+            <select name="purpose" class="form-control">
+              {% for value, label in source_purposes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Amount</label>
+            <input type="number" name="amount" step="0.01" required class="form-control">
+          </div>
+          <button type="submit" class="btn btn-gray">Add</button>
+        </form>
+        {% endif %}
+      </div>
+      <div class="pf-ledger">
+        <h3>Uses · {{ totals.uses|floatformat:2 }}</h3>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Into</th><th>Amount</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+            <tbody>
+              {% for line in use_lines %}
+              <tr>
+                <td>{{ line.get_purpose_display }}{% if line.label %} · {{ line.label }}{% endif %}</td>
+                <td>{{ line.amount|floatformat:2 }}</td>
+                {% if can_edit %}
+                <td>
+                  <form method="post" action="{% url 'project_delete_line' loan_request.id line.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-gray" style="font-size:0.75rem;">Remove</button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% empty %}
+              <tr><td colspan="3">No uses yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if can_edit %}
+        <form method="post" action="{% url 'project_add_line' loan_request.id %}" class="pf-add">
+          {% csrf_token %}
+          <input type="hidden" name="side" value="use">
+          <div>
+            <label>Use</label>
+            <select name="purpose" class="form-control">
+              {% for value, label in use_purposes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Amount</label>
+            <input type="number" name="amount" step="0.01" required class="form-control">
+          </div>
+          <button type="submit" class="btn btn-gray">Add</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="pf-panel" id="viability">
+    <h2>Viability</h2>
+    <p class="help">
+      Operating cashflow versus project debt service. When years and cost are in, NPV / IRR / DSCR fill the tiles above.
+      A finished study can also be typed under Cost &amp; equity.
+    </p>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Year</th><th>Operating CF</th><th>Debt service</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for y in cashflows %}
+          <tr>
+            <td>{{ y.year_number }}</td>
+            <td>{{ y.operating_cf|floatformat:2 }}</td>
+            <td>{{ y.debt_service|floatformat:2 }}</td>
+            {% if can_edit %}
+            <td>
+              <form method="post" action="{% url 'project_delete_cashflow' loan_request.id y.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-gray" style="font-size:0.75rem;">Remove</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No years yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if can_edit %}
+    <form method="post" action="{% url 'project_add_cashflow' loan_request.id %}" class="pf-add">
+      {% csrf_token %}
+      <div>
+        <label>Year</label>
+        <input type="number" name="year_number" min="1" required class="form-control">
+      </div>
+      <div>
+        <label>Operating CF</label>
+        <input type="number" name="operating_cf" step="0.01" required class="form-control">
+      </div>
+      <div>
+        <label>Debt service</label>
+        <input type="number" name="debt_service" step="0.01" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-gray">Save year</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="pf-panel" id="desks">
+    <h2>Plant desks</h2>
+    <p class="help">Civil, mechanical, and electrical review the investment — not collateral BOQ. All three must clear before committee.</p>
+    <div class="pf-grid-3">
+      {% for desk in desks %}
+      <article class="pf-desk-card{% if desk.status == 'cleared' %} is-cleared{% elif desk.status == 'returned' %} is-returned{% endif %}">
+        <h3>{{ desk.get_desk_display }}</h3>
+        <p class="help">{{ desk.get_status_display }}{% if desk.reviewed_by %} · {{ desk.reviewed_by.get_full_name|default:desk.reviewed_by.username }}{% endif %}</p>
+        {% if can_edit %}
+        <form method="post" action="{% url 'project_desk_review' loan_request.id desk.desk %}">
+          {% csrf_token %}
+          <textarea name="note" class="form-control" rows="2" placeholder="Finding / condition">{{ desk.note }}</textarea>
+          <div class="pf-actions">
+            <button type="submit" name="action" value="clear" class="btn btn-green">Clear</button>
+            <button type="submit" name="action" value="return" class="btn btn-gray">Return</button>
+          </div>
+        </form>
+        {% elif desk.note %}
+        <p>{{ desk.note }}</p>
+        {% endif %}
+      </article>
+      {% empty %}
+      <p class="help">Desks appear once this file is opened.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="pf-panel" id="implementation">
+    <h2>Implementation</h2>
+    <p class="help">
+      After the first release, a site visit (percent complete + purpose) unlocks the next tranche.
+      Record visits here or on the drawdown track.
+    </p>
+    {% if visits %}
+    <div class="table-container">
+      <table>
+        <thead><tr><th>Date</th><th>%</th><th>Purpose</th><th>Note</th><th>Unlock</th></tr></thead>
+        <tbody>
+          {% for v in visits %}
+          <tr>
+            <td>{{ v.visited_at }}</td>
+            <td>{{ v.percent_complete|default:"—" }}</td>
+            <td>{{ v.purpose_code|default:"—" }}</td>
+            <td>{{ v.notes|truncatechars:80 }}</td>
+            <td>{% if v.unlocks_next_tranche %}Yes{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="help">No implementation visits yet.</p>
+    {% endif %}
+    {% if can_edit %}
+    <form method="post" action="{% url 'project_implementation_visit' loan_request.id %}" class="pf-fields">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="project">
+      <div class="pf-field">
+        <label>Visit date</label>
+        <input type="date" name="visited_at" class="form-control">
+      </div>
+      <div class="pf-field">
+        <label>Percent complete</label>
+        <input type="number" name="percent_complete" min="0" max="100" step="0.1" class="form-control">
+      </div>
+      <div class="pf-field">
+        <label>Purpose</label>
+        <select name="purpose_code" class="form-control">
+          <option value="civil">Civil works</option>
+          <option value="machinery">Machinery</option>
+          <option value="working_capital">Working capital</option>
+          <option value="insurance">Insurance</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="pf-field">
+        <label>
+          <input type="checkbox" name="unlocks_next_tranche" value="1"> Unlock next tranche
+        </label>
+      </div>
+      <div class="pf-field wide">
+        <label>Note</label>
+        <textarea name="notes" class="form-control" rows="2" required placeholder="What was seen on site, and what the last draw was used for."></textarea>
+      </div>
+      <div class="pf-field">
+        <button type="submit" class="btn btn-green">Record visit</button>
+      </div>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

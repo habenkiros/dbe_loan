@@ -4,11 +4,7 @@
 
 {% block content %}
 <h1>Edit Loan Category</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save Changes</button>
-</form>
+{% include "loans/_loan_category_form.html" with submit_label="Save Changes" %}
 <p style="margin-top:1.25rem;">
   <a href="{% url 'manage_loan_category_documents' category.id %}">Configure documents for this loan type →</a>
   · <a href="{% url 'manage_loan_categories' %}">← Back to categories</a>

@@ -1,0 +1,69 @@
+{% if desk_intel %}
+<article class="ci-decision-card dec-{{ desk_intel.decision.code }}">
+  <header class="ci-decision-head">
+    <div>
+      <p class="ci-eyebrow-dark">{{ desk_intel.family_label }} appraisal</p>
+      <h3>{{ desk_intel.decision.label }}</h3>
+      <p class="ci-decision-rationale">{{ desk_intel.decision.rationale }}</p>
+    </div>
+    <div class="ci-decision-score">
+      <div class="total">{{ desk_intel.mode_label }}</div>
+      <span class="ci-band band-{{ desk_intel.decision.code }}">{{ desk_intel.decision.code }}</span>
+    </div>
+  </header>
+
+  <p class="help" style="margin:0 0 0.6rem;">
+    KYC {% if desk_intel.kyc.complete %}cleared{% else %}open{% endif %}
+    · Documents {% if desk_intel.documents.ready %}authenticated{% elif desk_intel.documents.checklist_count %}incomplete{% else %}no pack configured{% endif %}
+    · CRM comments {% if desk_intel.crm_cleared %}cleared{% else %}open{% endif %}
+    {% if desk_intel.sanctions.ran %}
+    · Sanctions {% if desk_intel.sanctions.hit %}hit{% else %}clear{% endif %}
+    {% endif %}
+  </p>
+
+  {% if desk_intel.highlights %}
+  <div class="ci-decision-grid" style="margin-bottom:0.75rem;">
+    {% for h in desk_intel.highlights %}
+    <div>
+      <h4>{{ h.label }}</h4>
+      <p style="margin:0;font-weight:600;">{{ h.value }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="ci-decision-grid">
+    <div>
+      <h4>Positive indicators</h4>
+      <ul>
+        {% for p in desk_intel.positives %}
+        <li>{{ p }}</li>
+        {% empty %}
+        <li class="muted">None flagged yet</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h4>Risk / gates</h4>
+      <ul>
+        {% for r in desk_intel.risks %}
+        <li>{{ r }}</li>
+        {% empty %}
+        <li class="muted">No open gates from this desk</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h4>Officer next steps</h4>
+      <ul>
+        {% for a in desk_intel.required_actions %}
+        <li>{{ a }}</li>
+        {% empty %}
+        <li class="muted">None</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <p class="ci-decision-disclaimer">{{ desk_intel.disclaimer }}</p>
+</article>
+{% endif %}

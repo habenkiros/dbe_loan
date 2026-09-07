@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ desk_title }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <section class="dash-hero">
+    <div>
+      <h1>{{ desk_title }}</h1>
+      <p>Named inbox for this work unit. Files stay on the same credit spine.</p>
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:1rem 0;">
+    {% for key, label, n in queue_tabs %}
+    <a href="?queue={{ key }}"
+       style="text-decoration:none;border:1px solid {% if queue == key %}#1a5c3a{% else %}#c9dbd1{% endif %};background:{% if queue == key %}#e8f5ee{% else %}#fff{% endif %};padding:0.4rem 0.7rem;border-radius:4px;font-size:0.9rem;color:#1a2e24;">
+      {{ label }} · <strong>{{ n }}</strong>
+    </a>
+    {% endfor %}
+  </div>
+
+  <section class="lw-panel">
+    <h3>{{ scope_label }}</h3>
+    {% if page_obj and page_obj.object_list %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          {% if row_kind == 'application' %}
+          <th>Portal ID</th>
+          <th>Applicant</th>
+          <th>Status</th>
+          <th></th>
+          {% else %}
+          <th>Queue ID</th>
+          <th>Applicant</th>
+          <th>Product</th>
+          <th>Branch</th>
+          <th></th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page_obj %}
+        <tr>
+          {% if row_kind == 'application' %}
+          <td>{{ row.public_id }}</td>
+          <td>{{ row.applicant_name|default:row.applicant.full_name }}</td>
+          <td>{{ row.get_status_display }}</td>
+          <td>
+            {% if row.loan_request_id %}
+            <a href="{% url 'loan_request_detail' row.loan_request_id %}">Open file</a>
+            {% else %}
+            Not queued
+            {% endif %}
+          </td>
+          {% else %}
+          <td>{{ row.loan_request_id }}</td>
+          <td>{{ row.applicant_name }}</td>
+          <td>{{ row.category.get_product_family_display }}</td>
+          <td>{{ row.branch }}</td>
+          <td><a href="{% url 'loan_request_detail' row.id %}">Open file</a></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="help">No files in this queue.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

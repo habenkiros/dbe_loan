@@ -1,115 +1,366 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Create Loan Request{% endif %}{% endblock %}
+{% block title %}Add loan request{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/loan_register.css' %}">
+<link rel="stylesheet" href="{% static 'css/project_desk.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="lw-wrap" style="max-width:42rem;">
-  <h1 class="lw-identity" style="font-size:1.45rem;">{% if is_credit_origin %}Create Head Office Credit Loan{% else %}Register loan request{% endif %}</h1>
-  <p class="lw-identity-sub" style="margin-bottom:1rem;">
-    {% if is_credit_origin %}
-    Head-office Credit loans skip Branch Cooperative intake.
-    {% else %}
-    Branch registration starts with the <strong>DECSI customer number</strong>. Look up the customer, then confirm amount and product.
-    {% endif %}
-    {% if customer_api_live %}
-    <br><span class="lw-badge lw-ok" style="margin-top:0.4rem;">Core banking API live</span>
-    {% else %}
-    <br><span class="lw-badge lw-muted" style="margin-top:0.4rem;">Demo lookup (set DECSI_BASE_URL for live party API)</span>
-    {% endif %}
-  </p>
+<div class="lr">
+  <header class="lr-hero">
+    <p class="lr-kicker">{% if is_credit_origin %}Head-office Credit{% else %}Branch intake{% endif %}</p>
+    <h1>Add loan request</h1>
+    <p>
+      Pick the product, then the party, then the few fields that product needs.
+      {% if is_credit_origin %}This file skips Branch Cooperative.{% endif %}
+    </p>
+  </header>
 
   {% if form.non_field_errors %}
   <ul class="errorlist">{{ form.non_field_errors }}</ul>
   {% endif %}
 
-  <form method="post" id="staff-loan-create-form" class="lw-panel" novalidate>
+  <form method="post" id="staff-loan-create-form" novalidate>
     {% csrf_token %}
 
-    <h3 style="margin-top:0;">1 · Customer number</h3>
-    <div class="form-group">
-      <label for="{{ form.customer_number.id_for_label }}"><strong>{{ form.customer_number.label }}</strong></label>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:stretch;margin-top:0.25rem;">
-        {{ form.customer_number }}
-        <button type="button" class="btn btn-blue" id="staff-customer-lookup-btn" style="white-space:nowrap;">
-          Look up customer
-        </button>
+    <ol class="lr-steps" id="lr-steps">
+      <li><button type="button" data-goto="1" class="is-on"><strong>1</strong><span>Product</span></button></li>
+      <li><button type="button" data-goto="2"><strong>2</strong><span>Party</span></button></li>
+      <li><button type="button" data-goto="3"><strong>3</strong><span>Details</span></button></li>
+      <li><button type="button" data-goto="4"><strong>4</strong><span>File</span></button></li>
+    </ol>
+
+    <div class="lr-card">
+      <section class="lr-step is-on" data-step="1">
+        <h2>What are you registering?</h2>
+        <p class="help">One product. The rest of this form follows it.</p>
+        <div class="lr-select-hidden">{{ form.category }}</div>
+        {{ form.category.errors }}
+        <div class="lr-products" id="lr-products">
+          {% for row in family_payload %}
+          <button type="button" class="lr-product" data-id="{{ row.id }}" data-family="{{ row.family }}">
+            <em>{{ row.family_label }}</em>
+            <strong>{{ row.name }}</strong>
+          </button>
+          {% endfor %}
+        </div>
+        <div id="dbe-family-guide" class="lr-guide">
+          <strong id="dbe-family-title"></strong>
+          <p id="dbe-family-text" class="help"></p>
+        </div>
+        <div class="lr-fields">
+          {% if form.district %}
+          <div class="lr-field">
+            <label for="{{ form.district.id_for_label }}">{{ form.district.label }}</label>
+            {{ form.district }}
+            {% if form.district.help_text %}<p class="help">{{ form.district.help_text }}</p>{% endif %}
+            {{ form.district.errors }}
+          </div>
+          {% endif %}
+          {% if form.branch %}
+          <div class="lr-field">
+            <label for="{{ form.branch.id_for_label }}">{{ form.branch.label }}</label>
+            {{ form.branch }}
+            {% if form.branch.help_text %}<p class="help">{{ form.branch.help_text }}</p>{% endif %}
+            {{ form.branch.errors }}
+          </div>
+          {% endif %}
+          <div class="lr-field{% if not form.branch %} wide{% endif %}">
+            <label for="{{ form.financing_fund.id_for_label }}">{{ form.financing_fund.label }}</label>
+            {{ form.financing_fund }}
+            <p class="help">Only windows allowed for this product. Own book if untagged.</p>
+            {{ form.financing_fund.errors }}
+          </div>
+        </div>
+      </section>
+
+      <section class="lr-step" data-step="2">
+        <h2>Who is on the file?</h2>
+        <p class="help" id="dbe-party-hint">Select a product first.</p>
+        <div class="lr-fields">
+          <div class="lr-field wide" id="dbe-cbs-block">
+            <label for="{{ form.customer_number.id_for_label }}" id="dbe-cn-label">{{ form.customer_number.label }}</label>
+            <div class="lr-lookup">
+              {{ form.customer_number }}
+              <button type="button" class="btn btn-blue" id="staff-customer-lookup-btn">Look up</button>
+            </div>
+            {{ form.customer_number.errors }}
+            <p class="help" id="staff-lookup-status"></p>
+            <div id="staff-profile-card" class="lr-profile">
+              <strong>Customer record</strong>
+              <span id="sp-source-badge" class="lw-badge lw-muted" style="margin-left:0.4rem;display:none;"></span>
+              <div class="lw-facts" style="margin-top:0.45rem;">
+                <span class="lbl">Name</span><span id="sp-name">—</span>
+                <span class="lbl">Phone</span><span id="sp-phone">—</span>
+                <span class="lbl">Type</span><span id="sp-status">—</span>
+                <span class="lbl">Address</span><span id="sp-addr">—</span>
+              </div>
+            </div>
+          </div>
+          <div class="lr-field">
+            <label for="{{ form.applicant_name.id_for_label }}" id="dbe-name-label">{{ form.applicant_name.label }}</label>
+            {{ form.applicant_name }}
+            {{ form.applicant_name.errors }}
+          </div>
+          <div class="lr-field">
+            <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+            {{ form.phone_number }}
+            {{ form.phone_number.errors }}
+          </div>
+          <div class="lr-field">
+            <label for="{{ form.customer_history.id_for_label }}">{{ form.customer_history.label }}</label>
+            {{ form.customer_history }}
+            {{ form.customer_history.errors }}
+          </div>
+        </div>
+      </section>
+
+      <section class="lr-step" data-step="3" id="dbe-intake-wrap">
+        <h2>Loan-type details</h2>
+        <p class="help" id="lr-details-help">Only the first cut. The full desk opens after you create the file.</p>
+
+        <div class="dbe-intake" data-family="project" hidden>
+          {% if intake_forms.project %}
+          <div class="lr-fields">
+            {% include "loans/_pf_field.html" with field=intake_forms.project.project_title %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.sector %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.location %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.debt_equity_policy %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.total_project_cost %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.promoter_equity %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.requested_debt %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.equity_plan %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.implementation_months %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.grace_months %}
+            {% include "loans/_pf_field.html" with field=intake_forms.project.purpose_summary wide=True %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="dbe-intake" data-family="wholesale" hidden>
+          {% include "loans/_registration_intake.html" with form=intake_forms.wholesale %}
+        </div>
+        <div class="dbe-intake" data-family="lease" data-also="ifb_ijarah" hidden>
+          <h3 id="dbe-lease-title" class="help" style="font-weight:700;">Leased asset</h3>
+          {% include "loans/_registration_intake.html" with form=intake_forms.lease %}
+        </div>
+        <div class="dbe-intake" data-family="ifb_murabaha" hidden>
+          {% include "loans/_registration_intake.html" with form=intake_forms.ifb_murabaha %}
+        </div>
+        <div class="dbe-intake" data-family="idea_equity" hidden>
+          {% include "loans/_registration_intake.html" with form=intake_forms.idea_equity %}
+        </div>
+        <div class="dbe-intake" data-family="consumer" hidden>
+          {% include "loans/_registration_intake.html" with form=intake_forms.consumer %}
+        </div>
+        <p class="help" id="lr-no-details" hidden>No extra intake for this product. Continue to the file.</p>
+      </section>
+
+      <section class="lr-step" data-step="4">
+        <h2>File</h2>
+        <p class="help">Amount and purpose. Security only when the product needs it.</p>
+        <div class="lr-fields">
+          <div class="lr-field" id="dbe-collateral-block">
+            <label for="{{ form.collateral.id_for_label }}">{{ form.collateral.label }}</label>
+            {{ form.collateral }}
+            {{ form.collateral.errors }}
+          </div>
+          <div class="lr-field">
+            <label for="{{ form.amount_requested.id_for_label }}">{{ form.amount_requested.label }}</label>
+            {{ form.amount_requested }}
+            {{ form.amount_requested.errors }}
+          </div>
+          <div class="lr-field wide">
+            <label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+            {{ form.reason }}
+            {{ form.reason.errors }}
+          </div>
+        </div>
+      </section>
+
+      <div class="lr-foot">
+        <a class="btn btn-gray" href="{% url 'view_loan_requests' %}">Cancel</a>
+        <div class="lr-foot-right">
+          <button type="button" class="btn btn-gray" id="lr-back" hidden>Back</button>
+          <button type="button" class="btn btn-green" id="lr-next">Next</button>
+          <button type="submit" class="btn btn-green" id="lr-save" hidden>Create file</button>
+        </div>
       </div>
-      {% if form.customer_number.help_text %}<p class="help">{{ form.customer_number.help_text }}</p>{% endif %}
-      {{ form.customer_number.errors }}
-      <p class="help" id="staff-lookup-status" style="min-height:1.2em;margin-top:0.35rem;"></p>
-    </div>
-
-    <div id="staff-profile-card" class="lw-panel" style="display:none;margin:0.75rem 0;background:#f3f8f5;border:1px solid #c9dbd1;box-shadow:none;">
-      <strong style="color:#064420;">Customer record</strong>
-      <span id="sp-source-badge" class="lw-badge lw-muted" style="margin-left:0.5rem;display:none;"></span>
-      <div class="lw-facts" style="margin-top:0.5rem;">
-        <span class="lbl">Name</span><span id="sp-name">—</span>
-        <span class="lbl">Phone</span><span id="sp-phone">—</span>
-        <span class="lbl">Type / rating</span><span id="sp-status">—</span>
-        <span class="lbl">Address</span><span id="sp-addr">—</span>
-        <span class="lbl">Gender / age</span><span id="sp-demo">—</span>
-        <span class="lbl">Town / AO</span><span id="sp-geo">—</span>
-      </div>
-    </div>
-
-    <h3>2 · Confirm identity</h3>
-    <div class="form-group">
-      <label for="{{ form.applicant_name.id_for_label }}">{{ form.applicant_name.label }}</label>
-      {{ form.applicant_name }}
-      {% if form.applicant_name.help_text %}<p class="help">{{ form.applicant_name.help_text }}</p>{% endif %}
-      {{ form.applicant_name.errors }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
-      {{ form.phone_number }}
-      {% if form.phone_number.help_text %}<p class="help">{{ form.phone_number.help_text }}</p>{% endif %}
-      {{ form.phone_number.errors }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.customer_history.id_for_label }}">{{ form.customer_history.label }}</label>
-      {{ form.customer_history }}
-      {{ form.customer_history.errors }}
-    </div>
-
-    <h3>3 · Loan details</h3>
-    {% if form.branch %}
-    <div class="form-group">
-      <label for="{{ form.branch.id_for_label }}">{{ form.branch.label }}</label>
-      {{ form.branch }}
-      {% if form.branch.help_text %}<p class="help">{{ form.branch.help_text }}</p>{% endif %}
-      {{ form.branch.errors }}
-    </div>
-    {% endif %}
-    <div class="form-group">
-      <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
-      {{ form.category }}
-      {{ form.category.errors }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.collateral.id_for_label }}">{{ form.collateral.label }}</label>
-      {{ form.collateral }}
-      {{ form.collateral.errors }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.amount_requested.id_for_label }}">{{ form.amount_requested.label }}</label>
-      {{ form.amount_requested }}
-      {{ form.amount_requested.errors }}
-    </div>
-    <div class="form-group">
-      <label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
-      {{ form.reason }}
-      {{ form.reason.errors }}
-    </div>
-
-    <div class="list-actions" style="margin-top:1.25rem;">
-      <button type="submit" class="btn btn-green">Create loan request</button>
-      <a class="btn btn-gray" href="{% url 'view_loan_requests' %}">Cancel</a>
     </div>
   </form>
 </div>
 
+{{ family_payload|json_script:"dbe-family-payload" }}
 <script>
 (function () {
+  var payload = JSON.parse(document.getElementById('dbe-family-payload').textContent);
+  var byId = {};
+  (payload || []).forEach(function (row) { byId[String(row.id)] = row; });
+
+  var cat = document.getElementById('id_category');
+  var guide = document.getElementById('dbe-family-guide');
+  var title = document.getElementById('dbe-family-title');
+  var text = document.getElementById('dbe-family-text');
+  var hint = document.getElementById('dbe-party-hint');
+  var cbs = document.getElementById('dbe-cbs-block');
+  var nameLabel = document.getElementById('dbe-name-label');
+  var cnLabel = document.getElementById('dbe-cn-label');
+  var collateral = document.getElementById('dbe-collateral-block');
+  var intakes = document.querySelectorAll('.dbe-intake');
+  var noDetails = document.getElementById('lr-no-details');
+  var products = document.querySelectorAll('.lr-product');
+
+  var partyLabel = {
+    person: 'Person / enterprise name',
+    institution: 'Institution name',
+    promoter: 'Promoter / project sponsor'
+  };
+  var partyHint = {
+    person: 'Person or enterprise. MSME / corporate looks up core banking.',
+    institution: 'Licensed PFI. No retail customer number.',
+    promoter: 'Project or idea sponsor. No retail customer number.'
+  };
+
+  function currentRow() {
+    return cat && byId[cat.value];
+  }
+
+  function applyFamily() {
+    var row = currentRow();
+    intakes.forEach(function (el) { el.hidden = true; });
+    products.forEach(function (btn) {
+      btn.classList.toggle('is-on', cat && String(btn.getAttribute('data-id')) === String(cat.value));
+    });
+    if (!row) {
+      guide.classList.remove('is-on');
+      hint.textContent = 'Select a product first.';
+      cbs.style.display = '';
+      if (nameLabel) nameLabel.textContent = 'Applicant name';
+      if (collateral) collateral.style.display = '';
+      if (noDetails) noDetails.hidden = true;
+      return;
+    }
+    title.textContent = row.family_label;
+    text.textContent = row.guide;
+    guide.classList.add('is-on');
+    hint.textContent = partyHint[row.party] || '';
+    if (nameLabel) nameLabel.textContent = partyLabel[row.party] || 'Applicant name';
+    if (cnLabel) cnLabel.textContent = row.needs_cbs ? 'Customer number' : 'Customer number (optional)';
+    cbs.style.display = row.needs_cbs ? '' : 'none';
+    if (collateral) collateral.style.display = row.needs_collateral ? '' : 'none';
+    var shown = false;
+    intakes.forEach(function (el) {
+      var fam = el.getAttribute('data-family');
+      var also = (el.getAttribute('data-also') || '').split(/\s+/);
+      var match = fam === row.family || also.indexOf(row.family) !== -1;
+      el.hidden = !match;
+      if (match) shown = true;
+    });
+    if (noDetails) noDetails.hidden = shown;
+    var leaseTitle = document.getElementById('dbe-lease-title');
+    if (leaseTitle) leaseTitle.textContent = row.family === 'ifb_ijarah' ? 'Ijarah asset' : 'Leased asset';
+    filterSelect(document.getElementById('id_financing_fund'), row.fund_ids, true);
+    filterSelect(document.getElementById('id_collateral'), row.collateral_ids, false);
+  }
+
+  function filterSelect(sel, ids, keepEmpty) {
+    if (!sel) return;
+    var allow = {};
+    (ids || []).forEach(function (id) { allow[String(id)] = true; });
+    var restrict = (ids || []).length > 0;
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      if (keepEmpty && !opt.value) {
+        opt.hidden = false;
+        opt.disabled = false;
+        return;
+      }
+      var ok = !restrict || allow[String(opt.value)];
+      opt.hidden = !ok;
+      opt.disabled = !ok;
+      if (!ok && opt.selected) opt.selected = false;
+    });
+    if (keepEmpty && !sel.value) sel.selectedIndex = 0;
+  }
+
+  products.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!cat) return;
+      cat.value = btn.getAttribute('data-id');
+      applyFamily();
+    });
+  });
+  if (cat) {
+    cat.addEventListener('change', applyFamily);
+    applyFamily();
+  }
+
+  var districtEl = document.getElementById('id_district');
+  var branchEl = document.getElementById('id_branch');
+  function loadBranches() {
+    if (!districtEl || !branchEl) return;
+    var did = districtEl.value;
+    var keep = branchEl.value;
+    branchEl.innerHTML = '<option value="">— Select branch —</option>';
+    if (!did) return;
+    fetch('{% url "ajax_staff_registration_options" %}?district_id=' + encodeURIComponent(did), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        (j.branches || []).forEach(function (b) {
+          var opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          if (String(b.id) === String(keep)) opt.selected = true;
+          branchEl.appendChild(opt);
+        });
+      })
+      .catch(function () {});
+  }
+  if (districtEl) districtEl.addEventListener('change', loadBranches);
+
+  var step = 1;
+  var steps = document.querySelectorAll('.lr-step');
+  var tabs = document.querySelectorAll('#lr-steps button');
+  var back = document.getElementById('lr-back');
+  var next = document.getElementById('lr-next');
+  var save = document.getElementById('lr-save');
+
+  function showStep(n) {
+    step = Math.max(1, Math.min(4, n));
+    steps.forEach(function (el) {
+      el.classList.toggle('is-on', Number(el.getAttribute('data-step')) === step);
+    });
+    tabs.forEach(function (btn) {
+      btn.classList.toggle('is-on', Number(btn.getAttribute('data-goto')) === step);
+    });
+    back.hidden = step === 1;
+    next.hidden = step === 4;
+    save.hidden = step !== 4;
+  }
+
+  tabs.forEach(function (btn) {
+    btn.addEventListener('click', function () { showStep(Number(btn.getAttribute('data-goto'))); });
+  });
+  next.addEventListener('click', function () {
+    if (step === 1 && cat && !cat.value) {
+      alert('Pick a product first.');
+      return;
+    }
+    showStep(step + 1);
+  });
+  back.addEventListener('click', function () { showStep(step - 1); });
+
+  var firstError = document.querySelector('.lr-step .errorlist, .lr-step .error');
+  if (firstError) {
+    var pane = firstError.closest('.lr-step');
+    if (pane) showStep(Number(pane.getAttribute('data-step')));
+  } else {
+    showStep(1);
+  }
+
   var btn = document.getElementById('staff-customer-lookup-btn');
   var cn = document.getElementById('id_customer_number');
   var statusEl = document.getElementById('staff-lookup-status');
@@ -120,17 +371,12 @@
     statusEl.textContent = msg || '';
     statusEl.style.color = warn ? '#9a3412' : (ok ? '#0a6b2e' : '#9b2c2c');
   }
-
   function showProfile(p, dataSource) {
     document.getElementById('sp-name').textContent = p.name || '—';
     document.getElementById('sp-phone').textContent = p.phone_number || '—';
     document.getElementById('sp-status').textContent =
       [p.status, p.customer_status].filter(Boolean).join(' · ') || '—';
     document.getElementById('sp-addr').textContent = p.home_address || '—';
-    document.getElementById('sp-demo').textContent =
-      [p.gender, p.age ? ('age ' + p.age) : '', p.date_of_birth].filter(Boolean).join(' · ') || '—';
-    document.getElementById('sp-geo').textContent =
-      [p.city, p.branch_code ? ('AO ' + p.branch_code) : ''].filter(Boolean).join(' · ') || '—';
     var badge = document.getElementById('sp-source-badge');
     if (badge && dataSource && dataSource.label) {
       badge.style.display = 'inline-block';
@@ -140,9 +386,8 @@
         dataSource.code === 'fallback' ? 'lw-warn' : 'lw-muted'
       );
     }
-    card.style.display = 'block';
+    card.classList.add('is-on');
   }
-
   function fillForm(p) {
     var nameEl = document.getElementById('id_applicant_name');
     var phoneEl = document.getElementById('id_phone_number');
@@ -150,22 +395,17 @@
     if (nameEl && p.name) nameEl.value = p.name;
     if (phoneEl && p.phone_number) phoneEl.value = p.phone_number;
     if (cn && p.customer_number) cn.value = p.customer_number;
-    if (histEl && !histEl.value) {
-      // Prefer existing when party profile is found
+    if (histEl) {
       for (var i = 0; i < histEl.options.length; i++) {
-        if (histEl.options[i].value === 'existing') {
-          histEl.selectedIndex = i;
-          break;
-        }
+        if (histEl.options[i].value === 'existing') { histEl.selectedIndex = i; break; }
       }
     }
   }
-
   function lookup() {
     var val = (cn.value || '').trim();
     if (val.length < 4) {
       setStatus('Enter a customer number first.', false);
-      card.style.display = 'none';
+      card.classList.remove('is-on');
       return;
     }
     setStatus('Looking up…', true);
@@ -179,7 +419,7 @@
         btn.disabled = false;
         if (!res.ok || !res.j.ok) {
           setStatus((res.j && res.j.error) || 'Customer not found.', false);
-          card.style.display = 'none';
+          card.classList.remove('is-on');
           return;
         }
         setStatus(res.j.message || 'Customer found.', true, (res.j.data_source || {}).code === 'fallback');
@@ -191,13 +431,9 @@
         setStatus('Lookup failed. Try again.', false);
       });
   }
-
   btn.addEventListener('click', lookup);
   cn.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      lookup();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); lookup(); }
   });
 })();
 </script>

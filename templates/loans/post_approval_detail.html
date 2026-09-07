@@ -37,6 +37,12 @@
   <p class="help">
     <a href="{% url 'post_approval_queue' %}">← Post-approval queue</a>
     · <a href="{% url 'loan_request_detail' loan_request.id %}">Loan detail</a>
+    {% if project_overlay.is_project %}· <a href="{% url 'project_file' loan_request.id %}">Project file</a>{% endif %}
+    {% if project_overlay.is_wholesale %}· <a href="{% url 'wholesale_file' loan_request.id %}">PFI file</a>{% endif %}
+    {% if project_overlay.is_lease %}· <a href="{% url 'lease_file' loan_request.id %}">{% if project_overlay.is_ijarah %}Ijarah{% else %}Lease{% endif %} file</a>{% endif %}
+    {% if project_overlay.is_murabaha %}· <a href="{% url 'murabaha_file' loan_request.id %}">Murabaha file</a>{% endif %}
+    {% if project_overlay.is_idea %}· <a href="{% url 'idea_file' loan_request.id %}">Idea file</a>{% endif %}
+    · <a href="{% url 'rehab_loan' loan_request.id %}">Rehab / SLA</a>
     {% if appraisal %}· <a href="{% url 'committee_appraisal_pack' loan_request.id %}">Appraisal pack</a>{% endif %}
   </p>
   <h1 style="margin-bottom:0.35rem;">Post-approval &amp; disbursement</h1>
@@ -249,7 +255,7 @@
         <h3>Collateral Restriction</h3>
         <p class="help" style="margin-top:0;">
           Land / municipality paper that restricts sale or transfer of the pledged property
-          until DECSI releases it.
+          until {{ institution_short|default:"DBE" }} releases it.
         </p>
         <p>
           {% if collateral_legal.restriction_ok %}
@@ -531,6 +537,199 @@
     {% endif %}
   </div>
 
+  {% if project_overlay.is_wholesale %}
+  <div class="pa-panel" style="border-color:#c4a035;">
+    <h2 style="margin-top:0; font-size:1.15rem;">PFI utilization</h2>
+    <p class="help" style="margin-top:0;">
+      After approval, track on-lending vs the facility, repayment to DBE, and sub-portfolio PAR.
+      Not a factory site visit.
+    </p>
+    {% if project_overlay.disbursement_blockers %}
+    <ul>
+      {% for b in project_overlay.disbursement_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if project_overlay.latest_report %}
+    <p>
+      Latest report {{ project_overlay.latest_report.as_of }}
+      · on-lent {{ project_overlay.latest_report.amount_onlent|floatformat:2 }}
+      · repaid {{ project_overlay.latest_report.pfi_repaid_to_dbe|floatformat:2 }}
+    </p>
+    {% endif %}
+    {% if can_manage_conditions %}
+    <form method="post" action="{% url 'wholesale_add_utilization' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="post_approval">
+      <label>As of</label>
+      <input type="date" name="as_of" class="form-control" style="max-width:12rem;">
+      <label>Amount on-lent</label>
+      <input type="number" step="0.01" name="amount_onlent" class="form-control" style="max-width:12rem;">
+      <label>PFI repaid to DBE</label>
+      <input type="number" step="0.01" name="pfi_repaid_to_dbe" class="form-control" style="max-width:12rem;">
+      <label>Sub-PAR 90</label>
+      <input type="number" step="0.01" name="sub_par90_pct" class="form-control" style="max-width:8rem;">
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Record utilization</button></p>
+    </form>
+    {% endif %}
+    <p><a href="{% url 'wholesale_file' loan_request.id %}">Open PFI file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_murabaha %}
+  <div class="pa-panel" style="border-color:#c4a035;">
+    <h2 style="margin-top:0; font-size:1.15rem;">Murabaha confirm</h2>
+    <p class="help" style="margin-top:0;">Cost-plus contract + cleared Sharia review. No interest Sheet 7.</p>
+    {% if project_overlay.disbursement_blockers %}
+    <ul>
+      {% for b in project_overlay.disbursement_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if can_manage_conditions %}
+    <form method="post" action="{% url 'murabaha_sharia_review' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="post_approval">
+      <label>Sharia note</label>
+      <textarea name="note" class="form-control" rows="2"></textarea>
+      <p><button type="submit" name="action" value="clear" class="btn btn-green" style="font-size:0.85rem;">Clear Sharia review</button></p>
+    </form>
+    {% endif %}
+    <p><a href="{% url 'murabaha_file' loan_request.id %}">Open Murabaha file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_idea %}
+  <div class="pa-panel" style="border-color:#c4a035;">
+    <h2 style="margin-top:0; font-size:1.15rem;">Investment / cap table</h2>
+    <p class="help" style="margin-top:0;">
+      Quasi-equity. Release the investment only when the cap table shows DBE’s share.
+    </p>
+    {% if project_overlay.disbursement_blockers %}
+    <ul>
+      {% for b in project_overlay.disbursement_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if can_manage_conditions %}
+    <form method="post" action="{% url 'idea_add_cap_row' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="post_approval">
+      <label>Holder</label>
+      <input type="text" name="holder_name" class="form-control" style="max-width:16rem;" required>
+      <label>Role</label>
+      <select name="role" class="form-control" style="max-width:12rem;">
+        <option value="founder">Founder</option>
+        <option value="dbe">DBE</option>
+        <option value="other">Other</option>
+      </select>
+      <label>Share %</label>
+      <input type="number" name="share_pct" step="0.01" class="form-control" style="max-width:8rem;" required>
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Add cap-table row</button></p>
+    </form>
+    {% endif %}
+    <p><a href="{% url 'idea_file' loan_request.id %}">Open idea file →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_lease %}
+  <div class="pa-panel" style="border-color:#c4a035;">
+    <h2 style="margin-top:0; font-size:1.15rem;">{% if project_overlay.is_ijarah %}Ijarah{% else %}Lease{% endif %} release</h2>
+    <p class="help" style="margin-top:0;">
+      First release needs asset identity, ≥20% contribution verified, insurance, and delivery / commencement.
+      {% if project_overlay.is_ijarah %}Ijarah also needs a cleared Sharia review and a rental schedule.{% endif %}
+    </p>
+    {% if project_overlay.disbursement_blockers %}
+    <ul>
+      {% for b in project_overlay.disbursement_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if project_overlay.is_ijarah and can_manage_conditions %}
+    <form method="post" action="{% url 'lease_sharia_review' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="post_approval">
+      <label>Sharia note</label>
+      <textarea name="note" class="form-control" rows="2"></textarea>
+      <p><button type="submit" name="action" value="clear" class="btn btn-green" style="font-size:0.85rem;">Clear Sharia review</button></p>
+    </form>
+    {% endif %}
+    <p><a href="{% url 'lease_file' loan_request.id %}">Open asset register →</a></p>
+  </div>
+  {% endif %}
+
+  {% if project_overlay.is_project %}
+  <div class="pa-panel" style="border-color:#c4a035;">
+    <h2 style="margin-top:0; font-size:1.15rem;">Project implementation</h2>
+    <p class="help" style="margin-top:0;">
+      First release needs a complete project file and verified promoter equity.
+      The next tranche waits for an implementation visit.
+    </p>
+    {% if project_overlay.disbursement_blockers %}
+    <ul>
+      {% for b in project_overlay.disbursement_blockers %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if project_overlay.unused_visits %}
+    <p><span class="pa-badge pa-ok">Visit ready to unlock next tranche</span></p>
+    {% endif %}
+    {% if project_overlay.profile %}
+    <p>
+      Current account:
+      {% if project_overlay.profile.current_account_opened %}
+      <span class="pa-badge pa-ok">Opened</span>
+      {% else %}
+      <span class="pa-badge pa-bad">Not opened</span>
+      {% endif %}
+      {% if project_overlay.profile.equity_plan == 'staggered' %}
+      · Equity stage {{ project_overlay.profile.equity_stage }}/3
+      {% endif %}
+    </p>
+    {% if can_manage_conditions and project_overlay.profile.equity_plan == 'staggered' %}
+    <form method="post" action="{% url 'project_set_equity_stage' loan_request.id %}">
+      {% csrf_token %}
+      <label>Set equity stage</label>
+      <select name="equity_stage" class="form-control" style="max-width:10rem;">
+        <option value="1" {% if project_overlay.profile.equity_stage == 1 %}selected{% endif %}>1/3</option>
+        <option value="2" {% if project_overlay.profile.equity_stage == 2 %}selected{% endif %}>2/3</option>
+        <option value="3" {% if project_overlay.profile.equity_stage == 3 %}selected{% endif %}>100%</option>
+      </select>
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.8rem;">Save equity stage</button></p>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% for t in tranches %}
+      {% if t.status == 'disbursed' and not t.utilization_note and can_manage_conditions %}
+      <form method="post" action="{% url 'project_record_utilization' loan_request.id t.id %}">
+        {% csrf_token %}
+        <label>Utilization of T{{ t.sequence }}</label>
+        <input type="text" name="utilization_note" class="form-control" required placeholder="Proof the last draw was used">
+        <p><button type="submit" class="btn btn-gray" style="font-size:0.8rem;">Record utilization</button></p>
+      </form>
+      {% endif %}
+    {% endfor %}
+    {% if can_manage_conditions %}
+    <form method="post" action="{% url 'project_implementation_visit' loan_request.id %}">
+      {% csrf_token %}
+      <label>Visit date</label>
+      <input type="date" name="visited_at" class="form-control" style="max-width:12rem;">
+      <label>Percent complete</label>
+      <input type="number" name="percent_complete" step="0.01" min="0" max="100" class="form-control" style="max-width:8rem;">
+      <label>Purpose of last / next draw</label>
+      <select name="purpose_code" class="form-control" style="max-width:16rem;">
+        <option value="civil">Civil works</option>
+        <option value="machinery">Machinery / equipment</option>
+        <option value="working_capital">Working capital</option>
+        <option value="insurance">Insurance / ancillary</option>
+        <option value="other">Other</option>
+      </select>
+      <label>Notes</label>
+      <textarea name="notes" class="form-control" rows="2" required></textarea>
+      <p>
+        <label><input type="checkbox" name="unlocks_next_tranche" value="1"> Unlock next tranche</label>
+      </p>
+      <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Record implementation visit</button></p>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
   <div class="pa-panel" style="border-color:#064420;">
     <h2 style="margin-top:0; font-size:1.15rem;">3. Disbursement</h2>
     {% if own_contribution_required %}
@@ -558,7 +757,7 @@
     <p><strong>Tranches</strong></p>
     <ul>
       {% for t in tranches %}
-      <li>T{{ t.sequence }} · {{ t.amount|floatformat:2 }} · {{ t.get_status_display }}{% if t.note %} — {{ t.note }}{% endif %}</li>
+      <li>T{{ t.sequence }} · {{ t.amount|floatformat:2 }} · {{ t.get_status_display }}{% if t.purpose_code %} · {{ t.purpose_code }}{% endif %}{% if t.note %} — {{ t.note }}{% endif %}{% if t.utilization_note %} · used{% endif %}</li>
       {% endfor %}
     </ul>
     {% endif %}
@@ -567,6 +766,24 @@
       {% csrf_token %}
       <label>Add tranche amount</label>
       <input type="number" step="0.01" name="amount" required class="form-control" style="max-width:12rem;">
+      {% if project_overlay.is_project %}
+      <label>Purpose</label>
+      <select name="purpose_code" class="form-control" style="max-width:16rem;">
+        <option value="civil">Civil works</option>
+        <option value="machinery">Machinery / equipment</option>
+        <option value="working_capital">Working capital</option>
+        <option value="insurance">Insurance / ancillary</option>
+        <option value="other">Other</option>
+      </select>
+      <label>L/C status (machinery)</label>
+      <select name="lc_status" class="form-control" style="max-width:16rem;">
+        <option value="">—</option>
+        <option value="not_required">Not required</option>
+        <option value="applied">Applied</option>
+        <option value="opened">Opened</option>
+        <option value="shipped">Shipped / cleared</option>
+      </select>
+      {% endif %}
       <label>Note</label>
       <input type="text" name="note" class="form-control" placeholder="e.g. civil works draw">
       <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Add tranche</button></p>

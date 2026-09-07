@@ -53,7 +53,7 @@ class ApplicantPortalSettings(models.Model):
     )
     require_customer_lookup = models.BooleanField(
         default=False,
-        help_text='If on (or when DECSI_BASE_URL is set live), registration requires a successful '
+        help_text='If on (or when BANK_CBS_BASE_URL / DECSI_BASE_URL is set live), registration requires a successful '
                   'customer-number match in core banking before an account can be created.',
     )
     updated_at = models.DateTimeField(auto_now=True)
@@ -76,16 +76,34 @@ class ApplicantPortalSettings(models.Model):
 
 
 class ApplicantAccount(models.Model):
-    """Portal-only identity (not staff CustomUser)."""
+    """Portal-only identity (not staff CustomUser).
+
+    DECSI customers are actor_kind=person (CBS customer number).
+    DBE institutions and promoters are different doors on the same table.
+    """
+
+    ACTOR_PERSON = 'person'
+    ACTOR_INSTITUTION = 'institution'
+    ACTOR_PROMOTER = 'promoter'
+    ACTOR_CHOICES = [
+        (ACTOR_PERSON, 'Customer (MSME / retail)'),
+        (ACTOR_INSTITUTION, 'Institution (bank / MFI / PFI)'),
+        (ACTOR_PROMOTER, 'Project / idea promoter'),
+    ]
 
     public_id = models.UUIDField(default=uuid4, unique=True, editable=False)
+    actor_kind = models.CharField(
+        max_length=16, choices=ACTOR_CHOICES, default=ACTOR_PERSON, db_index=True,
+    )
     full_name = models.CharField(max_length=255)
+    institution_name = models.CharField(max_length=255, blank=True)
+    license_number = models.CharField(max_length=80, blank=True)
     phone_number = models.CharField(max_length=30, unique=True, db_index=True)
     customer_number = models.CharField(
         max_length=50,
         unique=True,
         db_index=True,
-        help_text='Core banking customer ID — registration + login (phone or this number).',
+        help_text='CBS customer ID for persons. Generated portal ID for institutions / promoters.',
     )
     email = models.EmailField(blank=True)
     password_hash = models.CharField(max_length=128)
@@ -312,6 +330,13 @@ class OnlineApplication(models.Model):
         blank=True,
         related_name='online_application',
     )
+    kyc_identity_case = models.OneToOneField(
+        'loans.KycIdentityCase',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='online_application',
+    )
     queue_id = models.CharField(
         max_length=22,
         blank=True,
@@ -338,7 +363,7 @@ class OnlineApplication(models.Model):
             self.STATUS_DRAFT,
             self.STATUS_DOCUMENTS,
             self.STATUS_PAYMENT,
-        } and self.loan_request_id is None
+        } and self.status != self.STATUS_SUBMITTED
 
     def payment_satisfied(self) -> bool:
         if self.processing_fee_amount <= 0:
@@ -361,6 +386,18 @@ class OnlineApplication(models.Model):
 class OnlineApplicationDocument(models.Model):
     """Pre-submit document upload for an online application."""
 
+    AUTH_PENDING = 'pending'
+    AUTH_AUTO_PASSED = 'auto_passed'
+    AUTH_NEEDS_REVIEW = 'needs_review'
+    AUTH_VERIFIED = 'verified'
+    AUTH_REJECTED = 'rejected'
+    AUTH_STATUS_CHOICES = [
+        (AUTH_PENDING, 'Pending checks'),
+        (AUTH_AUTO_PASSED, 'Auto-passed (integrity OK)'),
+        (AUTH_NEEDS_REVIEW, 'Needs manual review'),
+        (AUTH_REJECTED, 'Rejected / not authentic'),
+    ]
+
     application = models.ForeignKey(
         OnlineApplication,
         on_delete=models.CASCADE,
@@ -374,6 +411,13 @@ class OnlineApplicationDocument(models.Model):
     file = models.FileField(upload_to='online_apply_docs/%Y/%m/')
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.PositiveIntegerField(null=True, blank=True)
+    file_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    auth_status = models.CharField(
+        max_length=20, choices=AUTH_STATUS_CHOICES, default=AUTH_PENDING,
+    )
+    automated_checks = models.JSONField(default=dict, blank=True)
+    quality_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    authenticity_score = models.PositiveSmallIntegerField(null=True, blank=True)
     uploaded_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

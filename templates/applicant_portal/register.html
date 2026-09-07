@@ -7,7 +7,7 @@
     <p class="ap-lp-hero-kicker" style="color:var(--accent);margin-bottom:0.5rem;">Digital Apply</p>
     <h1 class="ap-hero-title">Create your account</h1>
     <p class="ap-sub">
-      Start with your <strong>DECSI customer number</strong>. When core banking is connected,
+      Start with your <strong>{{ institution_short|default:"DBE" }} customer number</strong>. When core banking is connected,
       we load your official name, mobile, and related details automatically.
     </p>
   </div>
@@ -123,7 +123,7 @@
           return;
         }
         fill(res.body.profile);
-        var live = res.body.live ? 'DECSI core banking' : 'demo profile';
+        var live = res.body.live ? 'core banking' : 'demo profile';
         setStatus('Loaded from ' + live + '. Confirm details, then set a password.', true);
       })
       .catch(function () {

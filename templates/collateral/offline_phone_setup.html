@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#064420">
-  <title>Phone offline setup — DECSI Field</title>
+  <title>Phone offline setup — Field</title>
   <link rel="stylesheet" href="{% static 'css/collateral_offline.css' %}">
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; background: #f4f7f5; color: #1a1a1a; }
@@ -37,7 +37,7 @@
     </p>
 
     <div class="card">
-      <h2>1. Install DECSI Field CA on this phone</h2>
+      <h2>1. Install the Field CA on this phone</h2>
       {% if ca_ready %}
       <a class="btn btn-primary" href="{% url 'collateral:offline_ca' %}">Download CA certificate</a>
       {% else %}
@@ -53,14 +53,14 @@
       <p><strong>iPhone</strong></p>
       <ol>
         <li>Open the download in Safari → Install Profile.</li>
-        <li>Settings → General → VPN &amp; Device Management → install the DECSI profile.</li>
-        <li>Settings → General → About → Certificate Trust Settings → enable full trust for DECSI Field Local CA.</li>
+        <li>Settings → General → VPN &amp; Device Management → install the Field profile.</li>
+        <li>Settings → General → About → Certificate Trust Settings → enable full trust for Field Local CA.</li>
       </ol>
     </div>
 
     <div class="card">
       <h2>2. Confirm HTTPS is trusted</h2>
-      <p>Close all DECSI tabs, then reopen:</p>
+      <p>Close all field-hub tabs, then reopen:</p>
       <p><code id="site-url">{{ site_url }}</code></p>
       <p>Address bar must show a lock — <em>no</em> “Your connection is not private” warning.</p>
       <p id="tls-status" class="warn">Checking…</p>

@@ -3,9 +3,11 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.db.models import Q
+from loans.product_family import FAMILY_GENERAL
 from .models import (
     CustomUser, LoanRequest, District, Branch, Department, Region, Zone, City,
-    LoanCategory, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
+    LoanCategory, FinancingFund, ProjectProfile, PfiInstitutionProfile, FundFileTag,
+    LeaseAssetProfile, MurabahaContract, IdeaProfile, ConsumerProfile, CollateralType, LoanApplicationDocumentType, LoanAppraisal, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalPurposeLine, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor,
     AppraisalRiskMitigation, AppraisalCondition,
     AppraisalESChecklistItem,
@@ -103,7 +105,453 @@ class CityForm(forms.ModelForm):
 class LoanCategoryForm(forms.ModelForm):
     class Meta:
         model = LoanCategory
-        fields = ['name', 'appraisal_mode']
+        fields = [
+            'name', 'product_family', 'appraisal_mode',
+            'requires_collateral', 'allowed_collateral',
+            'allowed_funds',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'product_family': forms.Select(attrs={'class': 'form-control', 'id': 'id_product_family'}),
+            'appraisal_mode': forms.Select(attrs={'class': 'form-control', 'id': 'id_appraisal_mode'}),
+            'requires_collateral': forms.CheckboxInput(attrs={'id': 'id_requires_collateral'}),
+            'allowed_funds': forms.SelectMultiple(attrs={'class': 'form-control', 'size': 6}),
+            'allowed_collateral': forms.SelectMultiple(
+                attrs={'class': 'form-control', 'size': 6, 'id': 'id_allowed_collateral'},
+            ),
+        }
+        help_texts = {
+            'product_family': (
+                'Choosing a family fills appraisal method and collateral defaults. '
+                'You can still change them on this loan type.'
+            ),
+            'appraisal_mode': (
+                'Filled from the family default. General = MSME or corporate 7-sheet. '
+                'Change it if this loan type needs a different desk.'
+            ),
+            'requires_collateral': (
+                'Uncheck for products that are unsecured (wholesale, idea/equity, or a special line).'
+            ),
+            'allowed_funds': (
+                'Leave empty so any unrestricted window (own book) is offered. '
+                'Attach donor lines here — KfW/RUFIP to wholesale, SMEFP to lease and wholesale.'
+            ),
+            'allowed_collateral': (
+                'Matched to the family when you select it. '
+                'Lease = financed asset; project = land/building and/or plant from this loan. '
+                'Leave unused when collateral is not required.'
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from loans.family_policy import category_requires_collateral, family_requires_collateral
+
+        if self.instance and self.instance.pk:
+            self.initial['requires_collateral'] = category_requires_collateral(self.instance)
+        elif 'requires_collateral' not in self.initial:
+            from loans.product_family import FAMILY_GENERAL
+            family = self.initial.get('product_family') or FAMILY_GENERAL
+            self.initial['requires_collateral'] = family_requires_collateral(family)
+
+    def clean(self):
+        from loans.family_policy import default_appraisal_for_family
+
+        cleaned = super().clean()
+        family = cleaned.get('product_family')
+        if not family:
+            return cleaned
+        default_mode = default_appraisal_for_family(family)
+        posted = cleaned.get('appraisal_mode')
+        # Fill only when still on the form default (MSME) or empty. An explicit
+        # desk the officer picked after the family auto-fill is kept.
+        if not posted or posted == LoanCategory.MODE_MSME:
+            if default_mode:
+                cleaned['appraisal_mode'] = default_mode
+            elif family == 'general':
+                cleaned['appraisal_mode'] = posted or LoanCategory.MODE_MSME
+        if not cleaned.get('requires_collateral'):
+            cleaned['allowed_collateral'] = []
+        return cleaned
+
+    def save(self, commit=True):
+        obj = super().save(commit=commit)
+        if commit and not obj.requires_collateral:
+            obj.allowed_collateral.clear()
+        return obj
+
+
+class FinancingFundForm(forms.ModelForm):
+    class Meta:
+        model = FinancingFund
+        fields = [
+            'code', 'name', 'kind', 'source_name', 'is_active', 'notes',
+            'envelope_amount', 'max_tenor_months', 'dbe_to_pfi_rate_pct',
+            'max_end_user_rate_pct', 'eligible_regions', 'eligible_sectors',
+            'women_min_pct', 'youth_min_pct', 'require_climate_cut',
+            'require_fx_window', 'par90_max_pct', 'agreement_ref',
+        ]
+        help_texts = {
+            'code': 'Short unique id, e.g. KFW21826 or OWN.',
+            'source_name': 'KfW / EU, IFAD, EIB, Ministry of Finance, or blank for own book.',
+            'envelope_amount': 'Total line from the agreement. Leave blank for untagged own book.',
+            'women_min_pct': 'Wholesale on-lending cut (218.26 = 30).',
+            'youth_min_pct': 'Wholesale on-lending cut (218.26 = 20).',
+            'eligible_regions': 'Comma-separated. 218.26 = Tigray, Amhara, Afar.',
+            'par90_max_pct': 'PFI PAR>90 cap (218.26 = 10).',
+        }
+
+
+class ProjectProfileForm(forms.ModelForm):
+    class Meta:
+        model = ProjectProfile
+        fields = [
+            'project_title', 'sector', 'location',
+            'implementation_months', 'grace_months', 'debt_equity_policy',
+            'total_project_cost', 'promoter_equity', 'requested_debt',
+            'discount_rate_pct', 'npv', 'irr_pct', 'project_dscr',
+            'equity_plan', 'current_account_opened',
+            'other_bank_name', 'other_bank_amount', 'other_bank_note',
+            'purpose_summary', 'notes',
+        ]
+        widgets = {
+            'project_title': forms.TextInput(attrs={'class': 'form-control'}),
+            'sector': forms.Select(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'implementation_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'grace_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'debt_equity_policy': forms.Select(attrs={'class': 'form-control'}),
+            'total_project_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'promoter_equity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'requested_debt': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'discount_rate_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'npv': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'irr_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'project_dscr': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'equity_plan': forms.Select(attrs={'class': 'form-control'}),
+            'other_bank_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'other_bank_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'other_bank_note': forms.TextInput(attrs={'class': 'form-control'}),
+            'purpose_summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'debt_equity_policy': 'DBE typical bands. Custom is allowed when Credit confirms.',
+            'promoter_equity': 'Must be verified on post-approval before the first release.',
+            'npv': 'Leave blank if annual cashflows below will compute NPV / IRR / DSCR.',
+            'project_dscr': 'Project cashflow vs project debt service — not MSME Sheet 3.',
+            'other_bank_name': 'Tripartite short-term WC with another bank, if any.',
+            'current_account_opened': 'Required before first equity or loan release.',
+        }
+
+
+class FundFileTagForm(forms.ModelForm):
+    class Meta:
+        model = FundFileTag
+        fields = [
+            'women_owned', 'youth_owned', 'climate_tagged', 'fx_window',
+            'region', 'sector',
+        ]
+        widgets = {
+            'region': forms.TextInput(attrs={'class': 'form-control'}),
+            'sector': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+
+class PfiInstitutionForm(forms.ModelForm):
+    class Meta:
+        model = PfiInstitutionProfile
+        fields = [
+            'institution_name', 'kind', 'license_number', 'ownership',
+            'footprint_regions', 'branch_count', 'has_adequate_mis',
+            'capital', 'liquidity_ratio_pct', 'npl_pct', 'par30_pct', 'par90_pct',
+            'audited_year', 'credit_policy_on_file', 'on_lending_policy_on_file',
+            'has_governance', 'has_esms',
+            'existing_dbe_exposure', 'other_lender_exposure',
+            'facility_amount', 'tenor_months', 'facility_purpose',
+            'pfi_match_pct', 'end_user_rate_ceiling_pct', 'dbe_to_pfi_rate_pct',
+            'target_sectors', 'target_regions', 'target_women_pct', 'target_youth_pct',
+            'notes',
+        ]
+        widgets = {
+            'institution_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'kind': forms.Select(attrs={'class': 'form-control'}),
+            'license_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'ownership': forms.TextInput(attrs={'class': 'form-control'}),
+            'footprint_regions': forms.TextInput(attrs={'class': 'form-control'}),
+            'branch_count': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'capital': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'liquidity_ratio_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'npl_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'par30_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'par90_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'audited_year': forms.NumberInput(attrs={'class': 'form-control', 'min': 2000}),
+            'existing_dbe_exposure': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'other_lender_exposure': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'facility_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'tenor_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'facility_purpose': forms.Select(attrs={'class': 'form-control'}),
+            'pfi_match_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'end_user_rate_ceiling_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'dbe_to_pfi_rate_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'target_sectors': forms.TextInput(attrs={'class': 'form-control'}),
+            'target_regions': forms.TextInput(attrs={'class': 'form-control'}),
+            'target_women_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'target_youth_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'has_adequate_mis': '218.26 already asks for adequate MIS.',
+            'par90_pct': 'Wholesale files refuse PAR>90 above 10% (or the fund cap).',
+            'par30_pct': 'Required on the institution file.',
+            'audited_year': 'Year of the latest audited statements.',
+            'credit_policy_on_file': 'PFI credit policy must be on the pack.',
+            'on_lending_policy_on_file': 'On-lending / sub-borrower policy must be on the pack.',
+            'end_user_rate_ceiling_pct': '218.26: PFI → MSME ≤ 11%.',
+            'dbe_to_pfi_rate_pct': '218.26: DBE → PFI 4.5%.',
+            'target_women_pct': 'On-lending commitment (218.26 = 30).',
+            'target_youth_pct': 'On-lending commitment (218.26 = 20).',
+            'footprint_regions': 'Must overlap the fund’s eligible regions when tagged.',
+        }
+
+
+class LeaseAssetForm(forms.ModelForm):
+    class Meta:
+        model = LeaseAssetProfile
+        fields = [
+            'supplier_name', 'supplier_invoice_ref', 'is_new_goods',
+            'asset_description', 'make_model', 'serial_number',
+            'asset_price', 'price_checked', 'price_check_note',
+            'ancillary_amount', 'lessee_contribution',
+            'other_bank_wc_name', 'other_bank_wc_amount',
+            'commissioning_date', 'delivery_date', 'commencement_date',
+            'insurance_in_force', 'insurance_policy', 'insurance_expiry',
+            'location', 'gps_lat', 'gps_lon', 'residual_value',
+            'bank_holds_title', 'asset_status',
+            'monthly_rent', 'rent_term_months', 'notes',
+        ]
+        widgets = {
+            'supplier_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_invoice_ref': forms.TextInput(attrs={'class': 'form-control'}),
+            'asset_description': forms.TextInput(attrs={'class': 'form-control'}),
+            'make_model': forms.TextInput(attrs={'class': 'form-control'}),
+            'serial_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'asset_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'price_check_note': forms.TextInput(attrs={'class': 'form-control'}),
+            'ancillary_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'lessee_contribution': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'other_bank_wc_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'other_bank_wc_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'commissioning_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'delivery_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'commencement_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'insurance_policy': forms.TextInput(attrs={'class': 'form-control'}),
+            'insurance_expiry': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'gps_lat': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
+            'gps_lon': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.00000001'}),
+            'residual_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'asset_status': forms.Select(attrs={'class': 'form-control'}),
+            'monthly_rent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'rent_term_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'is_new_goods': 'DBE lease is new capital goods only.',
+            'lessee_contribution': 'At least 20% of asset price.',
+            'ancillary_amount': 'Insurance, transport, install — at most 15% of asset price.',
+            'other_bank_wc_name': 'Extra WC via another bank — do not stuff it into the lease.',
+            'commencement_date': 'Timing follows delivery / commencement, not approval day.',
+            'monthly_rent': 'Ijarah only — rental, not hire-purchase interest.',
+            'bank_holds_title': 'Bank owns the machine until the last installment.',
+        }
+
+
+class MurabahaContractForm(forms.ModelForm):
+    class Meta:
+        model = MurabahaContract
+        fields = [
+            'goods_description', 'supplier_name', 'supplier_offer_ref',
+            'delivery_status', 'cost_price', 'markup_pct',
+            'scope', 'tenor_months', 'routed_to_ifb_ho', 'notes',
+        ]
+        widgets = {
+            'goods_description': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_offer_ref': forms.TextInput(attrs={'class': 'form-control'}),
+            'delivery_status': forms.Select(attrs={'class': 'form-control'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'markup_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'scope': forms.Select(attrs={'class': 'form-control'}),
+            'tenor_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'markup_pct': 'Cost-plus markup. Export is typically lower than domestic.',
+            'routed_to_ifb_ho': 'Required for project-scale files (cost ≥ ETB 10m).',
+            'scope': 'Export Murabaha uses a lower markup.',
+            'supplier_offer_ref': 'Offer or invoice the cost-plus is based on.',
+            'delivery_status': 'Release needs goods received or sold — not merely ordered.',
+        }
+
+
+class IdeaProfileForm(forms.ModelForm):
+    class Meta:
+        model = IdeaProfile
+        fields = [
+            'venture_name', 'founded_year', 'implements_in_ethiopia',
+            'has_ip', 'has_mols_training', 'has_startup_label',
+            'proposed_dbe_share_pct', 'sector', 'notes',
+        ]
+        widgets = {
+            'venture_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'founded_year': forms.NumberInput(attrs={'class': 'form-control', 'min': 1990}),
+            'proposed_dbe_share_pct': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'sector': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'founded_year': 'Start-up must be ≤ 5 years old.',
+            'has_startup_label': 'IP, MoLS training, or start-up label — at least one.',
+            'proposed_dbe_share_pct': 'DBE takes a share. This is not an installment loan.',
+        }
+
+
+class ProjectIntakeForm(ProjectProfileForm):
+    """Registration subset — full project file stays on the overlay."""
+
+    class Meta(ProjectProfileForm.Meta):
+        fields = [
+            'project_title', 'sector', 'location',
+            'implementation_months', 'grace_months', 'debt_equity_policy',
+            'total_project_cost', 'promoter_equity', 'requested_debt',
+            'equity_plan', 'purpose_summary',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('project_title', 'sector', 'location', 'total_project_cost',
+                     'promoter_equity', 'requested_debt'):
+            self.fields[name].required = True
+
+
+class PfiIntakeForm(PfiInstitutionForm):
+    class Meta(PfiInstitutionForm.Meta):
+        fields = [
+            'institution_name', 'kind', 'license_number',
+            'has_adequate_mis', 'capital', 'npl_pct', 'par90_pct',
+            'has_governance', 'has_esms',
+            'facility_amount', 'tenor_months', 'facility_purpose',
+            'end_user_rate_ceiling_pct', 'dbe_to_pfi_rate_pct',
+            'target_women_pct', 'target_youth_pct',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('institution_name', 'kind', 'license_number', 'facility_amount', 'tenor_months'):
+            self.fields[name].required = True
+
+
+class LeaseIntakeForm(LeaseAssetForm):
+    class Meta(LeaseAssetForm.Meta):
+        fields = [
+            'supplier_name', 'is_new_goods', 'asset_description',
+            'asset_price', 'lessee_contribution', 'ancillary_amount',
+            'bank_holds_title', 'monthly_rent', 'rent_term_months',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('supplier_name', 'asset_description', 'asset_price'):
+            self.fields[name].required = True
+        self.fields['is_new_goods'].initial = True
+        self.fields['bank_holds_title'].initial = True
+
+
+class MurabahaIntakeForm(MurabahaContractForm):
+    class Meta(MurabahaContractForm.Meta):
+        fields = [
+            'goods_description', 'supplier_name', 'cost_price', 'markup_pct',
+            'scope', 'tenor_months',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('goods_description', 'cost_price', 'markup_pct'):
+            self.fields[name].required = True
+
+
+class IdeaIntakeForm(IdeaProfileForm):
+    class Meta(IdeaProfileForm.Meta):
+        fields = [
+            'venture_name', 'founded_year', 'implements_in_ethiopia',
+            'has_ip', 'has_mols_training', 'has_startup_label',
+            'proposed_dbe_share_pct', 'sector',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('venture_name', 'founded_year', 'proposed_dbe_share_pct'):
+            self.fields[name].required = True
+        self.fields['implements_in_ethiopia'].initial = True
+
+
+class ConsumerProfileForm(forms.ModelForm):
+    class Meta:
+        model = ConsumerProfile
+        fields = [
+            'purpose', 'employer_name', 'occupation',
+            'monthly_salary', 'monthly_obligations', 'asset_value',
+            'term_months', 'notes',
+        ]
+        widgets = {
+            'purpose': forms.Select(attrs={'class': 'form-control'}),
+            'employer_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'occupation': forms.TextInput(attrs={'class': 'form-control'}),
+            'monthly_salary': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'monthly_obligations': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'asset_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'term_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+        help_texts = {
+            'monthly_salary': 'Net monthly pay. DTI = obligations ÷ salary.',
+            'monthly_obligations': 'Existing monthly debt service.',
+            'asset_value': 'House or vehicle value. LTV = requested amount ÷ this value.',
+        }
+
+
+class ConsumerIntakeForm(ConsumerProfileForm):
+    class Meta(ConsumerProfileForm.Meta):
+        fields = [
+            'purpose', 'employer_name', 'occupation',
+            'monthly_salary', 'monthly_obligations', 'asset_value',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('employer_name', 'monthly_salary', 'asset_value'):
+            self.fields[name].required = True
+
+
+class ProductFamilySelect(forms.Select):
+    """Loan-type dropdown with data-family for the registration script."""
+
+    family_by_pk = None
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+        raw = getattr(value, 'value', value)
+        mapping = self.family_by_pk or {}
+        if raw not in (None, ''):
+            try:
+                family = mapping.get(int(raw))
+            except (TypeError, ValueError):
+                family = mapping.get(raw)
+            if family:
+                option['attrs']['data-family'] = family
+        return option
+
 
 class CollateralTypeForm(forms.ModelForm):
     class Meta:
@@ -355,6 +803,7 @@ class LoanRequestForm(forms.ModelForm):
             'applicant_name',
             'phone_number',
             'category',
+            'financing_fund',
             'collateral',
             'amount_requested',
             'reason',
@@ -372,7 +821,8 @@ class LoanRequestForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09…'}),
             'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'category': forms.Select(attrs={'class': 'form-control'}),
+            'category': ProductFamilySelect(attrs={'class': 'form-control'}),
+            'financing_fund': forms.Select(attrs={'class': 'form-control'}),
             'collateral': forms.Select(attrs={'class': 'form-control'}),
             'customer_history': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -382,64 +832,133 @@ class LoanRequestForm(forms.ModelForm):
             'phone_number': 'Phone number',
             'amount_requested': 'Amount requested (ETB)',
             'customer_history': 'New or existing customer',
+            'financing_fund': 'Funding window (optional)',
+            'category': 'Loan type / product',
         }
         help_texts = {
-            'customer_number': 'Look up DECSI core banking first — name and phone fill in when found.',
-            'applicant_name': 'Filled from party API when available; correct if needed.',
-            'phone_number': 'Filled from party API when available; must be reachable.',
+            'customer_number': 'Required only for ordinary MSME / corporate files (core banking).',
+            'applicant_name': 'Person, promoter, or institution — follows the loan type.',
+            'phone_number': 'Reachable contact for this file.',
+            'category': (
+                'DBE product first. The rest of this form follows the family: '
+                'project, lease / Ijarah, wholesale / PFI, Murabaha, idea, or ordinary MSME / corporate.'
+            ),
         }
 
     def __init__(self, *args, credit_origin=False, **kwargs):
         super(LoanRequestForm, self).__init__(*args, **kwargs)
-        self.fields['customer_number'].required = True
+        self.fields['customer_number'].required = False
         self.fields['customer_number'].error_messages = {
-            'required': 'Enter the DECSI customer number.',
+            'required': 'Enter the core-banking customer number for this MSME / corporate file.',
         }
-        # Filled from Look up / clean(); required only after party resolve.
         self.fields['applicant_name'].required = False
         self.fields['phone_number'].required = False
+        self.fields['collateral'].required = False
+        self.fields['financing_fund'].required = False
+        self.fields['financing_fund'].queryset = FinancingFund.objects.filter(is_active=True).order_by('name')
+        self.fields['financing_fund'].empty_label = 'Own book / not tagged'
+        self.fields['financing_fund'].help_text = (
+            'Windows allowed for this product. Donor lines (KfW, RUFIP, SMEFP) attach to '
+            'wholesale / lease — not every MSME file. Leave blank for own book.'
+        )
+        self.fields['collateral'].queryset = CollateralType.objects.order_by('name')
+        self.fields['collateral'].empty_label = '— Select security type —'
+        cats = list(LoanCategory.objects.order_by('product_family', 'name'))
+        self.fields['category'].queryset = LoanCategory.objects.filter(
+            pk__in=[c.pk for c in cats],
+        ).order_by('product_family', 'name')
+        self.fields['category'].widget.family_by_pk = {c.id: c.product_family for c in cats}
+        self.fields['category'].label_from_instance = (
+            lambda obj: obj.name if obj.product_family == FAMILY_GENERAL
+            else f'{obj.name} — {obj.get_product_family_display()}'
+        )
+        self.fields['category'].empty_label = '— Select DBE product —'
         if credit_origin:
-            self.fields['branch'] = forms.ModelChoiceField(
-                queryset=Branch.objects.select_related('district').order_by('district__name', 'name'),
+            self.fields['district'] = forms.ModelChoiceField(
+                queryset=District.objects.order_by('name'),
                 required=True,
+                empty_label='— Select district —',
                 widget=forms.Select(attrs={'class': 'form-control'}),
-                help_text='Servicing branch for this head-office Credit loan.',
+                help_text='District first. Branches belong to a district, not a flat list.',
+            )
+            district_id = None
+            if self.data.get('district'):
+                try:
+                    district_id = int(self.data.get('district'))
+                except (TypeError, ValueError):
+                    district_id = None
+            elif getattr(self.instance, 'district_id', None):
+                district_id = self.instance.district_id
+            branch_qs = Branch.objects.none()
+            if district_id:
+                branch_qs = Branch.objects.filter(district_id=district_id).order_by('name')
+            self.fields['branch'] = forms.ModelChoiceField(
+                queryset=branch_qs,
+                required=True,
+                empty_label='— Select branch —',
+                widget=forms.Select(attrs={'class': 'form-control'}),
+                help_text='Servicing branch in the selected district.',
             )
 
     def clean_customer_number(self):
         raw = (self.cleaned_data.get('customer_number') or '').strip()
         if not raw:
-            raise forms.ValidationError('Customer number is required.')
-        # Digits preferred; allow alphanumeric codes used by bank
+            return ''
         cn = ''.join(ch for ch in raw if ch.isalnum())
         if len(cn) < 4:
             raise forms.ValidationError('Customer number looks too short.')
         return cn
 
     def clean(self):
+        from loans.registration import (
+            collateral_for_category,
+            collateral_required,
+            family_of_category,
+            funds_for_category,
+            requires_cbs_customer,
+        )
+
         cleaned = super().clean()
+        family = family_of_category(cleaned.get('category'))
         cn = cleaned.get('customer_number')
         self._lookup_profile = None
-        if not cn:
-            return cleaned
-        from loans.services.customer import fetch_customer_by_number
-        profile = fetch_customer_by_number(cn)
-        self._lookup_profile = profile
-        if profile:
-            if not (cleaned.get('applicant_name') or '').strip() and profile.get('name'):
-                cleaned['applicant_name'] = str(profile['name'])[:255]
-            if not (cleaned.get('phone_number') or '').strip() and profile.get('phone_number'):
-                cleaned['phone_number'] = str(profile['phone_number'])[:15]
+        if requires_cbs_customer(family) and not cn:
+            self.add_error(
+                'customer_number',
+                'Customer number is required for MSME / corporate files.',
+            )
+        if cn:
+            from loans.services.customer import fetch_customer_by_number
+            profile = fetch_customer_by_number(cn)
+            self._lookup_profile = profile
+            if profile:
+                if not (cleaned.get('applicant_name') or '').strip() and profile.get('name'):
+                    cleaned['applicant_name'] = str(profile['name'])[:255]
+                if not (cleaned.get('phone_number') or '').strip() and profile.get('phone_number'):
+                    cleaned['phone_number'] = str(profile['phone_number'])[:15]
         if not (cleaned.get('applicant_name') or '').strip():
             self.add_error(
                 'applicant_name',
-                'Name is required. Look up the customer number or type the name.',
+                'Name is required. Look up the customer or type the person / institution / promoter.',
             )
         if not (cleaned.get('phone_number') or '').strip():
             self.add_error(
                 'phone_number',
-                'Phone is required. Look up the customer number or enter a phone.',
+                'Phone is required. Look up the customer or enter a contact number.',
             )
+        if collateral_required(cleaned.get('category')) and not cleaned.get('collateral'):
+            self.add_error('collateral', 'Select a security type for this product.')
+        category = cleaned.get('category')
+        fund = cleaned.get('financing_fund')
+        if fund and category and not funds_for_category(category).filter(pk=fund.pk).exists():
+            self.add_error('financing_fund', 'This funding window is not eligible for the selected product.')
+        collateral = cleaned.get('collateral')
+        if collateral and category and not collateral_for_category(category).filter(pk=collateral.pk).exists():
+            self.add_error('collateral', 'This security type is not used for the selected product.')
+        district = cleaned.get('district')
+        branch = cleaned.get('branch')
+        if district and branch and branch.district_id != district.pk:
+            self.add_error('branch', 'Select a branch that belongs to the chosen district.')
         return cleaned
 
 
@@ -1100,6 +1619,7 @@ class CommitteeVoteForm(forms.Form):
         choices=[
             ('approve', 'Approve'),
             ('decline', 'Decline'),
+            ('pend', 'Pend — wait for more information'),
         ],
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
@@ -1116,6 +1636,12 @@ class CommitteeVoteForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
     )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('vote') == 'pend' and len((cleaned.get('comments') or '').strip()) < 8:
+            self.add_error('comments', 'Explain why this file is pended (at least 8 characters).')
+        return cleaned
 
 
 class ApprovalCommitteeLevelForm(forms.ModelForm):

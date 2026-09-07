@@ -10,7 +10,7 @@ from django.utils import timezone
 from .forms import (
     CustomUserCreationForm, CustomUserChangeForm, LoanRequestForm, AssignLoanOfficerForm, AssignEngineerForm,
     DistrictForm, BranchForm, DepartmentForm, RegionForm, ZoneForm, CityForm,
-    LoanCategoryForm, CollateralTypeForm, LoanApplicationDocumentTypeForm,
+    LoanCategoryForm, FinancingFundForm, CollateralTypeForm, LoanApplicationDocumentTypeForm,
     DocumentAuthenticationDefaultsForm, LoanApplicationDocumentTypeEditForm, LoanAppraisalForm,
     LoanRequestBasicInfoForm, get_credit_history_formset, get_qualitative_factors_formset,
     get_purpose_line_formset,
@@ -43,7 +43,7 @@ from .cashflow_utils import (
 )
 from .sheet_requirements import get_appraisal_sheet_status, sheets_blocking_completion
 from .models import (
-    Region, Zone, City, District, Branch, Department, LoanCategory, CollateralType,
+    Region, Zone, City, District, Branch, Department, LoanCategory, FinancingFund, CollateralType,
     LoanApplicationDocumentType, LoanRequestDocument, LoanDocumentRequest, LoanAppraisal,
     LoanRequest, CustomUser, CollateralEstimationConfig,
     LoanRequestBasicInfo, AppraisalCreditHistoryEntry, AppraisalQualitativeFactor, QUALITATIVE_FACTOR_KEYS,
@@ -148,6 +148,24 @@ def _user_can_open_loan_detail(user) -> bool:
     )
 
 
+def _product_desk_redirect(request, loan_request):
+    """Send product-desk families away from the MSME / corporate 7-sheet wizard."""
+    from loans.engines import get_engine
+    from loans.registration import overlay_url_name
+
+    engine = get_engine(loan_request)
+    if engine.requires_appraisal_sheets():
+        return None
+    dest = overlay_url_name(engine.family)
+    if not dest:
+        return None
+    messages.info(
+        request,
+        'This product is appraised on its own desk, not the MSME or corporate sheets.',
+    )
+    return redirect(dest, loan_request_id=loan_request.id)
+
+
 def _get_loan_for_officer(user, loan_request_id):
     """Assigned LO or appraisal-delegate covering that officer."""
     from loans.delegation import can_access_loan_as_officer, log_delegation_action
@@ -168,8 +186,15 @@ def _get_loan_for_officer(user, loan_request_id):
     return loan_request
 
 
+def _is_hub_admin(user):
+    return bool(
+        getattr(user, 'is_superuser', False)
+        or getattr(user, 'role', None) in ('admin', 'superadmin')
+    )
+
+
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def create_user(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -181,7 +206,7 @@ def create_user(request):
     return render(request, 'loans/create_user.html', {'form': form})
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_users(request):
     users = CustomUser.objects.all()
 
@@ -213,7 +238,7 @@ def manage_users(request):
     return render(request, "loans/manage_users.html", context)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_user(request, user_id):
     user = get_object_or_404(CustomUser, pk=user_id)
     if request.method == 'POST':
@@ -225,14 +250,63 @@ def edit_user(request, user_id):
         form = CustomUserChangeForm(instance=user)
     return render(request, 'loans/edit_user.html', {'form': form, 'user': user})
 
+def _registration_page(request, form, is_credit, intake_forms=None, extra=None):
+    from loans.models import LoanCategory
+    from loans.registration import category_family_payload, empty_intake_forms
+    from loans.services.customer import customer_api_is_live
+
+    ctx = {
+        'form': form,
+        'is_credit_origin': is_credit,
+        'customer_api_live': customer_api_is_live(),
+        'intake_forms': intake_forms or empty_intake_forms(),
+        'family_payload': category_family_payload(
+            LoanCategory.objects.prefetch_related(
+                'allowed_funds', 'allowed_collateral',
+            ).order_by('product_family', 'name')
+        ),
+    }
+    if extra:
+        ctx.update(extra)
+    return render(request, 'loans/create_loan_request.html', ctx)
+
+
 @login_required
 @user_passes_test(_user_can_create_loan)
 def create_loan_request(request):
+    from loans.product_family import FAMILY_IFB_IJARAH, FAMILY_LEASE
+    from loans.registration import (
+        bind_intake_form,
+        empty_intake_forms,
+        family_of_category,
+        overlay_url_name,
+        requires_cbs_customer,
+        save_intake,
+        suggest_amount,
+        suggest_applicant_name,
+    )
+
     is_credit = _user_is_credit_staff(request.user)
     if request.method == 'POST':
         form = LoanRequestForm(request.POST, credit_origin=is_credit)
-        if form.is_valid():
+        from loans.models import LoanCategory
+        posted_cat = LoanCategory.objects.filter(pk=request.POST.get('category') or 0).first()
+        family = family_of_category(posted_cat)
+        intake = bind_intake_form(family, request.POST)
+        intake_ok = intake is None or intake.is_valid()
+        intake_forms = empty_intake_forms()
+        if intake is not None:
+            key = FAMILY_LEASE if family in (FAMILY_LEASE, FAMILY_IFB_IJARAH) else family
+            intake_forms[key] = intake
+
+        if form.is_valid() and intake_ok:
             loan_request = form.save(commit=False)
+            suggested = suggest_applicant_name(family, intake)
+            if suggested and not (loan_request.applicant_name or '').strip():
+                loan_request.applicant_name = suggested
+            suggested_amt = suggest_amount(family, intake)
+            if suggested_amt and not loan_request.amount_requested:
+                loan_request.amount_requested = suggested_amt
             cn = (form.cleaned_data.get('customer_number') or '').strip()
             profile = getattr(form, '_lookup_profile', None)
             if profile is None and cn:
@@ -240,7 +314,6 @@ def create_loan_request(request):
             from loans.services.customer import attach_profile_snapshot_to_loan, customer_api_is_live
             if profile:
                 attach_profile_snapshot_to_loan(loan_request, profile)
-                # Form cleaned data already has name/phone from clean(); keep declared address.
                 addr = (profile.get('home_address') or '').strip()
                 if addr and not loan_request.declared_address_text:
                     loan_request.declared_address_text = addr[:2000]
@@ -251,26 +324,31 @@ def create_loan_request(request):
                         'Live core banking lookup failed — demo mock profile was used. '
                         'Verify the customer number before proceeding.',
                     )
-            elif customer_api_is_live():
+            elif requires_cbs_customer(family) and customer_api_is_live():
                 form.add_error(
                     'customer_number',
-                    'Customer number not found in DECSI core banking. Check the number or register at branch CBS first.',
+                    'Customer number not found in core banking. Check the number or register the party first.',
                 )
-                return render(request, 'loans/create_loan_request.html', {
-                    'form': form,
-                    'is_credit_origin': is_credit,
-                    'customer_api_live': customer_api_is_live(),
-                })
+                return _registration_page(request, form, is_credit, intake_forms)
+
+            if not loan_request.collateral_id:
+                from loans.registration import collateral_for_category
+                first = collateral_for_category(posted_cat).first() if posted_cat else None
+                if first:
+                    loan_request.collateral = first
+                else:
+                    from loans.models import CollateralType
+                    placeholder, _ = CollateralType.objects.get_or_create(
+                        name='To be determined',
+                        defaults={'kind': getattr(CollateralType, 'KIND_MOVABLE', 'movable')},
+                    )
+                    loan_request.collateral = placeholder
 
             if is_credit:
                 branch = form.cleaned_data.get('branch') or request.user.branch
                 if not branch:
                     messages.error(request, 'Select a branch for this head-office loan.')
-                    return render(request, 'loans/create_loan_request.html', {
-                        'form': form,
-                        'is_credit_origin': True,
-                        'customer_api_live': customer_api_is_live(),
-                    })
+                    return _registration_page(request, form, is_credit, intake_forms)
                 loan_request.branch = branch
                 loan_request.district = branch.district
                 loan_request.origin_level = LoanRequest.ORIGIN_HEAD_OFFICE
@@ -283,6 +361,12 @@ def create_loan_request(request):
                 loan_request.origin_level = LoanRequest.ORIGIN_BRANCH
             loan_request.loan_request_id = generate_incremental_loan_request_id()
             loan_request.save()
+            save_intake(loan_request, family, intake, user=request.user)
+            try:
+                from loans.kyc_desk import ensure_intake_screenings
+                ensure_intake_screenings(loan_request)
+            except Exception:
+                pass
             try:
                 from loans.compliance.case_engine import screen_loan_and_open_case
                 from loans.models import ComplianceCase
@@ -293,24 +377,20 @@ def create_loan_request(request):
                 )
             except Exception:
                 pass
-            if profile:
-                msg = (
-                    f'Loan request created for customer {cn} '
-                    f'({profile.get("name") or loan_request.applicant_name}). '
-                    'You can now add application documents.'
+            dest = overlay_url_name(family)
+            if dest:
+                messages.success(
+                    request,
+                    f'{form.cleaned_data["category"].get_product_family_display()} file opened. '
+                    'Complete the remaining product details, then documents.',
                 )
-            else:
-                msg = 'Loan request created. You can now add application documents.'
-            messages.success(request, msg)
+                return redirect(dest, loan_request_id=loan_request.id)
+            messages.success(request, 'Loan request created. You can now add application documents.')
             return redirect('upload_loan_request_documents', loan_request_id=loan_request.id)
-    else:
-        form = LoanRequestForm(credit_origin=is_credit)
-    from loans.services.customer import customer_api_is_live
-    return render(request, 'loans/create_loan_request.html', {
-        'form': form,
-        'is_credit_origin': is_credit,
-        'customer_api_live': customer_api_is_live(),
-    })
+        return _registration_page(request, form, is_credit, intake_forms)
+
+    form = LoanRequestForm(credit_origin=is_credit)
+    return _registration_page(request, form, is_credit)
 
 
 @login_required
@@ -335,7 +415,7 @@ def ajax_staff_lookup_customer(request):
         return JsonResponse({
             'ok': False,
             'error': (
-                'Customer not found in DECSI core banking.'
+                'Customer not found in core banking.'
                 if customer_api_is_live()
                 else 'Customer not found (mock: try 2000050041 Tekeste or 2000050042 Samrawit).'
             ),
@@ -368,6 +448,45 @@ def ajax_staff_lookup_customer(request):
             'provider': profile.get('provider') or '',
             'highlights': compact,
         },
+    })
+
+
+@login_required
+@user_passes_test(_user_can_create_loan)
+@require_http_methods(['GET'])
+def ajax_staff_registration_options(request):
+    """District → branches, product → eligible funds / collateral."""
+    from django.http import JsonResponse
+    from loans.models import Branch, LoanCategory
+    from loans.registration import collateral_for_category, collateral_required, funds_for_category
+
+    district_id = request.GET.get('district_id') or request.GET.get('district')
+    branches = []
+    if district_id:
+        try:
+            branches = list(
+                Branch.objects.filter(district_id=int(district_id))
+                .order_by('name')
+                .values('id', 'name')
+            )
+        except (TypeError, ValueError):
+            branches = []
+
+    category = LoanCategory.objects.filter(pk=request.GET.get('category_id') or 0).first()
+    funds = [
+        {'id': f.id, 'name': str(f)}
+        for f in funds_for_category(category)
+    ]
+    collaterals = [
+        {'id': c.id, 'name': c.name}
+        for c in collateral_for_category(category)
+    ]
+    return JsonResponse({
+        'ok': True,
+        'branches': branches,
+        'funds': funds,
+        'collaterals': collaterals,
+        'needs_collateral': collateral_required(category) if category is not None else True,
     })
 
 
@@ -769,14 +888,18 @@ def loan_request_detail(request, loan_request_id):
                 messages.warning(request, 'You do not have access to this loan request.')
                 return redirect('view_loan_requests')
     elif user.role == 'engineer':
-        if loan_request.assigned_engineer_id != user.id:
+        from loans.kyc_desk import kyc_applies
+        has_kyc_pack = False
+        if kyc_applies(loan_request):
+            has_kyc_pack = loan_request.desk_screenings.filter(desk='engineering').exists()
+        if loan_request.assigned_engineer_id != user.id and not has_kyc_pack:
             messages.warning(request, 'You do not have access to this loan request.')
             return redirect('view_loan_requests')
     elif user.role not in (
         'branch_manager', 'district_manager', 'credit_head', 'admin', 'superadmin',
         'cooperative_manager', 'operation_manager', 'finance_manager',
         'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service', 'board_member',
-        'risk_compliance', 'auditor', 'engineering_head', 'accountant',
+        'risk_compliance', 'auditor', 'engineering_head', 'accountant', 'legal_officer',
     ) and not getattr(user, 'is_superuser', False):
         if not (
             user_can_access_loan_for_assign(user, loan_request)
@@ -848,11 +971,47 @@ def loan_request_detail(request, loan_request_id):
         from .ci_decision import build_application_decision
         basic_info = getattr(loan_request, 'basic_info', None)
         decision_card = build_application_decision(loan_request, appraisal, basic_info)
+    desk_intel = None
+    try:
+        from loans.product_intel import build_product_intel
+        desk_intel = build_product_intel(loan_request)
+    except Exception:
+        desk_intel = None
     from .risk_desk import loan_risk_summary
     from loans.compliance.case_engine import open_cases_for_loan, user_can_manage_compliance_cases
     risk_summary = loan_risk_summary(loan_request)
     compliance_cases = list(open_cases_for_loan(loan_request, open_only=False)[:8])
     can_open_compliance_case = user_can_manage_compliance_cases(user)
+    kyc_screenings = []
+    kyc_my_desk = None
+    try:
+        from loans.kyc_desk import (
+            annotate_kyc_rows, kyc_applies, user_can_access_kyc_desk, user_desk_for_kyc,
+        )
+        if kyc_applies(loan_request):
+            from loans.kyc_desk import ensure_intake_screenings
+            kyc_screenings = annotate_kyc_rows(
+                loan_request, ensure_intake_screenings(loan_request),
+            )
+            if user_can_access_kyc_desk(user):
+                kyc_my_desk = user_desk_for_kyc(user)
+    except Exception:
+        kyc_screenings = []
+    kyc_identity = None
+    try:
+        from loans.kyc_identity import case_payload
+        kyc_identity = case_payload(loan_request)
+    except Exception:
+        kyc_identity = None
+    crm_cycle = None
+    try:
+        from loans.crm_cycle import can_crm_comment, can_send_to_crm, cycle_payload
+        crm_cycle = cycle_payload(loan_request)
+        if crm_cycle:
+            crm_cycle['can_send'] = can_send_to_crm(user, loan_request)
+            crm_cycle['can_comment'] = can_crm_comment(user, loan_request)
+    except Exception:
+        crm_cycle = None
     return render(request, 'loans/loan_request_detail.html', {
         'loan_request': loan_request,
         'collateral_estimation_mode': collateral_mode,
@@ -881,6 +1040,13 @@ def loan_request_detail(request, loan_request_id):
         'risk_summary': risk_summary,
         'compliance_cases': compliance_cases,
         'can_open_compliance_case': can_open_compliance_case,
+        'kyc_screenings': kyc_screenings,
+        'kyc_my_desk': kyc_my_desk,
+        'kyc_identity': kyc_identity,
+        'crm_cycle': crm_cycle,
+        'desk_intel': desk_intel,
+        'project_overlay': _project_overlay_for(loan_request),
+        'postbook': _postbook_for(loan_request),
     })
 
 
@@ -993,6 +1159,11 @@ def authenticate_loan_document(request, loan_request_id, document_id):
         doc.save()
         notify_document_verified(doc, request.user)
         messages.success(request, f'"{doc.document_type.name}" marked as verified.')
+        try:
+            from loans.kyc_identity import ensure_identity_case, recompute_identity_case
+            recompute_identity_case(ensure_identity_case(loan_request=loan_request))
+        except Exception:
+            pass
     elif action == 'reject':
         doc.auth_status = LRD.AUTH_REJECTED
         doc.auth_verdict = verdict or LRD.VERDICT_NOT_AUTHENTIC
@@ -1012,6 +1183,11 @@ def authenticate_loan_document(request, loan_request_id, document_id):
             except Exception:
                 pass
         messages.warning(request, f'"{doc.document_type.name}" rejected.')
+        try:
+            from loans.kyc_identity import ensure_identity_case, recompute_identity_case
+            recompute_identity_case(ensure_identity_case(loan_request=loan_request))
+        except Exception:
+            pass
     elif action == 'requeue':
         try:
             from .services.document_auth import run_automated_document_checks
@@ -1158,7 +1334,11 @@ def _try_submit_to_committee(request, loan_request, notes=''):
 @login_required
 @user_passes_test(_user_can_work_appraisal)
 def loan_appraisal_edit(request, loan_request_id):
-    """Redirect to step-based appraisal (step 1)."""
+    """Redirect to step-based appraisal (step 1), or the product desk."""
+    loan_request = _get_loan_for_officer(request.user, loan_request_id)
+    dest = _product_desk_redirect(request, loan_request)
+    if dest:
+        return dest
     return redirect('loan_appraisal_step', loan_request_id=loan_request_id, step=1)
 
 
@@ -1173,6 +1353,9 @@ def loan_appraisal_step(request, loan_request_id, step):
         return redirect('loan_appraisal_edit', loan_request_id=loan_request_id)
 
     loan_request = _get_loan_for_officer(request.user, loan_request_id)
+    dest = _product_desk_redirect(request, loan_request)
+    if dest:
+        return dest
     basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan_request)
     from .appraisal_mode import (
         MODE_CORPORATE, ensure_appraisal_mode, is_corporate, mode_label, resolve_appraisal_mode,
@@ -1226,6 +1409,8 @@ def loan_appraisal_step(request, loan_request_id, step):
         'appraisal_locked': lock_state['locked'],
         'appraisal_lock_reason': lock_state['reason'],
         'appraisal_lock_code': lock_state['code'],
+        'product_family': getattr(loan_request.category, 'product_family', 'general'),
+        'product_family_label': loan_request.category.get_product_family_display() if loan_request.category_id else '',
     }
 
     # Finalized appraisal / in committee / decided — read-only (POST blocked).
@@ -1751,6 +1936,10 @@ def _generate_amortization_schedule(appraisal, basic_info, loan_request):
     from decimal import Decimal
     from django.utils import timezone
     from loans.disbursement import final_annual_rate_pct, final_loan_amount, final_term_months
+    from loans.engines import get_engine
+
+    if not get_engine(loan_request).uses_conventional_schedule:
+        return
 
     AppraisalAmortizationEntry.objects.filter(appraisal=appraisal).delete()
     amount = final_loan_amount(loan_request, appraisal)
@@ -2022,7 +2211,8 @@ def cast_committee_vote(request, loan_request_id):
         messages.warning(request, 'You do not have access to this loan in the approval workflow.')
         return redirect('view_loan_requests_manager')
     level = loan_request.current_approval_level
-    if not level or loan_request.committee_status != LoanRequest.COMMITTEE_PENDING:
+    from loans.committee import _committee_is_open
+    if not level or not _committee_is_open(loan_request):
         messages.warning(request, 'This loan is not open for voting at any committee level.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
@@ -2053,14 +2243,17 @@ def cast_committee_vote(request, loan_request_id):
         messages.warning(request, 'You cannot vote on this loan at the current approval level.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
-    LoanCommitteeVote.objects.create(
+    LoanCommitteeVote.objects.update_or_create(
         loan_request=loan_request,
         approval_level=level,
         member=member,
-        cast_by=cast_by,
-        vote=form.cleaned_data['vote'],
-        amount_supported=amount,
-        comments=form.cleaned_data.get('comments') or '',
+        defaults={
+            'cast_by': cast_by,
+            'vote': form.cleaned_data['vote'],
+            'amount_supported': amount,
+            'comments': form.cleaned_data.get('comments') or '',
+            'voted_at': timezone.now(),
+        },
     )
     if cast_by:
         log_delegation_action(
@@ -2085,6 +2278,8 @@ def cast_committee_vote(request, loan_request_id):
             messages.success(request, 'Required approvals reached — loan fully approved by all committee levels.')
         elif loan_request.committee_status == LoanRequest.COMMITTEE_DECLINED:
             messages.warning(request, 'Required declines reached — loan rejected at this committee level.')
+        elif loan_request.committee_status == LoanRequest.COMMITTEE_PENDED:
+            messages.info(request, 'File pended — waiting for more information before a deciding vote.')
         else:
             messages.success(request, f'Level “{level.name}” complete. Advanced to the next approval committee.')
     else:
@@ -2183,6 +2378,16 @@ def _user_can_export_appraisal_pack(user, loan_request) -> bool:
     if role == 'branch_manager' and user.branch_id and loan_request.branch_id == user.branch_id:
         return True
     return False
+
+
+def _project_overlay_for(loan_request):
+    from loans.engines import get_engine
+    return get_engine(loan_request).file_summary()
+
+
+def _postbook_for(loan_request):
+    from loans.rehab import postbook_summary
+    return postbook_summary(loan_request)
 
 
 def _can_view_post_approval(user, loan_request) -> bool:
@@ -2306,6 +2511,8 @@ def post_approval_detail(request, loan_request_id):
         'can_approve_finance_disbursement': can_approve_finance_disbursement(request.user, loan_request),
         'TYPE_CP': AppraisalCondition.TYPE_CP,
         'TYPE_COVENANT': AppraisalCondition.TYPE_COVENANT,
+        'project_overlay': _project_overlay_for(loan_request),
+        'postbook': _postbook_for(loan_request),
     })
 
 
@@ -2810,7 +3017,11 @@ def post_approval_add_tranche(request, loan_request_id):
         messages.error(request, 'Tranche amount must be greater than zero.')
         return redirect('post_approval_detail', loan_request_id=loan_request_id)
     note = (request.POST.get('note') or '').strip()
-    add_disbursement_tranche(loan_request, amount, note=note)
+    purpose = (request.POST.get('purpose_code') or '').strip()
+    lc_status = (request.POST.get('lc_status') or '').strip()
+    add_disbursement_tranche(
+        loan_request, amount, note=note, purpose_code=purpose, lc_status=lc_status,
+    )
     messages.success(request, 'Tranche added.')
     return redirect('post_approval_detail', loan_request_id=loan_request_id)
 
@@ -3242,7 +3453,7 @@ def view_loan_requests_finance_manager(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_districts(request):
     districts = District.objects.all().order_by('name')
     if request.method == 'POST':
@@ -3263,7 +3474,7 @@ def manage_districts(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_departments(request):
     departments = Department.objects.all().order_by('sort_order', 'name')
     if request.method == 'POST':
@@ -3285,7 +3496,7 @@ def manage_departments(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_department(request, department_id):
     department = get_object_or_404(Department, pk=department_id)
     if request.method == 'POST':
@@ -3388,7 +3599,7 @@ def view_loan_requests_manager(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_district(request, district_id):
     district = get_object_or_404(District, pk=district_id)
     if request.method == 'POST':
@@ -3402,7 +3613,7 @@ def edit_district(request, district_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_regions(request):
     regions = Region.objects.all()
     if request.method == 'POST':
@@ -3416,7 +3627,7 @@ def manage_regions(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_region(request, region_id):
     region = get_object_or_404(Region, pk=region_id)
     if request.method == 'POST':
@@ -3430,7 +3641,7 @@ def edit_region(request, region_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_geo_zones(request):
     zones = Zone.objects.select_related('region').all()
     if request.method == 'POST':
@@ -3444,7 +3655,7 @@ def manage_geo_zones(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_geo_zone(request, zone_id):
     zone = get_object_or_404(Zone, pk=zone_id)
     if request.method == 'POST':
@@ -3474,7 +3685,7 @@ def load_cities_by_zone(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_cities(request):
     cities = City.objects.select_related('zone', 'zone__region').all()
     if request.method == 'POST':
@@ -3490,7 +3701,7 @@ def manage_cities(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_city(request, city_id):
     city = get_object_or_404(City, pk=city_id)
     if request.method == 'POST':
@@ -3506,7 +3717,7 @@ def edit_city(request, city_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_branches(request):
     branches = Branch.objects.select_related('district').all()
     
@@ -3530,7 +3741,7 @@ def manage_branches(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_branch(request, branch_id):
     branch = get_object_or_404(Branch, pk=branch_id)
     if request.method == 'POST':
@@ -3543,8 +3754,25 @@ def edit_branch(request, branch_id):
     return render(request, 'loans/edit_branch.html', {'form': form, 'branch': branch})
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
+@require_http_methods(['GET'])
+def ajax_family_policy(request):
+    """Loan-type form: family → default appraisal + collateral."""
+    from django.http import JsonResponse
+    from loans.family_policy import ensure_family_policies, policy_payload
+    from loans.product_family import parse_product_family
+
+    ensure_family_policies()
+    family = parse_product_family(request.GET.get('family') or '')
+    return JsonResponse({'ok': True, **policy_payload(family)})
+
+
+@login_required
+@user_passes_test(_is_hub_admin)
 def manage_loan_categories(request):
+    from loans.family_policy import ensure_family_policies
+
+    ensure_family_policies()
     categories = LoanCategory.objects.all()
     
     paginator = Paginator(categories, 10)  # Show 10 branches per page
@@ -3561,12 +3789,13 @@ def manage_loan_categories(request):
         
     context = {
         'form': form,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'family_policy_url': reverse('ajax_family_policy'),
     }   
     return render(request, 'loans/manage_loan_categories.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_loan_category_documents(request, category_id):
     """Configure which document types apply to a loan category (loan type)."""
     category = get_object_or_404(LoanCategory, pk=category_id)
@@ -3638,7 +3867,7 @@ def manage_loan_category_documents(request, category_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_loan_category(request, category_id):
     category = get_object_or_404(LoanCategory, pk=category_id)
     if request.method == 'POST':
@@ -3648,10 +3877,52 @@ def edit_loan_category(request, category_id):
             return redirect('manage_loan_categories')
     else:
         form = LoanCategoryForm(instance=category)
-    return render(request, 'loans/edit_loan_category.html', {'form': form, 'category': category})
+    return render(request, 'loans/edit_loan_category.html', {
+        'form': form,
+        'category': category,
+        'family_policy_url': reverse('ajax_family_policy'),
+    })
+
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
+def manage_financing_funds(request):
+    funds = FinancingFund.objects.all().order_by('name')
+    if request.method == 'POST':
+        form = FinancingFundForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Funding window saved.')
+            return redirect('manage_financing_funds')
+    else:
+        form = FinancingFundForm()
+    from loans.pagination import page_querystring, paginate
+    page_obj = paginate(request, funds)
+    return render(request, 'loans/manage_financing_funds.html', {
+        'funds': page_obj,
+        'page_obj': page_obj,
+        'form': form,
+        'querystring': page_querystring(request),
+    })
+
+
+@login_required
+@user_passes_test(_is_hub_admin)
+def edit_financing_fund(request, fund_id):
+    fund = get_object_or_404(FinancingFund, pk=fund_id)
+    if request.method == 'POST':
+        form = FinancingFundForm(request.POST, instance=fund)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Funding window updated.')
+            return redirect('manage_financing_funds')
+    else:
+        form = FinancingFundForm(instance=fund)
+    return render(request, 'loans/edit_financing_fund.html', {'form': form, 'fund': fund})
+
+
+@login_required
+@user_passes_test(_is_hub_admin)
 def manage_collateral_types(request):
     collateral_types = CollateralType.objects.all()
     
@@ -3674,7 +3945,7 @@ def manage_collateral_types(request):
     return render(request, 'loans/manage_collateral_types.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_collateral_type(request, collateral_type_id):
     collateral_type = get_object_or_404(CollateralType, pk=collateral_type_id)
     if request.method == 'POST':
@@ -3807,7 +4078,7 @@ def delete_approval_committee_level(request, level_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def manage_loan_application_document_types(request):
     """Superadmin: document types + per-type auth rules + bank-wide defaults."""
     document_types = LoanApplicationDocumentType.objects.all()
@@ -3845,7 +4116,7 @@ def manage_loan_application_document_types(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def edit_loan_application_document_type(request, document_type_id):
     from .services.reference_sample import process_reference_sample
 
@@ -3888,7 +4159,7 @@ def edit_loan_application_document_type(request, document_type_id):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_is_hub_admin)
 def serve_document_type_reference_sample(request, document_type_id):
     """Superadmin: view official reference sample inline."""
     from django.http import FileResponse, Http404
@@ -4180,7 +4451,7 @@ def _excel_upload_view(page_key):
     spec = EXCEL_UPLOAD_PAGES[page_key]
 
     @login_required
-    @user_passes_test(lambda u: u.is_superuser)
+    @user_passes_test(_is_hub_admin)
     def view(request):
         from loans.excel_import import import_pack, run_import
 

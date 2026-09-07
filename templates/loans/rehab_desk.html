@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Rehab / recovery{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<div class="dash">
+  <h1>Project Rehabilitation and Loan Recovery</h1>
+  <p class="help">
+    Named path: watchlist → restructure / technical assistance → recover → foreclosure last.
+    Not a second collections system — this sits on the same booked file.
+    <a href="{% url 'collections_desk' %}">Collections</a>
+    · <a href="{% url 'monitoring_desk' %}">Monitoring</a>
+  </p>
+  <p>
+    <a href="{% url 'rehab_desk' %}">Open cases</a>
+    · <a href="?view=sla">SLA breach</a>
+    · <a href="?view=insurance">Insurance due</a>
+    · <a href="?view=appeals">Open appeals</a>
+    {% for val, label in stage_choices %}
+    · <a href="?stage={{ val }}">{{ label }}</a>
+    {% endfor %}
+  </p>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Loan</th><th>Applicant</th><th>Rehab stage</th><th>Clock</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for loan, pb in rows %}
+      <tr>
+        <td>{{ loan.loan_request_id }}</td>
+        <td>{{ loan.applicant_name }}</td>
+        <td>{% if pb.has_rehab %}{{ pb.rehab_stage_label }}{% else %}—{% endif %}</td>
+        <td>
+          Day {{ pb.sla.elapsed_days }}/{{ pb.sla.target_days }}
+          {% if pb.sla.breached %}<span class="lw-badge lw-warn">SLA breach</span>{% endif %}
+        </td>
+        <td><a href="{% url 'rehab_loan' loan.id %}">Open</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">No files on this filter. General files are not forced onto a rehab stage.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "includes/pagination.html" %}
+</div>
+{% endblock %}

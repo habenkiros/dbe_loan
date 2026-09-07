@@ -192,6 +192,8 @@ class Command(BaseCommand):
             ('Machinery / Equipment', CollateralType.KIND_MOVABLE),
             ('Other Movable', CollateralType.KIND_MOVABLE),
             ('Building + Land', CollateralType.KIND_MIXED),
+            ('Financed machinery / plant (from this loan)', CollateralType.KIND_FINANCED),
+            ('Financed vehicle (from this loan)', CollateralType.KIND_FINANCED),
         ]
         out = {}
         for name, kind in names:
@@ -332,7 +334,7 @@ class Command(BaseCommand):
         users['admin_sys'] = self._ensure_user(
             'admin.sys', email='admin.sys@decsi.local', phone_number='0911000001',
             role='admin', first_name='System', last_name='Admin',
-            is_staff=True, is_superuser=False,
+            is_staff=True, is_superuser=True,
         )
         users['eng_head'] = self._ensure_user(
             'eng.head', email='eng.head@decsi.local', phone_number='0911000002',
@@ -475,12 +477,15 @@ class Command(BaseCommand):
 
 
         # Departments + HO attachments
+        from loans.dbe_desks import DBE_DESK_SEED
+
         dept_defs = [
             (Department.KEY_COOPERATIVE, 'Branch Cooperative', 1),
             (Department.KEY_FINANCE, 'Finance', 2),
             (Department.KEY_CREDIT, 'Credit', 3),
             (Department.KEY_MANAGEMENT, 'Management', 4),
             (Department.KEY_BOARD, 'Board of Directors', 5),
+            *DBE_DESK_SEED,
         ]
         depts = {}
         for key, name, order in dept_defs:

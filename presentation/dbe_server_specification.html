@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Server Specification — DBE iBOC On-Premises Deployment</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+:root{--g:#0b6b3a;--gd:#064528;--gold:#c4a035;--ink:#14201a;--muted:#5a6b62;--line:#d5e0d9;--bg:#f7faf8;--danger:#912018;--ok:#065f36;}
+*{box-sizing:border-box;}
+@page{
+  size:A4;
+  margin:12mm 12mm 16mm 12mm;
+  @bottom-left{
+    content:"Seqela  ·  Confidential  ·  Development Bank of Ethiopia  ·  SEQ/DBE/IBOC/INFRA/2026-09";
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:7.5pt;
+    color:#5a6b62;
+  }
+  @bottom-right{
+    content:counter(page);
+    font-family:"DM Sans",system-ui,sans-serif;
+    font-size:9pt;
+    color:#064528;
+    font-weight:600;
+  }
+}
+body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);background:#e8eee9;line-height:1.42;font-size:9.5pt;}
+.doc{max-width:210mm;margin:0 auto;background:#fff;}
+.screen{max-width:210mm;margin:0 auto;background:#fff;padding:0 0 4px;}
+@media print{
+  body{background:#fff;}
+  .doc{max-width:none;}
+  .screen{margin:0;padding:0;box-shadow:none;max-width:none;}
+  .pagebreak{break-before:page;page-break-before:always;}
+  h2,h3{break-after:avoid;page-break-after:avoid;}
+  .box, .callout, .exec, .three, .meta{break-inside:avoid;page-break-inside:avoid;}
+  tr{break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+  .no-print{display:none!important;}
+}
+.hero{background:linear-gradient(165deg,#053820 0%,#0b6b3a 45%,#064528 100%);color:#fff;padding:8mm 11mm 7mm;position:relative;margin:0 0 8px;border-radius:0;}
+.hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,#e8d48a,transparent);}
+.hero .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.hero .seqela{font-family:Fraunces,Georgia,serif;font-size:12pt;font-weight:700;}
+.hero .seqela span{display:block;font-family:'DM Sans',sans-serif;font-size:7pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a8cbb8;margin-top:2px;}
+.hero .conf{font-size:7pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e8d48a;border:1px solid rgba(232,212,138,.45);padding:4px 9px;border-radius:999px;}
+.hero .for-label{font-size:7pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#e8d48a;margin:0 0 2px;}
+.hero .bank{font-family:Fraunces,Georgia,serif;font-size:14pt;font-weight:700;margin:0 0 1px;line-height:1.2;}
+.hero .bank-sub{font-size:8.5pt;color:#b7d9c6;margin:0 0 6px;}
+.hero h1{font-family:Fraunces,Georgia,serif;font-size:16pt;line-height:1.15;color:#fff;margin:0 0 5px;letter-spacing:-.02em;}
+.hero .tagline{font-size:9pt;color:#d7ebe0;line-height:1.4;margin:0;max-width:170mm;}
+.logo-img{height:38px;width:auto;display:block;object-fit:contain;}
+h2{font-family:Fraunces,Georgia,serif;font-size:12pt;color:var(--gd);margin:9px 0 4px;padding-bottom:2px;border-bottom:2px solid var(--line);}
+h3{font-size:10pt;color:var(--g);margin:7px 0 3px;}
+p,li{margin:0 0 4px;}
+ul,ol{margin:0 0 6px;padding-left:1.2em;}
+.exec{background:var(--bg);border-left:4px solid var(--g);padding:7px 9px;border-radius:0 8px 8px 0;margin:4px 0 8px;}
+.callout{background:#fffdf5;border:1px solid #e8d48a;border-radius:8px;padding:6px 9px;margin:6px 0;}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 10px;}
+.kpi>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 5px;text-align:center;}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:11pt;font-weight:700;color:var(--gd);}
+.kpi .l{font-size:7pt;color:var(--muted);margin-top:2px;line-height:1.3;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:8px 0;}
+.box{border:1px solid var(--line);border-radius:8px;padding:8px 9px;background:#fff;}
+.box h4{margin:0 0 3px;font-size:10pt;color:var(--gd);}
+.box.green{border-top:3px solid var(--g);}
+.box.gold{border-top:3px solid var(--gold);}
+.box.ok{border-top:3px solid var(--ok);}
+.box p,.box li{font-size:9pt;margin:0 0 4px;}
+table{width:100%;border-collapse:collapse;margin:4px 0 8px;font-size:8.2pt;}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top;}
+th{background:var(--bg);color:var(--gd);font-size:7pt;text-transform:uppercase;letter-spacing:.04em;}
+.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:8.2pt;margin:6px 0 8px;}
+.meta .l{color:var(--muted);font-size:6.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.meta .v{font-weight:600;color:var(--gd);}
+.small{font-size:8pt;color:var(--muted);}
+.arch{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:7pt;line-height:1.3;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 9px;white-space:pre;overflow:hidden;color:var(--gd);margin:4px 0 8px;}
+.footer{margin-top:8px;padding-top:5px;border-top:1px solid var(--line);font-size:7.5pt;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="doc">
+
+<section class="screen">
+  <div class="hero">
+    <div class="top">
+      <div>
+        <img class="logo-img" src="logo.png" alt="Seqela"/>
+        <div class="seqela" style="margin-top:6px;">Seqela<span>Banking technology · Ethiopia</span></div>
+      </div>
+      <div class="conf">Confidential · For DBE IT</div>
+    </div>
+    <p class="for-label">Prepared for</p>
+    <p class="bank">Development Bank of Ethiopia</p>
+    <p class="bank-sub">የኢትዮጵያ ልማት ባንክ · Head Office, Addis Ababa · Infrastructure / IT / Security</p>
+    <h1>Server specification — on-premises deployment of DBE iBOC</h1>
+    <p class="tagline">
+      Hardware, storage, network, and environment sizing for the Integrated Back Office Automation
+      and Credit Intelligence Platform. Data stays in DBE’s data centre. Core banking stays DBE’s.
+    </p>
+  </div>
+
+  <div class="meta">
+    <div><div class="l">Document</div><div class="v">Infrastructure specification</div></div>
+    <div><div class="l">Reference</div><div class="v">SEQ/DBE/IBOC/INFRA/2026-09</div></div>
+    <div><div class="l">Date</div><div class="v">7 September 2026</div></div>
+    <div><div class="l">Prepared by</div><div class="v">Seqela</div></div>
+    <div><div class="l">Audience</div><div class="v">DBE IT, Infrastructure, Security</div></div>
+    <div><div class="l">Contact</div><div class="v">info@seqela.com · +251 964 790 724</div></div>
+  </div>
+
+  <div class="exec">
+    <strong>Ask of DBE IT:</strong> provision the environments below (UAT now; production before go-live).
+    Seqela supplies the application, license key, and install runbook. DBE supplies servers, storage,
+    TLS, DNS, firewall, SMTP, NTP, backup target, and CBS connectivity when ready.
+    Do <strong>not</strong> size production on the 2 vCPU / 4 GB lab minimum used for a DECSI pilot host.
+  </div>
+
+  <h2>1. Purpose and deploy model</h2>
+  <p>
+    iBOC is the credit back-office for DBE: origination, KYC/documents, appraisal, GPS collateral,
+    committees, seven financing product engines, and post-disbursement monitoring. It runs
+    <strong>on-premises or in DBE private cloud</strong>. It is not multi-tenant SaaS. There is no vendor phone-home.
+  </p>
+  <div class="three">
+    <div class="box green"><h4>UAT / training</h4><p>Configuration, UAT, and training-of-trainers. One VM is enough. Keep it off the production host.</p></div>
+    <div class="box gold"><h4>Production</h4><p>Live system for HQ and regional offices. Split application and database. Two app nodes preferred.</p></div>
+    <div class="box ok"><h4>DR (recommended)</h4><p>Cold standby or streaming replica. Restore drill at least twice a year.</p></div>
+  </div>
+
+  <h2>2. UAT server (single host)</h2>
+  <p>All-in-one Docker Compose: application, PostgreSQL 16, document media, nightly backup.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Count / role</td><td>1 virtual machine</td></tr>
+      <tr><td>CPU</td><td><strong>8 vCPU</strong></td></tr>
+      <tr><td>RAM</td><td><strong>32 GB</strong></td></tr>
+      <tr><td>OS disk</td><td>100 GB SSD</td></tr>
+      <tr><td>Data disk</td><td><strong>500 GB SSD</strong> (database + documents / photos)</td></tr>
+      <tr><td>Operating system</td><td>Ubuntu 22.04 LTS or RHEL 8/9, x86_64</td></tr>
+      <tr><td>Software on host</td><td>Docker Engine 24+, Docker Compose v2, Git, NTP</td></tr>
+      <tr><td>Network</td><td>LAN to HQ / UAT users; static IP or DNS name</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Production architecture</h2>
+  <div class="arch">Staff / regional offices  →  Load balancer (HTTPS / TLS)
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+           App-1           App-2         (optional App-N)
+         Django / Gunicorn — stateless — same LICENSE_KEY
+              │               │
+              └───────┬───────┘
+                      ▼
+              PostgreSQL 16  (one primary; optional replica)
+                      ▲
+         shared media (NFS / SAN)     nightly backup (DB + media)</div>
+  <p class="small">If two app nodes each keep local disks, a file uploaded on node A is missing on node B. Shared media is mandatory for HA.</p>
+</section>
+
+<section class="screen">
+  <h2>4. Production servers</h2>
+  <h3>4.1 Application nodes (2 for high availability)</h3>
+  <p>Stateless web tier. OCR (Tesseract English + Amharic), PDF packs, and document upload run here. Do not put PostgreSQL on these boxes.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Per node</th></tr></thead>
+    <tbody>
+      <tr><td>Count</td><td><strong>2</strong> behind DBE load balancer (nginx / F5 / HAProxy)</td></tr>
+      <tr><td>CPU</td><td><strong>8–16 vCPU</strong></td></tr>
+      <tr><td>RAM</td><td><strong>32 GB</strong> (64 GB if concurrent OCR / PDF is heavy)</td></tr>
+      <tr><td>OS disk</td><td>100 GB SSD</td></tr>
+      <tr><td>OS / runtime</td><td>Ubuntu 22.04 LTS or RHEL 8/9 · Docker 24+ · Compose v2</td></tr>
+      <tr><td>Gunicorn (start point)</td><td>8 workers × 2 threads · timeout 120 seconds</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.2 Database server</h3>
+  <table>
+    <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Count</td><td><strong>1 primary</strong> (+ streaming replica if DBE requires database HA)</td></tr>
+      <tr><td>CPU</td><td><strong>8–16 vCPU</strong></td></tr>
+      <tr><td>RAM</td><td><strong>32–64 GB</strong></td></tr>
+      <tr><td>Data disk</td><td><strong>500 GB–1 TB SSD</strong>, dedicated — not NFS</td></tr>
+      <tr><td>Engine</td><td>PostgreSQL <strong>16</strong></td></tr>
+      <tr><td>Encryption at rest</td><td>Volume / disk encryption per bank / INSA policy</td></tr>
+    </tbody>
+  </table>
+  <p class="small">One logical primary only. Do not run two independent databases. A replica is for failover or reporting — not a second write copy.</p>
+
+  <h3>4.3 Shared document storage</h3>
+  <p>KYC packs, collateral photos, GPS evidence, signatures, and implementation-visit images.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Type</td><td>NFS or SAN, same path on every app node</td></tr>
+      <tr><td>Start size</td><td><strong>1 TB</strong></td></tr>
+      <tr><td>Growth</td><td>Plan <strong>2–5 TB over 3 years</strong> (project dossiers + site photos)</td></tr>
+      <tr><td>Backup</td><td>Included in the nightly job together with the database</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4 Load balancer / reverse proxy</h3>
+  <p>Use DBE’s existing F5, nginx, or HAProxy.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>TLS</td><td>Terminate HTTPS with the bank certificate</td></tr>
+      <tr><td>Health check</td><td><code>GET /hub/</code> — node must be able to reach PostgreSQL</td></tr>
+      <tr><td>Upload body limit</td><td><strong>≥ 50 MB</strong> (PDFs and field photos)</td></tr>
+      <tr><td>Sticky sessions</td><td>Not required (sessions stored in PostgreSQL)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.5 Disaster recovery (recommended)</h3>
+  <table>
+    <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Option A</td><td>Cold VM matching production database size; restore from backup</td></tr>
+      <tr><td>Option B</td><td>Streaming replica in a second site / data centre</td></tr>
+      <tr><td>RPO</td><td>≤ 24 hours with nightly backup; minutes with a replica</td></tr>
+      <tr><td>RTO</td><td>4–8 hours (cold restore); under 1 hour if a replica is kept warm</td></tr>
+      <tr><td>Restore drill</td><td>At least twice a year</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="screen">
+  <h2>5. Bill of materials for DBE IT</h2>
+  <h3>5.1 Recommended production (HA)</h3>
+  <table>
+    <thead><tr><th>Server</th><th>CPU</th><th>RAM</th><th>Disk</th></tr></thead>
+    <tbody>
+      <tr><td>App-1</td><td>8–16 vCPU</td><td>32 GB</td><td>100 GB OS SSD</td></tr>
+      <tr><td>App-2</td><td>8–16 vCPU</td><td>32 GB</td><td>100 GB OS SSD</td></tr>
+      <tr><td>Database primary</td><td>8–16 vCPU</td><td>32–64 GB</td><td>500 GB–1 TB data SSD</td></tr>
+      <tr><td>Database replica (optional)</td><td>Same as primary</td><td>Same</td><td>Same</td></tr>
+      <tr><td>Shared media</td><td>—</td><td>—</td><td>1 TB+ NFS / SAN</td></tr>
+      <tr><td>Backup / DR target</td><td>—</td><td>—</td><td>2–4 TB off-box</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Minimum production (no HA)</h3>
+  <p>Acceptable only if HA is deferred. Still split application and database.</p>
+  <table>
+    <thead><tr><th>Server</th><th>CPU</th><th>RAM</th><th>Disk</th></tr></thead>
+    <tbody>
+      <tr><td>Application</td><td>8 vCPU</td><td>32 GB</td><td>100 GB OS + 1 TB media</td></tr>
+      <tr><td>Database</td><td>8 vCPU</td><td>32 GB</td><td>100 GB OS + 500 GB data SSD</td></tr>
+      <tr><td>Backup target</td><td>—</td><td>—</td><td>2 TB off-box NAS / tape / object</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Short HQ pilot only:</strong> if a single box is all that can be issued at first,
+    the floor is <strong>16 vCPU · 64 GB · 1 TB SSD</strong>. That is a pilot host, not the national production shape.
+    UAT and production must not share that host.
+  </div>
+
+  <h2>6. Network, ports, and integrations</h2>
+  <table>
+    <thead><tr><th>Direction</th><th>Port</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>Staff / regional offices → load balancer</td><td><strong>443/tcp</strong></td><td>HTTPS staff hub, Digital Apply, field tablets</td></tr>
+      <tr><td>App → PostgreSQL</td><td>5432/tcp</td><td>Internal VLAN only — never internet</td></tr>
+      <tr><td>App → SMTP</td><td>25 / 587</td><td>Password reset and notifications</td></tr>
+      <tr><td>App → DBE CBS (later)</td><td>Bank-defined</td><td>Customer lookup and disbursement booking</td></tr>
+      <tr><td>App → NTP</td><td>UDP 123</td><td>Required for MFA (TOTP)</td></tr>
+      <tr><td>Outbound HTTPS (optional)</td><td>443</td><td>Maps / geocoding, OS and Docker patches; AI only if policy allows</td></tr>
+    </tbody>
+  </table>
+  <p>
+    <strong>Firewall:</strong> staff and branches reach 443 only. PostgreSQL, Docker, and admin ports stay on the
+    data-centre VLAN, jump host, or VPN. <strong>DNS:</strong> a name such as <code>iboc.dbe.et</code> (or DBE naming).
+    Static IPs on all servers.
+  </p>
+  <p>
+    <strong>Workstations:</strong> current Chrome, Edge, or Firefox; 1920×1080 preferred for appraisal and collateral.
+    Field GPS / camera requires HTTPS.
+  </p>
+
+  <h2>7. Software stack on the servers</h2>
+  <table>
+    <thead><tr><th>Component</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Django + Gunicorn</td><td>Staff hub, product engines, committees, Credit Intelligence</td></tr>
+      <tr><td>PostgreSQL 16</td><td>System of record</td></tr>
+      <tr><td>Tesseract OCR (eng + amh)</td><td>Scanned documents</td></tr>
+      <tr><td>Media volume</td><td>KYC, collateral, implementation photos</td></tr>
+      <tr><td>Nightly backup</td><td>Database dump + media → off-box store (14+ day retention)</td></tr>
+      <tr><td>License key</td><td>Offline <code>SEQLA1.…</code> key; verified locally; no phone-home</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Host does not need a separate Python or PostgreSQL install when using Docker Compose. Production runs with <code>DEBUG=False</code> and <code>USE_GUNICORN=1</code>.</p>
+</section>
+
+<section class="screen">
+  <h2>8. Split of responsibility</h2>
+  <table>
+    <thead><tr><th>DBE provides</th><th>Seqela provides</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>
+          Virtual machines or bare metal; storage; TLS certificate; DNS; firewall;
+          SMTP; NTP; backup target; jump host / VPN; CBS connectivity when ready.
+        </td>
+        <td>
+          Application images; signed license key; install runbook; database migrations;
+          UAT support; Year-1 hypercare.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Hardware, data-centre, and connectivity cost remain with DBE.</p>
+
+  <h2>9. Security baseline (hosting)</h2>
+  <ul>
+    <li>TLS on every staff and tablet path; secure cookies; MFA (TOTP) for staff.</li>
+    <li>PostgreSQL not published to the internet; unique strong <code>SECRET_KEY</code> and database password per environment.</li>
+    <li>Disk / volume encryption for database and media; encrypted off-box backups.</li>
+    <li>Clock synchronized (NTP) — MFA codes fail if the server clock drifts.</li>
+    <li>Django Admin reachable only from jump host / VPN.</li>
+    <li>UAT and production use different secrets, license keys, and databases.</li>
+  </ul>
+
+  <h2>10. Pre-provision checklist</h2>
+  <table>
+    <thead><tr><th></th><th>Item</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td>☐</td><td>UAT VM sized per §2</td><td>Infrastructure</td></tr>
+      <tr><td>☐</td><td>Production app + database hosts sized per §4 / §5</td><td>Infrastructure</td></tr>
+      <tr><td>☐</td><td>Shared media mount (if two app nodes)</td><td>Infrastructure</td></tr>
+      <tr><td>☐</td><td>Off-box backup target with restore path</td><td>Infrastructure</td></tr>
+      <tr><td>☐</td><td>DNS name + static IPs + TLS certificate</td><td>Infrastructure / Network</td></tr>
+      <tr><td>☐</td><td>Firewall: 443 to staff; 5432 internal only</td><td>Network / Security</td></tr>
+      <tr><td>☐</td><td>SMTP and NTP available from app hosts</td><td>Infrastructure</td></tr>
+      <tr><td>☐</td><td>Jump host / VPN for admin access</td><td>Security</td></tr>
+      <tr><td>☐</td><td>CBS endpoints and credentials (when cutover is approved)</td><td>CBS / IT</td></tr>
+      <tr><td>☐</td><td>Seqela license key and release package received</td><td>Seqela / DBE IT</td></tr>
+    </tbody>
+  </table>
+
+  <p class="small">This note sizes the platform for HQ and regional-office use. Final VM counts can be confirmed with DBE IT when the deployment is scheduled. It is a working specification, not a contract or sign-off pack.</p>
+
+  <div class="footer">
+    Seqela · Addis Ababa · info@seqela.com · +251 964 790 724 · seqela.com<br>
+    Companion documents: DBE iBOC proposal (SEQ/DBE/IBOC/2026-09). Core banking remains DBE’s. This note covers hosting only — not commercial terms.
+  </div>
+</section>
+
+</div>
+</body>
+</html>

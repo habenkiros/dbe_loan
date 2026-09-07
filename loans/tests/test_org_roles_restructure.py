@@ -157,6 +157,7 @@ class OrgRolesRestructureTests(TestCase):
             'amount_requested': '2500000',
             'reason': 'HO credit facility',
             'customer_history': 'new',
+            'district': self.branch.district_id,
             'branch': self.branch.id,
         })
         self.assertEqual(resp.status_code, 302)

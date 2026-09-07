@@ -98,6 +98,17 @@ def staff_nav(request):
     return nav_flags_for(request.user)
 
 
+def institution_branding(request):
+    """Bank name on the hub / portal. This instance is DBE."""
+    from loans.branding import institution_name, institution_short, product_name
+
+    return {
+        'institution_name': institution_name(),
+        'institution_short': institution_short(),
+        'product_name': product_name(),
+    }
+
+
 def product_license(request):
     """Expose license status for hub banners (days remaining / grace)."""
     status = getattr(request, 'license_status', None)

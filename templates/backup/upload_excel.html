@@ -3,7 +3,7 @@
 {% block content %}
   <h2>{{ spec.title }}</h2>
   <p>Excel columns: <code>{{ spec.columns }}</code></p>
-  <p>Fill the DECSI templates in <code>docs/migration_templates/</code>, then upload the matching sheet here (superuser only).</p>
+  <p>Fill the migration templates in <code>docs/migration_templates/</code>, then upload the matching sheet here (superuser only).</p>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div>

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from applicant_portal import help_views as applicant_help
+from applicant_portal import product_views
 from applicant_portal import views
 
 app_name = 'applicant_portal'
@@ -23,6 +24,22 @@ urlpatterns = [
     path('apply/<uuid:public_id>/', views.apply_status, name='apply_status'),
     path('apply/<uuid:public_id>/schedule/', views.apply_schedule, name='apply_schedule'),
     path('apply/<uuid:public_id>/details/', views.apply_details, name='apply_details'),
+    path('apply/<uuid:public_id>/product/', product_views.apply_product, name='apply_product'),
+    path(
+        'apply/<uuid:public_id>/product/line/',
+        product_views.apply_product_line,
+        name='apply_product_line',
+    ),
+    path(
+        'apply/<uuid:public_id>/product/utilization/',
+        product_views.apply_product_utilization,
+        name='apply_product_utilization',
+    ),
+    path(
+        'apply/<uuid:public_id>/product/cap/',
+        product_views.apply_product_cap,
+        name='apply_product_cap',
+    ),
     path('apply/<uuid:public_id>/documents/', views.apply_documents, name='apply_documents'),
     path('apply/<uuid:public_id>/payment/', views.apply_payment, name='apply_payment'),
     path('apply/<uuid:public_id>/payment/return/', views.apply_payment_return, name='apply_payment_return'),

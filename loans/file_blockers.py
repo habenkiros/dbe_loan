@@ -56,6 +56,23 @@ def build_file_blockers(loan_request) -> Dict[str, Any]:
     except Exception:
         pass
 
+    # KYC packs (DBE product files)
+    try:
+        from loans.kyc_desk import kyc_applies, kyc_committee_blockers
+        if kyc_applies(loan_request):
+            for msg in kyc_committee_blockers(loan_request):
+                blockers.append({
+                    'area': 'kyc',
+                    'severity': 'high',
+                    'message': msg,
+                    'action_label': 'Open KYC packs',
+                    'action_url_name': 'loan_request_detail',
+                    'action_url_args': [loan_request.id],
+                })
+                stage = 'kyc'
+    except Exception:
+        pass
+
     # Fraud / AML compliance cases
     try:
         from loans.compliance.case_engine import open_cases_for_loan
@@ -75,36 +92,50 @@ def build_file_blockers(loan_request) -> Dict[str, Any]:
 
     # Appraisal sheets
     try:
+        from loans.engines import get_engine
         from loans.models import LoanAppraisal, LoanRequestBasicInfo
         from loans.sheet_requirements import get_appraisal_sheet_status, sheets_blocking_completion
 
+        engine = get_engine(loan_request)
         appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
         basic = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
-        if appraisal and not loan_request.appraisal_completed_at:
-            sheet_status = get_appraisal_sheet_status(loan_request, appraisal, basic)
-            gaps = sheets_blocking_completion(sheet_status) or []
-            for gap in gaps[:6]:
-                msg = gap if isinstance(gap, str) else str(gap)
+        if engine.requires_appraisal_sheets():
+            if appraisal and not loan_request.appraisal_completed_at:
+                sheet_status = get_appraisal_sheet_status(loan_request, appraisal, basic)
+                gaps = sheets_blocking_completion(sheet_status) or []
+                for gap in gaps[:6]:
+                    msg = gap if isinstance(gap, str) else str(gap)
+                    blockers.append({
+                        'area': 'appraisal',
+                        'severity': 'medium',
+                        'message': msg,
+                        'action_label': 'Open appraisal',
+                        'action_url_name': 'loan_request_detail',
+                        'action_url_args': [loan_request.id],
+                    })
+                if gaps:
+                    stage = 'appraisal'
+            elif not appraisal and loan_request.assigned_loan_officer_id:
+                blockers.append({
+                    'area': 'appraisal',
+                    'severity': 'medium',
+                    'message': 'Appraisal not started yet.',
+                    'action_label': 'Open loan',
+                    'action_url_name': 'loan_request_detail',
+                    'action_url_args': [loan_request.id],
+                })
+                stage = 'appraisal'
+        else:
+            for msg in (engine.committee_blockers() or [])[:6]:
                 blockers.append({
                     'area': 'appraisal',
                     'severity': 'medium',
                     'message': msg,
-                    'action_label': 'Open appraisal',
+                    'action_label': 'Open product desk',
                     'action_url_name': 'loan_request_detail',
                     'action_url_args': [loan_request.id],
                 })
-            if gaps:
                 stage = 'appraisal'
-        elif not appraisal and loan_request.assigned_loan_officer_id:
-            blockers.append({
-                'area': 'appraisal',
-                'severity': 'medium',
-                'message': 'Appraisal not started yet.',
-                'action_label': 'Open loan',
-                'action_url_name': 'loan_request_detail',
-                'action_url_args': [loan_request.id],
-            })
-            stage = 'appraisal'
     except Exception:
         pass
 

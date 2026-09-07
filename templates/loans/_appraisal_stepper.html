@@ -100,6 +100,20 @@
       {% if mode_label %}
       <span style="font-size:0.85rem; font-weight:600; vertical-align:middle; margin-left:0.5rem; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid {% if is_corporate %}#1e40af{% else %}#064420{% endif %}; color:{% if is_corporate %}#1e40af{% else %}#064420{% endif %}; background:{% if is_corporate %}#eff6ff{% else %}#e8f4ec{% endif %};">{{ mode_label }}</span>
       {% endif %}
+      {% if product_family_label and product_family and product_family != 'general' %}
+      <span style="font-size:0.8rem; font-weight:600; vertical-align:middle; margin-left:0.35rem; padding:0.2rem 0.55rem; border-radius:999px; border:1px solid #c4a035; color:#7a5b10; background:#fffdf5;">{{ product_family_label }}</span>
+      {% if product_family == 'project' %}
+      <a href="{% url 'project_file' loan_request.id %}" style="font-size:0.8rem; margin-left:0.35rem;">Project file</a>
+      {% elif product_family == 'wholesale' %}
+      <a href="{% url 'wholesale_file' loan_request.id %}" style="font-size:0.8rem; margin-left:0.35rem;">PFI file</a>
+      {% elif product_family == 'lease' or product_family == 'ifb_ijarah' %}
+      <a href="{% url 'lease_file' loan_request.id %}" style="font-size:0.8rem; margin-left:0.35rem;">{% if product_family == 'ifb_ijarah' %}Ijarah file{% else %}Lease file{% endif %}</a>
+      {% elif product_family == 'ifb_murabaha' %}
+      <a href="{% url 'murabaha_file' loan_request.id %}" style="font-size:0.8rem; margin-left:0.35rem;">Murabaha file</a>
+      {% elif product_family == 'idea_equity' %}
+      <a href="{% url 'idea_file' loan_request.id %}" style="font-size:0.8rem; margin-left:0.35rem;">Idea file</a>
+      {% endif %}
+      {% endif %}
       {% if appraisal_locked %}
       <span style="font-size:0.8rem; font-weight:600; vertical-align:middle; margin-left:0.35rem; padding:0.2rem 0.55rem; border-radius:999px; background:#5c4500; color:#fff;">LOCKED</span>
       {% endif %}

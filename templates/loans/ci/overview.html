@@ -28,7 +28,23 @@
 
   <p class="ci-disclaimer">{{ disclaimer }}</p>
 
-  {% if user.role == 'loan_officer' or user.role == 'branch_manager' %}
+  {% if user.is_superuser or user.role == 'admin' or user.role == 'superadmin' %}
+  <div class="dash-quicklinks">
+    <h3>System workbench</h3>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'view_loan_requests' as loans_url %}
+      {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
+      {% url 'manage_users' as users_url %}
+      {% include "includes/list_action.html" with href=users_url icon="users" label="Users" tone="blue" only %}
+      {% url 'manage_loan_categories' as cats_url %}
+      {% include "includes/list_action.html" with href=cats_url icon="catalog" label="Loan categories" tone="blue" only %}
+      {% url 'online_loan_intake' as intake_url %}
+      {% include "includes/list_action.html" with href=intake_url icon="loan" label="Online intake" tone="orange" only %}
+      {% url 'manage_applicant_portal_settings' as apply_url %}
+      {% include "includes/list_action.html" with href=apply_url icon="settings" label="Digital apply" tone="blue" only %}
+    </div>
+  </div>
+  {% elif user.role == 'loan_officer' or user.role == 'branch_manager' %}
   <div class="dash-quicklinks">
     <h3>{% if user.role == 'loan_officer' %}Your workbench{% else %}Branch workbench{% endif %}</h3>
     <div class="dash-actions list-actions list-actions-lg" style="margin:0;">

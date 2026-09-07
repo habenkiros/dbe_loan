@@ -71,7 +71,7 @@ class ExcelImportTests(TestCase):
         Branch.objects.create(name='Mekelle Main', district=District.objects.get(name='Mekelle District'))
         run_import('loan_categories', self._file('cat.xlsx', [
             {'name': 'MSME Trade', 'appraisal_mode': 'msme'},
-            {'name': 'Corporate CapEx', 'appraisal_mode': 'corporate'},
+            {'name': 'Corporate CapEx', 'appraisal_mode': 'corporate', 'product_family': 'project'},
         ]))
         run_import('collateral_types', self._file('col.xlsx', [
             {'collateral': 'Building / House', 'kind': 'building'},
@@ -102,6 +102,8 @@ class ExcelImportTests(TestCase):
         self.assertIsNone(head.branch_id)
         self.assertEqual(head.department.key, 'credit')
         self.assertEqual(LoanCategory.objects.get(name='Corporate CapEx').appraisal_mode, 'corporate')
+        self.assertEqual(LoanCategory.objects.get(name='Corporate CapEx').product_family, 'project')
+        self.assertEqual(LoanCategory.objects.get(name='MSME Trade').product_family, 'general')
         self.assertEqual(CollateralType.objects.get(name='Building / House').kind, 'building')
 
     def test_loan_request_uses_existing_id_and_customer_number(self):

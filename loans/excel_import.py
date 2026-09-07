@@ -19,6 +19,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 
 from collateral.models import MainWork, SubSubWork, SubWork, SubWorkUnitPrice
 from loans.ids import bump_latest_id_from_existing, generate_incremental_loan_request_id
+from loans.product_family import parse_product_family
 from loans.models import (
     ApprovalCommitteeLevel,
     ApprovalCommitteeMemberRule,
@@ -31,6 +32,7 @@ from loans.models import (
     LoanApplicationDocumentType,
     LoanCategory,
     LoanCategoryDocumentRequirement,
+    FinancingFund,
     LoanRequest,
     Region,
     Zone,
@@ -44,6 +46,7 @@ PACK_ORDER = [
     'branches',
     'departments',
     'loan_categories',
+    'financing_funds',
     'collateral_types',
     'document_types',
     'category_documents',
@@ -70,6 +73,9 @@ KIND_ALIASES = {
     'loan_categories': 'loan_categories',
     'categories': 'loan_categories',
     'loan_types': 'loan_categories',
+    'financing_funds': 'financing_funds',
+    'funding_windows': 'financing_funds',
+    'funds': 'financing_funds',
     'collateral_types': 'collateral_types',
     'collaterals': 'collateral_types',
     'document_types': 'document_types',
@@ -610,14 +616,79 @@ def import_loan_categories(rows: Sequence[Dict[str, Any]], *, update: bool = Fal
         if mode not in APPRAISAL_MODES:
             result.error(n, f'appraisal_mode must be msme or corporate (got {mode_raw!r})')
             continue
+        family = parse_product_family(col(row, 'product_family', 'family', 'financing_product'))
         try:
             with transaction.atomic():
                 obj = LoanCategory.objects.filter(name__iexact=name).first()
                 if obj is None:
-                    LoanCategory.objects.create(name=name, appraisal_mode=mode)
+                    LoanCategory.objects.create(
+                        name=name, appraisal_mode=mode, product_family=family,
+                    )
                     _tally(result, 'created')
                 else:
-                    action = _apply_update(obj, {'appraisal_mode': mode}, update)
+                    action = _apply_update(obj, {
+                        'appraisal_mode': mode,
+                        'product_family': family,
+                    }, update)
+                    _tally(result, 'skipped' if action in ('exists', 'skipped') else action)
+        except Exception as exc:
+            result.error(n, str(exc))
+    return result
+
+
+def import_financing_funds(rows: Sequence[Dict[str, Any]], *, update: bool = False, **_kwargs) -> ImportResult:
+    result = ImportResult('financing_funds')
+    kinds = {k for k, _ in FinancingFund.KIND_CHOICES}
+    kind_aliases = {
+        'own': FinancingFund.KIND_OWN,
+        'own_book': FinancingFund.KIND_OWN,
+        'government': FinancingFund.KIND_GOVERNMENT,
+        'mof': FinancingFund.KIND_GOVERNMENT,
+        'donor': FinancingFund.KIND_DONOR,
+        'dfi': FinancingFund.KIND_DONOR,
+        'other': FinancingFund.KIND_OTHER,
+    }
+    for i, row in enumerate(rows):
+        n = _row_num(i)
+        code = col(row, 'code', 'fund_code', 'window_code')
+        name = col(row, 'name', 'fund', 'window')
+        if not code or not name:
+            result.error(n, 'code and name are required')
+            continue
+        kind_raw = (col(row, 'kind', 'source_kind') or FinancingFund.KIND_OWN).strip().lower()
+        kind = kind_aliases.get(kind_raw, kind_raw.replace(' ', '_'))
+        if kind not in kinds:
+            result.error(n, f'kind must be own_book, government, donor, or other (got {kind_raw!r})')
+            continue
+        fields = {
+            'name': name,
+            'kind': kind,
+            'source_name': col(row, 'source_name', 'donor', 'source') or '',
+            'is_active': as_bool(col(row, 'is_active', 'active'), True),
+            'notes': col(row, 'notes') or '',
+            'envelope_amount': as_decimal(col(row, 'envelope_amount', 'envelope')),
+            'max_tenor_months': as_int(col(row, 'max_tenor_months', 'max_tenor')),
+            'dbe_to_pfi_rate_pct': as_decimal(col(row, 'dbe_to_pfi_rate_pct', 'dbe_rate')),
+            'max_end_user_rate_pct': as_decimal(col(row, 'max_end_user_rate_pct', 'end_user_rate')),
+            'eligible_regions': col(row, 'eligible_regions', 'regions') or '',
+            'eligible_sectors': col(row, 'eligible_sectors', 'sectors') or '',
+            'women_min_pct': as_decimal(col(row, 'women_min_pct', 'women_pct')),
+            'youth_min_pct': as_decimal(col(row, 'youth_min_pct', 'youth_pct')),
+            'par90_max_pct': as_decimal(col(row, 'par90_max_pct', 'par90')),
+            'agreement_ref': col(row, 'agreement_ref', 'agreement') or '',
+        }
+        fields = {k: v for k, v in fields.items() if v is not None or k in (
+            'name', 'kind', 'source_name', 'is_active', 'notes',
+            'eligible_regions', 'eligible_sectors', 'agreement_ref',
+        )}
+        try:
+            with transaction.atomic():
+                obj = FinancingFund.objects.filter(code__iexact=code.strip()).first()
+                if obj is None:
+                    FinancingFund.objects.create(code=code, **fields)
+                    _tally(result, 'created')
+                else:
+                    action = _apply_update(obj, fields, update)
                     _tally(result, 'skipped' if action in ('exists', 'skipped') else action)
         except Exception as exc:
             result.error(n, str(exc))
@@ -662,8 +733,12 @@ def import_document_types(rows: Sequence[Dict[str, Any]], *, update: bool = Fals
             mode = col(row, 'for_appraisal_mode', 'appraisal_mode').lower()
             if mode in ('all', 'both', ''):
                 mode = ''
-            if mode not in ('', 'msme', 'corporate'):
-                raise ValueError(f'for_appraisal_mode must be blank, msme, or corporate')
+            from loans.appraisal_mode import ALL_MODES
+            if mode and mode not in ALL_MODES:
+                raise ValueError(
+                    'for_appraisal_mode must be blank, msme, corporate, project, '
+                    'wholesale, lease, ifb_murabaha, ifb_ijarah, idea_equity, or consumer'
+                )
             fields = {
                 'order': as_int(col(row, 'order'), 0) or 0,
                 'is_required': as_bool(col(row, 'is_required'), True),
@@ -1051,6 +1126,14 @@ def import_loan_requests(rows: Sequence[Dict[str, Any]], *, update: bool = False
                 officer = CustomUser.objects.filter(username__iexact=officer_name).first()
                 if not officer:
                     raise ValueError(f'Loan officer not found: {officer_name}')
+            fund = None
+            fund_code = col(row, 'financing_fund', 'fund_code', 'funding_window')
+            if fund_code:
+                fund = FinancingFund.objects.filter(code__iexact=fund_code.strip()).first()
+                if fund is None:
+                    fund = FinancingFund.objects.filter(name__iexact=fund_code.strip()).first()
+                if fund is None:
+                    raise ValueError(f'Funding window not found: {fund_code}')
             loan_id = col(row, 'loan_request_id', 'loan_id', 'request_id')
             if loan_id and len(loan_id) > 22:
                 raise ValueError('loan_request_id is longer than 22 characters')
@@ -1065,6 +1148,7 @@ def import_loan_requests(rows: Sequence[Dict[str, Any]], *, update: bool = False
                 'customer_number': col(row, 'customer_number', 'cif', 'cust_id') or None,
                 'email': col(row, 'email') or None,
                 'category': category,
+                'financing_fund': fund,
                 'collateral': collateral,
                 'amount_requested': amount,
                 'reason': reason,
@@ -1115,6 +1199,7 @@ IMPORTERS: Dict[str, Callable[..., ImportResult]] = {
     'branches': import_branches,
     'departments': import_departments,
     'loan_categories': import_loan_categories,
+    'financing_funds': import_financing_funds,
     'collateral_types': import_collateral_types,
     'document_types': import_document_types,
     'category_documents': import_category_documents,

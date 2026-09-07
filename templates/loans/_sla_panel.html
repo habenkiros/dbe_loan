@@ -1,0 +1,23 @@
+<div class="lw-panel" style="margin:1rem 0;">
+  <h3>Origination clock</h3>
+  <p class="help" style="margin-top:0;">
+    Screening → technical → appraisal → review → committee → legal → first release.
+    President KPI: {{ sla.target_days }} days is already slow. Informational — not a committee gate.
+  </p>
+  <p>
+    Day {{ sla.elapsed_days }} of {{ sla.target_days }}
+    {% if sla.breached %}
+    <span class="lw-badge lw-warn">SLA breach</span>
+    {% elif sla.status == 'released_late' %}
+    <span class="lw-badge lw-warn">{{ sla.status_label }}</span>
+    {% else %}
+    <span class="lw-badge lw-ok">{{ sla.status_label }}</span>
+    {% endif %}
+  </p>
+  <div class="lw-facts">
+    {% for step in sla.stages %}
+    <span class="lbl">{{ step.label }}</span>
+    <span>{% if step.at %}{{ step.at|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+    {% endfor %}
+  </div>
+</div>

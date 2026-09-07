@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Collections {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
-<p class="help"><a href="{% url 'collections_desk' %}">← Collections</a> · <a href="{% url 'monitoring_loan' loan_request.id %}">Monitoring</a></p>
+<p class="help"><a href="{% url 'collections_desk' %}">← Collections</a> · <a href="{% url 'monitoring_loan' loan_request.id %}">Monitoring</a> · <a href="{% url 'rehab_loan' loan_request.id %}">Rehab / recovery</a></p>
 <h1>{{ loan_request.loan_request_id }}</h1>
-<p>{{ loan_request.applicant_name }} · {{ loan_request.get_arrears_status_display }}</p>
+<p>{{ loan_request.applicant_name }} · {{ loan_request.get_arrears_status_display }}
+  {% if postbook.has_rehab %} · Rehab: <strong>{{ postbook.rehab_stage_label }}</strong>{% endif %}
+</p>
 
 <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:1rem;margin:1rem 0;">
   <h2 style="font-size:1.1rem;margin-top:0;">Arrears status</h2>

@@ -9,7 +9,7 @@ from loans.process_policy import get_or_create_analysis_policy, get_or_create_pr
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: getattr(u, 'is_superuser', False) or getattr(u, 'role', None) in ('admin', 'superadmin'))
 def manage_process_policy(request):
     analysis = get_or_create_analysis_policy()
     process = get_or_create_process_policy()

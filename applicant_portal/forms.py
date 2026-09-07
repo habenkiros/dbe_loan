@@ -5,6 +5,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from loans.models import Branch, CollateralType, District, LoanCategory
+from loans.product_family import FAMILY_GENERAL
 
 from applicant_portal.models import ApplicantAccount, ApplicantPortalSettings, OnlineApplication
 from applicant_portal.security import (
@@ -234,6 +235,130 @@ class ApplicantRegisterForm(forms.Form):
             customer_number=self.cleaned_data['customer_number'],
             email=fields.get('email') or '',
             customer_profile_snapshot=profile,
+            terms_accepted_at=timezone.now() if self.cleaned_data.get('accept_terms') else None,
+        )
+        account.set_password(self.cleaned_data['password'])
+        account.save()
+        return account
+
+
+class ExternalActorRegisterForm(forms.Form):
+    """PFI / promoter door — no DECSI customer-number lookup."""
+
+    actor_kind = forms.ChoiceField(
+        choices=[
+            (ApplicantAccount.ACTOR_INSTITUTION, 'Institution (bank / MFI / PFI)'),
+            (ApplicantAccount.ACTOR_PROMOTER, 'Project / idea promoter'),
+        ],
+        widget=forms.HiddenInput(),
+    )
+    institution_name = forms.CharField(
+        max_length=255,
+        label='Institution or venture name',
+        widget=forms.TextInput(attrs={'class': 'ap-input', 'autocomplete': 'organization'}),
+    )
+    license_number = forms.CharField(
+        max_length=80,
+        required=False,
+        label='License / registration number',
+        widget=forms.TextInput(attrs={'class': 'ap-input'}),
+    )
+    full_name = forms.CharField(
+        max_length=255,
+        label='Contact person',
+        widget=forms.TextInput(attrs={'class': 'ap-input', 'autocomplete': 'name'}),
+    )
+    phone_number = forms.CharField(
+        max_length=30,
+        label='Mobile number',
+        widget=forms.TextInput(attrs={
+            'class': 'ap-input',
+            'autocomplete': 'tel',
+            'inputmode': 'tel',
+            'placeholder': '09… / 07… / +251…',
+        }),
+    )
+    email = forms.EmailField(
+        required=False,
+        label='Email',
+        widget=forms.EmailInput(attrs={'class': 'ap-input', 'autocomplete': 'email'}),
+    )
+    password = forms.CharField(
+        label='Password',
+        widget=forms.PasswordInput(attrs={'class': 'ap-input', 'autocomplete': 'new-password'}),
+    )
+    password_confirm = forms.CharField(
+        label='Confirm password',
+        widget=forms.PasswordInput(attrs={'class': 'ap-input', 'autocomplete': 'new-password'}),
+    )
+    accept_terms = forms.BooleanField(
+        required=False,
+        label='I accept the terms of digital application and privacy notice.',
+    )
+    website = forms.CharField(required=False, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.policy = get_portal_settings()
+        self.fields['password'].help_text = 'Required: ' + '; '.join(
+            password_policy_hints(self.policy),
+        )
+        if self.policy.require_terms_acceptance:
+            self.fields['accept_terms'].required = True
+
+    def clean_phone_number(self):
+        phone = normalize_phone(self.cleaned_data.get('phone_number') or '')
+        validate_phone_format(phone)
+        if ApplicantAccount.objects.filter(phone_number=phone).exists():
+            raise ValidationError('An account with this phone already exists. Sign in instead.')
+        return phone
+
+    def clean_full_name(self):
+        name = (self.cleaned_data.get('full_name') or '').strip()
+        if len(name) < 3:
+            raise ValidationError('Enter the contact person’s name.')
+        return name
+
+    def clean_institution_name(self):
+        name = (self.cleaned_data.get('institution_name') or '').strip()
+        if len(name) < 2:
+            raise ValidationError('Enter the institution or venture name.')
+        return name
+
+    def clean(self):
+        cleaned = super().clean()
+        if (cleaned.get('website') or '').strip():
+            raise ValidationError('Registration blocked.')
+        password = cleaned.get('password') or ''
+        confirm = cleaned.get('password_confirm') or ''
+        if password != confirm:
+            self.add_error('password_confirm', 'Passwords do not match.')
+        if password and not self.errors.get('password'):
+            try:
+                validate_applicant_password(
+                    password,
+                    phone=cleaned.get('phone_number') or '',
+                    full_name=cleaned.get('full_name') or '',
+                    policy=self.policy,
+                )
+            except ValidationError as exc:
+                self.add_error('password', exc)
+        if self.policy.require_terms_acceptance and not cleaned.get('accept_terms'):
+            self.add_error('accept_terms', 'You must accept the terms to register.')
+        return cleaned
+
+    def save(self) -> ApplicantAccount:
+        from django.utils import timezone
+        from applicant_portal.access import portal_customer_number
+
+        account = ApplicantAccount(
+            actor_kind=self.cleaned_data['actor_kind'],
+            full_name=self.cleaned_data['full_name'],
+            institution_name=self.cleaned_data['institution_name'],
+            license_number=(self.cleaned_data.get('license_number') or '').strip(),
+            phone_number=self.cleaned_data['phone_number'],
+            email=(self.cleaned_data.get('email') or '').strip(),
+            customer_number=portal_customer_number(),
             terms_accepted_at=timezone.now() if self.cleaned_data.get('accept_terms') else None,
         )
         account.set_password(self.cleaned_data['password'])
@@ -492,18 +617,65 @@ class ApplicationDetailsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from applicant_portal.access import (
+            ACTOR_INSTITUTION, ACTOR_PERSON, ACTOR_PROMOTER, actor_kind_of, categories_for_account,
+        )
+        from loans.forms import ProductFamilySelect
+
         self.fields['district'].queryset = District.objects.order_by('name')
-        self.fields['category'].queryset = LoanCategory.objects.order_by('name')
-        self.fields['collateral'].queryset = CollateralType.objects.order_by('name').exclude(
+        acct = getattr(self.instance, 'applicant', None) if self.instance else None
+        if acct is not None:
+            self.fields['category'].queryset = categories_for_account(acct)
+        else:
+            self.fields['category'].queryset = LoanCategory.objects.order_by('product_family', 'name')
+        cat_qs = self.fields['category'].queryset
+        self.fields['category'].widget = ProductFamilySelect(attrs={'class': 'ap-input', 'id': 'id_category'})
+        self.fields['category'].widget.family_by_pk = {c.id: c.product_family for c in cat_qs}
+        self.fields['category'].label_from_instance = (
+            lambda obj: obj.name if obj.product_family == FAMILY_GENERAL
+            else f'{obj.name} — {obj.get_product_family_display()}'
+        )
+        posted_cat = None
+        if self.data.get('category'):
+            posted_cat = LoanCategory.objects.filter(pk=self.data.get('category')).first()
+        elif self.instance and self.instance.category_id:
+            posted_cat = self.instance.category
+        from loans.registration import collateral_for_category
+        self.fields['collateral'].queryset = collateral_for_category(posted_cat).exclude(
             name__icontains='to be determined',
         )
-        self.fields['collateral'].required = True
+        kind = actor_kind_of(acct) if acct is not None else ACTOR_PERSON
+        wholesale_door = kind == ACTOR_INSTITUTION
+        self.fields['collateral'].required = not wholesale_door
         self.fields['collateral'].empty_label = '— Select collateral type —'
-        self.fields['collateral'].help_text = 'Required — branch may refine during appraisal.'
-        self.fields['customer_number'].required = True
-        self.fields['customer_number'].help_text = 'DECSI customer number from registration (core banking).'
-        self.fields['applicant_name'].help_text = 'From customer account when available.'
-        self.fields['phone_number'].help_text = 'From customer account when available.'
+        self.fields['collateral'].help_text = (
+            'Optional for a PFI facility — staff may add security later.'
+            if wholesale_door else
+            'Required — branch may refine during appraisal.'
+        )
+        self.fields['customer_number'].required = kind == ACTOR_PERSON
+        self.fields['customer_number'].help_text = (
+            'DBE / core-banking customer number from your account.'
+            if kind == ACTOR_PERSON else
+            'Not required for a PFI or promoter. A portal reference is generated.'
+        )
+        self.fields['applicant_name'].label = (
+            'Institution name' if wholesale_door else
+            'Promoter / project name' if kind == ACTOR_PROMOTER else
+            'Applicant name'
+        )
+        self.fields['applicant_name'].help_text = (
+            'Legal name of the PFI.' if wholesale_door else
+            'Promoter or venture as it should appear on the file.'
+            if kind == ACTOR_PROMOTER else
+            'From your customer account when available.'
+        )
+        self.fields['phone_number'].help_text = 'Reachable contact for this application.'
+        self.fields['category'].help_text = (
+            'The product decides the next page: project file, PFI file, lease / Ijarah, Murabaha, or idea.'
+        )
+        self.fields['reason'].label = 'Purpose of financing'
+        self.fields['amount_requested'].label = 'Amount requested (ETB)'
 
         # Prefill locked identity from snapshot when drafting
         if self.instance and self.instance.pk:
@@ -546,7 +718,8 @@ class ApplicationDetailsForm(forms.ModelForm):
             'pattern': r'[0-9\s\-]*',
             'placeholder': 'Digits only',
         })
-        self.fields['customer_number'].help_text = 'DECSI customer number (from registration).'
+        if kind == ACTOR_PERSON:
+            self.fields['customer_number'].help_text = 'DBE / core-banking customer number (from your account).'
         self.fields['amount_requested'].widget = forms.NumberInput(attrs={
             'class': 'ap-input',
             'min': '1',
@@ -556,8 +729,9 @@ class ApplicationDetailsForm(forms.ModelForm):
         self.fields['amount_requested'].help_text = 'Numbers only (ETB).'
 
         desired = [
+            'category',
             'applicant_name', 'phone_number', 'customer_number', 'customer_history',
-            'category', 'collateral', 'district', 'branch', 'amount_requested', 'reason',
+            'collateral', 'district', 'branch', 'amount_requested', 'reason',
         ]
         self.order_fields(desired)
 
@@ -575,7 +749,14 @@ class ApplicationDetailsForm(forms.ModelForm):
         return phone
 
     def clean_customer_number(self):
+        from applicant_portal.access import ACTOR_PERSON, actor_kind_of
+
         raw = self.cleaned_data.get('customer_number') or ''
+        acct = getattr(self.instance, 'applicant', None) if self.instance else None
+        if actor_kind_of(acct) != ACTOR_PERSON:
+            if not str(raw).strip() and acct is not None:
+                return acct.customer_number
+            return (str(raw).strip() or '')[:50]
         if not str(raw).strip():
             raise ValidationError('Customer number is required.')
         cn = normalize_customer_number(raw)

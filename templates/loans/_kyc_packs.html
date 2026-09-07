@@ -1,0 +1,63 @@
+{% if kyc_screenings %}
+<section class="lw-panel" style="margin:0.75rem 0;">
+  <h3>KYC packs</h3>
+  <p class="help">CRM, Engineering, and Legal screen in parallel. Tick the checklist before clearing. Scan/Admin applies to digital apply.</p>
+  {% for row in kyc_screenings %}
+  <article style="border:1px solid #d5e6db;border-radius:8px;padding:0.75rem 0.9rem;margin:0.6rem 0;">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:0.5rem;align-items:baseline;">
+      <strong>{{ row.get_desk_display }}</strong>
+      <span>{{ row.get_status_display }}</span>
+    </div>
+    {% if row.ui_identity %}
+    <p class="help" style="margin:0.35rem 0 0;">Identity from documents:</p>
+    <ul style="margin:0.2rem 0 0.5rem;padding-left:1.2rem;">
+      {% for ident in row.ui_identity %}
+      <li>{% if ident.passed %}Match{% else %}Mismatch{% endif %} — {{ ident.document }}{% if ident.summary %}: {{ ident.summary }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if row.ui_findings.sanctions %}
+    <p class="help" style="margin:0.25rem 0;">
+      Sanctions / PEP:
+      {% if row.ui_findings.sanctions.ran %}
+        {% if row.ui_findings.sanctions.hit %}hit — compliance case opened{% else %}no hit{% endif %}
+      {% else %}
+        not run (provider off or not yet cleared)
+      {% endif %}
+    </p>
+    {% endif %}
+    {% if kyc_my_desk == row.desk or user.is_superuser or user.role == 'admin' or user.role == 'superadmin' %}
+    <form method="post" action="{% url 'kyc_screening_action' loan_request.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="desk" value="{{ row.desk }}">
+      <input type="hidden" name="next" value="{{ request.path }}">
+      {% if row.ui_items %}
+      <ul style="list-style:none;padding:0;margin:0.5rem 0;">
+        {% for item in row.ui_items %}
+        <li style="margin:0.2rem 0;">
+          <label>
+            <input type="checkbox" name="check_{{ item.key }}"{% if item.checked %} checked{% endif %}>
+            {{ item.label }}{% if item.required %} <span class="help">required</span>{% endif %}
+            {% if item.hint %}<span class="help"> — {{ item.hint }}</span>{% endif %}
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+        <input type="text" name="note" placeholder="{% if row.desk == 'scan_admin' %}Override note if identity is blocked{% else %}Note{% endif %}" style="min-width:10rem;" value="{{ row.note }}">
+        <button type="submit" name="action" value="clear" class="btn btn-green">Clear</button>
+        <button type="submit" name="action" value="return" class="btn btn-gray">Return</button>
+      </div>
+    </form>
+    {% elif row.ui_items %}
+    <ul style="margin:0.4rem 0 0;padding-left:1.2rem;">
+      {% for item in row.ui_items %}
+      <li>{% if item.checked %}Done{% else %}Open{% endif %} — {{ item.label }}{% if item.hint %} ({{ item.hint }}){% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}

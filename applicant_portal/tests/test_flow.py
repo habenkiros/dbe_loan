@@ -76,6 +76,19 @@ class ApplicantPortalFlowTests(TestCase):
             b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00'
             b'\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
         )
+        try:
+            from PIL import Image
+            import io
+            img = Image.new('RGB', (640, 480))
+            img.putdata([
+                ((i * 17) % 256, (i * 31) % 256, (i * 7) % 256)
+                for i in range(640 * 480)
+            ])
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            self.png_bytes = buf.getvalue()
+        except Exception:
+            pass
         self.strong_password = 'SecurePass1!'
 
     def _register(self, phone='0911222333', customer_number='1001001'):

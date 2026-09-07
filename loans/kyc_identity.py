@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
+from loans.product_family import (
+    FAMILY_IDEA_EQUITY,
+    FAMILY_PROJECT,
+    FAMILY_WHOLESALE,
+)
 from loans.services.document_extraction_defaults import _bucket_for_name
 from loans.services.document_forensics import applicant_facing
+
+ENTITY_PARTY_FAMILIES = {FAMILY_PROJECT, FAMILY_WHOLESALE, FAMILY_IDEA_EQUITY}
+RELATED_ROLES = ('director', 'ubo', 'guarantor', 'spouse')
 
 
 def is_strict_identity_type(doc_type) -> bool:
@@ -141,6 +149,203 @@ def save_applicant_identity(
     return party
 
 
+def _parse_share(value) -> Optional[Any]:
+    from decimal import Decimal, InvalidOperation
+
+    if value is None or value == '':
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    if parsed < 0 or parsed > 100:
+        return None
+    return parsed
+
+
+def _parse_date(value):
+    from datetime import datetime
+
+    text = (value or '').strip() if not hasattr(value, 'year') else ''
+    if hasattr(value, 'year') and value:
+        return value
+    if not text:
+        return None
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def needs_related_parties(obj) -> bool:
+    if obj is None:
+        return False
+    cat = getattr(obj, 'category', None)
+    if cat is None:
+        loan = getattr(obj, 'loan_request', None)
+        cat = getattr(loan, 'category', None) if loan is not None else None
+    family = getattr(cat, 'product_family', None) or ''
+    if family in ENTITY_PARTY_FAMILIES:
+        return True
+    mode = getattr(cat, 'appraisal_mode', None) or ''
+    return mode == 'corporate'
+
+
+def related_role_choices():
+    from loans.models import KycParty
+    return [c for c in KycParty.ROLE_CHOICES if c[0] in RELATED_ROLES]
+
+
+def party_completeness(case) -> Dict[str, Any]:
+    from loans.models import KycParty
+
+    parties = list(
+        KycParty.objects.filter(identity_case_id=case.pk)
+    ) if case is not None and getattr(case, 'pk', None) else []
+    related = [p for p in parties if p.role != KycParty.ROLE_APPLICANT]
+    directors = [p for p in related if p.role == KycParty.ROLE_DIRECTOR]
+    ubos = [p for p in related if p.role == KycParty.ROLE_UBO]
+    guarantors = [p for p in related if p.role == KycParty.ROLE_GUARANTOR]
+    share = sum((p.share_percent or 0) for p in related if p.role in (
+        KycParty.ROLE_UBO, KycParty.ROLE_DIRECTOR,
+    ))
+    complete = bool(directors or ubos)
+    return {
+        'complete': complete,
+        'related_count': len(related),
+        'directors': len(directors),
+        'ubos': len(ubos),
+        'guarantors': len(guarantors),
+        'share_percent': float(share) if share else 0,
+    }
+
+
+def _id_portrait_bytes(case) -> Tuple[bytes, str]:
+    for doc in _doc_rows_for_case(case):
+        dt = getattr(doc, 'document_type', None)
+        bucket = _bucket_for_name(getattr(dt, 'name', '') or '')
+        if bucket != 'id' and not is_strict_identity_type(dt):
+            continue
+        if bucket == 'tin':
+            continue
+        f = getattr(doc, 'file', None)
+        if f is None or not getattr(f, 'name', ''):
+            continue
+        try:
+            f.open('rb')
+            raw = f.read()
+            f.seek(0)
+        except Exception:
+            continue
+        ext = f.name.rsplit('.', 1)[-1].lower() if '.' in f.name else 'jpg'
+        if raw:
+            return raw, ext
+    return b'', ''
+
+
+def save_applicant_selfie(
+    *,
+    loan_request=None,
+    online_application=None,
+    uploaded_file,
+):
+    from django.core.files.base import ContentFile
+    from loans.services.document_auth import _read_upload_bytes
+    from loans.services.identity_verify import verify_biometric
+
+    case = ensure_identity_case(
+        loan_request=loan_request, online_application=online_application,
+    )
+    party = ensure_applicant_party(
+        case, loan_request=loan_request, online_application=online_application,
+    )
+    raw = _read_upload_bytes(uploaded_file) if uploaded_file else b''
+    if not raw:
+        return party
+    name = getattr(uploaded_file, 'name', '') or 'selfie.jpg'
+    party.selfie.save(name, ContentFile(raw), save=False)
+    party.save(update_fields=['selfie', 'updated_at'])
+    id_raw, id_ext = _id_portrait_bytes(case)
+    verify_biometric(
+        party,
+        selfie_bytes=raw,
+        selfie_filename=name,
+        id_portrait_bytes=id_raw,
+        id_ext=id_ext,
+    )
+    recompute_identity_case(case)
+    return party
+
+
+def save_related_party(
+    *,
+    loan_request=None,
+    online_application=None,
+    role: str = '',
+    legal_name_en: str = '',
+    legal_name_am: str = '',
+    identity_kind: str = '',
+    fan: str = '',
+    tin: str = '',
+    id_number: str = '',
+    share_percent=None,
+    capacity: str = '',
+    date_of_birth=None,
+    party_id=None,
+    verify: bool = True,
+):
+    from loans.models import KycParty
+    from loans.services.identity_verify import verify_party
+
+    case = ensure_identity_case(
+        loan_request=loan_request, online_application=online_application,
+    )
+    role = (role or '').strip() or KycParty.ROLE_UBO
+    if role not in RELATED_ROLES:
+        role = KycParty.ROLE_UBO
+    party = None
+    if party_id:
+        party = case.parties.filter(pk=party_id).exclude(role=KycParty.ROLE_APPLICANT).first()
+    if party is None:
+        party = KycParty(identity_case=case, role=role)
+    else:
+        party.role = role
+    kind = (identity_kind or '').strip() or KycParty.KIND_NATIONAL_ID
+    allowed = {c[0] for c in KycParty.KIND_CHOICES}
+    if kind not in allowed:
+        kind = KycParty.KIND_NATIONAL_ID
+    party.identity_kind = kind
+    party.legal_name_en = (legal_name_en or '').strip()[:255]
+    party.legal_name_am = (legal_name_am or '').strip()[:255]
+    party.fan = (fan or '').strip()[:40]
+    party.tin = (tin or '').strip()[:40]
+    party.id_number = (id_number or '').strip()[:80]
+    party.capacity = (capacity or '').strip()[:80]
+    party.share_percent = _parse_share(share_percent)
+    parsed_dob = _parse_date(date_of_birth)
+    if parsed_dob:
+        party.date_of_birth = parsed_dob
+    party.save()
+    if verify and (party.fan or party.tin or party.id_number):
+        verify_party(party)
+    recompute_identity_case(case)
+    return party
+
+
+def delete_related_party(*, loan_request=None, online_application=None, party_id) -> bool:
+    from loans.models import KycParty
+
+    case = get_identity_case(loan_request=loan_request, online_application=online_application)
+    if case is None or not party_id:
+        return False
+    deleted, _ = case.parties.filter(pk=party_id).exclude(role=KycParty.ROLE_APPLICANT).delete()
+    if deleted:
+        recompute_identity_case(case)
+    return bool(deleted)
+
+
 def apply_extracted_fields_to_party(party, extracted: Dict[str, Any]) -> None:
     if not party or not extracted:
         return
@@ -194,7 +399,7 @@ def recompute_identity_case(case) -> None:
     if case is None:
         return
     docs = _doc_rows_for_case(case)
-    parties = list(case.parties.all())
+    parties = list(KycParty.objects.filter(identity_case_id=case.pk).order_by('id'))
     applicant = next((p for p in parties if p.role == KycParty.ROLE_APPLICANT), None)
 
     blockers: List[str] = []
@@ -207,6 +412,8 @@ def recompute_identity_case(case) -> None:
     reuse = False
     provider_error = False
     provider_denied = False
+    biometric_failed = False
+    biometric_hard_fail = False
 
     for party in parties:
         if party.verify_status in (KycParty.VERIFY_NOT_FOUND, KycParty.VERIFY_MISMATCH):
@@ -217,6 +424,18 @@ def recompute_identity_case(case) -> None:
         elif party.verify_status == KycParty.VERIFY_ERROR:
             provider_error = True
             reasons.append('provider_unconfirmed')
+        if party.biometric_status == KycParty.BIOMETRIC_FAILED:
+            biometric_failed = True
+            score_val = float(party.face_match_score or 0)
+            if score_val < 40:
+                biometric_hard_fail = True
+                blockers.append(
+                    f'{party.get_role_display()} face match failed.'
+                )
+            else:
+                reasons.append('biometric_review')
+        elif party.biometric_status == KycParty.BIOMETRIC_PENDING:
+            reasons.append('biometric_pending')
 
     for doc in docs:
         checks = getattr(doc, 'automated_checks', None) or {}
@@ -252,21 +471,39 @@ def recompute_identity_case(case) -> None:
     avg = int(sum(scores) / len(scores)) if scores else 70
     if identity_fails:
         reasons.append('identity_mismatch')
+    ubo = party_completeness(case)
+    loan = getattr(case, 'loan_request', None)
+    app = _related_case(case, 'online_application')
+    needs_ubo = needs_related_parties(loan) or needs_related_parties(app)
+    if needs_ubo and not ubo.get('complete'):
+        reasons.append('ubo_incomplete')
     band = KycIdentityCase.BAND_CLEAR
-    if blockers or identity_fails or provider_denied or unreadable:
+    if blockers or identity_fails or provider_denied or unreadable or biometric_hard_fail:
         band = KycIdentityCase.BAND_BLOCKED
         if identity_fails and not any('match' in b.lower() for b in blockers):
             blockers.append('Identity on a document does not match the applicant.')
-    elif needs_review or reuse or provider_error or avg < 70:
+    elif needs_review or reuse or provider_error or avg < 70 or biometric_failed or (
+        needs_ubo and not ubo.get('complete')
+    ) or 'biometric_pending' in reasons:
         band = KycIdentityCase.BAND_REVIEW
         if not docs:
             band = KycIdentityCase.BAND_REVIEW
         if provider_error:
             reasons.append('provider_unconfirmed')
-    if not docs and not any(p.fan or p.tin or p.id_number for p in parties):
+    if (
+        band != KycIdentityCase.BAND_BLOCKED
+        and not docs
+        and not any(p.fan or p.tin or p.id_number for p in parties)
+    ):
         band = KycIdentityCase.BAND_REVIEW
         avg = min(avg, 50)
 
+    applicant_bio = {
+        'status': getattr(applicant, 'biometric_status', '') if applicant else '',
+        'score': str(getattr(applicant, 'face_match_score', '') or '') if applicant else '',
+        'liveness_ref': getattr(applicant, 'liveness_ref', '') if applicant else '',
+        'has_selfie': bool(applicant and getattr(getattr(applicant, 'selfie', None), 'name', '')),
+    }
     findings = dict(case.findings or {})
     findings.update({
         'recomputed_at': timezone.now().isoformat(),
@@ -276,6 +513,9 @@ def recompute_identity_case(case) -> None:
         'needs_review': needs_review,
         'reuse': reuse,
         'reasons': sorted(set(reasons)),
+        'biometric': applicant_bio,
+        'ubo': ubo,
+        'needs_ubo': needs_ubo,
         'applicant': {
             'name': getattr(applicant, 'legal_name_en', '') if applicant else '',
             'kind': getattr(applicant, 'identity_kind', '') if applicant else '',
@@ -349,6 +589,30 @@ def suggested_kyc_hints(loan_request) -> Dict[str, str]:
     applicant = findings.get('applicant') or {}
     if applicant.get('verify_status') == 'confirmed':
         hints['identity_docs'] = 'System: Fayda/TIN adapter confirmed the applicant.'
+        hints['legal_personality'] = 'System: applicant identity confirmed on the case.'
+    bio = findings.get('biometric') or {}
+    if bio.get('status') == 'matched':
+        hints['identity_match'] = (
+            hints.get('identity_match') or 'System: selfie matched the ID portrait.'
+        )
+    elif bio.get('status') == 'failed':
+        hints['identity_match'] = 'System: face match failed — review before clearing.'
+    ubo = findings.get('ubo') or {}
+    if findings.get('needs_ubo'):
+        if ubo.get('complete'):
+            msg = (
+                f"System: {ubo.get('directors', 0)} director(s), "
+                f"{ubo.get('ubos', 0)} UBO(s) recorded"
+            )
+            if ubo.get('share_percent'):
+                msg += f", share {ubo['share_percent']}%"
+            hints['ubo'] = msg + '.'
+            hints['ubo_recorded'] = hints['ubo']
+            if ubo.get('directors'):
+                hints['title_or_authority'] = 'System: a director is on the identity case.'
+        else:
+            hints['ubo'] = 'System: no director or UBO on the identity case yet.'
+            hints['ubo_recorded'] = hints['ubo']
     try:
         from loans.models import SanctionsScreeningResult
         latest = (
@@ -367,13 +631,17 @@ def suggested_kyc_hints(loan_request) -> Dict[str, str]:
 
 
 def case_payload(loan_request) -> Optional[Dict[str, Any]]:
+    from loans.models import KycParty
+
     case = get_identity_case(loan_request=loan_request)
     if case is None:
         return None
     parties = []
     for p in case.parties.all():
         parties.append({
+            'pk': p.pk,
             'role': p.get_role_display(),
+            'role_key': p.role,
             'name': p.legal_name_en or p.legal_name_am,
             'kind': p.get_identity_kind_display(),
             'fan': p.fan,
@@ -382,6 +650,13 @@ def case_payload(loan_request) -> Optional[Dict[str, Any]]:
             'verify': p.get_verify_status_display(),
             'verify_status': p.verify_status,
             'biometric': p.get_biometric_status_display() if p.biometric_status else '',
+            'biometric_status': p.biometric_status,
+            'face_match_score': str(p.face_match_score) if p.face_match_score is not None else '',
+            'liveness_ref': p.liveness_ref,
+            'share_percent': str(p.share_percent) if p.share_percent is not None else '',
+            'capacity': p.capacity,
+            'has_selfie': bool(getattr(p.selfie, 'name', '')),
+            'is_related': p.role != p.ROLE_APPLICANT,
         })
     docs = []
     loan = getattr(case, 'loan_request', None) or loan_request
@@ -403,6 +678,12 @@ def case_payload(loan_request) -> Optional[Dict[str, Any]]:
         'parties': parties,
         'documents': docs,
         'scan_override': (case.findings or {}).get('scan_override'),
+        'loan_id': getattr(loan, 'pk', None),
+        'related_roles': related_role_choices(),
+        'identity_kinds': KycParty.KIND_CHOICES,
+        'needs_ubo': bool((case.findings or {}).get('needs_ubo')),
+        'ubo': (case.findings or {}).get('ubo') or {},
+        'biometric': (case.findings or {}).get('biometric') or {},
     }
 
 

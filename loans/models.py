@@ -3923,9 +3923,16 @@ class KycParty(models.Model):
         max_digits=5, decimal_places=2, null=True, blank=True,
     )
     liveness_ref = models.CharField(max_length=80, blank=True)
+    biometric_payload = models.JSONField(default=dict, blank=True)
+    selfie = models.FileField(
+        upload_to='kyc/selfies/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Applicant / party photo evidence. Vendor templates are not stored.',
+    )
     share_percent = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, blank=True,
-        help_text='Ownership share for UBO / director (phase 3).',
+        help_text='Ownership share for UBO / director.',
     )
     capacity = models.CharField(max_length=80, blank=True)
     updated_at = models.DateTimeField(auto_now=True)

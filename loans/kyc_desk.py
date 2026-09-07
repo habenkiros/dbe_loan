@@ -60,7 +60,6 @@ _CORE_CHECKLIST = {
     DESK_CRM: [
         ('identity_docs', 'Identity documents present and readable', True),
         ('identity_match', 'Name / ID matches the applicant on this file', True),
-        ('ubo', 'Beneficial owners / directors recorded', True),
         ('source_of_funds', 'Source of funds / wealth noted', True),
         ('pep_sanctions', 'PEP / sanctions screen reviewed', True),
         ('financial_pack', 'Financial / KYC pack complete for this product', True),
@@ -79,8 +78,14 @@ _CORE_CHECKLIST = {
 
 _FAMILY_EXTRA = {
     FAMILY_PROJECT: {
+        DESK_CRM: [
+            ('ubo', 'Beneficial owners / directors recorded', True),
+        ],
         DESK_ENGINEERING: [
             ('plant_or_civil', 'Plant / civil technical note reviewed', True),
+        ],
+        DESK_LEGAL: [
+            ('ubo_recorded', 'Beneficial owners / directors match the identity case', True),
         ],
     },
     FAMILY_LEASE: {
@@ -104,14 +109,22 @@ _FAMILY_EXTRA = {
     FAMILY_WHOLESALE: {
         DESK_CRM: [
             ('esms_policy', 'PFI ESMS / credit policy seen', True),
+            ('ubo', 'Beneficial owners / directors recorded', True),
         ],
         DESK_ENGINEERING: [
             ('portfolio_pack', 'PAR / NPL and on-lending pack seen', True),
+        ],
+        DESK_LEGAL: [
+            ('ubo_recorded', 'Beneficial owners / directors match the identity case', True),
         ],
     },
     FAMILY_IDEA_EQUITY: {
         DESK_CRM: [
             ('cap_table', 'Cap table / start-up evidence seen', True),
+            ('ubo', 'Beneficial owners / directors recorded', True),
+        ],
+        DESK_LEGAL: [
+            ('ubo_recorded', 'Beneficial owners / directors match the identity case', True),
         ],
     },
     FAMILY_CONSUMER: {

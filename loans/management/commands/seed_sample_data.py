@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 from decimal import Decimal
+import hashlib
+import io
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -80,6 +82,35 @@ from loans.cashflow_utils import (
 
 
 DEFAULT_PASSWORD = 'Demo@12345'
+PORTAL_PASSWORD = 'Demo@12345'
+
+
+def _demo_png(seed: str) -> bytes:
+    """Unique but readable demo portrait (ID + matching selfie use the same seed)."""
+    from PIL import Image, ImageDraw
+
+    digest = hashlib.md5((seed or 'demo').encode()).digest()
+    bg = (40 + digest[0] % 160, 50 + digest[1] % 160, 70 + digest[2] % 140)
+    img = Image.new('RGB', (640, 480), bg)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([24, 24, 616, 456], outline=(255, 255, 255), width=8)
+    draw.ellipse([220, 90, 420, 290], fill=(240, 220, 200), outline=(40, 40, 40), width=3)
+    label = (seed or 'ID')[:42]
+    draw.rectangle([40, 340, 600, 430], fill=(20, 20, 40))
+    draw.text((56, 368), label, fill=(255, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    return buf.getvalue()
+
+
+def _demo_pdf(label: str) -> bytes:
+    text = (label or 'demo document').replace('\\', ' ')[:80]
+    return (
+        b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+        b'2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n'
+        b'3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\n'
+        b'trailer<</Root 1 0 R>>\n%%EOF\n%' + text.encode('ascii', 'ignore') + b'\n'
+    )
 
 
 class Command(BaseCommand):
@@ -92,10 +123,10 @@ class Command(BaseCommand):
             help='Delete existing LoanRequest rows before seeding loans (keeps users/master data).',
         )
 
-    @transaction.atomic
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING('Seeding sample data…'))
 
+        self._ensure_dbe_catalog()
         geo = self._seed_geography()
         categories = self._seed_categories()
         collateral_types = self._seed_collateral_types()
@@ -110,14 +141,30 @@ class Command(BaseCommand):
             self.stdout.write(f'  Flushed {deleted} loan-related rows')
 
         loans = self._seed_loans(geo, categories, collateral_types, users, catalog)
+        self._seed_required_packs(loans, users)
+        self._seed_kyc_identity_packs(loans, users)
+        self._seed_kyc_desk_packs(loans, users)
+        self._seed_portal_applicants(geo, categories, collateral_types, users, loans)
         self._seed_notifications(users, loans)
         self._seed_delegations(users)
+
+        from loans.seed_factory_tour import seed_full_factory_tour
+        seed_full_factory_tour(
+            stdout=self.stdout, style=self.style, loans=loans, users=users, geo=geo,
+        )
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Sample data ready.'))
         self.stdout.write(f'  Login password for demo users: {DEFAULT_PASSWORD}')
         self.stdout.write('  Examples: bm.mekele / lo.mekele1 / eng.head / coop.manager / ceo / admin.sys')
         self.stdout.write('  Delegation demo: acct.mekele acts for bm.mekele (Alem locked out until cover ends)')
+        self.stdout.write('  Digital Apply (same password):')
+        self.stdout.write('    Person 0912111801 · documents unpaid')
+        self.stdout.write('    Institution 0912111802 · Tigray MFI sample')
+        self.stdout.write('    Promoter 0912111803 · Mekelle plant promoter')
+        self.stdout.write('    Submitted 0912111804 · already in Scan inbox')
+        self.stdout.write('    Fee-paid 0912111805 · ready to submit')
+        self.stdout.write('  Market portal: 0912111901 / Demo@12345')
         self.stdout.write(f'  Loans created/updated: {len(loans)}')
 
     # ------------------------------------------------------------------ geography
@@ -181,6 +228,8 @@ class Command(BaseCommand):
                 cat.appraisal_mode = mode
                 cat.save(update_fields=['appraisal_mode'])
             out[name] = cat
+        for cat in LoanCategory.objects.all():
+            out[cat.name] = cat
         self.stdout.write(self.style.SUCCESS(f'  Loan categories: {len(out)}'))
         return out
 
@@ -208,6 +257,9 @@ class Command(BaseCommand):
     def _seed_document_types(self):
         docs = [
             ('National ID / Kebele ID', 10, True, True),
+            ('Director / beneficial owner ID', 12, False, True),
+            ('UBO ownership evidence', 13, False, False),
+            ('Guarantor identity document', 14, False, True),
             ('TIN Certificate', 20, True, True),
             ('Business License', 30, True, False),
             ('Bank Statement (6 months)', 40, True, False),
@@ -716,6 +768,119 @@ class Command(BaseCommand):
             ),
         ]
 
+        extra = []
+        if 'Project Financing' in categories:
+            extra.append(dict(
+                key='project1', applicant='Mekelle Cement Plant PLC', phone='0912111810',
+                customer_number='3010', category='Project Financing', collateral='Land',
+                amount='45000000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+                reason='Greenfield cement grinding plant — promoter equity on file',
+                op=True, fin=True, status_hint='Approved', days_ago=9,
+                officer=users.get('credit_lo') or users['lo1'], engineer=users['eng1'],
+                history='existing', with_land=True, with_building=True, with_appraisal=True,
+                score='80.00', band='strong',
+            ))
+        if 'Wholesale / PFI Facility' in categories:
+            extra.append(dict(
+                key='wholesale1', applicant='Tigray Microfinance S.C.', phone='0912111811',
+                customer_number='3011', category='Wholesale / PFI Facility',
+                collateral='Building / House',
+                amount='25000000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+                reason='Working-capital on-lending facility for MSME book',
+                op=True, fin=True, status_hint='Approved', days_ago=11,
+                officer=users.get('credit_lo') or users['lo1'], history='existing',
+                with_appraisal=True, score='77.00', band='acceptable',
+            ))
+        if 'Idea / Quasi-Equity' in categories:
+            extra.append(dict(
+                key='idea1', applicant='Axum AgriTech Start-up', phone='0912111812',
+                customer_number='3012', category='Idea / Quasi-Equity',
+                collateral='Other Movable',
+                amount='3500000', branch=b['Axum Branch'], district=d['Central District'],
+                reason='Cap-table backed quasi-equity for irrigation sensors',
+                op=True, fin=True, status_hint='Approved', days_ago=6,
+                officer=users.get('credit_lo') or users['lo1'], history='new',
+                with_other=True, with_appraisal=True, score='72.00', band='acceptable',
+            ))
+        if 'Lease Financing' in categories:
+            extra.append(dict(
+                key='lease1', applicant='Adwa Workshop Lease', phone='0912111813',
+                customer_number='4013', category='Lease Financing',
+                collateral='Machinery / Equipment',
+                amount='2800000', branch=b['Mekelle Industrial Branch'],
+                district=d['Mekelle District'],
+                reason='CNC lathe hire-purchase — bank holds title until buyout',
+                op=True, fin=True, status_hint='Approved', days_ago=15,
+                officer=users.get('credit_lo') or users['lo2'], history='existing',
+                with_other=True, with_appraisal=True, score='76.00', band='acceptable',
+            ))
+        if 'IFB Ijarah' in categories:
+            extra.append(dict(
+                key='ijarah1', applicant='Shire Ijarah Transport', phone='0912111814',
+                customer_number='4014', category='IFB Ijarah',
+                collateral='Vehicle',
+                amount='1900000', branch=b['Shire Branch'], district=d['Central District'],
+                reason='Ijarah rental of two Isuzu trucks — Sharia cleared',
+                op=True, fin=True, status_hint='Approved', days_ago=13,
+                officer=users.get('credit_lo') or users['lo1'], history='existing',
+                with_other=True, with_appraisal=True, score='74.00', band='acceptable',
+            ))
+        if 'IFB Murabaha' in categories:
+            extra.append(dict(
+                key='murabaha1', applicant='Mekelle Murabaha Traders', phone='0912111815',
+                customer_number='4015', category='IFB Murabaha',
+                collateral='Other Movable',
+                amount='850000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+                reason='Cost-plus purchase of construction materials from named supplier',
+                op=True, fin=True, status_hint='Approved', days_ago=8,
+                officer=users.get('credit_lo') or users['lo1'], history='existing',
+                with_other=True, with_appraisal=True, score='73.00', band='acceptable',
+            ))
+        if 'Consumer Financing' in categories:
+            extra.append(dict(
+                key='consumer1', applicant='Selam Housing Consumer', phone='0912111816',
+                customer_number='4016', category='Consumer Financing',
+                collateral='Building / House',
+                amount='1200000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+                reason='Salary-backed housing loan — DTI and LTV on consumer desk',
+                op=True, fin=True, status_hint='Approved', days_ago=16,
+                officer=users['lo1'], history='existing',
+                with_building=True, with_appraisal=True, score='81.00', band='strong',
+            ))
+        if 'External Fund Window' in categories:
+            extra.append(dict(
+                key='fund1', applicant='Youth Climate MSME', phone='0912111817',
+                customer_number='4017', category='External Fund Window',
+                collateral='Land',
+                amount='640000', branch=b['Axum Branch'], district=d['Central District'],
+                reason='Donor window — youth-owned climate-tagged agri MSME',
+                op=True, fin=True, status_hint='Approved', days_ago=7,
+                officer=users['lo1'], history='new',
+                with_land=True, with_appraisal=True, score='70.00', band='acceptable',
+            ))
+        extra.append(dict(
+            key='collections1', applicant='Wukro Collections Sample', phone='0912111818',
+            customer_number='4018', category='MSME Manufacturing',
+            collateral='Machinery / Equipment',
+            amount='480000', branch=b['Wukro Branch'], district=d['Eastern District'],
+            reason='Booked mill now 90+ DPD — collections and rehab sample',
+            op=True, fin=True, status_hint='Approved', days_ago=120,
+            officer=users['lo3'], history='existing',
+            with_other=True, with_appraisal=True, score='68.00', band='weak',
+            committee='approved',
+        ))
+        extra.append(dict(
+            key='online1', applicant='Portal Submitted Applicant', phone='0912111819',
+            customer_number='4019', category='MSME Trade',
+            collateral='Building / House',
+            amount='275000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+            reason='Digital Apply submitted — Scan/Admin inbox sample',
+            op=True, fin=True, status_hint='Approved', days_ago=2,
+            officer=users['lo1'], history='new',
+            with_building=True, online=True,
+        ))
+        specs.extend(extra)
+
         loans = []
         for i, spec in enumerate(specs, start=1):
             loan = self._upsert_loan(spec, now, i, city_me, categories, collateral_types, users)
@@ -767,6 +932,10 @@ class Command(BaseCommand):
             loan.save()
         else:
             loan.save()
+
+        if spec.get('online'):
+            loan.source_channel = LoanRequest.SOURCE_ONLINE
+            loan.save(update_fields=['source_channel'])
 
         if spec.get('officer') and loan.queue_approved:
             loan.documents_reviewed_at = now - timedelta(days=max(1, spec.get('days_ago', 2) - 2))
@@ -823,6 +992,7 @@ class Command(BaseCommand):
         if spec.get('with_appraisal') and spec.get('officer'):
             self._seed_full_appraisal(loan, spec, index, now)
 
+        self._seed_product_overlay(loan, spec, users)
         return loan
 
     def _ensure_qual_factors(self, appraisal):
@@ -945,7 +1115,16 @@ class Command(BaseCommand):
         """Populate Sheets 1–7 with realistic demo content."""
         officer = spec['officer']
         amount = Decimal(spec['amount'])
-        mode = 'corporate' if spec.get('corporate') else 'msme'
+        from loans.product_family import resolve_product_family, suggested_appraisal_mode
+        family = resolve_product_family(loan)
+        suggested = suggested_appraisal_mode(family)
+        if spec.get('corporate'):
+            mode = 'corporate'
+        elif suggested:
+            mode = suggested
+        else:
+            mode = 'msme'
+        heavy = mode in ('corporate', 'project', 'wholesale', 'idea_equity')
 
         appraisal, _ = LoanAppraisal.objects.get_or_create(
             loan_request=loan,
@@ -957,7 +1136,7 @@ class Command(BaseCommand):
 
         # ----- Sheet 1 -----
         basic_info, _ = LoanRequestBasicInfo.objects.get_or_create(loan_request=loan)
-        basic_info.tin_number = f'00{index:08d}'
+        basic_info.tin_number = f'11{index:08d}'
         basic_info.gender = 'Female' if index % 2 == 0 else 'Male'
         basic_info.age = 28 + (index % 20)
         basic_info.marital_status = 'Married'
@@ -971,7 +1150,7 @@ class Command(BaseCommand):
         basic_info.business_description = spec['reason']
         basic_info.business_address = loan.declared_address_text or f'Business kebele {index}'
         basic_info.date_business_started = (now - timedelta(days=365 * (3 + index % 5))).date()
-        basic_info.form_of_ownership = 'PLC' if mode == 'corporate' else 'Sole Proprietorship'
+        basic_info.form_of_ownership = 'PLC' if heavy else 'Sole Proprietorship'
         basic_info.economic_sector = 'Trade'
         basic_info.subsector_activity = spec['category']
         basic_info.employees_full_time = 4 + index
@@ -979,7 +1158,7 @@ class Command(BaseCommand):
         basic_info.employees_seasonal = 1
         basic_info.employees_ft_equivalent = Decimal(str(4 + index)) + Decimal('0.50')
         basic_info.family_members_employed = 1 + (index % 2)
-        basic_info.number_business_owners = 3 if mode == 'corporate' else 1
+        basic_info.number_business_owners = 3 if heavy else 1
         basic_info.peak_sales_months = 'Nov-Jan'
         basic_info.lowest_sales_months = 'Jun-Aug'
         basic_info.peak_sales_percent = Decimal('130')
@@ -992,7 +1171,7 @@ class Command(BaseCommand):
         basic_info.interest_only_months = 0
         basic_info.instalments_per_year = 12
         basic_info.cash_contribution = (amount * Decimal('0.20')).quantize(Decimal('0.01'))
-        if mode == 'corporate':
+        if heavy:
             basic_info.legal_registration_number = f'CR/{1000 + index}'
             basic_info.directors_summary = 'Board of 3 directors; managing director is primary contact.'
             basic_info.ubo_summary = 'Two UBOs hold 60% / 40%; both Ethiopian nationals.'
@@ -1089,7 +1268,7 @@ class Command(BaseCommand):
         cost_pct = Decimal('10')
         other_inc = Decimal('5000')
         other_exp = Decimal('2000')
-        if mode == 'corporate':
+        if heavy:
             sales = (amount / Decimal('5')).quantize(Decimal('0.01'))
             expenses = (sales * Decimal('0.46')).quantize(Decimal('0.01'))
             other_inc = (sales * Decimal('0.02')).quantize(Decimal('0.01'))
@@ -1135,7 +1314,7 @@ class Command(BaseCommand):
         appraisal.stressed_dscr = (
             (stressed_net / installment).quantize(Decimal('0.01')) if installment else None
         )
-        if mode == 'corporate':
+        if heavy:
             appraisal.bs_current_assets = (amount * Decimal('0.55')).quantize(Decimal('0.01'))
             appraisal.bs_current_liabilities = (amount * Decimal('0.22')).quantize(Decimal('0.01'))
             appraisal.bs_inventory = (amount * Decimal('0.15')).quantize(Decimal('0.01'))
@@ -1499,3 +1678,563 @@ class Command(BaseCommand):
         self.stdout.write('    Active: Alem→Kidane (assign/committee), Frehiwot→Sara (appraisal)')
         self.stdout.write('    Pending: Helen→Meron (appraisal), Rahel→Senait (finance)')
         self.stdout.write('    Login as admin.sys to approve pending; acct.mekele to use BM cover')
+
+    def _ensure_dbe_catalog(self):
+        from loans.management.commands.seed_dbe_product_catalog import Command as DbeCatalog
+        DbeCatalog().handle()
+
+    def _seed_product_overlay(self, loan, spec, users):
+        from loans.models import (
+            ConsumerProfile,
+            FundFileTag,
+            IdeaProfile,
+            IjarahRentLine,
+            LeaseAssetProfile,
+            MurabahaContract,
+            PfiInstitutionProfile,
+            ProjectProfile,
+            ShariaReview,
+        )
+        from loans.product_family import (
+            FAMILY_CONSUMER,
+            FAMILY_EXTERNAL_FUND,
+            FAMILY_IDEA_EQUITY,
+            FAMILY_IFB_IJARAH,
+            FAMILY_IFB_MURABAHA,
+            FAMILY_LEASE,
+            FAMILY_PROJECT,
+            FAMILY_WHOLESALE,
+            resolve_product_family,
+        )
+
+        family = resolve_product_family(loan)
+        officer = spec.get('officer')
+        amount = Decimal(spec['amount'])
+        if family == FAMILY_PROJECT:
+            profile, _ = ProjectProfile.objects.get_or_create(loan_request=loan)
+            profile.project_title = spec['applicant']
+            profile.sector = ProjectProfile.SECTOR_INDUSTRY
+            profile.location = spec['branch'].name
+            profile.implementation_months = 24
+            profile.grace_months = 6
+            profile.total_project_cost = (amount * Decimal('1.35')).quantize(Decimal('0.01'))
+            profile.promoter_equity = (amount * Decimal('0.35')).quantize(Decimal('0.01'))
+            profile.requested_debt = amount
+            profile.purpose_summary = spec['reason']
+            profile.current_account_opened = True
+            profile.discount_rate_pct = Decimal('12.00')
+            profile.npv = (amount * Decimal('0.18')).quantize(Decimal('0.01'))
+            profile.irr_pct = Decimal('19.50')
+            profile.project_dscr = Decimal('1.45')
+            profile.updated_by = officer
+            profile.save()
+        elif family == FAMILY_WHOLESALE:
+            profile, _ = PfiInstitutionProfile.objects.get_or_create(loan_request=loan)
+            profile.institution_name = spec['applicant']
+            profile.kind = PfiInstitutionProfile.KIND_MFI
+            profile.license_number = 'NBE-MFI-DEMO-11'
+            profile.ownership = 'Share company'
+            profile.footprint_regions = 'Tigray'
+            profile.branch_count = 18
+            profile.has_adequate_mis = True
+            profile.capital = Decimal('120000000')
+            profile.npl_pct = Decimal('4.20')
+            profile.par90_pct = Decimal('6.10')
+            profile.audited_year = timezone.now().year - 1
+            profile.credit_policy_on_file = True
+            profile.on_lending_policy_on_file = True
+            profile.has_governance = True
+            profile.has_esms = True
+            profile.facility_amount = amount
+            profile.tenor_months = 36
+            profile.facility_purpose = PfiInstitutionProfile.PURPOSE_WC
+            profile.target_women_pct = Decimal('30')
+            profile.target_youth_pct = Decimal('20')
+            profile.updated_by = officer
+            profile.save()
+        elif family == FAMILY_IDEA_EQUITY:
+            from loans.models import CapTableEntry
+            profile, _ = IdeaProfile.objects.get_or_create(loan_request=loan)
+            profile.venture_name = spec['applicant']
+            profile.founded_year = timezone.now().year - 2
+            profile.implements_in_ethiopia = True
+            profile.has_startup_label = True
+            profile.proposed_dbe_share_pct = Decimal('15.00')
+            profile.sector = 'Agri-tech'
+            profile.notes = spec['reason']
+            profile.updated_by = officer
+            profile.save()
+            if not profile.cap_table.exists():
+                from loans.models import CapTableEntry
+                CapTableEntry.objects.create(
+                    profile=profile, holder_name=spec['applicant'],
+                    role=CapTableEntry.ROLE_FOUNDER, share_pct=Decimal('70.00'),
+                )
+                CapTableEntry.objects.create(
+                    profile=profile, holder_name='DBE (proposed)',
+                    role=CapTableEntry.ROLE_DBE, share_pct=Decimal('15.00'),
+                )
+                CapTableEntry.objects.create(
+                    profile=profile, holder_name='Angel investor',
+                    role=CapTableEntry.ROLE_OTHER, share_pct=Decimal('15.00'),
+                )
+        elif family in (FAMILY_LEASE, FAMILY_IFB_IJARAH):
+            profile, _ = LeaseAssetProfile.objects.get_or_create(loan_request=loan)
+            profile.supplier_name = 'Mekelle Capital Goods PLC'
+            profile.supplier_invoice_ref = f'INV-{spec["key"].upper()}'
+            profile.is_new_goods = True
+            profile.asset_description = spec['reason']
+            profile.make_model = 'Isuzu NPR' if family == FAMILY_IFB_IJARAH else 'Haas VF-2'
+            profile.serial_number = f'SN-{spec["customer_number"]}'
+            profile.asset_price = amount
+            profile.price_checked = True
+            profile.price_check_note = 'Invoice matched to supplier quote.'
+            profile.ancillary_amount = (amount * Decimal('0.08')).quantize(Decimal('0.01'))
+            profile.lessee_contribution = (amount * Decimal('0.22')).quantize(Decimal('0.01'))
+            profile.commissioning_date = (timezone.now() - timedelta(days=20)).date()
+            profile.delivery_date = (timezone.now() - timedelta(days=25)).date()
+            profile.commencement_date = (timezone.now() - timedelta(days=18)).date()
+            profile.insurance_in_force = True
+            profile.insurance_policy = f'NYA-{spec["customer_number"]}'
+            profile.insurance_expiry = (timezone.now() + timedelta(days=340)).date()
+            profile.location = spec['branch'].name
+            profile.gps_lat = Decimal('13.49670000')
+            profile.gps_lon = Decimal('39.47530000')
+            profile.residual_value = (amount * Decimal('0.10')).quantize(Decimal('0.01'))
+            profile.bank_holds_title = True
+            profile.asset_status = LeaseAssetProfile.STATUS_ON_LEASE
+            profile.updated_by = officer
+            if family == FAMILY_IFB_IJARAH:
+                profile.monthly_rent = (amount / Decimal('36')).quantize(Decimal('0.01'))
+                profile.rent_term_months = 36
+            profile.notes = spec['reason']
+            profile.save()
+            if family == FAMILY_IFB_IJARAH and not profile.rent_lines.exists():
+                start = timezone.now().date()
+                rent = profile.monthly_rent or Decimal('0')
+                for period in range(1, 7):
+                    IjarahRentLine.objects.create(
+                        profile=profile,
+                        period_number=period,
+                        due_date=start + timedelta(days=30 * period),
+                        rent_amount=rent,
+                    )
+                ShariaReview.objects.get_or_create(
+                    loan_request=loan,
+                    kind=ShariaReview.KIND_IJARAH,
+                    defaults={
+                        'status': ShariaReview.STATUS_CLEARED,
+                        'note': 'Asset identified, bank owns, rent is usufruct — demo clearance.',
+                        'reviewed_at': timezone.now() - timedelta(days=3),
+                        'reviewed_by': officer,
+                    },
+                )
+        elif family == FAMILY_IFB_MURABAHA:
+            profile, _ = MurabahaContract.objects.get_or_create(loan_request=loan)
+            profile.goods_description = 'Cement, rebar and HCB package'
+            profile.supplier_name = 'Mekelle Cement Depot'
+            profile.supplier_offer_ref = 'OFFER-MUR-4015'
+            profile.delivery_status = MurabahaContract.DELIVERY_RECEIVED
+            profile.cost_price = amount
+            profile.markup_pct = Decimal('12.50')
+            profile.scope = MurabahaContract.SCOPE_DOMESTIC
+            profile.selling_price = (amount * Decimal('1.125')).quantize(Decimal('0.01'))
+            profile.tenor_months = 12
+            profile.notes = spec['reason']
+            profile.updated_by = officer
+            profile.save()
+            ShariaReview.objects.get_or_create(
+                loan_request=loan,
+                kind=ShariaReview.KIND_MURABAHA,
+                defaults={
+                    'status': ShariaReview.STATUS_CLEARED,
+                    'note': 'Cost disclosed; bank purchased before sale — demo clearance.',
+                    'reviewed_at': timezone.now() - timedelta(days=2),
+                    'reviewed_by': officer,
+                },
+            )
+        elif family == FAMILY_CONSUMER:
+            profile, _ = ConsumerProfile.objects.get_or_create(loan_request=loan)
+            profile.purpose = ConsumerProfile.PURPOSE_HOUSING
+            profile.employer_name = 'Tigray Education Bureau'
+            profile.occupation = 'Teacher'
+            profile.monthly_salary = Decimal('28000')
+            profile.monthly_obligations = Decimal('4500')
+            profile.asset_value = Decimal('1850000')
+            profile.term_months = 120
+            profile.notes = spec['reason']
+            profile.updated_by = officer
+            profile.save()
+        elif family == FAMILY_EXTERNAL_FUND:
+            tag, _ = FundFileTag.objects.get_or_create(loan_request=loan)
+            tag.women_owned = False
+            tag.youth_owned = True
+            tag.climate_tagged = True
+            tag.fx_window = False
+            tag.region = 'Tigray'
+            tag.sector = 'Climate-smart agriculture'
+            tag.updated_by = officer
+            tag.save()
+
+    def _attach_demo_document(self, loan, doc_type, officer, now, *, png=None, label=''):
+        from django.core.files.base import ContentFile
+
+        existing = loan.application_documents.filter(document_type=doc_type).first()
+        if existing and existing.file:
+            return existing
+        name = (getattr(doc_type, 'name', '') or 'document').lower()
+        use_png = png is not None and any(
+            k in name for k in ('national id', 'kebele', 'identity', 'director', 'guarantor', 'passport')
+        )
+        raw = png if use_png else _demo_pdf(label or doc_type.name)
+        filename = f'{loan.loan_request_id}_{doc_type.id}.{"png" if use_png else "pdf"}'
+        doc = existing or LoanRequestDocument(
+            loan_request=loan,
+            document_type=doc_type,
+            uploaded_by=officer,
+        )
+        doc.original_filename = filename
+        doc.file_size = len(raw)
+        doc.auth_status = LoanRequestDocument.AUTH_VERIFIED
+        doc.auth_verdict = LoanRequestDocument.VERDICT_AUTHENTIC
+        doc.authenticated_by = officer
+        doc.authenticated_at = now
+        doc.auth_notes = 'Demo seeded required pack.'
+        doc.quality_score = 90
+        doc.authenticity_score = 88
+        doc.automated_checks = {
+            'passed': True,
+            'auth_status': 'verified',
+            'forensics': {'authenticity_score': 88, 'quality': {'score': 90}},
+            'identity_match': {'passed': True} if use_png else {},
+        }
+        doc.file.save(filename, ContentFile(raw), save=False)
+        doc.save()
+        return doc
+
+    def _seed_required_packs(self, loans, users):
+        from loans.document_checklist import checklist_for_category
+
+        now = timezone.now()
+        attached = 0
+        for loan in loans:
+            officer = loan.assigned_loan_officer or users.get('lo1')
+            png = _demo_png(loan.loan_request_id)
+            items = list(checklist_for_category(loan.category))
+            required = [i.document_type for i in items if i.is_required]
+            extra_names = [
+                'National ID / Kebele ID',
+                'TIN Certificate',
+                'Director / beneficial owner ID',
+                'UBO ownership evidence',
+            ]
+            by_name = {dt.name: dt for dt in LoanApplicationDocumentType.objects.all()}
+            for name in extra_names:
+                dt = by_name.get(name)
+                if dt and dt not in required:
+                    required.append(dt)
+            for dt in required:
+                self._attach_demo_document(
+                    loan, dt, officer, now, png=png, label=dt.name,
+                )
+                attached += 1
+        self.stdout.write(self.style.SUCCESS(f'  Required documents attached: {attached}'))
+
+    def _seed_kyc_identity_packs(self, loans, users):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from loans.kyc_identity import (
+            needs_related_parties,
+            save_applicant_identity,
+            save_applicant_selfie,
+            save_related_party,
+        )
+        from loans.models import KycParty
+
+        filled = 0
+        for index, loan in enumerate(loans, start=1):
+            tin = ''
+            try:
+                tin = (loan.basic_info.tin_number or '').strip()
+            except Exception:
+                tin = f'11{index:08d}'
+            fan = f'1234567{index:03d}'
+            try:
+                party = save_applicant_identity(
+                    loan_request=loan,
+                    identity_kind=KycParty.KIND_FAYDA,
+                    legal_name_en=loan.applicant_name,
+                    fan=fan,
+                    tin=tin,
+                    id_number=f'ID{index:06d}',
+                    verify=True,
+                )
+                png = _demo_png(loan.loan_request_id)
+                if not getattr(party.selfie, 'name', ''):
+                    save_applicant_selfie(
+                        loan_request=loan,
+                        uploaded_file=SimpleUploadedFile(
+                            'selfie.png', png, content_type='image/png',
+                        ),
+                    )
+                if needs_related_parties(loan):
+                    existing = loan.kyc_identity_case.parties.exclude(
+                        role=KycParty.ROLE_APPLICANT,
+                    ).count()
+                    if existing < 2:
+                        first = (loan.applicant_name or 'Owner').split()[0]
+                        save_related_party(
+                            loan_request=loan,
+                            role=KycParty.ROLE_UBO,
+                            legal_name_en=f'{first} Beneficial One',
+                            id_number=f'UBO{index:04d}A',
+                            share_percent='60',
+                            capacity='Shareholder',
+                            verify=False,
+                        )
+                        save_related_party(
+                            loan_request=loan,
+                            role=KycParty.ROLE_UBO,
+                            legal_name_en=f'{first} Beneficial Two',
+                            id_number=f'UBO{index:04d}B',
+                            share_percent='40',
+                            capacity='Shareholder',
+                            verify=False,
+                        )
+                        save_related_party(
+                            loan_request=loan,
+                            role=KycParty.ROLE_DIRECTOR,
+                            legal_name_en=f'{first} Chair',
+                            id_number=f'DIR{index:04d}',
+                            capacity='Chair',
+                            verify=False,
+                        )
+            except Exception as exc:
+                self.stderr.write(
+                    f'  KYC identity failed for {loan.loan_request_id}: {type(exc).__name__}: {exc}'
+                )
+                raise
+            filled += 1
+        self.stdout.write(self.style.SUCCESS(f'  KYC identity cases filled: {filled}'))
+
+    def _seed_kyc_desk_packs(self, loans, users):
+        from loans.kyc_desk import (
+            complete_checklist_payload,
+            ensure_intake_screenings,
+            kyc_applies,
+            set_screening_status,
+        )
+        from loans.models import CreditDeskScreening
+
+        cleared = 0
+        admin = users.get('admin_sys') or users.get('admin')
+        crm = users.get('credit_lo') or users.get('lo1')
+        eng = users.get('eng1')
+        legal = users.get('legal')
+        desk_user = {
+            CreditDeskScreening.DESK_SCAN: admin,
+            CreditDeskScreening.DESK_CRM: crm,
+            CreditDeskScreening.DESK_ENGINEERING: eng,
+            CreditDeskScreening.DESK_LEGAL: legal,
+        }
+        for loan in loans:
+            if not kyc_applies(loan):
+                continue
+            rows = ensure_intake_screenings(loan)
+            for row in rows:
+                if row.status == CreditDeskScreening.STATUS_CLEARED:
+                    continue
+                user = desk_user.get(row.desk) or crm or admin
+                if user is None:
+                    continue
+                set_screening_status(
+                    loan, row.desk, CreditDeskScreening.STATUS_CLEARED, user,
+                    'Demo seeded complete KYC pack.',
+                    checklist=complete_checklist_payload(row.desk, loan),
+                )
+                cleared += 1
+                if row.desk == CreditDeskScreening.DESK_SCAN:
+                    rows = ensure_intake_screenings(loan)
+            cleared += 0
+        self.stdout.write(self.style.SUCCESS(f'  KYC desk packs cleared: {cleared}'))
+
+    def _seed_portal_applicants(self, geo, categories, collateral_types, users, loans=None):
+        from applicant_portal.models import (
+            ApplicantAccount, ApplicantPortalSettings, OnlineApplication,
+            OnlineApplicationDocument,
+        )
+        from django.core.files.base import ContentFile
+        from loans.document_checklist import checklist_for_category
+        from loans.kyc_identity import save_applicant_identity, save_applicant_selfie
+        from loans.models import KycParty
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        now = timezone.now()
+        ApplicantPortalSettings.objects.get_or_create(pk=1)
+        branch = geo['branches']['Mekelle Main Branch']
+        msme = categories.get('MSME Trade')
+        wholesale = categories.get('Wholesale / PFI Facility')
+        project = categories.get('Project Financing')
+        coll = collateral_types.get('Building / House')
+        by_cn = {loan.customer_number: loan for loan in (loans or []) if loan.customer_number}
+
+        specs = [
+            dict(
+                phone='0912111801', name='Portal Abebe Kebede', customer_number='1001',
+                actor='person', email='portal.abebe@example.com',
+                category=msme, collateral=coll, amount='350000',
+                reason='Working capital — Digital Apply demo with required documents',
+                fan='123459001', tin='1188000001',
+                stage='documents',
+            ),
+            dict(
+                phone='0912111802', name='Tigray Microfinance S.C.', customer_number='PFI-1802',
+                actor='institution', email='portal.pfi@example.com',
+                institution_name='Tigray Microfinance S.C.', license_number='NBE-MFI-DEMO-11',
+                category=wholesale, collateral=coll, amount='25000000',
+                reason='Wholesale on-lending — Digital Apply institution demo',
+                fan='123459002', tin='1188000002',
+                stage='documents',
+            ),
+            dict(
+                phone='0912111803', name='Mekelle Plant Promoter', customer_number='PRM-1803',
+                actor='promoter', email='portal.promoter@example.com',
+                category=project, collateral=collateral_types.get('Land'), amount='45000000',
+                reason='Project financing — Digital Apply promoter demo',
+                fan='123459003', tin='1188000003',
+                stage='documents',
+            ),
+            dict(
+                phone='0912111804', name='Portal Submitted Applicant', customer_number='4019',
+                actor='person', email='portal.submitted@example.com',
+                category=msme, collateral=coll, amount='275000',
+                reason='Submitted Digital Apply — already in Scan/Admin inbox',
+                fan='123459004', tin='1188000004',
+                stage='submitted', link_customer='4019',
+            ),
+            dict(
+                phone='0912111805', name='Portal Fee Paid Applicant', customer_number='P-1805',
+                actor='person', email='portal.feepaid@example.com',
+                category=msme, collateral=coll, amount='310000',
+                reason='Fee paid — last step before submit',
+                fan='123459005', tin='1188000005',
+                stage='payment_paid',
+            ),
+        ]
+        created = 0
+        for spec in specs:
+            if spec['category'] is None:
+                continue
+            acct, made = ApplicantAccount.objects.get_or_create(
+                phone_number=spec['phone'],
+                defaults={
+                    'full_name': spec['name'],
+                    'customer_number': spec['customer_number'],
+                    'email': spec['email'],
+                    'actor_kind': spec['actor'],
+                    'institution_name': spec.get('institution_name', ''),
+                    'license_number': spec.get('license_number', ''),
+                    'preferred_branch': branch,
+                    'terms_accepted_at': now,
+                    'is_active': True,
+                },
+            )
+            acct.set_password(PORTAL_PASSWORD)
+            acct.full_name = spec['name']
+            acct.customer_number = spec['customer_number']
+            acct.actor_kind = spec['actor']
+            acct.is_active = True
+            acct.terms_accepted_at = acct.terms_accepted_at or now
+            acct.save()
+            app = OnlineApplication.objects.filter(
+                applicant=acct, category=spec['category'],
+            ).first()
+            if app is None:
+                app = OnlineApplication.objects.create(
+                    applicant=acct,
+                    applicant_name=spec['name'],
+                    phone_number=spec['phone'],
+                    email=spec['email'],
+                    customer_number=spec['customer_number'],
+                    category=spec['category'],
+                    collateral=spec['collateral'],
+                    branch=branch,
+                    amount_requested=Decimal(spec['amount']),
+                    reason=spec['reason'],
+                    status=OnlineApplication.STATUS_DOCUMENTS,
+                    payment_status=OnlineApplication.PAY_UNPAID,
+                )
+            png = _demo_png(f'portal-{spec["phone"]}')
+            save_applicant_identity(
+                online_application=app,
+                identity_kind=KycParty.KIND_FAYDA,
+                legal_name_en=spec['name'],
+                fan=spec.get('fan') or '123459001',
+                tin=spec.get('tin') or '1188000001',
+                id_number=f'PID{spec["phone"][-4:]}',
+                verify=True,
+            )
+            types = []
+            for item in checklist_for_category(spec['category']):
+                if not item.is_required:
+                    continue
+                types.append(item.document_type)
+            extra_names = ['National ID / Kebele ID', 'TIN Certificate']
+            by_name = {dt.name: dt for dt in LoanApplicationDocumentType.objects.all()}
+            for name in extra_names:
+                dt = by_name.get(name)
+                if dt and dt not in types:
+                    types.append(dt)
+            for dt in types:
+                if app.documents.filter(document_type=dt).exists():
+                    continue
+                use_png = any(k in dt.name.lower() for k in ('id', 'kebele', 'identity'))
+                raw = png if use_png else _demo_pdf(dt.name)
+                filename = f'{dt.id}.{"png" if use_png else "pdf"}'
+                doc = OnlineApplicationDocument(
+                    application=app,
+                    document_type=dt,
+                    original_filename=filename,
+                    file_size=len(raw),
+                    auth_status='verified',
+                    quality_score=90,
+                    authenticity_score=88,
+                    automated_checks={
+                        'passed': True,
+                        'auth_status': 'verified',
+                        'forensics': {'authenticity_score': 88, 'quality': {'score': 90}},
+                    },
+                )
+                doc.file.save(filename, ContentFile(raw), save=False)
+                doc.save()
+            app.refresh_from_db()
+            party = getattr(app, 'kyc_identity_case', None)
+            applicant = None
+            if party is not None:
+                applicant = party.parties.filter(role=KycParty.ROLE_APPLICANT).first()
+            if applicant and not getattr(applicant.selfie, 'name', ''):
+                save_applicant_selfie(
+                    online_application=app,
+                    uploaded_file=SimpleUploadedFile(
+                        'selfie.png', png, content_type='image/png',
+                    ),
+                )
+            stage = spec.get('stage') or 'documents'
+            if stage == 'submitted':
+                linked = by_cn.get(spec.get('link_customer'))
+                app.status = OnlineApplication.STATUS_SUBMITTED
+                app.payment_status = OnlineApplication.PAY_PAID
+                app.processing_fee_amount = Decimal('500.00')
+                app.payment_paid_at = now - timedelta(days=1)
+                app.submitted_at = now - timedelta(hours=12)
+                if linked:
+                    app.loan_request = linked
+                    app.queue_id = linked.loan_request_id
+                app.save()
+            elif stage == 'payment_paid':
+                app.status = OnlineApplication.STATUS_PAYMENT
+                app.payment_status = OnlineApplication.PAY_PAID
+                app.processing_fee_amount = Decimal('500.00')
+                app.payment_paid_at = now - timedelta(hours=2)
+                app.save()
+            created += 1
+        self.stdout.write(self.style.SUCCESS(f'  Digital Apply accounts ready: {created}'))

@@ -23,7 +23,19 @@
       · verify {{ p.verify }}
       {% if p.fan %} · FAN {{ p.fan }}{% endif %}
       {% if p.tin %} · TIN {{ p.tin }}{% endif %}
+      {% if p.share_percent %} · {{ p.share_percent }}%{% endif %}
+      {% if p.capacity %} · {{ p.capacity }}{% endif %}
       {% if p.biometric %} · biometric {{ p.biometric }}{% endif %}
+      {% if p.face_match_score %} · match {{ p.face_match_score }}{% endif %}
+      {% if p.liveness_ref %} · ref {{ p.liveness_ref }}{% endif %}
+      {% if p.is_related and kyc_identity.loan_id %}
+      <form method="post" action="{% url 'kyc_party_action' kyc_identity.loan_id %}" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="party_id" value="{{ p.pk }}">
+        <button type="submit" class="btn-link">Remove</button>
+      </form>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
@@ -40,6 +52,42 @@
     </li>
     {% endfor %}
   </ul>
+  {% endif %}
+  {% if kyc_identity.biometric %}
+  <p class="help">
+    Face match:
+    <strong>{{ kyc_identity.biometric.status|default:"not captured" }}</strong>
+    {% if kyc_identity.biometric.score %} · score {{ kyc_identity.biometric.score }}{% endif %}
+    {% if kyc_identity.biometric.liveness_ref %} · {{ kyc_identity.biometric.liveness_ref }}{% endif %}
+  </p>
+  {% endif %}
+  {% if kyc_identity.needs_ubo %}
+  <p class="help">
+    Beneficial owners:
+    {% if kyc_identity.ubo.complete %}
+    {{ kyc_identity.ubo.directors }} director(s), {{ kyc_identity.ubo.ubos }} UBO(s)
+    {% if kyc_identity.ubo.share_percent %} · share {{ kyc_identity.ubo.share_percent }}%{% endif %}
+    {% else %}
+    not yet recorded on this case
+    {% endif %}
+  </p>
+  {% endif %}
+  {% if kyc_identity.loan_id %}
+  <form method="post" action="{% url 'kyc_party_action' kyc_identity.loan_id %}" style="margin-top:0.5rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <p class="help" style="margin:0 0 0.35rem;">Add director / UBO / guarantor</p>
+    <select name="role">
+      {% for value, label in kyc_identity.related_roles %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="legal_name_en" placeholder="Full name" required>
+    <input type="text" name="id_number" placeholder="ID number">
+    <input type="text" name="share_percent" placeholder="Share %" size="6">
+    <input type="text" name="capacity" placeholder="Capacity">
+    <button type="submit">Add party</button>
+  </form>
   {% endif %}
   {% if kyc_identity.scan_override %}
   <p class="help">Scan/Admin override: {{ kyc_identity.scan_override.note }}

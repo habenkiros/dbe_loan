@@ -401,7 +401,13 @@ def apply_documents(request, public_id):
         _read_upload_bytes, run_portal_document_checks, validate_upload_bytes,
     )
     from loans.kyc_identity import (
-        ensure_identity_case, save_applicant_identity,
+        delete_related_party,
+        ensure_identity_case,
+        needs_related_parties,
+        related_role_choices,
+        save_applicant_identity,
+        save_applicant_selfie,
+        save_related_party,
     )
     from loans.services.document_forensics import applicant_facing
     from applicant_portal.services import ensure_working_loan, sync_portal_document_to_loan
@@ -431,6 +437,54 @@ def apply_documents(request, public_id):
                 verify=True,
             )
             messages.success(request, 'Identity details saved.')
+            return redirect('applicant_portal:apply_documents', public_id=app.public_id)
+        if action == 'selfie':
+            uploaded = request.FILES.get('selfie')
+            if not uploaded:
+                messages.error(request, 'Choose a selfie photo first.')
+            else:
+                party = save_applicant_selfie(
+                    loan_request=loan,
+                    online_application=app,
+                    uploaded_file=uploaded,
+                )
+                status = party.biometric_status
+                if status == KycParty.BIOMETRIC_FAILED:
+                    messages.warning(request, 'Selfie did not match the ID portrait. Retake a clear photo.')
+                elif status == KycParty.BIOMETRIC_MATCHED:
+                    messages.success(request, 'Selfie captured and matched to the ID portrait.')
+                else:
+                    messages.success(request, 'Selfie saved. Staff will review the face match.')
+            return redirect('applicant_portal:apply_documents', public_id=app.public_id)
+        if action == 'related_party':
+            name = (request.POST.get('legal_name_en') or '').strip()
+            if not name:
+                messages.error(request, 'Enter the related party name.')
+            else:
+                save_related_party(
+                    loan_request=loan,
+                    online_application=app,
+                    role=request.POST.get('role') or '',
+                    legal_name_en=name,
+                    legal_name_am=request.POST.get('legal_name_am') or '',
+                    identity_kind=request.POST.get('identity_kind') or '',
+                    fan=request.POST.get('fan') or '',
+                    tin=request.POST.get('tin') or '',
+                    id_number=request.POST.get('id_number') or '',
+                    share_percent=request.POST.get('share_percent') or '',
+                    capacity=request.POST.get('capacity') or '',
+                    date_of_birth=request.POST.get('date_of_birth') or '',
+                    verify=True,
+                )
+                messages.success(request, 'Related party saved on the identity case.')
+            return redirect('applicant_portal:apply_documents', public_id=app.public_id)
+        if action == 'delete_party':
+            try:
+                pid = int(request.POST.get('party_id') or 0)
+            except (TypeError, ValueError):
+                pid = 0
+            if delete_related_party(loan_request=loan, online_application=app, party_id=pid):
+                messages.success(request, 'Related party removed.')
             return redirect('applicant_portal:apply_documents', public_id=app.public_id)
         if action == 'continue':
             ok, reason = can_proceed_to_payment(app)
@@ -516,6 +570,7 @@ def apply_documents(request, public_id):
         })
     missing = missing_required_documents(app)
     ok_pay, _reason = can_proceed_to_payment(app)
+    related = list(case.parties.exclude(role=KycParty.ROLE_APPLICANT))
     return render(request, 'applicant_portal/apply_documents.html', {
         'application': app,
         'rows': rows,
@@ -525,6 +580,9 @@ def apply_documents(request, public_id):
         'can_continue': ok_pay,
         'kyc_party': party,
         'identity_kinds': KycParty.KIND_CHOICES,
+        'show_related_parties': needs_related_parties(app),
+        'related_parties': related,
+        'related_roles': related_role_choices(),
     })
 
 

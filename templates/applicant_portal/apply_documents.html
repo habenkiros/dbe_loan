@@ -38,6 +38,79 @@
     </div>
   </form>
 
+  <form method="post" enctype="multipart/form-data" style="margin-bottom:1.25rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="selfie">
+    <h2 style="font-size:1.05rem;margin:0 0 0.5rem;">Selfie</h2>
+    <p class="ap-help">
+      After your ID scan, take a live photo. The bank stores the photo as evidence and a vendor match score — not a biometric template.
+    </p>
+    {% if kyc_party %}
+    <p class="ap-help">
+      Face match: {{ kyc_party.get_biometric_status_display|default:"Not captured" }}
+      {% if kyc_party.face_match_score %} · score {{ kyc_party.face_match_score }}{% endif %}
+      {% if kyc_party.liveness_ref %} · ref {{ kyc_party.liveness_ref }}{% endif %}
+    </p>
+    {% endif %}
+    <input class="ap-input" type="file" name="selfie" accept="image/*" capture="user">
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-ghost" type="submit">Save selfie</button>
+    </div>
+  </form>
+
+  {% if show_related_parties %}
+  <form method="post" style="margin-bottom:1.25rem;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="related_party">
+    <h2 style="font-size:1.05rem;margin:0 0 0.5rem;">Directors, beneficial owners, guarantors</h2>
+    <p class="ap-help">Required for project, wholesale, and idea files. Legal / CRM desks tick from this list.</p>
+    {% if related_parties %}
+    <ul style="margin:0 0 0.75rem;padding-left:1.2rem;">
+      {% for p in related_parties %}
+      <li>
+        {{ p.get_role_display }} — {{ p.legal_name_en|default:p.legal_name_am }}
+        {% if p.share_percent %} · {{ p.share_percent }}%{% endif %}
+        {% if p.capacity %} · {{ p.capacity }}{% endif %}
+        <button class="ap-btn ap-btn-ghost" type="submit" form="delete-party-{{ p.pk }}" style="margin-left:0.35rem;">Remove</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <label for="id_rel_role">Role</label>
+    <select class="ap-input" id="id_rel_role" name="role">
+      {% for value, label in related_roles %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label for="id_rel_name">Full name (English)</label>
+    <input class="ap-input" id="id_rel_name" name="legal_name_en">
+    <label for="id_rel_kind">ID type</label>
+    <select class="ap-input" id="id_rel_kind" name="identity_kind">
+      {% for value, label in identity_kinds %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label for="id_rel_id">ID / FAN / TIN</label>
+    <input class="ap-input" id="id_rel_id" name="id_number" placeholder="ID number">
+    <input class="ap-input" name="fan" placeholder="Fayda FAN (optional)">
+    <input class="ap-input" name="tin" placeholder="TIN (optional)">
+    <label for="id_rel_share">Ownership share %</label>
+    <input class="ap-input" id="id_rel_share" name="share_percent" inputmode="decimal">
+    <label for="id_rel_cap">Capacity (director, signatory, …)</label>
+    <input class="ap-input" id="id_rel_cap" name="capacity">
+    <div class="ap-btn-row">
+      <button class="ap-btn ap-btn-ghost" type="submit">Add related party</button>
+    </div>
+  </form>
+  {% for p in related_parties %}
+  <form id="delete-party-{{ p.pk }}" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete_party">
+    <input type="hidden" name="party_id" value="{{ p.pk }}">
+  </form>
+  {% endfor %}
+  {% endif %}
+
   {% if missing %}
   <p class="ap-help" style="color:var(--warn);">Still missing: {{ missing|join:", " }}</p>
   {% endif %}

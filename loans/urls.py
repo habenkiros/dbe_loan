@@ -47,6 +47,11 @@ urlpatterns = [
         views_kyc.kyc_screening_action,
         name='kyc_screening_action',
     ),
+    path(
+        'kyc/loans/<int:loan_request_id>/party/',
+        views_kyc.kyc_party_action,
+        name='kyc_party_action',
+    ),
     path('appraisal/', views_directorate.appraisal_desk, name='appraisal_desk'),
     path('its/', views_directorate.its_desk, name='its_desk'),
     path('mis/', views_directorate.mis_desk, name='mis_desk'),

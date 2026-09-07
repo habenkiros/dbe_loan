@@ -261,14 +261,119 @@ class KycIdentityCaseTests(TestCase):
         save_applicant_identity(
             loan_request=loan, legal_name_en='Id Co', fan='123456789', verify=True,
         )
-        from django.template.loader import render_to_string
-        from loans.kyc_identity import case_payload
-        html = render_to_string(
-            'loans/_kyc_identity_case.html',
-            {'kyc_identity': case_payload(loan)},
+        from django.test import Client
+        from django.urls import reverse
+        client = Client()
+        client.force_login(self.officer)
+        resp = client.get(reverse('loan_request_detail', args=[loan.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Identity case')
+        self.assertContains(resp, 'FAN')
+        self.assertContains(resp, 'Face match')
+        self.assertContains(resp, 'Add director')
+
+    def test_mock_biometric_matches_id_portrait(self):
+        loan = self._loan(self.project_cat, 'LR-ID-BIO')
+        raw = _pattern_png()
+        doc = LoanRequestDocument(
+            loan_request=loan,
+            document_type=self.dt_id,
+            original_filename='id.png',
+            file_size=len(raw),
         )
-        self.assertIn('Identity case', html)
-        self.assertIn('FAN', html)
+        doc.file.save('id.png', ContentFile(raw), save=False)
+        doc.save()
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from loans.kyc_identity import save_applicant_selfie
+        party = save_applicant_selfie(
+            loan_request=loan,
+            uploaded_file=SimpleUploadedFile('selfie.png', raw, content_type='image/png'),
+        )
+        self.assertEqual(party.biometric_status, KycParty.BIOMETRIC_MATCHED)
+        self.assertTrue(party.liveness_ref)
+        self.assertGreaterEqual(float(party.face_match_score), 70)
+        loan.kyc_identity_case.refresh_from_db()
+        self.assertNotEqual(loan.kyc_identity_case.band, KycIdentityCase.BAND_BLOCKED)
+
+    @override_settings(BIOMETRIC_PROVIDER='mock')
+    def test_mock_biometric_fail_token_blocks_case(self):
+        loan = self._loan(self.project_cat, 'LR-ID-BIOF')
+        raw = _pattern_png()
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from loans.kyc_identity import save_applicant_selfie
+        party = save_applicant_selfie(
+            loan_request=loan,
+            uploaded_file=SimpleUploadedFile('fail-selfie.png', raw, content_type='image/png'),
+        )
+        self.assertEqual(party.biometric_status, KycParty.BIOMETRIC_FAILED)
+        case = loan.kyc_identity_case
+        case.refresh_from_db()
+        self.assertEqual(case.band, KycIdentityCase.BAND_BLOCKED)
+        self.assertTrue(identity_committee_blockers(loan))
+
+    def test_ubo_party_drives_legal_hints_and_review_band(self):
+        from loans.kyc_desk import checklist_spec
+        from loans.dbe_desks import DESK_CRM, DESK_LEGAL
+        from loans.kyc_identity import save_related_party, suggested_kyc_hints
+        from loans.product_family import FAMILY_CONSUMER
+
+        consumer_keys = [k for k, _, _ in checklist_spec(DESK_CRM, FAMILY_CONSUMER)]
+        self.assertNotIn('ubo', consumer_keys)
+        project_crm = [k for k, _, _ in checklist_spec(DESK_CRM, FAMILY_PROJECT)]
+        self.assertIn('ubo', project_crm)
+        project_legal = [k for k, _, _ in checklist_spec(DESK_LEGAL, FAMILY_PROJECT)]
+        self.assertIn('ubo_recorded', project_legal)
+
+        loan = self._loan(self.project_cat, 'LR-ID-UBO')
+        save_applicant_identity(
+            loan_request=loan, legal_name_en='Id Co', fan='123456789', verify=True,
+        )
+        case = loan.kyc_identity_case
+        case.refresh_from_db()
+        self.assertEqual(case.band, KycIdentityCase.BAND_REVIEW)
+        self.assertIn('ubo_incomplete', (case.findings or {}).get('reasons') or [])
+        hints = suggested_kyc_hints(loan)
+        self.assertIn('no director or UBO', hints.get('ubo', ''))
+        save_related_party(
+            loan_request=loan,
+            role=KycParty.ROLE_UBO,
+            legal_name_en='Owner One',
+            id_number='ID-UBO-1',
+            share_percent='40',
+            capacity='Shareholder',
+            verify=False,
+        )
+        save_related_party(
+            loan_request=loan,
+            role=KycParty.ROLE_DIRECTOR,
+            legal_name_en='Chair Person',
+            capacity='Chair',
+            verify=False,
+        )
+        case.refresh_from_db()
+        self.assertTrue((case.findings or {}).get('ubo', {}).get('complete'))
+        hints = suggested_kyc_hints(loan)
+        self.assertIn('UBO', hints.get('ubo_recorded', ''))
+        self.assertIn('director', hints.get('title_or_authority', '').lower())
+
+    @override_settings(SANCTIONS_PROVIDER='mock')
+    def test_pep_screen_covers_related_parties(self):
+        from loans.compliance.sanctions_screen import screen_loan_request
+        from loans.kyc_identity import save_related_party
+
+        loan = self._loan(self.project_cat, 'LR-ID-PEP')
+        save_applicant_identity(
+            loan_request=loan, legal_name_en='Clean Applicant', fan='123456789', verify=True,
+        )
+        save_related_party(
+            loan_request=loan,
+            role=KycParty.ROLE_DIRECTOR,
+            legal_name_en='PEP Demo Official',
+            verify=False,
+        )
+        result = screen_loan_request(loan)
+        self.assertTrue(result.get('hit'))
+        self.assertGreaterEqual(int(result.get('subjects_screened') or 0), 2)
 
 
 class KycIdentityVerifyHttpTests(TestCase):

@@ -267,7 +267,41 @@ def subject_from_loan(loan_request) -> Dict[str, str]:
 
 def screen_loan_request(loan_request) -> Dict[str, Any]:
     subject = subject_from_loan(loan_request)
-    return screen_subject(**subject)
+    subjects = [subject]
+    seen = {(subject.get('name') or '').strip().lower()}
+    try:
+        from loans.kyc_identity import get_identity_case
+
+        case = get_identity_case(loan_request=loan_request)
+        if case is not None:
+            for party in case.parties.all():
+                name = (party.legal_name_en or party.legal_name_am or '').strip()
+                key = name.lower()
+                if not name or key in seen:
+                    continue
+                seen.add(key)
+                subjects.append({
+                    'name': name,
+                    'customer_number': '',
+                    'date_of_birth': str(party.date_of_birth or ''),
+                })
+    except Exception:
+        pass
+    combined = screen_subject(**subjects[0])
+    extra_hits = []
+    for extra in subjects[1:]:
+        result = screen_subject(**extra)
+        if result.get('hit'):
+            extra_hits.append(result)
+            combined['hit'] = True
+            combined['score'] = max(int(combined.get('score') or 0), int(result.get('score') or 0))
+            combined['matches'] = list(combined.get('matches') or []) + list(result.get('matches') or [])
+            types = list(combined.get('match_types') or []) + list(result.get('match_types') or [])
+            combined['match_types'] = list(dict.fromkeys(types))
+    if extra_hits:
+        combined['party_hits'] = len(extra_hits)
+    combined['subjects_screened'] = len(subjects)
+    return combined
 
 
 def persist_screening(loan_request, result: Dict[str, Any], *, opened_case=None):

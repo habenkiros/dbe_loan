@@ -72,7 +72,10 @@ home_address=Address
 
 def _bucket_for_name(name: str) -> Optional[str]:
     n = (name or '').lower()
-    if any(k in n for k in ('national id', 'kebele', 'passport', 'id card', 'identity')):
+    if any(k in n for k in (
+        'national id', 'kebele', 'passport', 'id card', 'identity',
+        'beneficial owner', 'director', 'guarantor', 'ubo',
+    )):
         return 'id'
     if 'tin' in n or 'tax identification' in n:
         return 'tin'

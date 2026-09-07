@@ -17,6 +17,7 @@ from loans.kyc_desk import (
     user_can_work_desk,
     user_desk_for_kyc,
 )
+from loans.kyc_identity import delete_related_party, save_related_party
 from loans.crm_cycle import (
     can_crm_comment,
     can_send_to_crm,
@@ -82,6 +83,47 @@ def kyc_screening_action(request, loan_request_id):
     else:
         messages.success(request, f'{desk.replace("_", " ").title()} pack updated.')
     nxt = request.POST.get('next') or request.GET.get('next')
+    if nxt:
+        return redirect(nxt)
+    return redirect('loan_request_detail', loan_request_id=loan.id)
+
+
+@login_required
+@user_passes_test(user_can_access_kyc_desk)
+@require_POST
+def kyc_party_action(request, loan_request_id):
+    loan = get_object_or_404(LoanRequest, pk=loan_request_id)
+    action = (request.POST.get('action') or 'add').strip()
+    nxt = request.POST.get('next') or request.GET.get('next')
+    if action == 'delete':
+        try:
+            pid = int(request.POST.get('party_id') or 0)
+        except (TypeError, ValueError):
+            pid = 0
+        if delete_related_party(loan_request=loan, party_id=pid):
+            messages.success(request, 'Related party removed from the identity case.')
+        else:
+            messages.error(request, 'Could not remove that party.')
+    else:
+        name = (request.POST.get('legal_name_en') or '').strip()
+        if not name:
+            messages.error(request, 'Enter the related party name.')
+        else:
+            save_related_party(
+                loan_request=loan,
+                role=request.POST.get('role') or '',
+                legal_name_en=name,
+                legal_name_am=request.POST.get('legal_name_am') or '',
+                identity_kind=request.POST.get('identity_kind') or '',
+                fan=request.POST.get('fan') or '',
+                tin=request.POST.get('tin') or '',
+                id_number=request.POST.get('id_number') or '',
+                share_percent=request.POST.get('share_percent') or '',
+                capacity=request.POST.get('capacity') or '',
+                date_of_birth=request.POST.get('date_of_birth') or '',
+                verify=True,
+            )
+            messages.success(request, 'Related party saved on the identity case.')
     if nxt:
         return redirect(nxt)
     return redirect('loan_request_detail', loan_request_id=loan.id)

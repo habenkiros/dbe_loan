@@ -257,6 +257,13 @@ FAYDA_VERIFY_URL = os.getenv('FAYDA_VERIFY_URL', '').strip()
 TIN_VERIFY_URL = os.getenv('TIN_VERIFY_URL', '').strip()
 IDENTITY_VERIFY_TIMEOUT = int(os.getenv('IDENTITY_VERIFY_TIMEOUT', '8'))
 
+# Face / liveness adapter (off | mock | http). Stores score + vendor ref only.
+BIOMETRIC_PROVIDER = os.getenv('BIOMETRIC_PROVIDER', 'mock').strip().lower()
+BIOMETRIC_VERIFY_URL = os.getenv('BIOMETRIC_VERIFY_URL', '').strip()
+BIOMETRIC_VERIFY_TIMEOUT = int(os.getenv('BIOMETRIC_VERIFY_TIMEOUT', '8'))
+BIOMETRIC_SEND_IMAGE = os.getenv('BIOMETRIC_SEND_IMAGE', '').lower() in ('1', 'true', 'yes')
+BIOMETRIC_MATCH_MIN = int(os.getenv('BIOMETRIC_MATCH_MIN', '70'))
+
 # Core banking / party customer lookup (Sheet 1 intake).
 # BANK_CBS_* is the DBE name; DECSI_* remains an alias for the live factory.
 BANK_CBS_BASE_URL = os.getenv('BANK_CBS_BASE_URL', '').rstrip('/')

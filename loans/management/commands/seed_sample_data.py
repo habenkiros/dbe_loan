@@ -1692,6 +1692,7 @@ class Command(BaseCommand):
             LeaseAssetProfile,
             MurabahaContract,
             PfiInstitutionProfile,
+            ProjectCashflowYear,
             ProjectProfile,
             ShariaReview,
         )
@@ -1728,6 +1729,27 @@ class Command(BaseCommand):
             profile.project_dscr = Decimal('1.45')
             profile.updated_by = officer
             profile.save()
+            if not profile.cashflows.exists():
+                cost = profile.total_project_cost
+                ds = (amount * Decimal('0.18')).quantize(Decimal('0.01'))
+                for year, cap, sales_mult, opex_mult in (
+                    (1, Decimal('70'), Decimal('0.55'), Decimal('0.28')),
+                    (2, Decimal('85'), Decimal('0.70'), Decimal('0.32')),
+                    (3, Decimal('100'), Decimal('0.90'), Decimal('0.36')),
+                    (4, Decimal('100'), Decimal('0.95'), Decimal('0.37')),
+                    (5, Decimal('100'), Decimal('1.00'), Decimal('0.38')),
+                ):
+                    sales = (cost * sales_mult).quantize(Decimal('0.01'))
+                    opex = (cost * opex_mult).quantize(Decimal('0.01'))
+                    ProjectCashflowYear.objects.create(
+                        profile=profile,
+                        year_number=year,
+                        revenue=sales,
+                        operating_cost=opex,
+                        capacity_pct=cap,
+                        operating_cf=sales - opex,
+                        debt_service=ds,
+                    )
         elif family == FAMILY_WHOLESALE:
             profile, _ = PfiInstitutionProfile.objects.get_or_create(loan_request=loan)
             profile.institution_name = spec['applicant']

@@ -7,7 +7,32 @@ from .models import (
     MainWork, SubWork, SubSubWork, SubWorkUnitPrice,
     OtherCollateralItem,
 )
+from .registration import TITLE_FIELDS
 from loans.models import City
+
+
+def _title_widgets():
+    return {
+        'owner_kind': forms.Select(attrs={'class': 'form-control'}),
+        'owner_name': forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Leave blank if the borrower owns it',
+        }),
+        'title_reference': forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Deed, plot, libretto, or invoice ref',
+        }),
+        'title_office': forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Woreda land office / registry',
+        }),
+    }
+
+
+def _soften_title_fields(form):
+    for name in TITLE_FIELDS:
+        if name in form.fields:
+            form.fields[name].required = False
 
 
 class MainWorkForm(forms.ModelForm):
@@ -54,13 +79,18 @@ class SubSubWorkForm(forms.ModelForm):
 class BuildingForm(forms.ModelForm):
     class Meta:
         model = Building
-        fields = ['name', 'construction_type', 'floors', 'city']
+        fields = ['name', 'construction_type', 'floors', 'city', *TITLE_FIELDS]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Building name or label'}),
             'construction_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Reinforced concrete'}),
             'floors': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'city': forms.Select(attrs={'class': 'form-control'}),
+            **_title_widgets(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _soften_title_fields(self)
 
 
 def _user_can_edit_unit_price(user):
@@ -139,7 +169,8 @@ class OtherCollateralItemForm(forms.ModelForm):
         model = OtherCollateralItem
         fields = [
             'name', 'make_model', 'year_made', 'plate_number', 'chassis_vin',
-            'odometer_or_hours', 'condition_grade', 'estimated_value', 'notes',
+            'odometer_or_hours', 'condition_grade', 'acquisition_status',
+            'estimated_value', 'notes', *TITLE_FIELDS,
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Toyota Pickup, Tractor'}),
@@ -149,8 +180,10 @@ class OtherCollateralItemForm(forms.ModelForm):
             'chassis_vin': forms.TextInput(attrs={'class': 'form-control'}),
             'odometer_or_hours': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'km or hours'}),
             'condition_grade': forms.Select(attrs={'class': 'form-control'}),
+            'acquisition_status': forms.Select(attrs={'class': 'form-control'}),
             'estimated_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            **_title_widgets(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -162,6 +195,9 @@ class OtherCollateralItemForm(forms.ModelForm):
         self.fields['odometer_or_hours'].required = False
         self.fields['condition_grade'].required = False
         self.fields['notes'].required = False
+        if 'acquisition_status' in self.fields:
+            self.fields['acquisition_status'].required = False
+        _soften_title_fields(self)
         self.fields['year_made'] = forms.IntegerField(
             required=False,
             min_value=1950,
@@ -185,12 +221,17 @@ class OtherCollateralItemForm(forms.ModelForm):
 class LandValuationForm(forms.ModelForm):
     class Meta:
         model = LandValuation
-        fields = ['land_size_sqm', 'unit_price_per_sqm', 'notes']
+        fields = ['land_size_sqm', 'unit_price_per_sqm', 'notes', *TITLE_FIELDS]
         widgets = {
             'land_size_sqm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001', 'min': 0}),
             'unit_price_per_sqm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            **_title_widgets(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _soften_title_fields(self)
 
 
 class SubWorkUnitPriceForm(forms.ModelForm):
@@ -280,6 +321,28 @@ class CollateralEngineeringReviewForm(forms.Form):
         label='Engineering note',
         help_text='Required when returning collateral for correction.',
     )
+    qa_coverage = forms.BooleanField(
+        required=False,
+        label='Coverage vs loan amount is adequate',
+    )
+    qa_gps = forms.BooleanField(
+        required=False,
+        label='Site / photo GPS is acceptable',
+    )
+    qa_evidence = forms.BooleanField(
+        required=False,
+        label='Photos and evidence pack are complete',
+    )
+    qa_valuation = forms.BooleanField(
+        required=False,
+        label='Valuation / BOQ is complete',
+    )
+    qa_ownership = forms.BooleanField(
+        required=False,
+        label='Owner and title are recorded',
+    )
+
+    QA_TICK_FIELDS = ('qa_coverage', 'qa_gps', 'qa_evidence', 'qa_valuation', 'qa_ownership')
 
     def clean(self):
         data = super().clean()

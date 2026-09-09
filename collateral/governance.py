@@ -86,7 +86,8 @@ def require_collateral_mutable(get_loan_request):
 
 def apply_site_gps_with_attestation(instance, post) -> tuple[bool, Optional[str]]:
     """
-    Save site GPS + officer attestation when accuracy is weak or missing.
+    Save site GPS + officer attestation when accuracy is weak, missing, or manual.
+    Manual lat/lon always requires attestation (audit / provenance).
     Returns (saved, error_message).
     """
     from collateral.field_utils import _parse_gps_coord
@@ -97,19 +98,40 @@ def apply_site_gps_with_attestation(instance, post) -> tuple[bool, Optional[str]
     if lat is None or lon is None:
         return False, None
 
+    if not (-90 <= float(lat) <= 90) or not (-180 <= float(lon) <= 180):
+        return False, 'Latitude must be −90…90 and longitude −180…180.'
+
+    source = (post.get('site_gps_source') or '').strip().lower()
+    if source not in ('device', 'manual'):
+        # Infer: empty accuracy and explicit manual fields → manual; else device.
+        if (post.get('site_gps_manual') or '').lower() in ('1', 'true', 'on', 'yes'):
+            source = 'manual'
+        else:
+            source = 'device'
+
     acc = _parse_gps_coord(post.get('site_gps_accuracy_m', ''))
-    weak = gps_is_weak(acc)
+    if source == 'manual':
+        acc = None
+        weak = True
+    else:
+        weak = gps_is_weak(acc)
+
     ack = (post.get('site_gps_weak_ack') or '').lower() in ('1', 'true', 'on', 'yes')
     note = (post.get('site_gps_attestation_note') or '').strip()
 
     if weak and not ack:
+        if source == 'manual':
+            return False, (
+                'Manual latitude/longitude requires attestation — '
+                'confirm you verified this pin on site and explain how.'
+            )
         threshold = get_collateral_policy().gps_accuracy_weak_threshold_m
         return False, (
             f'GPS accuracy is weak (>{threshold}m or unavailable). '
             'Check the attestation box and explain how the location was verified.'
         )
     if weak and len(note) < 10:
-        return False, 'Provide a brief officer attestation (at least 10 characters) for weak GPS.'
+        return False, 'Provide a brief officer attestation (at least 10 characters) for weak or manual GPS.'
 
     instance.site_gps_lat = lat
     instance.site_gps_lon = lon
@@ -117,9 +139,11 @@ def apply_site_gps_with_attestation(instance, post) -> tuple[bool, Optional[str]
     instance.site_captured_at = timezone.now()
     instance.site_gps_weak_acknowledged = weak and ack
     instance.site_gps_attestation_note = note if weak else ''
+    instance.site_gps_source = source
     instance.save(update_fields=[
         'site_gps_lat', 'site_gps_lon', 'site_gps_accuracy_m', 'site_captured_at',
-        'site_gps_weak_acknowledged', 'site_gps_attestation_note', 'updated_at',
+        'site_gps_weak_acknowledged', 'site_gps_attestation_note', 'site_gps_source',
+        'updated_at',
     ])
     return True, None
 

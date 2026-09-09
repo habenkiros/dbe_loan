@@ -67,6 +67,11 @@
       <strong>{% if metrics.npv is not None %}{{ metrics.npv|floatformat:0 }}{% elif profile.npv is not None %}{{ profile.npv|floatformat:0 }}{% else %}—{% endif %}</strong>
       <small>From annual cashflows</small>
     </article>
+    <article class="pf-kpi">
+      <em>IRR</em>
+      <strong>{% if metrics.irr_pct is not None %}{{ metrics.irr_pct }}%{% elif profile.irr_pct is not None %}{{ profile.irr_pct }}%{% else %}—{% endif %}</strong>
+      <small>Total investment</small>
+    </article>
     <article class="pf-kpi{% if metrics.dscr and metrics.dscr < 1 %} is-warn{% elif metrics.dscr %} is-ok{% endif %}">
       <em>Project DSCR</em>
       <strong>{% if metrics.dscr is not None %}{{ metrics.dscr }}{% elif profile.project_dscr is not None %}{{ profile.project_dscr }}{% else %}—{% endif %}</strong>
@@ -253,21 +258,65 @@
   <section class="pf-panel" id="viability">
     <h2>Viability</h2>
     <p class="help">
-      Operating cashflow versus project debt service. When years and cost are in, NPV / IRR / DSCR fill the tiles above.
-      A finished study can also be typed under Cost &amp; equity.
+      UNIDO-style project feasibility on this file — not MSME Sheet 3.
+      Enter sales and operating cost per year (or a net operating CF). NPV, IRR, DSCR, payback, and break-even compute from the years and project cost.
     </p>
+    <div class="pf-kpis pf-kpis-comfar">
+      <article class="pf-kpi">
+        <em>Equity IRR</em>
+        <strong>{% if metrics.equity_irr_pct is not None %}{{ metrics.equity_irr_pct }}%{% else %}—{% endif %}</strong>
+        <small>Return on promoter equity</small>
+      </article>
+      <article class="pf-kpi">
+        <em>Payback</em>
+        <strong>{% if metrics.payback_years is not None %}{{ metrics.payback_years }} yr{% else %}—{% endif %}</strong>
+        <small>{% if metrics.discounted_payback_years is not None %}Discounted {{ metrics.discounted_payback_years }} yr{% else %}Years to recover cost{% endif %}</small>
+      </article>
+      <article class="pf-kpi{% if metrics.bcr and metrics.bcr < 1 %} is-warn{% elif metrics.bcr %} is-ok{% endif %}">
+        <em>BCR</em>
+        <strong>{% if metrics.bcr is not None %}{{ metrics.bcr }}{% else %}—{% endif %}</strong>
+        <small>PV of operating CF / investment</small>
+      </article>
+      <article class="pf-kpi{% if metrics.min_dscr and metrics.min_dscr < 1 %} is-warn{% elif metrics.min_dscr %} is-ok{% endif %}">
+        <em>Min DSCR</em>
+        <strong>{% if metrics.min_dscr is not None %}{{ metrics.min_dscr }}{% else %}—{% endif %}</strong>
+        <small>Worst year (committee uses average ≥ 1.00)</small>
+      </article>
+      <article class="pf-kpi{% if metrics.break_even_capacity_pct and metrics.break_even_capacity_pct > 100 %} is-warn{% endif %}">
+        <em>Break-even</em>
+        <strong>{% if metrics.break_even_capacity_pct is not None %}{{ metrics.break_even_capacity_pct }}%{% else %}—{% endif %}</strong>
+        <small>Capacity to cover opex + debt service</small>
+      </article>
+    </div>
     <div class="table-container">
       <table>
-        <thead><tr><th>Year</th><th>Operating CF</th><th>Debt service</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
-        <tbody>
-          {% for y in cashflows %}
+        <thead>
           <tr>
-            <td>{{ y.year_number }}</td>
+            <th>Year</th>
+            <th>Capacity %</th>
+            <th>Sales</th>
+            <th>Operating cost</th>
+            <th>Operating CF</th>
+            <th>Debt service</th>
+            <th>DSCR</th>
+            <th>Break-even %</th>
+            {% if can_edit %}<th></th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for y in cashflow_rows %}
+          <tr>
+            <td>{{ y.year }}</td>
+            <td>{% if y.capacity_pct is not None %}{{ y.capacity_pct }}{% else %}—{% endif %}</td>
+            <td>{% if y.revenue is not None %}{{ y.revenue|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td>{% if y.operating_cost is not None %}{{ y.operating_cost|floatformat:2 }}{% else %}—{% endif %}</td>
             <td>{{ y.operating_cf|floatformat:2 }}</td>
             <td>{{ y.debt_service|floatformat:2 }}</td>
+            <td>{% if y.dscr is not None %}{{ y.dscr }}{% else %}—{% endif %}</td>
+            <td>{% if y.break_even_pct is not None %}{{ y.break_even_pct }}{% else %}—{% endif %}</td>
             {% if can_edit %}
             <td>
-              <form method="post" action="{% url 'project_delete_cashflow' loan_request.id y.id %}">
+              <form method="post" action="{% url 'project_delete_cashflow' loan_request.id y.obj_id %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-gray" style="font-size:0.75rem;">Remove</button>
               </form>
@@ -275,21 +324,33 @@
             {% endif %}
           </tr>
           {% empty %}
-          <tr><td colspan="4">No years yet.</td></tr>
+          <tr><td colspan="9">No years yet. Add the operating statement below.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% if can_edit %}
-    <form method="post" action="{% url 'project_add_cashflow' loan_request.id %}" class="pf-add">
+    <form method="post" action="{% url 'project_add_cashflow' loan_request.id %}" class="pf-add pf-add-cf">
       {% csrf_token %}
       <div>
         <label>Year</label>
         <input type="number" name="year_number" min="1" required class="form-control">
       </div>
       <div>
+        <label>Capacity %</label>
+        <input type="number" name="capacity_pct" min="0" max="200" step="0.1" class="form-control" placeholder="100">
+      </div>
+      <div>
+        <label>Sales</label>
+        <input type="number" name="revenue" step="0.01" class="form-control">
+      </div>
+      <div>
+        <label>Operating cost</label>
+        <input type="number" name="operating_cost" step="0.01" class="form-control">
+      </div>
+      <div>
         <label>Operating CF</label>
-        <input type="number" name="operating_cf" step="0.01" required class="form-control">
+        <input type="number" name="operating_cf" step="0.01" class="form-control" placeholder="Sales − cost">
       </div>
       <div>
         <label>Debt service</label>
@@ -299,6 +360,42 @@
     </form>
     {% endif %}
   </section>
+
+  {% if sensitivity %}
+  <section class="pf-panel" id="sensitivity">
+    <h2>Sensitivity</h2>
+    <p class="help">
+      One-way shocks on the same years. Sales and operating-cost cases use the sales/opex split when it is entered; otherwise they move net operating cashflow.
+      Committee still uses the base-case DSCR ≥ 1.00.
+    </p>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>NPV</th>
+            <th>IRR</th>
+            <th>Equity IRR</th>
+            <th>DSCR</th>
+            <th>Payback</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in sensitivity %}
+          <tr{% if case.stressed %} class="is-warn"{% endif %}>
+            <td>{{ case.label }}</td>
+            <td>{% if case.npv is not None %}{{ case.npv|floatformat:0 }}{% else %}—{% endif %}</td>
+            <td>{% if case.irr_pct is not None %}{{ case.irr_pct }}%{% else %}—{% endif %}</td>
+            <td>{% if case.equity_irr_pct is not None %}{{ case.equity_irr_pct }}%{% else %}—{% endif %}</td>
+            <td>{% if case.dscr is not None %}{{ case.dscr }}{% else %}—{% endif %}</td>
+            <td>{% if case.payback_years is not None %}{{ case.payback_years }} yr{% else %}Does not pay back{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
 
   <section class="pf-panel" id="desks">
     <h2>Plant desks</h2>

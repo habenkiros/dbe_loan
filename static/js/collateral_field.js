@@ -121,6 +121,10 @@
 
   function applyGpsReading(prefix, statusEl, lat, lon, accuracy, label) {
     setHidden(prefix, lat, lon, accuracy);
+    if (prefix === 'site') {
+      var src = byId('site_gps_source');
+      if (src) src.value = 'device';
+    }
     updateGpsStatus(statusEl, lat, lon, accuracy, label);
     if (prefix === 'site' && window.COLLATERAL_SITE_MAP_ID && window.CollateralMap) {
       window.CollateralMap.updateLiveSite(
@@ -131,6 +135,31 @@
         label || 'Registered site'
       );
     }
+  }
+
+  function initManualSiteGps() {
+    var btn = byId('btn-apply-manual-site-gps');
+    if (!btn) return;
+    var status = byId('site-gps-status');
+    btn.addEventListener('click', function () {
+      var latRaw = (byId('manual_site_lat') || {}).value || '';
+      var lonRaw = (byId('manual_site_lon') || {}).value || '';
+      var lat = parseFloat(String(latRaw).trim().replace(',', '.'));
+      var lon = parseFloat(String(lonRaw).trim().replace(',', '.'));
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        updateGpsStatus(status, null, null, null, 'Enter valid latitude (−90…90) and longitude (−180…180).');
+        return;
+      }
+      var src = byId('site_gps_source');
+      if (src) src.value = 'manual';
+      // Manual has no accuracy — treat as weak so attestation panel opens.
+      applyGpsReading('site', status, lat, lon, null, 'Manual coordinates');
+      if (src) src.value = 'manual';
+      var panel = byId('site-gps-attestation');
+      if (panel) panel.hidden = false;
+      var ack = byId('site_gps_weak_ack');
+      if (ack) ack.checked = false;
+    });
   }
 
   function captureGpsPromise(prefix, statusEl, btn) {
@@ -576,6 +605,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initSecureContextBanner();
     initSiteGps();
+    initManualSiteGps();
     initPhotoCapture();
     initBuildingImagesPage();
   });

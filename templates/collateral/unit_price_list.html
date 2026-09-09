@@ -35,7 +35,12 @@
                 <td>{% if p.sub_work_id %}{{ p.sub_work.main_work.name }}{% else %}{{ p.sub_sub_work.sub_work.main_work.name }}{% endif %}</td>
                 <td>{% if p.sub_work_id %}{{ p.sub_work.name }}{% else %}{{ p.sub_sub_work.sub_work.name }}{% endif %}</td>
                 <td>{% if p.sub_sub_work_id %}{{ p.sub_sub_work.name }}{% else %}— (sub work only){% endif %}</td>
-                <td>{{ p.unit_price|floatformat:2 }}</td>
+                <td>{{ p.unit_price|floatformat:2 }}
+                  {% if p.market_suggest and p.market_suggest.is_suggestible %}
+                  <br><small class="help">Market {{ p.market_suggest.median|floatformat:2 }}
+                    ({{ p.market_suggest.p25|floatformat:0 }}–{{ p.market_suggest.p75|floatformat:0 }})</small>
+                  {% endif %}
+                </td>
                 <td>
                   <div class="list-actions">
                   {% url 'collateral:unit_price_edit' p.id as edit_url %}

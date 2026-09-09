@@ -88,9 +88,38 @@ class SubWorkUnitPrice(models.Model):
         return f"{self.sub_work} @ {self.city.name}: {self.unit_price}"
 
 
+class CollateralTitleMixin(models.Model):
+    """Who holds the asset and which paper identifies it. Closing pack still verifies."""
+
+    OWNER_BORROWER = 'borrower'
+    OWNER_THIRD_PARTY = 'third_party'
+    OWNER_BANK = 'bank'
+    OWNER_CHOICES = [
+        (OWNER_BORROWER, 'Borrower / applicant'),
+        (OWNER_THIRD_PARTY, 'Third party (guarantor / family)'),
+        (OWNER_BANK, 'Bank holds title (financed / lease)'),
+    ]
+
+    owner_kind = models.CharField(
+        max_length=16, choices=OWNER_CHOICES, default=OWNER_BORROWER,
+    )
+    owner_name = models.CharField(
+        max_length=255, blank=True,
+        help_text='Leave blank when the borrower owns it — applicant name is used.',
+    )
+    title_reference = models.CharField(
+        max_length=80, blank=True,
+        help_text='Deed, plot, libretto, plate book, or supplier invoice reference.',
+    )
+    title_office = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        abstract = True
+
+
 # ---------- Building & valuation ----------
 
-class Building(models.Model):
+class Building(CollateralTitleMixin):
     """One physical building under a loan request."""
     loan_request = models.ForeignKey('loans.LoanRequest', on_delete=models.CASCADE)
     name = models.CharField(max_length=255, help_text="Building label/name")
@@ -121,6 +150,16 @@ class Building(models.Model):
     site_gps_attestation_note = models.TextField(
         blank=True,
         help_text='Officer explanation when GPS accuracy exceeds policy threshold.',
+    )
+    GPS_SOURCE_DEVICE = 'device'
+    GPS_SOURCE_MANUAL = 'manual'
+    GPS_SOURCE_CHOICES = [
+        (GPS_SOURCE_DEVICE, 'Device GPS'),
+        (GPS_SOURCE_MANUAL, 'Manual latitude / longitude'),
+    ]
+    site_gps_source = models.CharField(
+        max_length=16, choices=GPS_SOURCE_CHOICES, blank=True, default='',
+        help_text='How the site pin was set — device capture or officer-entered coordinates.',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -224,7 +263,7 @@ class BuildingImage(models.Model):
         return f"{self.building.name} image"
 
 
-class LandValuation(models.Model):
+class LandValuation(CollateralTitleMixin):
     """Land value for a loan request (optional; one per loan)."""
     loan_request = models.OneToOneField(
         'loans.LoanRequest', on_delete=models.CASCADE, related_name='land_valuation',
@@ -238,6 +277,16 @@ class LandValuation(models.Model):
     site_captured_at = models.DateTimeField(null=True, blank=True)
     site_gps_weak_acknowledged = models.BooleanField(default=False)
     site_gps_attestation_note = models.TextField(blank=True)
+    GPS_SOURCE_DEVICE = 'device'
+    GPS_SOURCE_MANUAL = 'manual'
+    GPS_SOURCE_CHOICES = [
+        (GPS_SOURCE_DEVICE, 'Device GPS'),
+        (GPS_SOURCE_MANUAL, 'Manual latitude / longitude'),
+    ]
+    site_gps_source = models.CharField(
+        max_length=16, choices=GPS_SOURCE_CHOICES, blank=True, default='',
+        help_text='How the site pin was set — device capture or officer-entered coordinates.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -291,7 +340,7 @@ class LandValuationImage(models.Model):
 
 # ---------- Other collateral types (Vehicle, Machinery, Equipment, etc.) ----------
 
-class OtherCollateralItem(models.Model):
+class OtherCollateralItem(CollateralTitleMixin):
     """
     Simple collateral item for non-building types (vehicle, machinery, equipment, etc.).
     One or more items per loan; each has name/description and estimated value.
@@ -305,6 +354,12 @@ class OtherCollateralItem(models.Model):
         (CONDITION_GOOD, 'Good'),
         (CONDITION_FAIR, 'Fair'),
         (CONDITION_POOR, 'Poor'),
+    ]
+    ACQ_OWNED = 'owned'
+    ACQ_TO_BUY = 'to_be_purchased'
+    ACQ_CHOICES = [
+        (ACQ_OWNED, 'Already owned — on site now'),
+        (ACQ_TO_BUY, 'To be purchased with this loan'),
     ]
 
     loan_request = models.ForeignKey(
@@ -320,6 +375,10 @@ class OtherCollateralItem(models.Model):
         max_length=50, blank=True, help_text='Odometer (km) or operating hours.',
     )
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
+    acquisition_status = models.CharField(
+        max_length=20, choices=ACQ_CHOICES, default=ACQ_OWNED,
+        help_text='Financed assets are registered before delivery — plate/serial wait until on site.',
+    )
     notes = models.TextField(blank=True)
     site_gps_lat = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
     site_gps_lon = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
@@ -327,6 +386,16 @@ class OtherCollateralItem(models.Model):
     site_captured_at = models.DateTimeField(null=True, blank=True)
     site_gps_weak_acknowledged = models.BooleanField(default=False)
     site_gps_attestation_note = models.TextField(blank=True)
+    GPS_SOURCE_DEVICE = 'device'
+    GPS_SOURCE_MANUAL = 'manual'
+    GPS_SOURCE_CHOICES = [
+        (GPS_SOURCE_DEVICE, 'Device GPS'),
+        (GPS_SOURCE_MANUAL, 'Manual latitude / longitude'),
+    ]
+    site_gps_source = models.CharField(
+        max_length=16, choices=GPS_SOURCE_CHOICES, blank=True, default='',
+        help_text='Optional inspection/yard pin only — not the asset identity for vehicles.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -342,11 +411,13 @@ class OtherCollateralItemImage(models.Model):
     PHOTO_PLATE = 'plate'
     PHOTO_ASSET = 'asset'
     PHOTO_SERIAL = 'serial_label'
+    PHOTO_OFFER = 'offer'
     PHOTO_OTHER = 'other'
     PHOTO_TYPE_CHOICES = [
         (PHOTO_PLATE, 'Plate / registration'),
         (PHOTO_ASSET, 'Full asset'),
         (PHOTO_SERIAL, 'Serial / chassis label'),
+        (PHOTO_OFFER, 'Supplier offer / invoice'),
         (PHOTO_OTHER, 'Other'),
     ]
 

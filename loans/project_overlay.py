@@ -310,9 +310,7 @@ def project_file_summary(loan_request) -> Optional[Dict[str, Any]]:
         return None
     profile = get_project_profile(loan_request)
     totals = sources_uses_totals(profile) if profile is not None else sources_uses_totals(None)
-    metrics = compute_project_metrics(profile) if profile is not None else {
-        'npv': None, 'irr_pct': None, 'dscr': None,
-    }
+    metrics = compute_project_metrics(profile) if profile is not None else empty_project_metrics()
     return {
         'is_project': True,
         'profile': profile,
@@ -332,6 +330,22 @@ def ensure_plant_desks(profile) -> None:
 
     for desk, _ in ProjectTechnicalReview.DESK_CHOICES:
         ProjectTechnicalReview.objects.get_or_create(profile=profile, desk=desk)
+
+
+def empty_project_metrics() -> Dict[str, Any]:
+    return {
+        'npv': None,
+        'irr_pct': None,
+        'dscr': None,
+        'equity_npv': None,
+        'equity_irr_pct': None,
+        'min_dscr': None,
+        'payback_years': None,
+        'discounted_payback_years': None,
+        'bcr': None,
+        'break_even_capacity_pct': None,
+        'has_operating_split': False,
+    }
 
 
 def _npv(rate: Decimal, cashflows) -> Decimal:
@@ -357,23 +371,195 @@ def _irr_pct(cashflows) -> Optional[Decimal]:
     return (lo * Decimal('100')).quantize(Decimal('0.01'))
 
 
-def compute_project_metrics(profile) -> Dict[str, Optional[Decimal]]:
-    years = list(profile.cashflows.order_by('year_number')) if profile else []
-    cost = (profile.total_project_cost if profile else None) or Decimal('0')
-    if not years or cost <= 0:
-        return {'npv': None, 'irr_pct': None, 'dscr': None}
+def _year_operating_cf(year) -> Decimal:
+    if year.revenue is not None and year.operating_cost is not None:
+        return year.revenue - year.operating_cost
+    return year.operating_cf or Decimal('0')
+
+
+def year_snapshots(profile) -> List[Dict[str, Any]]:
+    """Normalized annual rows used by viability, break-even, and sensitivity."""
+    if profile is None:
+        return []
+    rows = []
+    for y in profile.cashflows.order_by('year_number'):
+        revenue = y.revenue
+        opex = y.operating_cost
+        ocf = _year_operating_cf(y)
+        ds = y.debt_service or Decimal('0')
+        cap = y.capacity_pct
+        dscr = (ocf / ds).quantize(Decimal('0.01')) if ds > 0 else None
+        be = None
+        if revenue is not None and revenue > 0:
+            utilized = cap if cap is not None else Decimal('100')
+            be = (((opex or Decimal('0')) + ds) / revenue * utilized).quantize(Decimal('0.1'))
+        rows.append({
+            'year': y.year_number,
+            'obj_id': y.id,
+            'revenue': revenue,
+            'operating_cost': opex,
+            'capacity_pct': cap,
+            'operating_cf': ocf,
+            'debt_service': ds,
+            'dscr': dscr,
+            'break_even_pct': be,
+        })
+    return rows
+
+
+def _payback_years(cost: Decimal, flows, discount_rate: Optional[Decimal] = None) -> Optional[Decimal]:
+    if cost <= 0 or not flows:
+        return None
+    cumulative = Decimal('0')
+    one = Decimal('1')
+    for i, cf in enumerate(flows, start=1):
+        amount = cf
+        if discount_rate is not None:
+            amount = cf / ((one + discount_rate) ** i)
+        if cumulative + amount >= cost:
+            needed = cost - cumulative
+            if amount == 0:
+                return Decimal(i)
+            return (Decimal(i - 1) + (needed / amount)).quantize(Decimal('0.01'))
+        cumulative += amount
+    return None
+
+
+def _break_even_capacity_pct(rows: List[Dict[str, Any]]) -> Optional[Decimal]:
+    values = [r['break_even_pct'] for r in rows if r.get('break_even_pct') is not None]
+    if not values:
+        return None
+    return (sum(values, Decimal('0')) / Decimal(len(values))).quantize(Decimal('0.1'))
+
+
+def metrics_from_rows(
+    rows: List[Dict[str, Any]],
+    cost: Decimal,
+    equity: Decimal,
+    rate_pct: Decimal,
+) -> Dict[str, Any]:
+    empty = empty_project_metrics()
+    if not rows or cost <= 0:
+        return empty
+    rate = rate_pct / Decimal('100')
+    ocfs = [r['operating_cf'] or Decimal('0') for r in rows]
+    nets = [
+        (r['operating_cf'] or Decimal('0')) - (r['debt_service'] or Decimal('0'))
+        for r in rows
+    ]
+    ds_total = sum((r['debt_service'] or Decimal('0') for r in rows), Decimal('0'))
+    ocf_total = sum(ocfs, Decimal('0'))
+    yearly_dscr = [r['dscr'] for r in rows if r.get('dscr') is not None]
+    one = Decimal('1')
+    pv_inflows = sum(
+        (cf / ((one + rate) ** t) for t, cf in enumerate(ocfs, start=1)),
+        Decimal('0'),
+    )
+    has_split = any(r.get('revenue') is not None and r.get('operating_cost') is not None for r in rows)
+    out = dict(empty)
+    out.update({
+        'npv': _npv(rate, [-cost] + nets),
+        'irr_pct': _irr_pct([-cost] + nets),
+        'dscr': (ocf_total / ds_total).quantize(Decimal('0.01')) if ds_total > 0 else None,
+        'equity_npv': _npv(rate, [-equity] + nets) if equity > 0 else None,
+        'equity_irr_pct': _irr_pct([-equity] + nets) if equity > 0 else None,
+        'min_dscr': min(yearly_dscr) if yearly_dscr else None,
+        'payback_years': _payback_years(cost, ocfs),
+        'discounted_payback_years': _payback_years(cost, ocfs, rate),
+        'bcr': (pv_inflows / cost).quantize(Decimal('0.01')) if cost > 0 else None,
+        'break_even_capacity_pct': _break_even_capacity_pct(rows),
+        'has_operating_split': has_split,
+    })
+    return out
+
+
+def compute_project_metrics(profile) -> Dict[str, Any]:
+    if profile is None:
+        return empty_project_metrics()
+    cost = profile.total_project_cost or Decimal('0')
+    equity = profile.promoter_equity or Decimal('0')
     rate_pct = profile.discount_rate_pct or Decimal('12')
-    rate = (rate_pct / Decimal('100'))
-    nets = [y.operating_cf - (y.debt_service or Decimal('0')) for y in years]
-    cashflows = [-cost] + nets
-    ocf = sum((y.operating_cf for y in years), Decimal('0'))
-    ds = sum((y.debt_service or Decimal('0') for y in years), Decimal('0'))
-    dscr = (ocf / ds).quantize(Decimal('0.01')) if ds > 0 else None
-    return {
-        'npv': _npv(rate, cashflows),
-        'irr_pct': _irr_pct(cashflows),
-        'dscr': dscr,
-    }
+    return metrics_from_rows(year_snapshots(profile), cost, equity, rate_pct)
+
+
+SENSITIVITY_CASES = (
+    ('base', 'Base case', {}),
+    ('sales_down', 'Sales −10%', {'revenue': Decimal('-0.10')}),
+    ('sales_up', 'Sales +10%', {'revenue': Decimal('0.10')}),
+    ('opex_up', 'Operating cost +10%', {'opex': Decimal('0.10')}),
+    ('capex_up', 'Investment cost +10%', {'capex': Decimal('0.10')}),
+    ('delay', 'One-year delay', {'delay_years': 1}),
+)
+
+
+def _shock_rows(rows: List[Dict[str, Any]], shock: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rev_delta = shock.get('revenue') or Decimal('0')
+    opex_delta = shock.get('opex') or Decimal('0')
+    out = []
+    for r in rows:
+        nr = dict(r)
+        if r.get('revenue') is not None and r.get('operating_cost') is not None:
+            nr['revenue'] = (r['revenue'] or Decimal('0')) * (Decimal('1') + rev_delta)
+            nr['operating_cost'] = (r['operating_cost'] or Decimal('0')) * (Decimal('1') + opex_delta)
+            nr['operating_cf'] = nr['revenue'] - nr['operating_cost']
+        else:
+            factor = Decimal('1') + rev_delta - opex_delta
+            nr['operating_cf'] = (r['operating_cf'] or Decimal('0')) * factor
+        ds = nr['debt_service'] or Decimal('0')
+        ocf = nr['operating_cf'] or Decimal('0')
+        nr['dscr'] = (ocf / ds).quantize(Decimal('0.01')) if ds > 0 else None
+        if nr.get('revenue') and nr['revenue'] > 0:
+            utilized = nr['capacity_pct'] if nr.get('capacity_pct') is not None else Decimal('100')
+            nr['break_even_pct'] = (
+                ((nr.get('operating_cost') or Decimal('0')) + ds) / nr['revenue'] * utilized
+            ).quantize(Decimal('0.1'))
+        out.append(nr)
+    delay = int(shock.get('delay_years') or 0)
+    if delay > 0:
+        idle = {
+            'year': 0,
+            'obj_id': None,
+            'revenue': Decimal('0') if any(r.get('revenue') is not None for r in rows) else None,
+            'operating_cost': Decimal('0') if any(r.get('operating_cost') is not None for r in rows) else None,
+            'capacity_pct': None,
+            'operating_cf': Decimal('0'),
+            'debt_service': Decimal('0'),
+            'dscr': None,
+            'break_even_pct': None,
+        }
+        out = [dict(idle) for _ in range(delay)] + out
+    return out
+
+
+def compute_sensitivity(profile) -> List[Dict[str, Any]]:
+    """COMFAR-style one-way shocks on the annual statement."""
+    if profile is None:
+        return []
+    rows = year_snapshots(profile)
+    cost = profile.total_project_cost or Decimal('0')
+    if not rows or cost <= 0:
+        return []
+    equity = profile.promoter_equity or Decimal('0')
+    rate_pct = profile.discount_rate_pct or Decimal('12')
+    cases = []
+    for key, label, shock in SENSITIVITY_CASES:
+        shocked = _shock_rows(rows, shock)
+        capex_factor = Decimal('1') + (shock.get('capex') or Decimal('0'))
+        metrics = metrics_from_rows(shocked, cost * capex_factor, equity, rate_pct)
+        cases.append({
+            'key': key,
+            'label': label,
+            'npv': metrics['npv'],
+            'irr_pct': metrics['irr_pct'],
+            'equity_irr_pct': metrics['equity_irr_pct'],
+            'dscr': metrics['dscr'],
+            'payback_years': metrics['payback_years'],
+            'stressed': key != 'base' and (
+                (metrics['npv'] is not None and metrics['npv'] < 0)
+                or (metrics['dscr'] is not None and metrics['dscr'] < Decimal('1.00'))
+            ),
+        })
+    return cases
 
 
 def debt_equity_blockers(profile) -> List[str]:

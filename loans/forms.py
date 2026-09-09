@@ -238,8 +238,9 @@ class ProjectProfileForm(forms.ModelForm):
         help_texts = {
             'debt_equity_policy': 'DBE typical bands. Custom is allowed when Credit confirms.',
             'promoter_equity': 'Must be verified on post-approval before the first release.',
-            'npv': 'Leave blank if annual cashflows below will compute NPV / IRR / DSCR.',
-            'project_dscr': 'Project cashflow vs project debt service — not MSME Sheet 3.',
+            'discount_rate_pct': 'Used for NPV, discounted payback, and BCR. Default 12% if blank.',
+            'npv': 'Leave blank if annual years below will compute NPV / IRR / DSCR / payback.',
+            'project_dscr': 'Average operating CF vs project debt service — not MSME Sheet 3. Committee needs ≥ 1.00.',
             'other_bank_name': 'Tripartite short-term WC with another bank, if any.',
             'current_account_opened': 'Required before first equity or loan release.',
         }

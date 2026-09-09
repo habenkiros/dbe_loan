@@ -57,6 +57,15 @@ def engineering_qa_review(request, loan_request_id):
         note = form.cleaned_data.get('review_note', '')
 
         if action == 'approve':
+            from collateral.engineering_qa import engineering_qa_approve_blockers
+
+            qa_blockers = engineering_qa_approve_blockers(loan_request, form.cleaned_data)
+            if qa_blockers:
+                messages.error(
+                    request,
+                    'Cannot approve yet: ' + '; '.join(qa_blockers),
+                )
+                return redirect('collateral:engineering_qa_review', loan_request_id=loan_request_id)
             loan_request.collateral_engineering_status = LoanRequest.ENG_COLLATERAL_APPROVED
             loan_request.collateral_engineering_reviewed_at = timezone.now()
             loan_request.collateral_engineering_reviewed_by = request.user
@@ -101,9 +110,13 @@ def engineering_qa_review(request, loan_request_id):
         return redirect('collateral:engineering_qa_review', loan_request_id=loan_request_id)
 
     from collateral.coverage import compute_coverage_adequacy
+    from collateral.engineering_qa import engineering_qa_checklist
     from collateral.field_utils import get_loan_collateral_readiness
     from collateral.pipeline import collateral_pipeline_stage, pipeline_stage_label
-    from collateral.models import Building, BuildingImage, BuildingValuation, LandValuation, LandValuationImage
+    from collateral.models import (
+        Building, BuildingImage, BuildingValuation, LandValuation, LandValuationImage,
+        OtherCollateralItem, OtherCollateralItemImage,
+    )
     from loans.services.appraisal_prefill import compute_collateral_totals
 
     readiness = get_loan_collateral_readiness(loan_request)
@@ -128,6 +141,14 @@ def engineering_qa_review(request, loan_request_id):
                 })
     except LandValuation.DoesNotExist:
         pass
+    for item in OtherCollateralItem.objects.filter(loan_request=loan_request):
+        for img in OtherCollateralItemImage.objects.filter(item=item).order_by('-created_at')[:4]:
+            if img.image:
+                photo_previews.append({
+                    'url': img.image.url,
+                    'label': f'{item.name} — {img.get_photo_type_display()}',
+                    'has_gps': bool(img.gps_lat),
+                })
     photo_previews = photo_previews[:12]
 
     building_boq = []
@@ -148,5 +169,6 @@ def engineering_qa_review(request, loan_request_id):
         'totals': totals,
         'photo_previews': photo_previews,
         'building_boq': building_boq,
+        'qa_checklist': engineering_qa_checklist(loan_request),
         'can_review': True,
     })

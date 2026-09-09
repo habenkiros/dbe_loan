@@ -87,6 +87,7 @@ class CollateralGovernanceTests(TestCase):
             BuildingImage.objects.create(
                 building=self.building,
                 image=tiny,
+                photo_type=BuildingImage.PHOTO_FRONT if i == 0 else BuildingImage.PHOTO_OTHER,
                 gps_lat=Decimal('9.01'),
                 gps_lon=Decimal('38.75'),
             )
@@ -109,6 +110,7 @@ class CollateralGovernanceTests(TestCase):
             BuildingImage.objects.create(
                 building=self.building,
                 image=tiny,
+                photo_type=BuildingImage.PHOTO_FRONT if i == 0 else BuildingImage.PHOTO_OTHER,
                 gps_lat=Decimal('9.01'),
                 gps_lon=Decimal('38.75'),
             )
@@ -132,6 +134,7 @@ class CollateralGovernanceTests(TestCase):
             BuildingImage.objects.create(
                 building=self.building,
                 image=tiny,
+                photo_type=BuildingImage.PHOTO_FRONT if i == 0 else BuildingImage.PHOTO_OTHER,
                 gps_lat=Decimal('9.01'),
                 gps_lon=Decimal('38.75'),
             )

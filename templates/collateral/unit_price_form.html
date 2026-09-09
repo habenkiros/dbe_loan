@@ -83,7 +83,18 @@
         </tr>
         <tr>
             <th><label for="id_unit_price">Unit price:</label></th>
-            <td>{{ form.unit_price }}{% if form.unit_price.errors %}<div class="error">{{ form.unit_price.errors }}</div>{% endif %}</td>
+            <td>{{ form.unit_price }}{% if form.unit_price.errors %}<div class="error">{{ form.unit_price.errors }}</div>{% endif %}
+              {% if market_suggest and market_suggest.is_suggestible %}
+              <p class="help" style="margin:0.4rem 0 0;">
+                Market median {{ market_suggest.median|floatformat:2 }}
+                ({{ market_suggest.p25|floatformat:0 }}–{{ market_suggest.p75|floatformat:0 }},
+                n={{ market_suggest.sample_count }}).
+                Suggestion only — the catalog is not overwritten.
+                <button type="button" class="btn btn-gray" id="btn-apply-market"
+                        data-median="{{ market_suggest.median }}">Use median</button>
+              </p>
+              {% endif %}
+            </td>
         </tr>
     </table>
     <button type="submit">{% if is_edit %}Save changes{% else %}Add unit price{% endif %}</button>
@@ -215,6 +226,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (regionSelect && regionSelect.value) loadZones(regionSelect.value);
     if (mainWorkSelect && mainWorkSelect.value) loadSubWorks(mainWorkSelect.value);
+
+    var applyMarket = document.getElementById('btn-apply-market');
+    if (applyMarket) {
+        applyMarket.addEventListener('click', function() {
+            var inp = document.getElementById('id_unit_price');
+            if (inp) inp.value = this.getAttribute('data-median');
+        });
+    }
 });
 </script>
 {% endblock %}

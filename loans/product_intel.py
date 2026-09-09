@@ -130,6 +130,9 @@ def _highlights_from_brief(brief: Dict[str, Any]) -> List[Dict[str, str]]:
     labels = {
         'npv': 'NPV',
         'irr_pct': 'IRR %',
+        'equity_irr_pct': 'Equity IRR %',
+        'payback_years': 'Payback years',
+        'break_even_capacity_pct': 'Break-even %',
         'dti_pct': 'DTI %',
         'ltv_pct': 'LTV %',
         'par90': 'PAR 90',

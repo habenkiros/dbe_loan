@@ -47,4 +47,9 @@ class ProjectEngine(ProductEngine):
             'blockers': (summary.get('committee_blockers') or [])[:8],
             'npv': str((summary.get('metrics') or {}).get('npv') or ''),
             'irr_pct': str((summary.get('metrics') or {}).get('irr_pct') or ''),
+            'equity_irr_pct': str((summary.get('metrics') or {}).get('equity_irr_pct') or ''),
+            'payback_years': str((summary.get('metrics') or {}).get('payback_years') or ''),
+            'break_even_capacity_pct': str(
+                (summary.get('metrics') or {}).get('break_even_capacity_pct') or ''
+            ),
         }

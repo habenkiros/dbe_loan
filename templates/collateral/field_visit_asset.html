@@ -48,6 +48,7 @@
                value="{{ land_form.unit_price_per_sqm.value|default:land.unit_price_per_sqm|default:'' }}" {% if locked %}disabled{% endif %}></p>
       <p><label for="id_notes">Notes</label><br>
         <textarea name="notes" id="id_notes" class="field-input-lg" rows="3" {% if locked %}disabled{% endif %}>{{ land_form.notes.value|default:land.notes|default:'' }}</textarea></p>
+      {% include "collateral/_title_fields.html" with form=land_form asset=land %}
       {% else %}
       {% if item_form.errors %}
       <div class="field-form-errors" style="margin-bottom:1rem;padding:0.75rem;background:#fdecea;border:1px solid #e57373;border-radius:6px;">
@@ -55,6 +56,17 @@
         <ul style="margin:0.35rem 0 0 1.1rem;">{% for field, errs in item_form.errors.items %}{% for e in errs %}<li>{{ field }}: {{ e }}</li>{% endfor %}{% endfor %}</ul>
       </div>
       {% endif %}
+      {% if to_be_purchased %}
+      <p class="help">This asset is bought with the loan. Plate and serial wait until delivery — photograph the supplier offer on step 2.</p>
+      {% endif %}
+      <p><label for="id_acquisition_status">Already owned or to be purchased</label><br>
+        <select name="acquisition_status" id="id_acquisition_status" class="field-input-lg" {% if locked %}disabled{% endif %}>
+          {% for val, lbl in item_form.fields.acquisition_status.choices %}
+          {% if val %}
+          <option value="{{ val }}" {% if item.acquisition_status == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endif %}
+          {% endfor %}
+        </select></p>
       <p><label for="id_name">Asset name</label><br>
         <input type="text" name="name" id="id_name" class="field-input-lg" required
                value="{{ item_form.name.value|default:item.name }}" {% if locked %}disabled{% endif %}></p>
@@ -64,6 +76,7 @@
       <p><label for="id_year_made">Year</label><br>
         <input type="number" name="year_made" id="id_year_made" class="field-input-lg" min="1950" max="2100"
                value="{{ item_form.year_made.value|default:item.year_made|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      {% if not to_be_purchased %}
       <p><label for="id_plate_number">Plate / registration</label><br>
         <input type="text" name="plate_number" id="id_plate_number" class="field-input-lg"
                value="{{ item_form.plate_number.value|default:item.plate_number|default:'' }}" {% if locked %}disabled{% endif %}></p>
@@ -73,6 +86,11 @@
       <p><label for="id_odometer_or_hours">Odometer (km) or hours</label><br>
         <input type="text" name="odometer_or_hours" id="id_odometer_or_hours" class="field-input-lg"
                value="{{ item_form.odometer_or_hours.value|default:item.odometer_or_hours|default:'' }}" {% if locked %}disabled{% endif %}></p>
+      {% else %}
+      <input type="hidden" name="plate_number" value="{{ item.plate_number|default:'' }}">
+      <input type="hidden" name="chassis_vin" value="{{ item.chassis_vin|default:'' }}">
+      <input type="hidden" name="odometer_or_hours" value="{{ item.odometer_or_hours|default:'' }}">
+      {% endif %}
       <p><label for="id_condition_grade">Condition</label><br>
         <select name="condition_grade" id="id_condition_grade" class="field-input-lg" {% if locked %}disabled{% endif %}>
           <option value="">——</option>
@@ -85,28 +103,24 @@
                value="{{ item_form.estimated_value.value|default:item.estimated_value }}" {% if locked %}disabled{% endif %}></p>
       <p><label for="id_notes">Notes</label><br>
         <textarea name="notes" id="id_notes" class="field-input-lg" rows="2" {% if locked %}disabled{% endif %}>{{ item_form.notes.value|default:item.notes|default:'' }}</textarea></p>
+      {% include "collateral/_title_fields.html" with form=item_form asset=item %}
       {% endif %}
 
       {% if visit_kind == 'land' %}
       <h4>Plot site GPS</h4>
-      <p class="help">Registered collateral location — photos are verified against this map pin.</p>
-      {% else %}
-      <h4>Storage / yard location (optional)</h4>
-      <p class="help">Vehicles and machinery move — <strong>photo GPS on step 2</strong> is what matters for verification. Mark a yard or branch location here only if useful; you can skip and go to Next.</p>
-      {% endif %}
+      <p class="help">Registered collateral location — photos are verified against this pin. Prefer device GPS; use manual lat/lon only if needed.</p>
       <div id="site-gps-status" class="field-gps-status field-gps-none">GPS not captured yet.</div>
-      {% if visit_kind == 'land' %}
       {% include "collateral/_collateral_location_map.html" with map_id="land-field-map" map_config_id="land-field-map-data" map_data=map_data map_title="Registered plot site" live_site=True %}
-      {% else %}
-      {% include "collateral/_collateral_location_map.html" with map_id="other-field-map" map_config_id="other-field-map-data" map_data=map_data map_title="Optional storage location" live_site=True auto_live_gps=False site_gps_optional=True %}
-      {% endif %}
       {% if not locked %}
-      {% if visit_kind == 'land' %}
       <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark site location (GPS)</button>
-      {% else %}
-      <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-mark-site-gps">Mark storage location (optional)</button>
-      {% endif %}
+      {% include "collateral/_site_gps_manual.html" %}
       {% include "collateral/_gps_attestation_site.html" %}
+      {% endif %}
+      {% else %}
+      <p class="help" style="margin-top:1rem;">
+        Vehicles and movable assets are identified by <strong>plate / VIN</strong> and typed photos.
+        Site GPS is not required and is not used for coverage checks.
+      </p>
       {% endif %}
     </form>
   </div>
@@ -125,7 +139,7 @@
     </div>
     {% if visit_kind == 'other' %}
     {% include "collateral/_other_asset_summary.html" %}
-    <p class="field-section-note">Capture <strong>plate</strong>, <strong>full asset</strong>, and <strong>serial/chassis</strong> photos. GPS is taken when you save each photo.</p>
+    <p class="field-section-note">Capture <strong>plate</strong>, <strong>full asset</strong>, and <strong>serial/chassis</strong> photos. GPS on photos is optional — vehicles are identified by plate/VIN.</p>
     {% if required_photo_type_status %}
     <ul class="field-checklist" style="margin:0.75rem 0;">
       {% for row in required_photo_type_status %}
@@ -239,10 +253,10 @@
   </div>
 </div>
 <script>window.COLLATERAL_GPS_WEAK_M = {{ gps_weak_threshold_m|default:100 }};</script>
-{% if step == 1 %}
-<script>window.COLLATERAL_SITE_MAP_ID = '{% if visit_kind == "land" %}land-field-map{% else %}other-field-map{% endif %}';</script>
+{% if step == 1 and visit_kind == 'land' %}
+<script>window.COLLATERAL_SITE_MAP_ID = 'land-field-map';</script>
 {% endif %}
-<script src="{% static 'js/collateral_field.js' %}?v=field-cam-3"></script>
+<script src="{% static 'js/collateral_field.js' %}?v=field-gps-manual-1"></script>
 {% if visit_kind == 'land' %}
 {% include "collateral/_offline_scripts.html" with visit_kind="land" subject_id=land.id subject_type="LandValuation" %}
 {% else %}

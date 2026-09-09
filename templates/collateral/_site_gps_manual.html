@@ -1,0 +1,24 @@
+{% comment %}Manual lat/lon fallback for immovable site pin. Expects locked. {% endcomment %}
+<input type="hidden" name="site_gps_source" id="site_gps_source" value="">
+<div class="field-manual-gps" style="margin-top:1rem;padding:0.85rem 1rem;border:1px dashed #90a4ae;border-radius:8px;background:#fafafa;">
+  <p style="margin:0 0 0.5rem;"><strong>Or enter coordinates manually</strong></p>
+  <p class="help" style="margin:0 0 0.75rem;">
+    Use when device GPS fails (indoors, weak signal). This is recorded as <em>manual</em> and needs officer attestation.
+    Prefer “Mark site location (GPS)” when the phone can get a fix.
+  </p>
+  <p>
+    <label for="manual_site_lat">Latitude</label><br>
+    <input type="text" id="manual_site_lat" class="field-input-lg" inputmode="decimal"
+           placeholder="e.g. 9.010123" autocomplete="off" {% if locked %}disabled{% endif %}>
+  </p>
+  <p>
+    <label for="manual_site_lon">Longitude</label><br>
+    <input type="text" id="manual_site_lon" class="field-input-lg" inputmode="decimal"
+           placeholder="e.g. 38.750456" autocomplete="off" {% if locked %}disabled{% endif %}>
+  </p>
+  {% if not locked %}
+  <button type="button" class="field-btn field-btn-secondary field-btn-block" id="btn-apply-manual-site-gps">
+    Apply manual coordinates
+  </button>
+  {% endif %}
+</div>

@@ -3685,12 +3685,29 @@ class ProjectSourceUseLine(models.Model):
 
 
 class ProjectCashflowYear(models.Model):
-    """Annual project operating CF vs debt service — not MSME Sheet 3."""
+    """Annual project operating statement — not MSME Sheet 3.
+
+    Sales and operating cost are the COMFAR split. When both are set,
+    operating_cf is sales minus operating cost. Officers may still type
+    a net operating CF only.
+    """
 
     profile = models.ForeignKey(
         ProjectProfile, on_delete=models.CASCADE, related_name='cashflows',
     )
     year_number = models.PositiveSmallIntegerField()
+    revenue = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Sales / operating revenue for the year.',
+    )
+    operating_cost = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+        help_text='Operating costs (materials, labour, overheads).',
+    )
+    capacity_pct = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text='Capacity utilization % (100 = full). Used for break-even.',
+    )
     operating_cf = models.DecimalField(max_digits=20, decimal_places=2)
     debt_service = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 

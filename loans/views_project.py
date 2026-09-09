@@ -26,6 +26,7 @@ from loans.project_overlay import (
     can_edit_project_file,
     can_view_project_file,
     compute_project_metrics,
+    compute_sensitivity,
     ensure_plant_desks,
     equity_structure,
     is_project_file,
@@ -35,6 +36,7 @@ from loans.project_overlay import (
     record_implementation_visit,
     seed_lines_from_profile,
     sources_uses_totals,
+    year_snapshots,
 )
 
 
@@ -71,9 +73,11 @@ def project_file(request, loan_request_id):
 
     lines = list(profile.lines.order_by('side', 'sequence', 'id'))
     cashflows = list(profile.cashflows.order_by('year_number'))
+    cashflow_rows = year_snapshots(profile)
     desks = list(profile.technical_reviews.order_by('desk'))
     totals = sources_uses_totals(profile)
     metrics = compute_project_metrics(profile)
+    sensitivity = compute_sensitivity(profile)
     visits = list(
         loan.monitoring_visits.filter(visit_kind='implementation').order_by('-visited_at', '-id')[:8]
     )
@@ -85,6 +89,8 @@ def project_file(request, loan_request_id):
         'source_lines': [ln for ln in lines if ln.side == ln.SIDE_SOURCE],
         'use_lines': [ln for ln in lines if ln.side == ln.SIDE_USE],
         'cashflows': cashflows,
+        'cashflow_rows': cashflow_rows,
+        'sensitivity': sensitivity,
         'desks': desks,
         'metrics': metrics,
         'structure': equity_structure(profile),
@@ -245,14 +251,28 @@ def project_add_cashflow(request, loan_request_id):
         year = int(request.POST.get('year_number') or '0')
     except (TypeError, ValueError):
         year = 0
+    revenue = parse_decimal(request.POST.get('revenue'))
+    opex = parse_decimal(request.POST.get('operating_cost'))
     ocf = parse_decimal(request.POST.get('operating_cf'))
     ds = parse_decimal(request.POST.get('debt_service')) or Decimal('0')
+    capacity = parse_decimal(request.POST.get('capacity_pct'))
+    if revenue is not None and opex is not None:
+        ocf = revenue - opex
     if year < 1 or ocf is None:
-        messages.error(request, 'Enter a year number and operating cashflow.')
+        messages.error(request, 'Enter a year number and either sales + operating cost, or net operating cashflow.')
+        return redirect('project_file', loan_request_id=loan.id)
+    if capacity is not None and (capacity < 0 or capacity > 200):
+        messages.error(request, 'Capacity utilization must be between 0 and 200%.')
         return redirect('project_file', loan_request_id=loan.id)
     ProjectCashflowYear.objects.update_or_create(
         profile=profile, year_number=year,
-        defaults={'operating_cf': ocf, 'debt_service': ds},
+        defaults={
+            'operating_cf': ocf,
+            'debt_service': ds,
+            'revenue': revenue,
+            'operating_cost': opex,
+            'capacity_pct': capacity,
+        },
     )
     _sync_computed_metrics(profile)
     messages.success(request, 'Cashflow year saved.')

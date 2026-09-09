@@ -15,7 +15,9 @@ def compute_coverage_adequacy(loan_request) -> Dict[str, Any]:
     """
     policy = get_collateral_policy()
     totals = compute_collateral_totals(loan_request)
-    amount = loan_request.amount_requested or Decimal('0')
+    requested = loan_request.amount_requested or Decimal('0')
+    approved = getattr(loan_request, 'committee_final_amount', None)
+    amount = approved if approved else requested
     grand = totals.get('grand_total') or Decimal('0')
 
     ratio = None
@@ -66,6 +68,9 @@ def compute_coverage_adequacy(loan_request) -> Dict[str, Any]:
 
     return {
         'amount_requested': amount,
+        'requested_amount': requested,
+        'coverage_amount': amount,
+        'uses_committee_amount': bool(approved),
         'grand_total': grand,
         'immovable': totals.get('collateral_immovable_value') or Decimal('0'),
         'moveable': totals.get('collateral_moveable_value') or Decimal('0'),
@@ -84,7 +89,6 @@ def _geo_policy_flags(loan_request, policy) -> Dict[str, List]:
     from collateral.map_utils import haversine_m
     from collateral.models import (
         Building, BuildingImage, LandValuation, LandValuationImage,
-        OtherCollateralItem, OtherCollateralItemImage,
     )
 
     flags: List[Dict[str, str]] = []
@@ -123,20 +127,14 @@ def _geo_policy_flags(loan_request, policy) -> Dict[str, List]:
         imgs = LandValuationImage.objects.filter(land_valuation=land)
         check_photos('Land', land.site_gps_lat, land.site_gps_lon, imgs, lambda i: i.get_photo_type_display())
 
-    for item in OtherCollateralItem.objects.filter(loan_request=loan_request):
-        imgs = OtherCollateralItemImage.objects.filter(item=item)
-        check_photos(
-            f'Asset "{item.name}"', item.site_gps_lat, item.site_gps_lon, imgs,
-            lambda i: i.get_photo_type_display(),
-        )
-
+    # Vehicles / movables: identity is plate/VIN — do not gate on yard or photo GPS.
     return {'flags': flags, 'warnings': warnings, 'blockers': blockers}
 
 
 def _declared_address_flags(loan_request, policy) -> Dict[str, List]:
     from collateral.geocoding import declared_address_for_loan, resolve_declared_address_coords
     from collateral.map_utils import haversine_m
-    from collateral.models import Building, LandValuation, OtherCollateralItem
+    from collateral.models import Building, LandValuation
 
     flags: List[Dict[str, str]] = []
     warnings: List[str] = []
@@ -164,10 +162,7 @@ def _declared_address_flags(loan_request, policy) -> Dict[str, List]:
     if land and land.site_gps_lat is not None:
         site_checks.append(('Land plot', land.site_gps_lat, land.site_gps_lon))
 
-    for item in OtherCollateralItem.objects.filter(loan_request=loan_request):
-        if item.site_gps_lat is not None:
-            site_checks.append((f'Asset "{item.name}"', item.site_gps_lat, item.site_gps_lon))
-
+    # Skip movable yard pins — they are not the pledged place.
     if not site_checks:
         return {'flags': flags, 'warnings': warnings, 'blockers': blockers}
 

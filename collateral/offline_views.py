@@ -263,11 +263,8 @@ def _sync_asset_site(kind: str, instance, fields, user) -> Tuple[bool, str]:
         return False, errs or 'Invalid asset data'
     form.save()
     instance.refresh_from_db()
-    if post.get('site_gps_lat'):
-        ok, err = apply_site_gps_to_instance(instance, post, user=user)
-        if err:
-            return False, err
-    return True, 'Asset site saved'
+    # Vehicles: no site GPS — plate/VIN identity only.
+    return True, 'Asset details saved'
 
 
 def _sync_photo(kind: str, instance, fields, image_payload, user, client_uid: str = '') -> Tuple[bool, str]:

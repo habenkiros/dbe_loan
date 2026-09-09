@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.utils import timezone
-from loans.models import LoanRequest, Region
+from loans.models import LoanCategory, LoanRequest, Region
 from loans.collateral_config import get_collateral_estimation_mode, allows_engineering_team
 from loans.collateral_kind import engines_for_loan
 from loans.services.appraisal_prefill import compute_collateral_totals
@@ -137,8 +137,16 @@ def _can_access_collateral(user):
 
 def _collateral_eligible_loans(user=None):
     """Loan requests eligible for collateral: queue_approved or status=Approved. By role and config (loan_officer / engineering_team / both)."""
+    from loans.product_family import FAMILY_IDEA_EQUITY, FAMILY_WHOLESALE
+
     qs = LoanRequest.objects.filter(
         Q(queue_approved=True) | Q(status__iexact='Approved')
+    ).exclude(
+        category__product_family__in=(FAMILY_WHOLESALE, FAMILY_IDEA_EQUITY),
+    ).exclude(
+        category_id__in=LoanCategory.objects.filter(requires_collateral=False).values('pk'),
+    ).exclude(
+        collateral__name__iexact='To be determined',
     )
     if user:
         role = getattr(user, 'role', None)
@@ -966,12 +974,7 @@ def other_field_visit(request, item_id, step=1):
             if item_form.is_valid():
                 item_form.save()
                 item.refresh_from_db()
-                if request.POST.get('site_gps_lat'):
-                    gps_ok, gps_err = apply_site_gps_to_instance(item, request.POST, user=request.user)
-                    if gps_err:
-                        messages.error(request, gps_err)
-                    elif gps_ok:
-                        messages.success(request, 'Asset location saved.')
+                # Vehicles: no site GPS registration — identity is plate/VIN + photos.
                 messages.success(request, 'Asset details saved.')
                 if action == 'save_next':
                     return redirect('collateral:other_field_visit_step', item_id=item_id, step=2)
@@ -993,12 +996,14 @@ def other_field_visit(request, item_id, step=1):
     map_data = other_item_map_data(item)
     image_rows = _annotate_image_distances(item.site_gps_lat, item.site_gps_lon, images)
     pctx = _policy_template_context()
-    from collateral import constants
+    from collateral.registration import item_is_to_be_purchased, required_movable_photo_types
+
     types_present = set(images.values_list('photo_type', flat=True))
     required_photo_type_status = [
         {'key': key, 'label': label, 'ok': key in types_present}
-        for key, label in constants.REQUIRED_MOVABLE_PHOTO_TYPES
+        for key, label in required_movable_photo_types(item)
     ]
+    to_be_purchased = item_is_to_be_purchased(item)
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'other',
@@ -1021,6 +1026,7 @@ def other_field_visit(request, item_id, step=1):
         'image_rows': image_rows,
         'max_photo_distance_m': pctx['max_photo_distance_m'],
         'required_photo_type_status': required_photo_type_status,
+        'to_be_purchased': to_be_purchased,
     })
 
 
@@ -1181,12 +1187,16 @@ def other_collateral_add(request, loan_request_id):
     blocked = block_if_collateral_locked(request, loan_request, 'collateral:other_collateral_list', loan_request_id)
     if blocked:
         return blocked
-    item = OtherCollateralItem.objects.create(
-        loan_request=loan_request,
-        name='Collateral item',
-        estimated_value=Decimal('0'),
-    )
-    messages.info(request, 'Enter asset details on step 1, then add photos.')
+    from collateral.registration import new_movable_item
+
+    item = new_movable_item(loan_request)
+    if item.acquisition_status == OtherCollateralItem.ACQ_TO_BUY:
+        messages.info(
+            request,
+            'Financed asset — enter supplier details on step 1. Plate and serial wait until delivery.',
+        )
+    else:
+        messages.info(request, 'Enter asset details on step 1, then add photos.')
     return redirect('collateral:other_field_visit', item_id=item.pk)
 
 
@@ -1636,9 +1646,12 @@ def unit_price_list(request):
         prices = prices.filter(city_id=city_id)
     paginator = Paginator(prices, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
+    from partners.market_bands import attach_bands_to_unit_prices
+
+    priced = attach_bands_to_unit_prices(list(page_obj.object_list))
     return render(request, 'collateral/unit_price_list.html', {
         'page_obj': page_obj,
-        'prices': page_obj,
+        'prices': priced,
         'selected_city_id': city_id,
     })
 
@@ -1666,6 +1679,7 @@ def unit_price_add(request):
         'main_works': main_works,
         'is_edit': False,
         'price': None,
+        'market_suggest': None,
         'zones_url': request.build_absolute_uri(reverse('ajax_load_zones_by_region')),
         'cities_url': request.build_absolute_uri(reverse('ajax_load_cities_by_zone')),
         'sub_works_url': request.build_absolute_uri(reverse('collateral:ajax_load_sub_works')),
@@ -1699,9 +1713,13 @@ def unit_price_edit(request, price_id):
             form.fields['sub_sub_work'].queryset = SubSubWork.objects.none()
     regions = Region.objects.all().order_by('name')
     main_works = MainWork.objects.all().order_by('order', 'name')
+    from partners.market_bands import attach_bands_to_unit_prices
+
+    attach_bands_to_unit_prices([price])
     return render(request, 'collateral/unit_price_form.html', {
         'form': form,
         'price': price,
+        'market_suggest': getattr(price, 'market_suggest', None),
         'regions': regions,
         'main_works': main_works,
         'is_edit': True,

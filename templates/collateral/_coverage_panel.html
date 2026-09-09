@@ -3,7 +3,10 @@
 <div class="collateral-coverage-panel" style="margin:1rem 0;padding:1rem;border-radius:8px;{% if coverage.blockers %}background:#fdecea;border:1px solid #e57373;{% elif coverage.warnings %}background:#fff8e1;border:1px solid #f9a825;{% else %}background:#e8f5e9;border:1px solid #2e7d32;{% endif %}">
   <h3 style="margin-top:0;">Collateral coverage &amp; adequacy</h3>
   <p>
-    <strong>Loan requested:</strong> {{ coverage.amount_requested|floatformat:2 }}
+    <strong>{% if coverage.uses_committee_amount %}Committee amount:{% else %}Loan requested:{% endif %}</strong> {{ coverage.amount_requested|floatformat:2 }}
+    {% if coverage.uses_committee_amount and coverage.requested_amount %}
+    <small>(requested {{ coverage.requested_amount|floatformat:2 }})</small>
+    {% endif %}
     &nbsp;|&nbsp;
     <strong>Collateral total:</strong> {{ coverage.grand_total|floatformat:2 }}
     {% if coverage.coverage_pct %}

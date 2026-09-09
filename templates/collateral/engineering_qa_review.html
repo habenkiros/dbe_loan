@@ -48,6 +48,24 @@
 
   {% include "collateral/_coverage_panel.html" %}
 
+  {% if qa_checklist %}
+  <div class="qa-panel">
+    <h3 style="margin-top:0;">Engineering checklist</h3>
+    <ul style="margin:0; padding-left:1.1rem;">
+      {% for item in qa_checklist.items %}
+      <li>
+        {% if item.ok %}<span style="color:#155724;">Pass</span>{% else %}<span style="color:#c62828;">Fail</span>{% endif %}
+        — <strong>{{ item.label }}</strong>
+        <br><small>{{ item.detail }}</small>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if not qa_checklist.all_ok %}
+    <p class="help" style="margin:0.75rem 0 0;">Approve is blocked until every item passes. Return the file if the officer must correct it.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if readiness and readiness.applies %}
   <div class="qa-panel">
     <h3 style="margin-top:0;">Field readiness</h3>
@@ -137,6 +155,14 @@
         {{ form.review_note }}
         <br><small class="help">Required when returning for correction.</small>
       </p>
+      <fieldset style="border:1px solid #c8e6c9; border-radius:8px; padding:0.75rem 1rem; margin:0 0 1rem;">
+        <legend>Confirm before approve</legend>
+        <p><label>{{ form.qa_coverage }} {{ form.qa_coverage.label }}</label></p>
+        <p><label>{{ form.qa_gps }} {{ form.qa_gps.label }}</label></p>
+        <p><label>{{ form.qa_evidence }} {{ form.qa_evidence.label }}</label></p>
+        <p><label>{{ form.qa_valuation }} {{ form.qa_valuation.label }}</label></p>
+        <p><label>{{ form.qa_ownership }} {{ form.qa_ownership.label }}</label></p>
+      </fieldset>
       <p>
         <button type="submit" name="action" value="approve" class="btn btn-green">Approve collateral</button>
         <button type="submit" name="action" value="return" class="btn btn-orange"

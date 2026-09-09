@@ -1,0 +1,21 @@
+{% comment %}Owner / title paper. Expects asset and optional form. {% endcomment %}
+<p><label for="id_owner_kind">Who owns this asset</label><br>
+  <select name="owner_kind" id="id_owner_kind" class="field-input-lg" {% if locked %}disabled{% endif %}>
+    {% for val, lbl in form.fields.owner_kind.choices %}
+    {% if val %}
+    <option value="{{ val }}" {% if asset.owner_kind == val %}selected{% endif %}>{{ lbl }}</option>
+    {% endif %}
+    {% endfor %}
+  </select></p>
+<p><label for="id_owner_name">Owner name</label><br>
+  <input type="text" name="owner_name" id="id_owner_name" class="field-input-lg"
+         placeholder="Leave blank if the borrower owns it"
+         value="{{ form.owner_name.value|default:asset.owner_name|default:'' }}" {% if locked %}disabled{% endif %}></p>
+<p><label for="id_title_reference">Deed / plot / title reference</label><br>
+  <input type="text" name="title_reference" id="id_title_reference" class="field-input-lg"
+         placeholder="Deed, plot, libretto, or invoice ref"
+         value="{{ form.title_reference.value|default:asset.title_reference|default:'' }}" {% if locked %}disabled{% endif %}></p>
+<p><label for="id_title_office">Issuing office</label><br>
+  <input type="text" name="title_office" id="id_title_office" class="field-input-lg"
+         placeholder="Woreda land office / registry"
+         value="{{ form.title_office.value|default:asset.title_office|default:'' }}" {% if locked %}disabled{% endif %}></p>

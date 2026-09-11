@@ -8,13 +8,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from loans.forms import IdeaProfileForm
+from loans.idea_appraisal import sync_idea_decision_to_appraisal
 from loans.idea_overlay import (
     can_edit_idea_file,
     can_view_idea_file,
     idea_file_summary,
     is_idea_file,
 )
-from loans.models import CapTableEntry, IdeaProfile, LoanRequest
+from loans.models import CapTableEntry, IdeaProfile, LoanAppraisal, LoanRequest
 from loans.product_intel import intel_context
 
 
@@ -38,17 +39,30 @@ def idea_file(request, loan_request_id):
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
     profile, _ = IdeaProfile.objects.get_or_create(loan_request=loan)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan).first()
     can_edit = can_edit_idea_file(request.user, loan)
     if request.method == 'POST' and can_edit:
-        form = IdeaProfileForm(request.POST, instance=profile)
+        form = IdeaProfileForm(
+            request.POST, instance=profile, appraisal=appraisal, loan_request=loan,
+        )
         if form.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
-            messages.success(request, 'Idea file saved.')
+            sync_idea_decision_to_appraisal(
+                loan, obj, request.user,
+                recommendation=form.cleaned_data.get('recommendation') or '',
+                amount_approved=form.cleaned_data.get('amount_approved'),
+                rate_approved=form.cleaned_data.get('rate_approved'),
+                term_approved_months=form.cleaned_data.get('term_approved_months'),
+                recommendation_comment=form.cleaned_data.get('recommendation_comment') or '',
+                strengths=form.cleaned_data.get('strengths') or '',
+                weaknesses=form.cleaned_data.get('weaknesses') or '',
+            )
+            messages.success(request, 'Idea appraisal saved — scorecard and recommendation updated.')
             return redirect('idea_file', loan_request_id=loan.id)
     else:
-        form = IdeaProfileForm(instance=profile)
+        form = IdeaProfileForm(instance=profile, appraisal=appraisal, loan_request=loan)
 
     overlay = idea_file_summary(loan)
     return render(request, 'loans/idea_file.html', {

@@ -65,6 +65,7 @@ class ProjectEnginePhaseBTests(TestCase):
         LoanAppraisal.objects.create(
             loan_request=loan, created_by=self.officer,
             recommendation='approve', amount_approved=Decimal('75000'),
+            term_approved_months=30, rate_approved=Decimal('12'),
         )
         return loan
 
@@ -102,6 +103,20 @@ class ProjectEnginePhaseBTests(TestCase):
             reviewed_at=timezone.now(),
             reviewed_by=self.officer,
         )
+        # Keep appraisal decision fields aligned with recommended debt
+        try:
+            appr = loan.appraisal
+        except LoanAppraisal.DoesNotExist:
+            appr = LoanAppraisal.objects.create(
+                loan_request=loan, created_by=self.officer,
+                recommendation='approve',
+            )
+        appr.amount_approved = profile.requested_debt
+        appr.recommendation = appr.recommendation or 'approve'
+        appr.term_approved_months = (profile.implementation_months or 0) + (profile.grace_months or 0) or 30
+        if appr.rate_approved is None:
+            appr.rate_approved = Decimal('12')
+        appr.save()
         return profile
 
     def test_general_committee_has_no_project_policy(self):
@@ -142,11 +157,37 @@ class ProjectEnginePhaseBTests(TestCase):
         self._balanced(loan)
         self.assertEqual(project_committee_blockers(loan), [])
 
+    def test_project_appraisal_scorecard_and_evidence(self):
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.project_appraisal import (
+            build_project_scorecard,
+            sync_project_decision_to_appraisal,
+        )
+
+        loan = self._loan(self.project_cat, lid='LR-PB-APP')
+        profile = self._balanced(loan)
+        card = build_project_scorecard(loan, profile)
+        self.assertEqual(card['modality'], 'project')
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_project_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('75000'),
+            rate_approved=Decimal('12'),
+            term_approved_months=30,
+            recommendation_comment='NPV positive, DSCR above 1.25.',
+            strengths='Balanced S&U · plant cleared',
+            weaknesses='Monitor implementation lag',
+        )
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'project')
+        self.assertEqual(project_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'project')
+        self.assertEqual(evidence['scorecard']['modality'], 'project')
     def test_dscr_below_one_blocks(self):
         loan = self._loan(self.project_cat, lid='LR-PB-DSCR')
         self._balanced(loan, project_dscr=Decimal('0.80'))
         self.assertTrue(any('DSCR' in b for b in project_committee_blockers(loan)))
-
     def test_cashflow_years_compute_metrics(self):
         loan = self._loan(self.project_cat, lid='LR-PB-CF')
         profile = self._balanced(loan, npv=None, irr_pct=None, project_dscr=None, discount_rate_pct=Decimal('10'))

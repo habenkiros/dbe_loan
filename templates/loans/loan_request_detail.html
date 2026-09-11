@@ -256,8 +256,8 @@
 
   {% if project_overlay.is_consumer %}
   <div class="lw-panel">
-    <h3>Consumer / HRM</h3>
-    <p class="help" style="margin-top:0;">Salary, DTI, and LTV — not MSME cashflow.</p>
+    <h3>Consumer / HRM appraisal</h3>
+    <p class="help" style="margin-top:0;">Salary, DTI, LTV, affordability, and officer recommendation — not MSME cashflow.</p>
     <div class="lw-facts">
       <span class="lbl">Employer</span>
       <span>{% if project_overlay.profile %}{{ project_overlay.profile.employer_name|default:"Not started" }}{% else %}Not started{% endif %}</span>
@@ -267,11 +267,20 @@
         /
         {% if project_overlay.ltv_pct %}{{ project_overlay.ltv_pct }}%{% else %}—{% endif %}
       </span>
+      {% if project_overlay.scorecard %}
+      <span class="lbl">Score</span>
+      <span>{{ project_overlay.scorecard.total|floatformat:1 }}/100 · {{ project_overlay.scorecard.band_label }}</span>
+      {% endif %}
+      {% if project_overlay.appraisal and project_overlay.appraisal.amount_approved %}
+      <span class="lbl">Recommended</span>
+      <span>{{ project_overlay.appraisal.amount_approved|floatformat:2 }}
+        · {{ project_overlay.appraisal.get_recommendation_display|default:"" }}</span>
+      {% endif %}
     </div>
     {% if project_overlay.committee_blockers %}
     <p class="help" style="color:#7a5b10;">{{ project_overlay.committee_blockers|join:" " }}</p>
     {% endif %}
-    <p><a href="{% url 'consumer_file' loan_request.id %}">Open consumer file →</a></p>
+    <p><a href="{% url 'consumer_file' loan_request.id %}">Open consumer appraisal →</a></p>
   </div>
   {% endif %}
 

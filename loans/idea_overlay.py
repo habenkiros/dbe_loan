@@ -97,7 +97,11 @@ def idea_cap_table_blockers(loan_request) -> List[str]:
 def idea_committee_blockers(loan_request) -> List[str]:
     if not is_idea_file(loan_request):
         return []
-    return list(idea_gate_blockers(loan_request))
+    from loans.idea_appraisal import idea_appraisal_blockers
+
+    blockers = list(idea_gate_blockers(loan_request))
+    blockers.extend(idea_appraisal_blockers(loan_request))
+    return blockers
 
 
 def idea_disbursement_blockers(loan_request) -> List[str]:
@@ -109,13 +113,24 @@ def idea_disbursement_blockers(loan_request) -> List[str]:
 def idea_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     if not is_idea_file(loan_request):
         return None
+    from loans.models import LoanAppraisal
+    from loans.idea_appraisal import build_idea_scorecard
+
     profile = get_idea_profile(loan_request)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if profile is not None:
+        scorecard = build_idea_scorecard(loan_request, profile)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'idea':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_idea': True,
         'is_project': False,
         'is_wholesale': False,
         'is_lease': False,
         'profile': profile,
+        'appraisal': appraisal,
+        'scorecard': scorecard,
         'age_years': startup_age_years(profile),
         'cap_totals': cap_table_totals(profile),
         'committee_blockers': idea_committee_blockers(loan_request),

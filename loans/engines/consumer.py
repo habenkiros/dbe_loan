@@ -33,6 +33,7 @@ class ConsumerEngine(ProductEngine):
     def assist_brief(self) -> Optional[Dict[str, Any]]:
         summary = self.file_summary() or {}
         profile = summary.get('profile')
+        scorecard = summary.get('scorecard') or {}
         return {
             'family': self.family,
             'family_label': self.family_label,
@@ -40,5 +41,8 @@ class ConsumerEngine(ProductEngine):
             'employer': getattr(profile, 'employer_name', '') if profile else '',
             'dti_pct': str(summary.get('dti_pct') or ''),
             'ltv_pct': str(summary.get('ltv_pct') or ''),
+            'score': str(scorecard.get('total') or ''),
+            'band': scorecard.get('band_label') or '',
+            'installment': str(scorecard.get('installment') or ''),
             'blockers': (summary.get('committee_blockers') or [])[:8],
         }

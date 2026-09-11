@@ -48,6 +48,19 @@ class LoginLockoutTests(TestCase):
             SecurityAuditLog.objects.filter(event_type=SecurityAuditLog.EVT_LOGIN_SUCCESS).exists()
         )
 
+    def test_authenticated_login_ignores_next_to_avoid_permission_loop(self):
+        """Logged-in non-superadmin + ?next= to a gated page must not bounce forever."""
+        self.client.force_login(self.user)
+        resp = self.client.get(
+            reverse('login') + '?next=/collateral/settings/policy/',
+            follow=False,
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, '/hub/')
+        # Policy is admin/superadmin — officer gets 403, not another login redirect.
+        denied = self.client.get('/collateral/settings/policy/', follow=False)
+        self.assertEqual(denied.status_code, 403)
+
 
 @override_settings(MFA_REQUIRED=False)
 class MfaFlowTests(TestCase):

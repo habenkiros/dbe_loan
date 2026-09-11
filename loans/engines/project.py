@@ -36,6 +36,7 @@ class ProjectEngine(ProductEngine):
             return None
         profile = summary.get('profile')
         totals = summary.get('totals') or {}
+        scorecard = summary.get('scorecard') or {}
         return {
             'family': self.family,
             'family_label': self.family_label,
@@ -52,4 +53,6 @@ class ProjectEngine(ProductEngine):
             'break_even_capacity_pct': str(
                 (summary.get('metrics') or {}).get('break_even_capacity_pct') or ''
             ),
+            'score': str(scorecard.get('total') or ''),
+            'band': scorecard.get('band_label') or '',
         }

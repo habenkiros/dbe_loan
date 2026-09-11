@@ -118,9 +118,12 @@ def ijarah_rent_blockers(loan_request) -> List[str]:
 def lease_committee_blockers(loan_request) -> List[str]:
     if not is_lease_file(loan_request):
         return []
+    from loans.lease_appraisal import lease_appraisal_blockers
+
     blockers = list(lease_policy_blockers(loan_request))
     if is_ijarah_file(loan_request):
         blockers.extend(ijarah_rent_blockers(loan_request))
+    blockers.extend(lease_appraisal_blockers(loan_request))
     return blockers
 
 
@@ -152,17 +155,28 @@ def lease_disbursement_blockers(loan_request) -> List[str]:
 def lease_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     if not is_lease_file(loan_request):
         return None
+    from loans.models import LoanAppraisal
+    from loans.lease_appraisal import build_lease_scorecard
+
     profile = get_lease_asset(loan_request)
     ijarah = is_ijarah_file(loan_request)
     latest_sharia = None
     if ijarah:
         latest_sharia = loan_request.sharia_reviews.order_by('-created_at', '-id').first()
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if profile is not None:
+        scorecard = build_lease_scorecard(loan_request, profile)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'lease':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_lease': True,
         'is_ijarah': ijarah,
         'is_project': False,
         'is_wholesale': False,
         'profile': profile,
+        'appraisal': appraisal,
+        'scorecard': scorecard,
         'contribution_share': contribution_share(profile),
         'latest_sharia': latest_sharia,
         'rent_lines': list(profile.rent_lines.all()) if profile else [],

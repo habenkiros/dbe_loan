@@ -82,7 +82,15 @@
 
     {# ——— Appraisal ——— #}
     <div class="ev-card">
-      <h3>Appraisal snapshot</h3>
+      <h3>
+        {% if evidence.modality == 'consumer' %}Consumer appraisal
+        {% elif evidence.modality == 'project' %}Project appraisal
+        {% elif evidence.modality == 'wholesale' %}Wholesale / PFI appraisal
+        {% elif evidence.modality == 'lease' %}{% if evidence.scorecard.is_ijarah %}Ijarah{% else %}Lease{% endif %} appraisal
+        {% elif evidence.modality == 'murabaha' %}Murabaha appraisal
+        {% elif evidence.modality == 'idea' %}Idea / equity appraisal
+        {% else %}Appraisal snapshot{% endif %}
+      </h3>
       {% if evidence.appraisal %}
       <p class="ev-meta">
         <span class="ev-badge ev-ok">{{ evidence.appraisal.get_recommendation_display|default:"—" }}</span>
@@ -100,7 +108,70 @@
           {{ evidence.appraisal.term_approved_months|default:"—" }} mo
           · {% if evidence.appraisal.rate_approved %}{{ evidence.appraisal.rate_approved }}%{% else %}—{% endif %}
         </li>
-        {% if evidence.appraisal.collateral_total_value or evidence.appraisal.collateral_coverage_ratio %}
+        {% if evidence.modality == 'consumer' and evidence.scorecard %}
+        <li><strong>DTI / LTV:</strong>
+          {% if evidence.scorecard.dti_pct != None %}{{ evidence.scorecard.dti_pct }}%{% else %}—{% endif %}
+          /
+          {% if evidence.scorecard.ltv_pct != None %}{{ evidence.scorecard.ltv_pct }}%{% else %}—{% endif %}
+          <small>(LTV cap {{ evidence.scorecard.ltv_cap }}%)</small>
+        </li>
+        {% if evidence.scorecard.installment %}
+        <li><strong>Installment:</strong>
+          {{ evidence.scorecard.installment|floatformat:2 }} ETB/mo
+          {% if evidence.scorecard.payment_burden_pct != None %}
+          · {{ evidence.scorecard.payment_burden_pct }}% of pay
+          {% endif %}
+        </li>
+        {% endif %}
+        {% elif evidence.modality == 'project' and evidence.scorecard %}
+        <li><strong>NPV / IRR / DSCR:</strong>
+          {% if evidence.scorecard.npv != None %}{{ evidence.scorecard.npv|floatformat:0 }}{% else %}—{% endif %}
+          · {% if evidence.scorecard.irr_pct != None %}{{ evidence.scorecard.irr_pct }}%{% else %}—{% endif %}
+          · {% if evidence.scorecard.dscr != None %}{{ evidence.scorecard.dscr }}{% else %}—{% endif %}
+        </li>
+        {% elif evidence.modality == 'wholesale' and evidence.scorecard %}
+        <li><strong>PAR>90 / NPL:</strong>
+          {% if evidence.scorecard.par90_pct != None %}{{ evidence.scorecard.par90_pct }}%{% else %}—{% endif %}
+          /
+          {% if evidence.scorecard.npl_pct != None %}{{ evidence.scorecard.npl_pct }}%{% else %}—{% endif %}
+          <small>(PAR cap {{ evidence.scorecard.par90_cap }}%)</small>
+        </li>
+        {% if evidence.scorecard.institution_name %}
+        <li><strong>Institution:</strong> {{ evidence.scorecard.institution_name }}</li>
+        {% endif %}
+        {% elif evidence.modality == 'lease' and evidence.scorecard %}
+        <li><strong>Contribution / ancillary:</strong>
+          {% if evidence.scorecard.contribution_pct != None %}{{ evidence.scorecard.contribution_pct }}%{% else %}—{% endif %}
+          /
+          {% if evidence.scorecard.ancillary_pct != None %}{{ evidence.scorecard.ancillary_pct }}%{% else %}—{% endif %}
+        </li>
+        <li><strong>Asset:</strong>
+          {% if evidence.scorecard.asset_price %}{{ evidence.scorecard.asset_price|floatformat:0 }}{% else %}—{% endif %}
+          {% if evidence.scorecard.asset_description %} · {{ evidence.scorecard.asset_description }}{% endif %}
+        </li>
+        {% if evidence.scorecard.is_ijarah and evidence.scorecard.monthly_rent %}
+        <li><strong>Monthly rent:</strong> {{ evidence.scorecard.monthly_rent|floatformat:2 }}</li>
+        {% endif %}
+        {% elif evidence.modality == 'murabaha' and evidence.scorecard %}
+        <li><strong>Cost / markup / selling:</strong>
+          {% if evidence.scorecard.cost_price %}{{ evidence.scorecard.cost_price|floatformat:0 }}{% else %}—{% endif %}
+          · {% if evidence.scorecard.markup_pct != None %}{{ evidence.scorecard.markup_pct }}%{% else %}—{% endif %}
+          · {% if evidence.scorecard.selling_price %}{{ evidence.scorecard.selling_price|floatformat:0 }}{% else %}—{% endif %}
+        </li>
+        {% if evidence.scorecard.goods_description %}
+        <li><strong>Goods:</strong> {{ evidence.scorecard.goods_description }}</li>
+        {% endif %}
+        {% elif evidence.modality == 'idea' and evidence.scorecard %}
+        <li><strong>Venture / age:</strong>
+          {{ evidence.scorecard.venture_name|default:"—" }}
+          · {% if evidence.scorecard.age_years != None %}{{ evidence.scorecard.age_years }}y{% else %}—{% endif %}
+          <small>(max {{ evidence.scorecard.max_age_years }}y)</small>
+        </li>
+        <li><strong>DBE share:</strong>
+          {% if evidence.scorecard.proposed_dbe_share_pct != None %}{{ evidence.scorecard.proposed_dbe_share_pct }}%{% else %}—{% endif %}
+          {% if evidence.scorecard.implements_in_ethiopia %} · Ethiopia{% endif %}
+        </li>
+        {% elif evidence.appraisal.collateral_total_value or evidence.appraisal.collateral_coverage_ratio %}
         <li><strong>Sheet 5 coverage:</strong>
           {% if evidence.appraisal.collateral_total_value %}{{ evidence.appraisal.collateral_total_value|floatformat:2 }}{% else %}—{% endif %}
           {% if evidence.appraisal.collateral_coverage_ratio %}
@@ -116,10 +187,30 @@
       <p class="ev-meta"><strong>Weaknesses:</strong> {{ evidence.weaknesses_short }}</p>
       {% endif %}
       <div class="ev-actions list-actions">
+        {% if evidence.modality == 'consumer' %}
+        {% url 'consumer_file' loan_request.id as cons_url %}
+        {% include "includes/list_action.html" with href=cons_url icon="appraisal" label="Consumer desk" tone="blue" only %}
+        {% elif evidence.modality == 'project' %}
+        {% url 'project_file' loan_request.id as proj_url %}
+        {% include "includes/list_action.html" with href=proj_url icon="appraisal" label="Project desk" tone="blue" only %}
+        {% elif evidence.modality == 'wholesale' %}
+        {% url 'wholesale_file' loan_request.id as wh_url %}
+        {% include "includes/list_action.html" with href=wh_url icon="appraisal" label="PFI desk" tone="blue" only %}
+        {% elif evidence.modality == 'lease' %}
+        {% url 'lease_file' loan_request.id as lease_url %}
+        {% include "includes/list_action.html" with href=lease_url icon="appraisal" label="Asset desk" tone="blue" only %}
+        {% elif evidence.modality == 'murabaha' %}
+        {% url 'murabaha_file' loan_request.id as mur_url %}
+        {% include "includes/list_action.html" with href=mur_url icon="appraisal" label="Murabaha desk" tone="blue" only %}
+        {% elif evidence.modality == 'idea' %}
+        {% url 'idea_file' loan_request.id as idea_url %}
+        {% include "includes/list_action.html" with href=idea_url icon="appraisal" label="Idea desk" tone="blue" only %}
+        {% else %}
         {% url 'committee_appraisal_pack' loan_request.id as pack_url2 %}
         {% include "includes/list_action.html" with href=pack_url2 icon="appraisal" label="Sheets 1–7" tone="blue" only %}
         {% url 'export_appraisal_pack_pdf' loan_request.id as pdf_url %}
         {% include "includes/list_action.html" with href=pdf_url icon="print" label="PDF" tone="green" only %}
+        {% endif %}
       </div>
       {% else %}
       <p class="ev-empty">No appraisal on this loan yet.</p>
@@ -155,6 +246,26 @@
         <li>Other: {{ evidence.collateral_totals.total_other|floatformat:2 }}</li>
         {% endif %}
       </ul>
+      {% if evidence.risk_brief %}
+      <p class="ev-meta" style="margin-top:0.45rem;">
+        <span class="ev-badge {% if evidence.risk_brief.overall == 'elevated' %}ev-bad{% elif evidence.risk_brief.overall == 'watch' %}ev-warn{% else %}ev-ok{% endif %}">
+          {{ evidence.risk_brief.overall_label }}
+        </span>
+        {% if evidence.risk_brief.gps and evidence.risk_brief.gps.score != None %}
+        · GPS {{ evidence.risk_brief.gps.label }}
+        {% endif %}
+      </p>
+      {% if evidence.risk_brief.market_outliers %}
+      <ul>
+        {% for o in evidence.risk_brief.market_outliers|slice:":3" %}
+        <li style="font-size:0.82rem;">{{ o.asset }}: {{ o.message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if evidence.risk_brief.duplicates %}
+      <p class="ev-meta"><span class="ev-badge ev-bad">Possible recycled photos</span></p>
+      {% endif %}
+      {% endif %}
       {% elif evidence.has_collateral %}
       <p class="ev-meta">Field work registered — open the pack for values and photos.</p>
       {% else %}

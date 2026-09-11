@@ -1,11 +1,17 @@
 {# Shared appraisal pack body (HTML view + WeasyPrint PDF). Expects pack context. #}
 {% if for_pdf %}
-<p class="pack-banner"><strong>Appraisal pack</strong> — Sheets 1–7
+<p class="pack-banner"><strong>Appraisal pack</strong>
+  {% if modality_pack %} — {{ modality_pack.title }}{% else %} — Sheets 1–7{% endif %}
   {% if mode_label %} · Mode: <strong>{{ mode_label }}</strong>{% endif %}
   · {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}
 </p>
 {% else %}
-<p class="pack-banner"><strong>Read-only appraisal pack</strong> — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.
+<p class="pack-banner"><strong>Read-only appraisal pack</strong>
+  {% if modality_pack %}
+  — product-desk pack for CRM / committee (not MSME Sheets 1–7).
+  {% else %}
+  — Sheets 1–7 as completed by the loan officer. Committee members cannot edit this data here.
+  {% endif %}
   {% if mode_label %} · Mode: <strong>{{ mode_label }}</strong>{% endif %}
 </p>
 {% endif %}
@@ -28,7 +34,7 @@
   {% if scorecard.pillars %}
   <ul style="margin:0.5rem 0 0 1.1rem; font-size:0.9rem;">
     {% for p in scorecard.pillars %}
-    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }}</li>
+    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }}{% if p.note %} — {{ p.note }}{% elif p.remark %} — {{ p.remark }}{% endif %}</li>
     {% endfor %}
   </ul>
   {% endif %}
@@ -51,6 +57,36 @@
   {% endif %}
 </div>
 
+{% if modality_pack %}
+<div id="modality" class="pack-section">
+  <h2>{{ modality_pack.title }}</h2>
+  <p class="help" style="margin-top:0;">
+    {% if modality_pack.algorithm %}{{ modality_pack.algorithm }} · {% endif %}
+    Product desk metrics for CRM comment and committee — not Sheet 3 / Sheet 7.
+  </p>
+  <div class="pack-grid">
+    {% for row in modality_pack.rows %}
+    <span class="lbl">{{ row.label }}</span><span>{{ row.value }}</span>
+    {% endfor %}
+  </div>
+  {% if modality_pack.comment %}
+  <p style="margin-top:0.75rem;"><strong>Rationale:</strong> {{ modality_pack.comment }}</p>
+  {% endif %}
+  {% if modality_pack.strengths %}
+  <p><strong>Strengths:</strong> {{ modality_pack.strengths|linebreaksbr }}</p>
+  {% endif %}
+  {% if modality_pack.weaknesses %}
+  <p><strong>Weaknesses / conditions:</strong> {{ modality_pack.weaknesses|linebreaksbr }}</p>
+  {% endif %}
+  {% if not for_pdf and modality_pack.desk_url_name %}
+  <p class="no-print list-actions" style="margin-top:0.75rem;">
+    {% url modality_pack.desk_url_name loan_request.id as desk_url %}
+    {% include "includes/list_action.html" with href=desk_url icon="appraisal" label="Open product desk" tone="blue" only %}
+  </p>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if not for_pdf %}
 <p>
   <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
@@ -59,8 +95,13 @@
   {% if appraisal.created_by %}&nbsp;|&nbsp; Officer: {{ appraisal.created_by.username }}{% endif %}
 </p>
 <p class="pack-nav no-print">
+  {% if modality_pack %}
+  <a href="#modality">Product desk</a>
+  <a href="#sheet6">Decision</a>
+  {% else %}
   <a href="#sheet1">Sheet 1</a><a href="#sheet2">Sheet 2</a><a href="#sheet3">Sheet 3</a>
   <a href="#sheet4">Sheet 4</a><a href="#sheet5">Sheet 5</a><a href="#sheet6">Sheet 6</a><a href="#sheet7">Sheet 7</a>
+  {% endif %}
   &nbsp;|&nbsp;<a href="{% url 'loan_request_detail_manager' loan_request.id %}">← Committee review</a>
   {% if loan_request.committee_status == 'committee_approved' %}
   &nbsp;|&nbsp;<a href="{% url 'post_approval_detail' loan_request.id %}">Post-approval track</a>
@@ -75,6 +116,7 @@
 </p>
 {% endif %}
 
+{% if sheet_pack %}
 <div id="sheet1" class="pack-section">
   <h2>Sheet 1 — Basic information</h2>
   {% if basic_info %}
@@ -142,10 +184,11 @@
     <span class="lbl">Coverage</span><span>{{ appraisal.collateral_coverage_ratio|default:"—" }}</span>
   </div>
 </div>
+{% endif %}
 
 <div id="sheet6" class="pack-section">
-  <h2>Sheet 6 — Summary &amp; decision</h2>
-  {% if scorecard %}
+  <h2>{% if modality_pack %}Officer decision{% else %}Sheet 6 — Summary &amp; decision{% endif %}</h2>
+  {% if scorecard and sheet_pack %}
   <h3>Explainable credit scorecard</h3>
   <div class="pack-grid">
     <span class="lbl">Total</span><span>{{ scorecard.total }} / 100 ({{ scorecard.band_label }})</span>
@@ -159,11 +202,12 @@
   </div>
   {% if risks %}<h3>Risks</h3><ul>{% for r in risks %}<li><strong>{{ r.risk }}</strong> — {{ r.mitigation|default:"—" }}</li>{% endfor %}</ul>{% endif %}
   {% if conditions %}<h3>Conditions</h3><ul>{% for c in conditions %}<li>{{ c.description }}</li>{% endfor %}</ul>{% endif %}
-  {% if not for_pdf %}
+  {% if not for_pdf and sheet_pack %}
   <p><a href="{% url 'appraisal_features_json' loan_request.id %}">Download features JSON</a></p>
   {% endif %}
 </div>
 
+{% if sheet_pack %}
 <div id="sheet7" class="pack-section">
   <h2>Sheet 7 — Amortization</h2>
   {% if amortization %}
@@ -182,3 +226,4 @@
   </table>
   {% else %}<p>No schedule generated.</p>{% endif %}
 </div>
+{% endif %}

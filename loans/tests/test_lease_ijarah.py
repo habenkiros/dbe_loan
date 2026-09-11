@@ -79,9 +79,20 @@ class LeaseIjarahTests(TestCase):
             delivery_date=date(2026, 3, 1),
             insurance_in_force=True,
             bank_holds_title=True,
+            rent_term_months=36,
         )
         kwargs.update(extra)
-        return LeaseAssetProfile.objects.create(**kwargs)
+        profile = LeaseAssetProfile.objects.create(**kwargs)
+        from loans.lease_appraisal import sync_lease_decision_to_appraisal
+        sync_lease_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('1800000'),
+            rate_approved=Decimal('12') if loan.category.product_family == FAMILY_LEASE else Decimal('0'),
+            term_approved_months=profile.rent_term_months or 36,
+            recommendation_comment='Contribution and title support approval.',
+        )
+        return profile
 
     def test_general_has_no_lease_gates(self):
         loan = self._loan(self.general, lid='LR-LS-G')
@@ -177,10 +188,20 @@ class LeaseIjarahTests(TestCase):
             'bank_holds_title': 'on',
             'asset_status': LeaseAssetProfile.STATUS_ON_LEASE,
             'notes': '',
+            'recommendation': 'approve',
+            'amount_approved': '1300000',
+            'rate_approved': '12',
+            'term_approved_months': '36',
+            'recommendation_comment': 'Ready for committee.',
+            'strengths': 'New goods; 20% contribution.',
+            'weaknesses': '',
         })
         self.assertEqual(resp.status_code, 302)
         loan.refresh_from_db()
         self.assertEqual(loan.lease_asset.supplier_name, 'Hawassa Motors')
+        appr = LoanAppraisal.objects.get(loan_request=loan)
+        self.assertEqual(appr.recommendation, 'approve')
+        self.assertEqual(appr.scorecard_detail['modality'], 'lease')
 
     def test_ijarah_officer_can_add_rent_and_sharia(self):
         loan = self._loan(self.ijarah_cat, lid='LR-LS-RJ')
@@ -207,3 +228,57 @@ class LeaseIjarahTests(TestCase):
         self.client.force_login(self.officer)
         resp = self.client.get(reverse('lease_file', args=[loan.id]))
         self.assertEqual(resp.status_code, 302)
+
+    def test_lease_appraisal_scorecard_and_evidence(self):
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.lease_appraisal import (
+            build_lease_scorecard,
+            lease_appraisal_blockers,
+            sync_lease_decision_to_appraisal,
+        )
+
+        loan = self._loan(self.lease_cat, lid='LR-LS-SC')
+        profile = LeaseAssetProfile.objects.create(
+            loan_request=loan,
+            supplier_name='Score Works',
+            asset_description='CNC lathe',
+            is_new_goods=True,
+            serial_number='CNC-1',
+            asset_price=Decimal('2500000'),
+            lessee_contribution=Decimal('625000'),
+            ancillary_amount=Decimal('200000'),
+            price_checked=True,
+            delivery_date=date(2026, 5, 1),
+            insurance_in_force=True,
+            bank_holds_title=True,
+            rent_term_months=48,
+        )
+        self.assertTrue(lease_appraisal_blockers(loan))
+        card = build_lease_scorecard(loan, profile)
+        self.assertEqual(card['modality'], 'lease')
+        self.assertFalse(card['is_ijarah'])
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_lease_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('2075000'),
+            rate_approved=Decimal('11'),
+            term_approved_months=48,
+            recommendation_comment='25% contribution; controls on file.',
+        )
+        self.assertEqual(appraisal.recommendation, 'approve')
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'lease')
+        self.assertEqual(saved['modality'], 'lease')
+        self.assertEqual(lease_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'lease')
+        self.assertEqual(evidence['scorecard']['modality'], 'lease')
+
+    def test_ijarah_committee_needs_rent_and_appraisal(self):
+        loan = self._loan(self.ijarah_cat, lid='LR-LS-IJC')
+        profile = self._ready_asset(loan)
+        blockers = lease_committee_blockers(loan)
+        self.assertTrue(any('rent' in b.lower() or 'rental' in b.lower() for b in blockers))
+        profile.monthly_rent = Decimal('45000')
+        profile.save(update_fields=['monthly_rent'])
+        self.assertEqual(lease_committee_blockers(loan), [])

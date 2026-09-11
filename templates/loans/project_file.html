@@ -145,9 +145,39 @@
       </div>
     </section>
 
+    <section class="pf-panel" id="decision">
+      <h2>Officer recommendation</h2>
+      <p class="help">
+        Project appraisal decision for committee — not MSME Sheet 6.
+        Score uses NPV, IRR, DSCR, and structure / plant-desk completeness.
+      </p>
+      {% if overlay.scorecard %}
+      <p>
+        Project score
+        <strong>{{ overlay.scorecard.total|floatformat:1 }}/100</strong>
+        ({{ overlay.scorecard.band_label }})
+        <span class="help">· {{ overlay.scorecard.algorithm }}</span>
+      </p>
+      <ul class="help">
+        {% for p in overlay.scorecard.pillars %}
+        <li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.note }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="pf-fields">
+        {% include "loans/_pf_field.html" with field=form.recommendation %}
+        {% include "loans/_pf_field.html" with field=form.amount_approved %}
+        {% include "loans/_pf_field.html" with field=form.term_approved_months %}
+        {% include "loans/_pf_field.html" with field=form.rate_approved %}
+        {% include "loans/_pf_field.html" with field=form.recommendation_comment wide=True %}
+        {% include "loans/_pf_field.html" with field=form.strengths wide=True %}
+        {% include "loans/_pf_field.html" with field=form.weaknesses wide=True %}
+      </div>
+    </section>
+
     {% if can_edit %}
     <div class="pf-actions">
-      <button type="submit" class="btn btn-green">Save project profile</button>
+      <button type="submit" class="btn btn-green">Save project appraisal</button>
     </div>
     {% else %}
     <p class="help">Read only on this file.</p>

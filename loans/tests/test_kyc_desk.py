@@ -41,6 +41,10 @@ class KycDeskTests(TestCase):
             username='kyc_eng', password='pass', phone_number='0911999002',
             role='engineer',
         )
+        self.legal = User.objects.create_user(
+            username='kyc_legal', password='pass', phone_number='0911999003',
+            role='legal_officer',
+        )
         self.project_cat = LoanCategory.objects.create(
             name='Kyc Project', product_family=FAMILY_PROJECT,
         )
@@ -127,6 +131,35 @@ class KycDeskTests(TestCase):
         self.assertContains(resp, 'KYC packs')
         self.assertContains(resp, 'Identity documents present')
         self.assertContains(resp, 'Project financing appraisal')
+
+    def test_legal_officer_opens_detail_and_sees_legal_clear_form(self):
+        loan = self._loan(self.project_cat, 'LR-KYC-LEGAL-UI')
+        ensure_intake_screenings(loan)
+        client = Client()
+        client.force_login(self.legal)
+        resp = client.get(reverse('loan_request_detail', args=[loan.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['kyc_my_desk'], 'legal')
+        self.assertContains(resp, 'name="desk" value="legal"')
+        self.assertContains(resp, 'Legal personality / capacity confirmed')
+        self.assertNotContains(resp, 'name="desk" value="crm"')
+
+    def test_legal_officer_can_clear_legal_pack_via_http(self):
+        loan = self._loan(self.project_cat, 'LR-KYC-LEGAL-CLR')
+        ensure_intake_screenings(loan)
+        client = Client()
+        client.force_login(self.legal)
+        payload = {
+            'desk': 'legal',
+            'action': 'clear',
+            'note': 'capacity ok',
+        }
+        for key in complete_checklist_payload('legal', loan):
+            payload[f'check_{key}'] = 'on'
+        resp = client.post(reverse('kyc_screening_action', args=[loan.id]), payload)
+        self.assertEqual(resp.status_code, 302)
+        row = loan.desk_screenings.get(desk=CreditDeskScreening.DESK_LEGAL)
+        self.assertEqual(row.status, CreditDeskScreening.STATUS_CLEARED)
 
     def test_cannot_clear_crm_without_checklist(self):
         loan = self._loan(self.project_cat, 'LR-KYC-CL')

@@ -104,7 +104,17 @@ class FundAndWholesaleTests(TestCase):
             target_regions='Tigray',
         )
         kwargs.update(extra)
-        return PfiInstitutionProfile.objects.create(**kwargs)
+        profile = PfiInstitutionProfile.objects.create(**kwargs)
+        from loans.wholesale_appraisal import sync_wholesale_decision_to_appraisal
+        sync_wholesale_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=profile.facility_amount,
+            rate_approved=profile.dbe_to_pfi_rate_pct,
+            term_approved_months=profile.tenor_months,
+            recommendation_comment='PFI controls and PAR within fund band.',
+        )
+        return profile
 
     def test_general_without_fund_is_ungated(self):
         loan = self._loan(self.general, lid='LR-FW-G')
@@ -227,10 +237,21 @@ class FundAndWholesaleTests(TestCase):
             'target_youth_pct': '20',
             'target_regions': 'Tigray',
             'notes': '',
+            'recommendation': 'approve',
+            'amount_approved': '500000',
+            'rate_approved': '4.5',
+            'term_approved_months': '36',
+            'recommendation_comment': 'Ready for committee.',
+            'strengths': 'PAR and MIS adequate.',
+            'weaknesses': '',
         })
         self.assertEqual(resp.status_code, 302)
         loan.refresh_from_db()
         self.assertEqual(loan.pfi_profile.institution_name, 'Awash Bank PFI')
+        from loans.models import LoanAppraisal
+        appr = LoanAppraisal.objects.get(loan_request=loan)
+        self.assertEqual(appr.recommendation, 'approve')
+        self.assertEqual(appr.scorecard_detail['modality'], 'wholesale')
 
     def test_general_cannot_open_pfi_page(self):
         loan = self._loan(self.general, lid='LR-FW-NO')
@@ -247,3 +268,52 @@ class FundAndWholesaleTests(TestCase):
     def test_fund_disbursement_empty_without_envelope_pressure(self):
         loan = self._loan(self.general, lid='LR-FW-OK2', financing_fund=self.kfw, amount_requested=Decimal('10000'))
         self.assertEqual(fund_disbursement_blockers(loan), [])
+
+    def test_wholesale_appraisal_scorecard_and_evidence(self):
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.wholesale_appraisal import (
+            build_wholesale_scorecard,
+            sync_wholesale_decision_to_appraisal,
+            wholesale_appraisal_blockers,
+        )
+
+        loan = self._loan(self.wholesale, lid='LR-FW-SC', financing_fund=self.kfw)
+        profile = PfiInstitutionProfile.objects.create(
+            loan_request=loan,
+            institution_name='Scorecard MFI',
+            kind=PfiInstitutionProfile.KIND_MFI,
+            license_number='MFI-SC',
+            has_adequate_mis=True,
+            capital=Decimal('3000000'),
+            npl_pct=Decimal('3.00'),
+            par30_pct=Decimal('5.00'),
+            par90_pct=Decimal('4.00'),
+            audited_year=2024,
+            credit_policy_on_file=True,
+            on_lending_policy_on_file=True,
+            has_governance=True,
+            has_esms=True,
+            facility_amount=Decimal('400000'),
+            tenor_months=24,
+            end_user_rate_ceiling_pct=Decimal('11.00'),
+            dbe_to_pfi_rate_pct=Decimal('4.50'),
+        )
+        self.assertTrue(wholesale_appraisal_blockers(loan))
+        card = build_wholesale_scorecard(loan, profile)
+        self.assertEqual(card['modality'], 'wholesale')
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_wholesale_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('400000'),
+            rate_approved=Decimal('4.50'),
+            term_approved_months=24,
+            recommendation_comment='Controls and PAR support facility.',
+        )
+        self.assertEqual(appraisal.recommendation, 'approve')
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'wholesale')
+        self.assertEqual(saved['modality'], 'wholesale')
+        self.assertEqual(wholesale_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'wholesale')
+        self.assertEqual(evidence['scorecard']['modality'], 'wholesale')

@@ -66,6 +66,25 @@ def compute_coverage_adequacy(loan_request) -> Dict[str, Any]:
     warnings.extend(exif_flags['warnings'])
     blockers.extend(exif_flags['blockers'])
 
+    try:
+        from collateral.intelligence import duplicate_flags_for_loan, market_outlier_flags
+        for o in market_outlier_flags(loan_request):
+            flags.append({
+                'level': o['level'] if o['level'] != 'block' else 'warn',
+                'key': o.get('key') or 'market_outlier',
+                'message': f"{o.get('asset')}: {o.get('message')}",
+            })
+            warnings.append(f"{o.get('asset')}: {o.get('message')}")
+        for d in duplicate_flags_for_loan(loan_request):
+            flags.append({
+                'level': 'warn',
+                'key': d.get('key') or 'duplicate_photo',
+                'message': d.get('message'),
+            })
+            warnings.append(d.get('message'))
+    except Exception:
+        pass
+
     return {
         'amount_requested': amount,
         'requested_amount': requested,

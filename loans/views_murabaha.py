@@ -7,7 +7,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from loans.forms import MurabahaContractForm
-from loans.models import LoanRequest, MurabahaContract, ShariaReview
+from loans.models import LoanAppraisal, LoanRequest, MurabahaContract, ShariaReview
+from loans.murabaha_appraisal import sync_murabaha_decision_to_appraisal
 from loans.murabaha_overlay import (
     can_edit_murabaha_file,
     can_view_murabaha_file,
@@ -38,18 +39,31 @@ def murabaha_file(request, loan_request_id):
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
     contract, _ = MurabahaContract.objects.get_or_create(loan_request=loan)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan).first()
     can_edit = can_edit_murabaha_file(request.user, loan)
     if request.method == 'POST' and can_edit:
-        form = MurabahaContractForm(request.POST, instance=contract)
+        form = MurabahaContractForm(
+            request.POST, instance=contract, appraisal=appraisal, loan_request=loan,
+        )
         if form.is_valid():
             obj = form.save(commit=False)
             obj.selling_price = compute_selling_price(obj.cost_price, obj.markup_pct)
             obj.updated_by = request.user
             obj.save()
-            messages.success(request, 'Murabaha contract saved.')
+            sync_murabaha_decision_to_appraisal(
+                loan, obj, request.user,
+                recommendation=form.cleaned_data.get('recommendation') or '',
+                amount_approved=form.cleaned_data.get('amount_approved'),
+                rate_approved=form.cleaned_data.get('rate_approved'),
+                term_approved_months=form.cleaned_data.get('term_approved_months'),
+                recommendation_comment=form.cleaned_data.get('recommendation_comment') or '',
+                strengths=form.cleaned_data.get('strengths') or '',
+                weaknesses=form.cleaned_data.get('weaknesses') or '',
+            )
+            messages.success(request, 'Murabaha appraisal saved — scorecard and recommendation updated.')
             return redirect('murabaha_file', loan_request_id=loan.id)
     else:
-        form = MurabahaContractForm(instance=contract)
+        form = MurabahaContractForm(instance=contract, appraisal=appraisal, loan_request=loan)
 
     return render(request, 'loans/murabaha_file.html', {
         'loan_request': loan,

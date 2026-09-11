@@ -75,7 +75,11 @@ def pfi_profile_blockers(loan_request) -> List[str]:
 def wholesale_committee_blockers(loan_request) -> List[str]:
     if not is_wholesale_file(loan_request):
         return []
-    return list(pfi_profile_blockers(loan_request))
+    from loans.wholesale_appraisal import wholesale_appraisal_blockers
+
+    blockers = list(pfi_profile_blockers(loan_request))
+    blockers.extend(wholesale_appraisal_blockers(loan_request))
+    return blockers
 
 
 def wholesale_disbursement_blockers(loan_request) -> List[str]:
@@ -105,16 +109,27 @@ def wholesale_disbursement_blockers(loan_request) -> List[str]:
 def wholesale_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     if not is_wholesale_file(loan_request):
         return None
+    from loans.models import LoanAppraisal
+    from loans.wholesale_appraisal import build_wholesale_scorecard
+
     profile = get_pfi_profile(loan_request)
     latest = None
     if profile:
         latest = profile.utilization_reports.order_by('-as_of', '-id').first()
     fund_summary = fund_file_summary(loan_request)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if profile is not None:
+        scorecard = build_wholesale_scorecard(loan_request, profile)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'wholesale':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_wholesale': True,
         'is_project': False,
         'is_fund': bool(fund_summary),
         'profile': profile,
+        'appraisal': appraisal,
+        'scorecard': scorecard,
         'latest_report': latest,
         'committee_blockers': wholesale_committee_blockers(loan_request),
         'disbursement_blockers': wholesale_disbursement_blockers(loan_request),

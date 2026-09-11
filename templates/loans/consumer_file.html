@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Consumer file — {{ loan_request.loan_request_id }}{% endblock %}
+{% block title %}Consumer appraisal — {{ loan_request.loan_request_id }}{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
 {% endblock %}
@@ -11,24 +11,44 @@
   · <a href="{% url 'post_approval_detail' loan_request.id %}">Post-approval</a>
   {% endif %}
 </p>
-<h1>Consumer / HRM · {{ loan_request.loan_request_id }}</h1>
+<h1>Consumer / HRM appraisal · {{ loan_request.loan_request_id }}</h1>
 <p>{{ loan_request.applicant_name }} · {{ loan_request.category.get_product_family_display }}</p>
 <p class="help">
-  Housing or vehicle. Salary, DTI (obligations ÷ pay), and LTV (amount ÷ asset).
-  Not MSME Sheet 3.
+  Housing or vehicle underwriting — salary, DTI, LTV, affordability, and officer recommendation.
+  Not MSME Sheets 1–7.
 </p>
 
 {% include "loans/_product_intel_panel.html" %}
 
 {% if overlay %}
-<p>
-  DTI
-  <strong>{% if overlay.dti_pct %}{{ overlay.dti_pct }}%{% else %}—{% endif %}</strong>
-  / cap {{ overlay.dti_cap }}%
-  · LTV
-  <strong>{% if overlay.ltv_pct %}{{ overlay.ltv_pct }}%{% else %}—{% endif %}</strong>
-  / cap {{ overlay.ltv_cap }}%
-</p>
+<div class="lw-panel" style="margin:1rem 0;">
+  <h3 style="margin-top:0;">Live metrics</h3>
+  <div class="lw-facts">
+    <span class="lbl">Asked</span>
+    <span>{{ loan_request.amount_requested|floatformat:2 }} ETB</span>
+    <span class="lbl">DTI</span>
+    <span>{% if overlay.dti_pct != None %}{{ overlay.dti_pct }}%{% else %}—{% endif %} / cap {{ overlay.dti_cap }}%</span>
+    <span class="lbl">LTV</span>
+    <span>{% if overlay.ltv_pct != None %}{{ overlay.ltv_pct }}%{% else %}—{% endif %} / cap {{ overlay.ltv_cap }}%</span>
+    <span class="lbl">Installment</span>
+    <span>{% if overlay.installment %}{{ overlay.installment|floatformat:2 }} ETB/mo{% else %}—{% endif %}
+      {% if overlay.payment_burden_pct != None %} · {{ overlay.payment_burden_pct }}% of pay{% endif %}
+    </span>
+  </div>
+  {% if overlay.scorecard %}
+  <p style="margin:0.75rem 0 0.35rem;">
+    Consumer score
+    <strong>{{ overlay.scorecard.total|floatformat:1 }}/100</strong>
+    ({{ overlay.scorecard.band_label }})
+    <span class="help">· {{ overlay.scorecard.algorithm }}</span>
+  </p>
+  <ul style="margin:0.25rem 0 0;padding-left:1.2rem;">
+    {% for p in overlay.scorecard.pillars %}
+    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.note }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
 {% endif %}
 
 {% if overlay.committee_blockers %}
@@ -41,11 +61,74 @@
 {% if can_edit %}
 <form method="post">
   {% csrf_token %}
-  {{ form.as_p }}
-  <p><button type="submit" class="btn btn-green">Save consumer file</button></p>
+  <div class="lw-panel">
+    <h3 style="margin-top:0;">1. Applicant &amp; capacity</h3>
+    <p>
+      <label for="{{ form.purpose.id_for_label }}">{{ form.purpose.label }}</label><br>{{ form.purpose }}
+      {% if form.purpose.help_text %}<span class="help">{{ form.purpose.help_text }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="{{ form.employer_name.id_for_label }}">{{ form.employer_name.label }}</label><br>{{ form.employer_name }}
+    </p>
+    <p>
+      <label for="{{ form.occupation.id_for_label }}">{{ form.occupation.label }}</label><br>{{ form.occupation }}
+    </p>
+    <p>
+      <label for="{{ form.monthly_salary.id_for_label }}">{{ form.monthly_salary.label }}</label><br>{{ form.monthly_salary }}
+      {% if form.monthly_salary.help_text %}<span class="help">{{ form.monthly_salary.help_text }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="{{ form.monthly_obligations.id_for_label }}">{{ form.monthly_obligations.label }}</label><br>{{ form.monthly_obligations }}
+      {% if form.monthly_obligations.help_text %}<span class="help">{{ form.monthly_obligations.help_text }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="{{ form.asset_value.id_for_label }}">{{ form.asset_value.label }}</label><br>{{ form.asset_value }}
+      {% if form.asset_value.help_text %}<span class="help">{{ form.asset_value.help_text }}</span>{% endif %}
+    </p>
+  </div>
+
+  <div class="lw-panel">
+    <h3 style="margin-top:0;">2. Officer recommendation</h3>
+    <p class="help">This is the consumer appraisal decision — committee uses recommended amount, term, and rate.</p>
+    <p>
+      <label for="{{ form.recommendation.id_for_label }}">{{ form.recommendation.label }}</label><br>{{ form.recommendation }}
+    </p>
+    <p>
+      <label for="{{ form.amount_approved.id_for_label }}">{{ form.amount_approved.label }}</label><br>{{ form.amount_approved }}
+      {% if form.amount_approved.help_text %}<span class="help">{{ form.amount_approved.help_text }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="{{ form.term_months.id_for_label }}">{{ form.term_months.label }}</label><br>{{ form.term_months }}
+      {% if form.term_months.help_text %}<span class="help">{{ form.term_months.help_text }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="{{ form.rate_approved.id_for_label }}">{{ form.rate_approved.label }}</label><br>{{ form.rate_approved }}
+    </p>
+    <p>
+      <label for="{{ form.recommendation_comment.id_for_label }}">{{ form.recommendation_comment.label }}</label><br>{{ form.recommendation_comment }}
+    </p>
+    <p>
+      <label for="{{ form.strengths.id_for_label }}">{{ form.strengths.label }}</label><br>{{ form.strengths }}
+    </p>
+    <p>
+      <label for="{{ form.weaknesses.id_for_label }}">{{ form.weaknesses.label }}</label><br>{{ form.weaknesses }}
+    </p>
+    <p>
+      <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><br>{{ form.notes }}
+    </p>
+  </div>
+
+  {% if form.errors %}
+  <div class="pa-panel" style="background:#fff8f8;border:1px solid #c45c5c;border-radius:8px;padding:0.85rem 1rem;margin:1rem 0;">
+    {{ form.errors }}
+  </div>
+  {% endif %}
+  <p><button type="submit" class="btn btn-green">Save consumer appraisal</button></p>
 </form>
 {% else %}
-{{ form.as_p }}
-<p class="help">Read only.</p>
+<div class="lw-panel">
+  {{ form.as_p }}
+  <p class="help">Read only.</p>
+</div>
 {% endif %}
 {% endblock %}

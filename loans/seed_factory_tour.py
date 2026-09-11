@@ -108,6 +108,7 @@ def _committee_votes(by_cn, users, now):
 
 
 def _risk_and_crm(by_cn, users, now):
+    from loans.crm_pack import default_crm_clear_note, default_crm_send_note
     from loans.models import AppraisalCrmRound, LoanRequest
 
     risk = users.get('risk')
@@ -135,6 +136,34 @@ def _risk_and_crm(by_cn, users, now):
                 'cleared_at': now - timedelta(days=2),
             },
         )
+
+    # Product-desk demo files: modality pack cleared for CRM walkthrough.
+    modality_cns = ('3010', '3011', '3012', '4013', '4014', '4015', '4016')
+    for cn in modality_cns:
+        loan = by_cn.get(cn)
+        if loan is None or crm is None:
+            continue
+        officer = loan.assigned_loan_officer or crm
+        AppraisalCrmRound.objects.get_or_create(
+            loan_request=loan,
+            version=1,
+            defaults={
+                'status': AppraisalCrmRound.STATUS_CLEARED,
+                'appraisal_note': default_crm_send_note(loan),
+                'crm_note': default_crm_clear_note(loan),
+                'sent_by': officer,
+                'sent_at': now - timedelta(days=2),
+                'crm_by': crm,
+                'crm_at': now - timedelta(days=1),
+                'cleared_at': now - timedelta(days=1),
+            },
+        )
+        if risk and not loan.risk_reviewed_at:
+            LoanRequest.objects.filter(pk=loan.pk).update(
+                risk_reviewed_at=now - timedelta(days=1),
+                risk_reviewed_by=risk,
+                risk_review_note='Product-desk demo — risk clear for committee walkthrough.',
+            )
 
 
 def _book_happy_path(loan, users, now):

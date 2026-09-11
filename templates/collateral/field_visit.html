@@ -134,9 +134,12 @@
         <label for="field-photo-type">Photo type</label><br>
         <select name="photo_type" id="field-photo-type" class="field-input-lg">
           {% for val, lbl in photo_types %}
-          <option value="{{ val }}">{{ lbl }}</option>
+          <option value="{{ val }}" {% if photo_type_suggest and photo_type_suggest.key == val %}selected{% endif %}>{{ lbl }}</option>
           {% endfor %}
         </select>
+        {% if photo_type_suggest %}
+        <br><small class="help">Assist suggests: {{ photo_type_suggest.key }} — {{ photo_type_suggest.reason }}</small>
+        {% endif %}
       </p>
       {% include "collateral/_field_photo_capture.html" %}
       <div id="photo-gps-status" class="field-gps-status field-gps-none">GPS will be captured when you take a photo.</div>

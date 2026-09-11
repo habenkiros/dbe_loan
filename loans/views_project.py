@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from loans.forms import ProjectProfileForm
 from loans.models import (
+    LoanAppraisal,
     LoanDisbursementTranche,
     LoanRequest,
     ProjectCashflowYear,
@@ -21,6 +22,7 @@ from loans.models import (
 )
 from loans.rehab import postbook_summary
 from loans.product_intel import intel_context
+from loans.project_appraisal import sync_project_decision_to_appraisal
 from loans.project_overlay import (
     PURPOSE_LABELS,
     can_edit_project_file,
@@ -59,17 +61,30 @@ def project_file(request, loan_request_id):
 
     profile, _ = ProjectProfile.objects.get_or_create(loan_request=loan)
     ensure_plant_desks(profile)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan).first()
     can_edit = can_edit_project_file(request.user, loan)
     if request.method == 'POST' and can_edit:
-        form = ProjectProfileForm(request.POST, instance=profile)
+        form = ProjectProfileForm(
+            request.POST, instance=profile, appraisal=appraisal, loan_request=loan,
+        )
         if form.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
-            messages.success(request, 'Project profile saved.')
+            sync_project_decision_to_appraisal(
+                loan, obj, request.user,
+                recommendation=form.cleaned_data.get('recommendation') or '',
+                amount_approved=form.cleaned_data.get('amount_approved'),
+                rate_approved=form.cleaned_data.get('rate_approved'),
+                term_approved_months=form.cleaned_data.get('term_approved_months'),
+                recommendation_comment=form.cleaned_data.get('recommendation_comment') or '',
+                strengths=form.cleaned_data.get('strengths') or '',
+                weaknesses=form.cleaned_data.get('weaknesses') or '',
+            )
+            messages.success(request, 'Project appraisal saved — scorecard and recommendation updated.')
             return redirect('project_file', loan_request_id=loan.id)
     else:
-        form = ProjectProfileForm(instance=profile)
+        form = ProjectProfileForm(instance=profile, appraisal=appraisal, loan_request=loan)
 
     lines = list(profile.lines.order_by('side', 'sequence', 'id'))
     cashflows = list(profile.cashflows.order_by('year_number'))

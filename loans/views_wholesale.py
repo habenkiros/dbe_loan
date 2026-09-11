@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from loans.forms import PfiInstitutionForm
-from loans.models import LoanRequest, PfiInstitutionProfile, PfiUtilizationReport
+from loans.models import LoanAppraisal, LoanRequest, PfiInstitutionProfile, PfiUtilizationReport
+from loans.wholesale_appraisal import sync_wholesale_decision_to_appraisal
 from loans.wholesale_overlay import (
     can_edit_wholesale_file,
     can_view_wholesale_file,
@@ -40,17 +41,30 @@ def wholesale_file(request, loan_request_id):
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
     profile, _ = PfiInstitutionProfile.objects.get_or_create(loan_request=loan)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan).first()
     can_edit = can_edit_wholesale_file(request.user, loan)
     if request.method == 'POST' and can_edit:
-        form = PfiInstitutionForm(request.POST, instance=profile)
+        form = PfiInstitutionForm(
+            request.POST, instance=profile, appraisal=appraisal, loan_request=loan,
+        )
         if form.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
-            messages.success(request, 'PFI institution file saved.')
+            sync_wholesale_decision_to_appraisal(
+                loan, obj, request.user,
+                recommendation=form.cleaned_data.get('recommendation') or '',
+                amount_approved=form.cleaned_data.get('amount_approved'),
+                rate_approved=form.cleaned_data.get('rate_approved'),
+                term_approved_months=form.cleaned_data.get('term_approved_months'),
+                recommendation_comment=form.cleaned_data.get('recommendation_comment') or '',
+                strengths=form.cleaned_data.get('strengths') or '',
+                weaknesses=form.cleaned_data.get('weaknesses') or '',
+            )
+            messages.success(request, 'PFI appraisal saved — scorecard and recommendation updated.')
             return redirect('wholesale_file', loan_request_id=loan.id)
     else:
-        form = PfiInstitutionForm(instance=profile)
+        form = PfiInstitutionForm(instance=profile, appraisal=appraisal, loan_request=loan)
 
     reports = list(profile.utilization_reports.select_related('recorded_by')[:12])
     return render(request, 'loans/wholesale_file.html', {

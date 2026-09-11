@@ -112,6 +112,7 @@ def engineering_qa_review(request, loan_request_id):
     from collateral.coverage import compute_coverage_adequacy
     from collateral.engineering_qa import engineering_qa_checklist
     from collateral.field_utils import get_loan_collateral_readiness
+    from collateral.intelligence import build_collateral_risk_brief
     from collateral.pipeline import collateral_pipeline_stage, pipeline_stage_label
     from collateral.models import (
         Building, BuildingImage, BuildingValuation, LandValuation, LandValuationImage,
@@ -170,5 +171,6 @@ def engineering_qa_review(request, loan_request_id):
         'photo_previews': photo_previews,
         'building_boq': building_boq,
         'qa_checklist': engineering_qa_checklist(loan_request),
+        'risk_brief': build_collateral_risk_brief(loan_request),
         'can_review': True,
     })

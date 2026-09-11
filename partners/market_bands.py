@@ -124,6 +124,61 @@ def find_band_for_unit_price(
     return None
 
 
+def find_band_for_land(*, city_id: Optional[int] = None, item_key: str = '') -> Optional[MarketPriceBand]:
+    """Land ETB/m² band — prefer city + key, then city-wide land, then key-only."""
+    qs = MarketPriceBand.objects.filter(asset_class=MarketObservation.ASSET_LAND)
+    key = normalize_item_key(item_key)
+    if city_id and key:
+        band = qs.filter(city_id=city_id, item_key=key).order_by('-sample_count').first()
+        if band:
+            return band
+    if city_id:
+        band = qs.filter(city_id=city_id).order_by('-sample_count').first()
+        if band:
+            return band
+    if key:
+        return qs.filter(item_key=key).order_by('-sample_count').first()
+    return None
+
+
+def find_band_for_movable(
+    *,
+    city_id: Optional[int] = None,
+    asset_class: str = '',
+    item_key: str = '',
+) -> Optional[MarketPriceBand]:
+    """Vehicle / machinery / other movable estimated-value band."""
+    from partners.models import MarketObservation
+
+    classes = []
+    ac = (asset_class or '').strip().lower()
+    if ac in (
+        MarketObservation.ASSET_VEHICLE,
+        MarketObservation.ASSET_MACHINERY,
+        MarketObservation.ASSET_OTHER,
+    ):
+        classes = [ac]
+    else:
+        classes = [
+            MarketObservation.ASSET_VEHICLE,
+            MarketObservation.ASSET_MACHINERY,
+            MarketObservation.ASSET_OTHER,
+        ]
+    qs = MarketPriceBand.objects.filter(asset_class__in=classes)
+    key = normalize_item_key(item_key)
+    if city_id and key:
+        band = qs.filter(city_id=city_id, item_key=key).order_by('-sample_count').first()
+        if band:
+            return band
+    if key:
+        band = qs.filter(item_key=key).order_by('-sample_count').first()
+        if band:
+            return band
+    if city_id:
+        return qs.filter(city_id=city_id).order_by('-sample_count').first()
+    return None
+
+
 def suggest_payload(band: Optional[MarketPriceBand]) -> Optional[Dict[str, Any]]:
     if not band:
         return None

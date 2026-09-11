@@ -65,14 +65,26 @@ def build_product_intel(loan_request) -> Optional[Dict[str, Any]]:
             ),
         }
     else:
-        decision = {
-            'code': 'ready',
-            'label': 'Desk pack in shape',
-            'rationale': (
-                'Product gates, KYC, and documents are clear. '
-                'Officer / committee recommendation is still required.'
-            ),
-        }
+        from loans.models import LoanAppraisal
+        appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+        if appraisal and appraisal.recommendation:
+            decision = {
+                'code': 'ready',
+                'label': 'Ready for CRM / committee',
+                'rationale': (
+                    f'Officer stamped {appraisal.get_recommendation_display()}. '
+                    'Send or clear the CRM pack when KYC is complete.'
+                ),
+            }
+        else:
+            decision = {
+                'code': 'ready',
+                'label': 'Desk pack in shape',
+                'rationale': (
+                    'Product gates, KYC, and documents are clear. '
+                    'Officer / committee recommendation is still required.'
+                ),
+            }
 
     sanctions = _latest_sanctions(loan_request)
 
@@ -135,6 +147,11 @@ def _highlights_from_brief(brief: Dict[str, Any]) -> List[Dict[str, str]]:
         'break_even_capacity_pct': 'Break-even %',
         'dti_pct': 'DTI %',
         'ltv_pct': 'LTV %',
+        'score': 'Score',
+        'band': 'Band',
+        'installment': 'Installment',
+        'sources': 'Sources',
+        'uses': 'Uses',
         'par90': 'PAR 90',
         'cost': 'Cost',
         'markup_pct': 'Markup %',

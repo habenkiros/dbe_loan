@@ -59,6 +59,7 @@ class ProjectComfarTests(TestCase):
         LoanAppraisal.objects.create(
             loan_request=loan, created_by=self.officer,
             recommendation='approve', amount_approved=Decimal('75000'),
+            term_approved_months=30, rate_approved=Decimal('12'),
         )
         return loan
 

@@ -92,7 +92,11 @@ def murabaha_delivery_blockers(loan_request) -> List[str]:
 def murabaha_committee_blockers(loan_request) -> List[str]:
     if not is_murabaha_file(loan_request):
         return []
-    return list(murabaha_policy_blockers(loan_request))
+    from loans.murabaha_appraisal import murabaha_appraisal_blockers
+
+    blockers = list(murabaha_policy_blockers(loan_request))
+    blockers.extend(murabaha_appraisal_blockers(loan_request))
+    return blockers
 
 
 def murabaha_disbursement_blockers(loan_request) -> List[str]:
@@ -108,14 +112,25 @@ def murabaha_disbursement_blockers(loan_request) -> List[str]:
 def murabaha_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     if not is_murabaha_file(loan_request):
         return None
+    from loans.models import LoanAppraisal
+    from loans.murabaha_appraisal import build_murabaha_scorecard
+
     contract = get_murabaha(loan_request)
     latest = loan_request.sharia_reviews.filter(kind='murabaha').order_by('-created_at', '-id').first()
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if contract is not None:
+        scorecard = build_murabaha_scorecard(loan_request, contract)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'murabaha':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_murabaha': True,
         'is_project': False,
         'is_wholesale': False,
         'is_lease': False,
         'contract': contract,
+        'appraisal': appraisal,
+        'scorecard': scorecard,
         'selling_price': (
             (contract.selling_price if contract else None)
             or compute_selling_price(

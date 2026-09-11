@@ -76,6 +76,8 @@ def _save_field_image(
     *,
     loan_request,
     subject_type: str,
+    suggest_kind: str = 'building',
+    missing_photo_types: Optional[List[str]] = None,
 ) -> Tuple[bool, str]:
     upload = files.get('image')
     if not upload:
@@ -84,12 +86,38 @@ def _save_field_image(
     valid_types = {c[0] for c in photo_choices}
     if photo_type not in valid_types:
         photo_type = 'other'
+
+    raw = b''
+    try:
+        upload.seek(0)
+        raw = upload.read()
+        upload.seek(0)
+    except Exception:
+        raw = b''
+
+    from collateral.intelligence import (
+        find_collateral_duplicates, hash_image_bytes, suggest_photo_type,
+    )
+    sha, phash = hash_image_bytes(raw, getattr(upload, 'name', '') or '')
+    suggested = suggest_photo_type(
+        kind=suggest_kind,
+        filename=getattr(upload, 'name', '') or '',
+        caption=(post.get('caption') or ''),
+        missing_types=missing_photo_types or [],
+    )
+    suggested_key = (suggested or {}).get('key') or ''
+    # Assistive: if officer left type as other and we have a suggestion, keep other but store suggest.
+    # Do not auto-override an explicit officer choice.
+
     kwargs = {fk_field: instance, 'image': upload, 'photo_type': photo_type}
     img = image_model(
         **kwargs,
         caption=(post.get('caption') or '').strip()[:255],
         captured_at=timezone.now(),
         uploaded_by=user if user.is_authenticated else None,
+        content_sha256=sha,
+        perceptual_hash=phash,
+        photo_type_suggested=suggested_key,
     )
     err = apply_photo_gps_attestation(img, post)
     if err:
@@ -105,6 +133,8 @@ def _save_field_image(
         subject_id=img.pk,
         payload={
             'photo_type': photo_type,
+            'photo_type_suggested': suggested_key,
+            'content_sha256': sha[:16] if sha else None,
             'gps_lat': str(img.gps_lat) if img.gps_lat is not None else None,
             'gps_weak_acknowledged': img.gps_weak_acknowledged,
             'exif_gps_lat': str(img.exif_gps_lat) if img.exif_gps_lat is not None else None,
@@ -124,8 +154,18 @@ def _save_field_image(
             payload={'context': 'photo', 'note': img.gps_attestation_note[:500]},
         )
     msg = 'Photo saved.'
+    if suggested_key and suggested_key != photo_type:
+        msg += f' Assist suggests type “{suggested_key}” ({suggested.get("reason", "")}).'
+    if sha or phash:
+        dups = find_collateral_duplicates(
+            content_sha256=sha, perceptual_hash=phash,
+            exclude_loan_id=loan_request.pk,
+        )
+        if dups:
+            other = dups[0].get('loan_request_id') or 'another file'
+            msg += f' Warning: similar photo found on {other}.'
     if exif_warn:
-        msg = f'Photo saved. Warning: {exif_warn}'
+        msg = f'{msg} Warning: {exif_warn}'
     return True, msg
 
 
@@ -305,15 +345,24 @@ def save_land_field_photo(land, post, files, user) -> Tuple[bool, str]:
         land, LandValuationImage, 'land_valuation', post, files, user,
         LandValuationImage.PHOTO_TYPE_CHOICES,
         loan_request=land.loan_request, subject_type='land_image',
+        suggest_kind='land',
     )
 
 
 def save_other_field_photo(item, post, files, user) -> Tuple[bool, str]:
     from collateral.models import OtherCollateralItemImage
+    from collateral.registration import required_movable_photo_types
+
+    types_present = set(
+        OtherCollateralItemImage.objects.filter(item=item).values_list('photo_type', flat=True)
+    )
+    missing = [t[0] for t in required_movable_photo_types(item) if t[0] not in types_present]
     return _save_field_image(
         item, OtherCollateralItemImage, 'item', post, files, user,
         OtherCollateralItemImage.PHOTO_TYPE_CHOICES,
         loan_request=item.loan_request, subject_type='other_image',
+        suggest_kind='other',
+        missing_photo_types=missing,
     )
 
 
@@ -518,6 +567,12 @@ def save_field_visit_photo(building, post, files, user) -> Tuple[bool, str]:
     """Create BuildingImage from field visit upload with GPS metadata."""
     from collateral.models import BuildingImage
 
+    types_present = set(
+        BuildingImage.objects.filter(building=building).values_list('photo_type', flat=True)
+    )
+    missing = []
+    if 'front' not in types_present:
+        missing.append('front')
     return _save_field_image(
         building,
         BuildingImage,
@@ -528,6 +583,8 @@ def save_field_visit_photo(building, post, files, user) -> Tuple[bool, str]:
         BuildingImage.PHOTO_TYPE_CHOICES,
         loan_request=building.loan_request,
         subject_type='building_image',
+        suggest_kind='building',
+        missing_photo_types=missing,
     )
 
 

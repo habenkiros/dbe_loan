@@ -179,6 +179,7 @@ class SpineAndConsumerTests(TestCase):
             monthly_salary=Decimal('10000'),
             monthly_obligations=Decimal('6000'),
             asset_value=Decimal('1000000'),
+            term_months=36,
         )
         self.assertEqual(dti_pct(profile), Decimal('60.00'))
         self.assertTrue(dti_pct(profile) > MAX_DTI_PCT)
@@ -188,4 +189,48 @@ class SpineAndConsumerTests(TestCase):
         profile.save()
         self.assertEqual(dti_pct(profile), Decimal('30.00'))
         self.assertEqual(ltv_pct(loan, profile), Decimal('50.00'))
+        # Still needs officer recommendation on the consumer appraisal desk
+        blockers = consumer_committee_blockers(loan)
+        self.assertTrue(any('recommendation' in b.lower() or 'Recommended' in b or 'recommended' in b for b in blockers))
+
+    def test_consumer_appraisal_scorecard_and_sync(self):
+        from loans.consumer_appraisal import (
+            build_consumer_scorecard,
+            sync_consumer_decision_to_appraisal,
+        )
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.models import LoanAppraisal
+
+        loan = self._loan(self.consumer_cat, 'LR-SP-CA')
+        profile = ConsumerProfile.objects.create(
+            loan_request=loan,
+            purpose=ConsumerProfile.PURPOSE_VEHICLE,
+            employer_name='Seqela',
+            monthly_salary=Decimal('250000'),
+            monthly_obligations=Decimal('0'),
+            asset_value=Decimal('18000000'),
+            term_months=48,
+        )
+        loan.amount_requested = Decimal('8200000')
+        loan.save(update_fields=['amount_requested'])
+        card = build_consumer_scorecard(loan, profile, amount=Decimal('8200000'), rate=Decimal('12'), term=48)
+        self.assertEqual(card['modality'], 'consumer')
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_consumer_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('8200000'),
+            rate_approved=Decimal('12'),
+            recommendation_comment='Salary covers installment; LTV under 70%.',
+            strengths='Stable pay · strong coverage',
+            weaknesses='First consumer facility',
+        )
+        self.assertEqual(appraisal.recommendation, 'approve')
+        self.assertEqual(appraisal.amount_approved, Decimal('8200000'))
+        self.assertEqual(appraisal.term_approved_months, 48)
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'consumer')
         self.assertEqual(consumer_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'consumer')
+        self.assertEqual(evidence['scorecard']['modality'], 'consumer')
+        self.assertNotEqual(evidence['scorecard']['total'], Decimal('20.0'))

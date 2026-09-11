@@ -189,22 +189,23 @@ def officer_checklist_for_mode(mode: str) -> List[str]:
     if mode == MODE_PROJECT:
         return [
             'Clear CRM / Engineering / Legal KYC packs with the checklist',
-            'Authenticate the project document pack (feasibility, site, equity)',
-            'Balance sources and uses; promoter equity before first release',
-            'Record NPV / IRR / DSCR on the project desk (not Sheet 3)',
-            'CRM comments on the appraisal pack must clear before committee',
+            'Balance sources and uses; record NPV / IRR / DSCR on the project desk',
+            'Clear civil / mechanical / electrical plant desks',
+            'Stamp Approve/Decline with recommended debt, term, and rate',
         ]
     if mode == MODE_LEASE:
         return [
             'Clear KYC packs and authenticate supplier / asset documents',
             'Complete the lease asset register (supplier, serial, price)',
-            'Confirm lessee contribution and insurance co-beneficiary',
+            'Confirm lessee contribution (≥20%) and insurance co-beneficiary',
+            'Record Approve/Decline, financed amount, rate, and term',
             'CRM comments must clear before committee',
         ]
     if mode == MODE_IJARAH:
         return [
             'Clear KYC packs including Sharia questionnaire',
             'Complete the Ijarah asset register and rent schedule',
+            'Record Approve/Decline, financed amount, term (rate 0 if rental-only)',
             'Record a Sharia trail before release',
             'CRM comments must clear before committee',
         ]
@@ -213,6 +214,7 @@ def officer_checklist_for_mode(mode: str) -> List[str]:
             'Clear KYC packs including Sharia questionnaire',
             'Enter cost, markup, and computed selling price (not Sheet 7)',
             'Authenticate goods specification and supplier offer',
+            'Record Approve/Decline, selling amount, markup %, and tenor',
             'Record a Sharia trail before confirm / release',
         ]
     if mode == MODE_WHOLESALE:
@@ -220,12 +222,14 @@ def officer_checklist_for_mode(mode: str) -> List[str]:
             'Treat this as a PFI institution file, not an SME LOS',
             'Clear KYC packs; authenticate license, AFS, ESMS, PAR',
             'Enter PAR 90 / NPL and facility amount on the PFI desk',
+            'Record Approve/Decline, facility amount, DBE→PFI rate, and tenor',
             'CRM comments must clear before committee',
         ]
     if mode == MODE_IDEA:
         return [
             'Clear KYC packs; authenticate start-up / IP / cap-table evidence',
             'Complete the idea desk (venture, proposed DBE share)',
+            'Record Approve/Decline, investment amount, DBE share %, and horizon',
             'Cap table after approval — not an installment schedule',
             'CRM comments must clear before committee',
         ]
@@ -233,8 +237,8 @@ def officer_checklist_for_mode(mode: str) -> List[str]:
         return [
             'Clear KYC packs; authenticate ID, salary, employer letter',
             'Enter employer, salary, DTI and LTV on the consumer desk',
-            'DTI cap 50%; housing LTV 80% / vehicle LTV 70%',
-            'CRM comments must clear before committee',
+            'Record recommended amount, term, rate, and Approve/Decline',
+            'DTI cap 50%; housing LTV 80% / vehicle LTV 70%; check installment vs pay',
         ]
     return [
         'Confirm personal + business details and purpose lines',

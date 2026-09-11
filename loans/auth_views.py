@@ -72,7 +72,16 @@ def _auth_backend_path(user) -> str:
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class StaffLoginView(LoginView):
     template_name = 'login.html'
-    redirect_authenticated_user = True
+    # Do not auto-follow ?next= for users who are already signed in.
+    # Permission denials redirect here with next=…; following that next causes
+    # ERR_TOO_MANY_REDIRECTS (login → denied page → login). Successful POST
+    # still honors next via get_success_url().
+    redirect_authenticated_user = False
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect(settings.LOGIN_REDIRECT_URL)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

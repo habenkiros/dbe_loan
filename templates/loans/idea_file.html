@@ -33,11 +33,32 @@
 </div>
 {% endif %}
 
+{% if overlay.scorecard %}
+<div class="pa-panel" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;padding:0.85rem 1rem;margin:1rem 0;">
+  <p style="margin:0 0 0.35rem;">
+    Idea score
+    <strong>{{ overlay.scorecard.total|floatformat:1 }}/100</strong>
+    ({{ overlay.scorecard.band_label }})
+    <span class="help">· {{ overlay.scorecard.algorithm }}</span>
+  </p>
+  <ul class="help" style="margin:0;">
+    {% for p in overlay.scorecard.pillars %}
+    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if can_edit %}
 <form method="post">
   {% csrf_token %}
   {{ form.as_p }}
-  <p><button type="submit" class="btn btn-green">Save idea file</button></p>
+  <p class="help">
+    Officer recommendation fields (Approve / Decline / Escalate, investment amount, DBE share %, horizon)
+    are the idea appraisal decision for committee — not MSME Sheet 6.
+    DBE share is stored in the rate field for routing — it is not interest.
+  </p>
+  <p><button type="submit" class="btn btn-green">Save idea appraisal</button></p>
 </form>
 {% else %}
 {{ form.as_p }}
@@ -46,7 +67,7 @@
 
 <h2>Cap table</h2>
 <p class="help">
-  Founders + DBE share. Sum must be 100%.
+  Founders + DBE share. Sum must be 100%. Required before investment release — not for committee.
   {% if cap_totals %}Now {{ cap_totals.total }}% · DBE {{ cap_totals.dbe }}%.{% endif %}
 </p>
 <div class="table-container">

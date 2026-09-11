@@ -2,6 +2,7 @@
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -18,9 +19,18 @@ from .views import (
 )
 
 
+def _can_edit_collateral_policy(user) -> bool:
+    return getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in (
+        'admin', 'superadmin',
+    )
+
+
 @login_required
-@user_passes_test(lambda u: u.role == 'superadmin')
 def collateral_policy_config(request):
+    if not _can_edit_collateral_policy(request.user):
+        raise PermissionDenied(
+            'Only admin or superadmin can edit collateral GPS / coverage policy.'
+        )
     config, _ = CollateralPolicyConfig.objects.get_or_create()
     if request.method == 'POST':
         form = CollateralPolicyConfigForm(request.POST, instance=config)

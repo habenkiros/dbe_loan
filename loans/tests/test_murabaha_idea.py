@@ -63,6 +63,35 @@ class MurabahaIdeaTests(TestCase):
         defaults.update(extra)
         return LoanRequest.objects.create(**defaults)
 
+    def _stamp_murabaha_appraisal(self, loan, contract):
+        from loans.murabaha_appraisal import sync_murabaha_decision_to_appraisal
+        return sync_murabaha_decision_to_appraisal(
+            loan, contract, self.officer,
+            recommendation='approve',
+            amount_approved=contract.selling_price or Decimal('2000000'),
+            rate_approved=contract.markup_pct if contract.markup_pct is not None else Decimal('6'),
+            term_approved_months=contract.tenor_months or 12,
+            recommendation_comment='Cost-plus structure supports approval.',
+        )
+
+    def _ready_murabaha(self, loan, **extra):
+        kwargs = dict(
+            loan_request=loan,
+            goods_description='Export coffee',
+            supplier_name='Jeddah Trading',
+            supplier_offer_ref='OFF-200',
+            tenor_months=12,
+            cost_price=Decimal('2000000'),
+            markup_pct=Decimal('6'),
+            scope=MurabahaContract.SCOPE_EXPORT,
+            selling_price=Decimal('2120000'),
+            delivery_status=MurabahaContract.DELIVERY_RECEIVED,
+        )
+        kwargs.update(extra)
+        contract = MurabahaContract.objects.create(**kwargs)
+        self._stamp_murabaha_appraisal(loan, contract)
+        return contract
+
     def test_general_ungated(self):
         loan = self._loan(self.general, lid='LR-EI-G')
         self.assertEqual(get_engine(loan).committee_blockers(), [])
@@ -91,18 +120,7 @@ class MurabahaIdeaTests(TestCase):
 
     def test_ready_murabaha_committee_ok_sharia_blocks_confirm(self):
         loan = self._loan(self.mur_cat, lid='LR-EI-OK')
-        MurabahaContract.objects.create(
-            loan_request=loan,
-            goods_description='Export coffee',
-            supplier_name='Jeddah Trading',
-            supplier_offer_ref='OFF-200',
-            tenor_months=12,
-            cost_price=Decimal('2000000'),
-            markup_pct=Decimal('6'),
-            scope=MurabahaContract.SCOPE_EXPORT,
-            selling_price=Decimal('2120000'),
-            delivery_status=MurabahaContract.DELIVERY_RECEIVED,
-        )
+        self._ready_murabaha(loan)
         self.assertEqual(murabaha_committee_blockers(loan), [])
         self.assertTrue(any('Sharia' in b for b in murabaha_disbursement_blockers(loan)))
         ShariaReview.objects.create(
@@ -114,16 +132,15 @@ class MurabahaIdeaTests(TestCase):
 
     def test_ordered_goods_block_murabaha_release(self):
         loan = self._loan(self.mur_cat, lid='LR-EI-ORD')
-        MurabahaContract.objects.create(
-            loan_request=loan,
+        self._ready_murabaha(
+            loan,
             goods_description='Spare parts',
-            supplier_name='Jeddah Trading',
             supplier_offer_ref='OFF-9',
-            tenor_months=12,
             cost_price=Decimal('500000'),
             markup_pct=Decimal('7'),
             selling_price=Decimal('535000'),
             delivery_status=MurabahaContract.DELIVERY_ORDERED,
+            scope=MurabahaContract.SCOPE_DOMESTIC,
         )
         ShariaReview.objects.create(
             loan_request=loan, kind=ShariaReview.KIND_MURABAHA,
@@ -160,11 +177,62 @@ class MurabahaIdeaTests(TestCase):
             'scope': MurabahaContract.SCOPE_DOMESTIC,
             'tenor_months': '18',
             'notes': '',
+            'recommendation': 'approve',
+            'amount_approved': '1605000',
+            'rate_approved': '7',
+            'term_approved_months': '18',
+            'recommendation_comment': 'Ready for committee.',
+            'strengths': 'Clear cost-plus pack.',
+            'weaknesses': '',
         })
         self.assertEqual(resp.status_code, 302)
         loan.refresh_from_db()
         self.assertEqual(loan.murabaha.goods_description, 'Spare parts')
         self.assertEqual(loan.murabaha.selling_price, Decimal('1605000.00'))
+        appr = LoanAppraisal.objects.get(loan_request=loan)
+        self.assertEqual(appr.recommendation, 'approve')
+        self.assertEqual(appr.scorecard_detail['modality'], 'murabaha')
+
+    def test_murabaha_appraisal_scorecard_and_evidence(self):
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.murabaha_appraisal import (
+            build_murabaha_scorecard,
+            murabaha_appraisal_blockers,
+            sync_murabaha_decision_to_appraisal,
+        )
+
+        loan = self._loan(self.mur_cat, lid='LR-EI-SC')
+        contract = MurabahaContract.objects.create(
+            loan_request=loan,
+            goods_description='Industrial spare parts',
+            supplier_name='Score Supplier',
+            supplier_offer_ref='OFF-SC',
+            tenor_months=24,
+            cost_price=Decimal('3000000'),
+            markup_pct=Decimal('8'),
+            scope=MurabahaContract.SCOPE_DOMESTIC,
+            selling_price=Decimal('3240000'),
+            delivery_status=MurabahaContract.DELIVERY_RECEIVED,
+        )
+        self.assertTrue(murabaha_appraisal_blockers(loan))
+        card = build_murabaha_scorecard(loan, contract)
+        self.assertEqual(card['modality'], 'murabaha')
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_murabaha_decision_to_appraisal(
+            loan, contract, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('3240000'),
+            rate_approved=Decimal('8'),
+            term_approved_months=24,
+            recommendation_comment='Cost-plus and delivery support approval.',
+        )
+        self.assertEqual(appraisal.recommendation, 'approve')
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'murabaha')
+        self.assertEqual(saved['modality'], 'murabaha')
+        self.assertEqual(murabaha_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'murabaha')
+        self.assertEqual(evidence['scorecard']['modality'], 'murabaha')
 
     def test_idea_gates_block_committee(self):
         loan = self._loan(self.idea_cat, lid='LR-EI-IG')
@@ -189,6 +257,15 @@ class MurabahaIdeaTests(TestCase):
             implements_in_ethiopia=True,
             has_startup_label=True,
             proposed_dbe_share_pct=Decimal('20'),
+        )
+        from loans.idea_appraisal import sync_idea_decision_to_appraisal
+        sync_idea_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('500000'),
+            rate_approved=Decimal('20'),
+            term_approved_months=60,
+            recommendation_comment='Gates clear; invest.',
         )
         self.assertEqual(idea_committee_blockers(loan), [])
         self.assertTrue(any('cap table' in b.lower() for b in idea_disbursement_blockers(loan)))
@@ -227,9 +304,19 @@ class MurabahaIdeaTests(TestCase):
             'proposed_dbe_share_pct': '15',
             'sector': 'Agri-tech',
             'notes': '',
+            'recommendation': 'approve',
+            'amount_approved': '500000',
+            'rate_approved': '15',
+            'term_approved_months': '60',
+            'recommendation_comment': 'Young start-up with IP.',
+            'strengths': 'Ethiopia + IP.',
+            'weaknesses': '',
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(loan.idea_profile.venture_name, 'AgriBot')
+        appr = LoanAppraisal.objects.get(loan_request=loan)
+        self.assertEqual(appr.recommendation, 'approve')
+        self.assertEqual(appr.scorecard_detail['modality'], 'idea')
         resp = self.client.post(reverse('idea_add_cap_row', args=[loan.id]), {
             'holder_name': 'DBE',
             'role': CapTableEntry.ROLE_DBE,
@@ -237,6 +324,45 @@ class MurabahaIdeaTests(TestCase):
         })
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(loan.idea_profile.cap_table.filter(role=CapTableEntry.ROLE_DBE).exists())
+
+    def test_idea_appraisal_scorecard_and_evidence(self):
+        from loans.committee_evidence import build_committee_vote_evidence
+        from loans.idea_appraisal import (
+            build_idea_scorecard,
+            idea_appraisal_blockers,
+            sync_idea_decision_to_appraisal,
+        )
+
+        loan = self._loan(self.idea_cat, lid='LR-EI-ISC')
+        profile = IdeaProfile.objects.create(
+            loan_request=loan,
+            venture_name='Score Lab',
+            founded_year=timezone.now().year - 1,
+            implements_in_ethiopia=True,
+            has_ip=True,
+            has_startup_label=True,
+            proposed_dbe_share_pct=Decimal('18'),
+            sector='Health-tech',
+        )
+        self.assertTrue(idea_appraisal_blockers(loan))
+        card = build_idea_scorecard(loan, profile)
+        self.assertEqual(card['modality'], 'idea')
+        self.assertGreaterEqual(card['total'], Decimal('60'))
+        appraisal, saved = sync_idea_decision_to_appraisal(
+            loan, profile, self.officer,
+            recommendation='approve',
+            amount_approved=Decimal('750000'),
+            rate_approved=Decimal('18'),
+            term_approved_months=60,
+            recommendation_comment='Age, Ethiopia, and share support investment.',
+        )
+        self.assertEqual(appraisal.recommendation, 'approve')
+        self.assertEqual(appraisal.scorecard_detail['modality'], 'idea')
+        self.assertEqual(saved['modality'], 'idea')
+        self.assertEqual(idea_committee_blockers(loan), [])
+        evidence = build_committee_vote_evidence(loan)
+        self.assertEqual(evidence['modality'], 'idea')
+        self.assertEqual(evidence['scorecard']['modality'], 'idea')
 
     def test_general_cannot_open_murabaha_or_idea(self):
         loan = self._loan(self.general, lid='LR-EI-NO')

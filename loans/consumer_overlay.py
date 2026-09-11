@@ -59,7 +59,7 @@ def consumer_committee_blockers(loan_request) -> List[str]:
         return []
     profile = get_consumer_profile(loan_request)
     if profile is None:
-        return ['Open the consumer file: employer, salary, DTI, and LTV.']
+        return ['Open the consumer file: employer, salary, DTI, LTV, and officer recommendation.']
     blockers = []
     if not (profile.employer_name or '').strip():
         blockers.append('Employer name is required.')
@@ -76,6 +76,8 @@ def consumer_committee_blockers(loan_request) -> List[str]:
     cap = ltv_cap(profile)
     if ltv is not None and ltv > cap:
         blockers.append(f'LTV is {ltv}% — cap for this purpose is {cap}%.')
+    from loans.consumer_appraisal import consumer_appraisal_blockers
+    blockers.extend(consumer_appraisal_blockers(loan_request))
     return blockers
 
 
@@ -87,16 +89,29 @@ def consumer_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     if not is_consumer_file(loan_request):
         return None
     profile = get_consumer_profile(loan_request)
+    from loans.consumer_appraisal import build_consumer_scorecard
+    from loans.models import LoanAppraisal
+
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if profile is not None:
+        scorecard = build_consumer_scorecard(loan_request, profile)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'consumer':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_consumer': True,
         'is_project': False,
         'is_wholesale': False,
         'is_lease': False,
         'profile': profile,
+        'appraisal': appraisal,
+        'scorecard': scorecard,
         'dti_pct': dti_pct(profile),
         'ltv_pct': ltv_pct(loan_request, profile),
         'dti_cap': MAX_DTI_PCT,
         'ltv_cap': ltv_cap(profile),
+        'installment': (scorecard or {}).get('installment'),
+        'payment_burden_pct': (scorecard or {}).get('payment_burden_pct'),
         'committee_blockers': consumer_committee_blockers(loan_request),
         'disbursement_blockers': consumer_disbursement_blockers(loan_request),
         'fund': fund_file_summary(loan_request),

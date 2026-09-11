@@ -120,7 +120,8 @@ def _user_can_view_loan_list(user) -> bool:
     role = getattr(user, 'role', None)
     if role in (
         'branch_manager', 'loan_officer', 'credit_loan_officer', 'credit_head',
-        'district_manager', 'engineer', 'engineering_head', 'superadmin', 'admin',
+        'district_manager', 'engineer', 'engineering_head', 'legal_officer',
+        'superadmin', 'admin',
     ):
         return True
     from loans.delegation import (
@@ -144,7 +145,7 @@ def _user_can_open_loan_detail(user) -> bool:
     return role in (
         'cooperative_manager', 'operation_manager', 'finance_manager',
         'accountant', 'ceo', 'vp', 'vp_operations', 'vp_it', 'vp_customer_service',
-        'board_member', 'risk_compliance', 'auditor',
+        'board_member', 'risk_compliance', 'auditor', 'legal_officer',
     )
 
 

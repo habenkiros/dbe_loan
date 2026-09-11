@@ -311,11 +311,22 @@ def project_file_summary(loan_request) -> Optional[Dict[str, Any]]:
     profile = get_project_profile(loan_request)
     totals = sources_uses_totals(profile) if profile is not None else sources_uses_totals(None)
     metrics = compute_project_metrics(profile) if profile is not None else empty_project_metrics()
+    from loans.models import LoanAppraisal
+    from loans.project_appraisal import build_project_scorecard
+
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
+    scorecard = None
+    if profile is not None:
+        scorecard = build_project_scorecard(loan_request, profile)
+        if appraisal and appraisal.scorecard_detail and appraisal.scorecard_detail.get('modality') == 'project':
+            scorecard = appraisal.scorecard_detail
     return {
         'is_project': True,
         'profile': profile,
+        'appraisal': appraisal,
         'totals': totals,
         'metrics': metrics,
+        'scorecard': scorecard,
         'profile_blockers': profile_blockers(loan_request),
         'committee_blockers': project_committee_blockers(loan_request),
         'disbursement_blockers': project_disbursement_blockers(loan_request),
@@ -647,6 +658,8 @@ def project_committee_blockers(loan_request) -> List[str]:
     blockers.extend(tenor_blockers(profile))
     blockers.extend(viability_blockers(profile))
     blockers.extend(plant_desk_blockers(profile))
+    from loans.project_appraisal import project_appraisal_blockers
+    blockers.extend(project_appraisal_blockers(loan_request))
     return blockers
 
 

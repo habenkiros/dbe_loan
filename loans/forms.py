@@ -203,6 +203,47 @@ class FinancingFundForm(forms.ModelForm):
 
 
 class ProjectProfileForm(forms.ModelForm):
+    """Project desk + officer appraisal decision (synced to LoanAppraisal on save)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended debt amount (ETB)',
+        help_text='What you recommend committee approve (often = requested DBE debt).',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended interest rate (%)',
+    )
+    term_approved_months = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        label='Recommended term (months)',
+        help_text='Defaults to implementation + grace when blank on first save.',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = ProjectProfile
         fields = [
@@ -245,6 +286,25 @@ class ProjectProfileForm(forms.ModelForm):
             'current_account_opened': 'Required before first equity or loan release.',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from loans.project_appraisal import default_project_term_months
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['term_approved_months'].initial = appraisal.term_approved_months
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif not self.is_bound:
+            profile = getattr(self, 'instance', None)
+            if profile and profile.requested_debt:
+                self.fields['amount_approved'].initial = profile.requested_debt
+            elif loan_request is not None:
+                self.fields['amount_approved'].initial = loan_request.amount_requested
+            self.fields['term_approved_months'].initial = default_project_term_months(profile)
+
 
 class FundFileTagForm(forms.ModelForm):
     class Meta:
@@ -260,6 +320,48 @@ class FundFileTagForm(forms.ModelForm):
 
 
 class PfiInstitutionForm(forms.ModelForm):
+    """PFI institution desk + officer facility recommendation (synced to LoanAppraisal)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended facility amount (ETB)',
+        help_text='What you recommend committee approve (often = facility amount).',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended DBE→PFI rate (%)',
+        help_text='Defaults to DBE→PFI rate on the institution file when blank.',
+    )
+    term_approved_months = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        label='Recommended facility tenor (months)',
+        help_text='Defaults to facility tenor when blank.',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = PfiInstitutionProfile
         fields = [
@@ -315,8 +417,71 @@ class PfiInstitutionForm(forms.ModelForm):
             'footprint_regions': 'Must overlap the fund’s eligible regions when tagged.',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['term_approved_months'].initial = appraisal.term_approved_months
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif not self.is_bound:
+            profile = getattr(self, 'instance', None)
+            if profile and profile.facility_amount:
+                self.fields['amount_approved'].initial = profile.facility_amount
+            elif loan_request is not None:
+                self.fields['amount_approved'].initial = loan_request.amount_requested
+            if profile and profile.dbe_to_pfi_rate_pct is not None:
+                self.fields['rate_approved'].initial = profile.dbe_to_pfi_rate_pct
+            if profile and profile.tenor_months:
+                self.fields['term_approved_months'].initial = profile.tenor_months
+
 
 class LeaseAssetForm(forms.ModelForm):
+    """Lease / Ijarah asset desk + officer recommendation (synced to LoanAppraisal)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended financed amount (ETB)',
+        help_text='Usually asset price − lessee contribution (+ ancillary if bank-financed).',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended rate (%)',
+        help_text='Hire-purchase rate. Ijarah: use 0 if rental-only (not Sheet 7 interest).',
+    )
+    term_approved_months = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        label='Recommended term (months)',
+        help_text='Defaults to rent term when blank.',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = LeaseAssetProfile
         fields = [
@@ -367,8 +532,71 @@ class LeaseAssetForm(forms.ModelForm):
             'bank_holds_title': 'Bank owns the machine until the last installment.',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['term_approved_months'].initial = appraisal.term_approved_months
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif not self.is_bound:
+            from loans.lease_appraisal import default_financed_amount
+            profile = getattr(self, 'instance', None)
+            financed = default_financed_amount(profile)
+            if financed is not None:
+                self.fields['amount_approved'].initial = financed
+            elif loan_request is not None:
+                self.fields['amount_approved'].initial = loan_request.amount_requested
+            if profile and profile.rent_term_months:
+                self.fields['term_approved_months'].initial = profile.rent_term_months
+
 
 class MurabahaContractForm(forms.ModelForm):
+    """Murabaha cost-plus desk + officer recommendation (synced to LoanAppraisal)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended selling / financed amount (ETB)',
+        help_text='Usually the computed selling price (cost + markup).',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended markup (%)',
+        help_text='Cost-plus markup — not an interest rate. Defaults to contract markup.',
+    )
+    term_approved_months = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        label='Recommended tenor (months)',
+        help_text='Defaults to contract tenor when blank.',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = MurabahaContract
         fields = [
@@ -395,8 +623,78 @@ class MurabahaContractForm(forms.ModelForm):
             'delivery_status': 'Release needs goods received or sold — not merely ordered.',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['term_approved_months'].initial = appraisal.term_approved_months
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif not self.is_bound:
+            from loans.murabaha_overlay import compute_selling_price
+            contract = getattr(self, 'instance', None)
+            if contract:
+                selling = contract.selling_price or compute_selling_price(
+                    contract.cost_price, contract.markup_pct,
+                )
+                if selling is not None:
+                    self.fields['amount_approved'].initial = selling
+                elif loan_request is not None:
+                    self.fields['amount_approved'].initial = loan_request.amount_requested
+                if contract.markup_pct is not None:
+                    self.fields['rate_approved'].initial = contract.markup_pct
+                if contract.tenor_months:
+                    self.fields['term_approved_months'].initial = contract.tenor_months
+            elif loan_request is not None:
+                self.fields['amount_approved'].initial = loan_request.amount_requested
+
 
 class IdeaProfileForm(forms.ModelForm):
+    """Idea / quasi-equity desk + officer recommendation (synced to LoanAppraisal)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended investment amount (ETB)',
+        help_text='Quasi-equity ticket size — not an installment principal.',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended DBE share (%)',
+        help_text='Stored as rate field for committee routing — not interest.',
+    )
+    term_approved_months = forms.IntegerField(
+        required=False, min_value=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        label='Expected investment horizon (months)',
+        help_text='Defaults to 60 months when blank.',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = IdeaProfile
         fields = [
@@ -417,6 +715,25 @@ class IdeaProfileForm(forms.ModelForm):
             'proposed_dbe_share_pct': 'DBE takes a share. This is not an installment loan.',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from loans.idea_appraisal import DEFAULT_HORIZON_MONTHS
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['term_approved_months'].initial = appraisal.term_approved_months
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif not self.is_bound:
+            profile = getattr(self, 'instance', None)
+            if loan_request is not None:
+                self.fields['amount_approved'].initial = loan_request.amount_requested
+            if profile and profile.proposed_dbe_share_pct is not None:
+                self.fields['rate_approved'].initial = profile.proposed_dbe_share_pct
+            self.fields['term_approved_months'].initial = DEFAULT_HORIZON_MONTHS
+
 
 class ProjectIntakeForm(ProjectProfileForm):
     """Registration subset — full project file stays on the overlay."""
@@ -430,7 +747,14 @@ class ProjectIntakeForm(ProjectProfileForm):
         ]
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop('appraisal', None)
+        kwargs.pop('loan_request', None)
         super().__init__(*args, **kwargs)
+        for name in (
+            'recommendation', 'amount_approved', 'rate_approved', 'term_approved_months',
+            'recommendation_comment', 'strengths', 'weaknesses',
+        ):
+            self.fields.pop(name, None)
         for name in ('project_title', 'sector', 'location', 'total_project_cost',
                      'promoter_equity', 'requested_debt'):
             self.fields[name].required = True
@@ -449,6 +773,11 @@ class PfiIntakeForm(PfiInstitutionForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for name in (
+            'recommendation', 'amount_approved', 'rate_approved', 'term_approved_months',
+            'recommendation_comment', 'strengths', 'weaknesses',
+        ):
+            self.fields.pop(name, None)
         for name in ('institution_name', 'kind', 'license_number', 'facility_amount', 'tenor_months'):
             self.fields[name].required = True
 
@@ -462,7 +791,14 @@ class LeaseIntakeForm(LeaseAssetForm):
         ]
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop('appraisal', None)
+        kwargs.pop('loan_request', None)
         super().__init__(*args, **kwargs)
+        for name in (
+            'recommendation', 'amount_approved', 'rate_approved', 'term_approved_months',
+            'recommendation_comment', 'strengths', 'weaknesses',
+        ):
+            self.fields.pop(name, None)
         for name in ('supplier_name', 'asset_description', 'asset_price'):
             self.fields[name].required = True
         self.fields['is_new_goods'].initial = True
@@ -477,7 +813,14 @@ class MurabahaIntakeForm(MurabahaContractForm):
         ]
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop('appraisal', None)
+        kwargs.pop('loan_request', None)
         super().__init__(*args, **kwargs)
+        for name in (
+            'recommendation', 'amount_approved', 'rate_approved', 'term_approved_months',
+            'recommendation_comment', 'strengths', 'weaknesses',
+        ):
+            self.fields.pop(name, None)
         for name in ('goods_description', 'cost_price', 'markup_pct'):
             self.fields[name].required = True
 
@@ -491,13 +834,55 @@ class IdeaIntakeForm(IdeaProfileForm):
         ]
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop('appraisal', None)
+        kwargs.pop('loan_request', None)
         super().__init__(*args, **kwargs)
+        for name in (
+            'recommendation', 'amount_approved', 'rate_approved', 'term_approved_months',
+            'recommendation_comment', 'strengths', 'weaknesses',
+        ):
+            self.fields.pop(name, None)
         for name in ('venture_name', 'founded_year', 'proposed_dbe_share_pct'):
             self.fields[name].required = True
         self.fields['implements_in_ethiopia'].initial = True
 
 
 class ConsumerProfileForm(forms.ModelForm):
+    """Intake + officer appraisal decision (synced to LoanAppraisal on save)."""
+
+    recommendation = forms.ChoiceField(
+        choices=[('', '— Select —')] + list(LoanAppraisal.RECOMMEND_CHOICES),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Officer recommendation',
+    )
+    amount_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=20,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended amount (ETB)',
+        help_text='What you recommend the committee approve (often ≤ amount requested).',
+    )
+    rate_approved = forms.DecimalField(
+        required=False, min_value=0, decimal_places=2, max_digits=8,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Recommended interest rate (%)',
+    )
+    recommendation_comment = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Recommendation rationale',
+    )
+    strengths = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Strengths',
+    )
+    weaknesses = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Weaknesses / conditions',
+    )
+
     class Meta:
         model = ConsumerProfile
         fields = [
@@ -517,17 +902,50 @@ class ConsumerProfileForm(forms.ModelForm):
         }
         help_texts = {
             'monthly_salary': 'Net monthly pay. DTI = obligations ÷ salary.',
-            'monthly_obligations': 'Existing monthly debt service.',
+            'monthly_obligations': 'Existing monthly debt service (enter 0 if none).',
             'asset_value': 'House or vehicle value. LTV = requested amount ÷ this value.',
+            'term_months': 'Recommended tenor in months (feeds affordability + committee).',
+        }
+        labels = {
+            'term_months': 'Recommended term (months)',
+            'notes': 'Underwriting notes',
         }
 
+    def __init__(self, *args, appraisal=None, loan_request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['employer_name'].required = True
+        self.fields['monthly_salary'].required = True
+        self.fields['monthly_obligations'].required = True
+        self.fields['asset_value'].required = True
+        self.fields['term_months'].required = True
+        if appraisal is not None:
+            self.fields['recommendation'].initial = appraisal.recommendation or ''
+            self.fields['amount_approved'].initial = appraisal.amount_approved
+            self.fields['rate_approved'].initial = appraisal.rate_approved
+            self.fields['recommendation_comment'].initial = appraisal.recommendation_comment or ''
+            self.fields['strengths'].initial = appraisal.strengths or ''
+            self.fields['weaknesses'].initial = appraisal.weaknesses or ''
+        elif loan_request is not None and not self.is_bound:
+            self.fields['amount_approved'].initial = loan_request.amount_requested
 
-class ConsumerIntakeForm(ConsumerProfileForm):
-    class Meta(ConsumerProfileForm.Meta):
+
+class ConsumerIntakeForm(forms.ModelForm):
+    """Registration-only capacity fields (no officer recommendation yet)."""
+
+    class Meta:
+        model = ConsumerProfile
         fields = [
             'purpose', 'employer_name', 'occupation',
             'monthly_salary', 'monthly_obligations', 'asset_value',
         ]
+        widgets = {
+            'purpose': forms.Select(attrs={'class': 'form-control'}),
+            'employer_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'occupation': forms.TextInput(attrs={'class': 'form-control'}),
+            'monthly_salary': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'monthly_obligations': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'asset_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

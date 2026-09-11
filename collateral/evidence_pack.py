@@ -67,6 +67,10 @@ def build_collateral_evidence_pack(loan_request) -> Dict[str, Any]:
         status=CollateralUnlockRequest.STATUS_PENDING,
     ).select_related('requested_by').first()
 
+    from collateral.intelligence import build_collateral_risk_brief
+
+    risk_brief = build_collateral_risk_brief(loan_request)
+
     return {
         'loan_request': loan_request,
         'policy': policy,
@@ -78,4 +82,5 @@ def build_collateral_evidence_pack(loan_request) -> Dict[str, Any]:
         'other_data': other_data,
         'audit_logs': audit_logs,
         'pending_unlock': pending_unlock,
+        'risk_brief': risk_brief,
     }

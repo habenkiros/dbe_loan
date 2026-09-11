@@ -859,6 +859,10 @@ def field_visit(request, building_id, step=1):
     map_data = building_map_data(building)
     image_rows = _annotate_image_distances(building.site_gps_lat, building.site_gps_lon, images)
     pctx = _policy_template_context()
+    from collateral.intelligence import suggest_photo_type
+    types_present = set(images.values_list('photo_type', flat=True))
+    missing = [] if 'front' in types_present else ['front']
+    photo_type_suggest = suggest_photo_type(kind='building', missing_types=missing)
 
     return render(request, 'collateral/field_visit.html', {
         'building': building,
@@ -876,6 +880,7 @@ def field_visit(request, building_id, step=1):
         'can_edit_unit_price': can_edit_unit_price,
         'images': images,
         'photo_types': photo_types,
+        'photo_type_suggest': photo_type_suggest,
         'min_images': pctx['min_images_per_building'],
         'gps_weak_threshold_m': pctx['gps_weak_threshold_m'],
         'map_data': map_data,
@@ -931,6 +936,10 @@ def land_field_visit(request, loan_request_id, step=1):
     map_data = land_map_data(land)
     image_rows = _annotate_image_distances(land.site_gps_lat, land.site_gps_lon, images)
     pctx = _policy_template_context()
+    from collateral.intelligence import suggest_photo_type
+    types_present = set(images.values_list('photo_type', flat=True))
+    missing = [t for t in ('plot', 'boundary', 'title_deed') if t not in types_present]
+    photo_type_suggest = suggest_photo_type(kind='land', missing_types=missing)
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'land',
@@ -945,6 +954,7 @@ def land_field_visit(request, loan_request_id, step=1):
         'land_form': land_form,
         'images': images,
         'photo_types': LandValuationImage.PHOTO_TYPE_CHOICES,
+        'photo_type_suggest': photo_type_suggest,
         'min_images': pctx['min_images_per_land'],
         'back_url': reverse('collateral:land_valuation', args=[loan_request_id]),
         'summary_url': reverse('collateral:summary', args=[loan_request_id]),
@@ -1004,6 +1014,9 @@ def other_field_visit(request, item_id, step=1):
         for key, label in required_movable_photo_types(item)
     ]
     to_be_purchased = item_is_to_be_purchased(item)
+    from collateral.intelligence import suggest_photo_type
+    missing = [row['key'] for row in required_photo_type_status if not row['ok']]
+    photo_type_suggest = suggest_photo_type(kind='other', missing_types=missing)
 
     return render(request, 'collateral/field_visit_asset.html', {
         'visit_kind': 'other',
@@ -1018,6 +1031,7 @@ def other_field_visit(request, item_id, step=1):
         'item_form': item_form,
         'images': images,
         'photo_types': OtherCollateralItemImage.PHOTO_TYPE_CHOICES,
+        'photo_type_suggest': photo_type_suggest,
         'min_images': pctx['min_images_per_other_item'],
         'back_url': reverse('collateral:other_collateral_list', args=[loan_request.id]),
         'summary_url': reverse('collateral:summary', args=[loan_request.id]),
@@ -1308,6 +1322,8 @@ def summary(request, loan_request_id):
         and coverage.get('adequate_for_submit', True)
         and not submit_blockers
     )
+    from collateral.intelligence import build_collateral_risk_brief
+    risk_brief = build_collateral_risk_brief(loan_request)
     if not loan_readiness.get('applies'):
         can_submit_collateral = True
     if loan_readiness.get('locked'):
@@ -1361,6 +1377,7 @@ def summary(request, loan_request_id):
         'building_map_sections': building_map_sections,
         'land_map_section': land_map_section,
         'other_map_sections': other_map_sections,
+        'risk_brief': risk_brief,
     })
 
 

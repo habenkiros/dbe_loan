@@ -15,7 +15,7 @@
 <p>{{ loan_request.applicant_name }} · {{ loan_request.category.get_product_family_display }}</p>
 <p class="help">
   Cost-plus sale. Selling price is cost plus markup — not an interest schedule.
-  Project-scale files route to IFB Directorate / HO.   Confirm needs a Sharia trail.
+  Project-scale files route to IFB Directorate / HO. Confirm needs a Sharia trail.
 </p>
 
 {% include "loans/_product_intel_panel.html" %}
@@ -37,11 +37,31 @@
 <p>Computed selling price <strong>{{ overlay.selling_price }}</strong></p>
 {% endif %}
 
+{% if overlay.scorecard %}
+<div class="pa-panel" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;padding:0.85rem 1rem;margin:1rem 0;">
+  <p style="margin:0 0 0.35rem;">
+    Murabaha score
+    <strong>{{ overlay.scorecard.total|floatformat:1 }}/100</strong>
+    ({{ overlay.scorecard.band_label }})
+    <span class="help">· {{ overlay.scorecard.algorithm }}</span>
+  </p>
+  <ul class="help" style="margin:0;">
+    {% for p in overlay.scorecard.pillars %}
+    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if can_edit %}
 <form method="post">
   {% csrf_token %}
   {{ form.as_p }}
-  <p><button type="submit" class="btn btn-green">Save Murabaha contract</button></p>
+  <p class="help">
+    Officer recommendation fields (Approve / Decline / Escalate, selling amount, markup %, tenor)
+    are the Murabaha appraisal decision for committee — not MSME Sheet 6.
+  </p>
+  <p><button type="submit" class="btn btn-green">Save Murabaha appraisal</button></p>
 </form>
 {% else %}
 {{ form.as_p }}

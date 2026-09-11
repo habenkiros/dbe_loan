@@ -254,6 +254,12 @@ class BuildingImage(models.Model):
         max_digits=12, decimal_places=1, null=True, blank=True,
         help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
     )
+    content_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    perceptual_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    photo_type_suggested = models.CharField(
+        max_length=20, blank=True,
+        help_text='Assistive suggested type at upload (officer may override).',
+    )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -328,6 +334,12 @@ class LandValuationImage(models.Model):
     browser_vs_exif_distance_m = models.DecimalField(
         max_digits=12, decimal_places=1, null=True, blank=True,
         help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
+    )
+    content_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    perceptual_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    photo_type_suggested = models.CharField(
+        max_length=20, blank=True,
+        help_text='Assistive suggested type at upload (officer may override).',
     )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -436,6 +448,12 @@ class OtherCollateralItemImage(models.Model):
     browser_vs_exif_distance_m = models.DecimalField(
         max_digits=12, decimal_places=1, null=True, blank=True,
         help_text='Distance between browser capture GPS and photo EXIF GPS (metres).',
+    )
+    content_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    perceptual_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    photo_type_suggested = models.CharField(
+        max_length=20, blank=True,
+        help_text='Assistive suggested type at upload (officer may override).',
     )
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

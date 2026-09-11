@@ -128,6 +128,12 @@ def crm_respond(loan_request, user, action: str, note: str = ''):
 def cycle_payload(loan_request) -> Optional[dict]:
     if not crm_cycle_applies(loan_request):
         return None
+    from loans.crm_pack import (
+        build_modality_pack_section,
+        default_crm_send_note,
+        uses_sheet_pack,
+    )
+
     row = latest_round(loan_request)
     history = []
     if getattr(loan_request, 'pk', None):
@@ -141,4 +147,7 @@ def cycle_payload(loan_request) -> Optional[dict]:
         'history': history,
         'cleared': crm_is_cleared(loan_request),
         'blockers': crm_committee_blockers(loan_request),
+        'modality_pack': build_modality_pack_section(loan_request),
+        'sheet_pack': uses_sheet_pack(loan_request),
+        'default_send_note': default_crm_send_note(loan_request),
     }

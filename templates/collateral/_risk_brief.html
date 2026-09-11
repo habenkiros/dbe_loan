@@ -1,0 +1,67 @@
+{% comment %}Assistive collateral risk brief. Expects risk_brief. Never a decision. {% endcomment %}
+{% if risk_brief %}
+<div class="collateral-risk-brief" style="margin:1rem 0;padding:1rem 1.15rem;border-radius:8px;border:1px solid {% if risk_brief.overall == 'elevated' %}#e57373;background:#fdecea{% elif risk_brief.overall == 'watch' %}#f9a825;background:#fff8e1{% else %}#2e7d32;background:#e8f5e9{% endif %};">
+  <h3 style="margin:0 0 0.35rem;">Collateral intelligence (assistive)</h3>
+  <p style="margin:0 0 0.65rem;" class="help">Suggests and flags for officer / engineering / committee — does not set value or approve.</p>
+  <p style="margin:0 0 0.75rem;">
+    <strong>{{ risk_brief.overall_label }}</strong>
+    {% if risk_brief.gps and risk_brief.gps.score != None %}
+    · GPS confidence <strong>{{ risk_brief.gps.label }}</strong> ({{ risk_brief.gps.score }}/100)
+    {% elif risk_brief.gps %}
+    · GPS {{ risk_brief.gps.label }}
+    {% endif %}
+    {% if risk_brief.coverage and risk_brief.coverage.coverage_pct %}
+    · Coverage {{ risk_brief.coverage.coverage_pct }}%
+    {% endif %}
+  </p>
+
+  {% if risk_brief.gps and risk_brief.gps.sites %}
+  <p style="margin:0 0 0.35rem;"><strong>Site GPS</strong></p>
+  <ul style="margin:0 0 0.75rem 1.1rem;">
+    {% for s in risk_brief.gps.sites %}
+    <li>{{ s.asset }} — {{ s.label }} ({{ s.score }}/100)
+      {% if s.source %}· {{ s.source }}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if risk_brief.market_outliers %}
+  <p style="margin:0 0 0.35rem;"><strong>Market band flags</strong></p>
+  <ul style="margin:0 0 0.75rem 1.1rem;">
+    {% for o in risk_brief.market_outliers %}
+    <li style="{% if o.level == 'block' %}color:#c62828;font-weight:600;{% elif o.level == 'warn' %}color:#856404;{% endif %}">
+      {{ o.asset }}: {{ o.message }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if risk_brief.duplicates %}
+  <p style="margin:0 0 0.35rem;"><strong>Possible recycled evidence</strong></p>
+  <ul style="margin:0 0 0.75rem 1.1rem;">
+    {% for d in risk_brief.duplicates %}
+    <li style="color:#c62828;">{{ d.message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if risk_brief.photo_hints %}
+  <p style="margin:0 0 0.35rem;"><strong>Photo / field completeness</strong></p>
+  <ul style="margin:0 0 0.75rem 1.1rem;">
+    {% for h in risk_brief.photo_hints %}
+    <li>{{ h.asset }}: {{ h.labels|join:"; " }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if risk_brief.ownership_flags %}
+  <p style="margin:0 0 0.35rem;"><strong>Ownership / title</strong></p>
+  <ul style="margin:0 0 0.5rem 1.1rem;">
+    {% for f in risk_brief.ownership_flags %}
+    <li>{{ f }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}

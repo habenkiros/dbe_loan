@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from loans.forms import LeaseAssetForm
+from loans.lease_appraisal import sync_lease_decision_to_appraisal
 from loans.lease_overlay import (
     can_edit_lease_file,
     can_view_lease_file,
@@ -17,7 +18,7 @@ from loans.lease_overlay import (
     is_lease_file,
     lease_file_summary,
 )
-from loans.models import IjarahRentLine, LeaseAssetProfile, LoanRequest, ShariaReview
+from loans.models import IjarahRentLine, LeaseAssetProfile, LoanAppraisal, LoanRequest, ShariaReview
 from loans.product_intel import intel_context
 
 
@@ -41,17 +42,30 @@ def lease_file(request, loan_request_id):
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
     profile, _ = LeaseAssetProfile.objects.get_or_create(loan_request=loan)
+    appraisal = LoanAppraisal.objects.filter(loan_request=loan).first()
     can_edit = can_edit_lease_file(request.user, loan)
     if request.method == 'POST' and can_edit:
-        form = LeaseAssetForm(request.POST, instance=profile)
+        form = LeaseAssetForm(
+            request.POST, instance=profile, appraisal=appraisal, loan_request=loan,
+        )
         if form.is_valid():
             obj = form.save(commit=False)
             obj.updated_by = request.user
             obj.save()
-            messages.success(request, 'Lease asset register saved.')
+            sync_lease_decision_to_appraisal(
+                loan, obj, request.user,
+                recommendation=form.cleaned_data.get('recommendation') or '',
+                amount_approved=form.cleaned_data.get('amount_approved'),
+                rate_approved=form.cleaned_data.get('rate_approved'),
+                term_approved_months=form.cleaned_data.get('term_approved_months'),
+                recommendation_comment=form.cleaned_data.get('recommendation_comment') or '',
+                strengths=form.cleaned_data.get('strengths') or '',
+                weaknesses=form.cleaned_data.get('weaknesses') or '',
+            )
+            messages.success(request, 'Lease appraisal saved — scorecard and recommendation updated.')
             return redirect('lease_file', loan_request_id=loan.id)
     else:
-        form = LeaseAssetForm(instance=profile)
+        form = LeaseAssetForm(instance=profile, appraisal=appraisal, loan_request=loan)
 
     return render(request, 'loans/lease_file.html', {
         'loan_request': loan,

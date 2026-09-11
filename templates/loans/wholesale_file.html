@@ -39,11 +39,32 @@
 </p>
 {% endif %}
 
+{% if overlay.scorecard %}
+<div class="pa-panel" style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;padding:0.85rem 1rem;margin:1rem 0;">
+  <p style="margin:0 0 0.35rem;">
+    PFI score
+    <strong>{{ overlay.scorecard.total|floatformat:1 }}/100</strong>
+    ({{ overlay.scorecard.band_label }})
+    <span class="help">· {{ overlay.scorecard.algorithm }}</span>
+  </p>
+  <ul class="help" style="margin:0;">
+    {% for p in overlay.scorecard.pillars %}
+    <li>{{ p.label }}: {{ p.earned }}/{{ p.max }} — {{ p.note }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if can_edit %}
 <form method="post">
   {% csrf_token %}
+  <h2>Institution &amp; facility</h2>
   {{ form.as_p }}
-  <p><button type="submit" class="btn btn-green">Save PFI file</button></p>
+  <p class="help">
+    Officer recommendation fields above (Approve / Decline / Escalate, amount, rate, tenor)
+    are the wholesale appraisal decision for committee — not MSME Sheet 6.
+  </p>
+  <p><button type="submit" class="btn btn-green">Save PFI appraisal</button></p>
 </form>
 {% else %}
 {{ form.as_p }}

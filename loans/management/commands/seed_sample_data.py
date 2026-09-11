@@ -556,6 +556,9 @@ class Command(BaseCommand):
             'vp_it': Department.KEY_MANAGEMENT,
             'vp_customer_service': Department.KEY_MANAGEMENT,
             'board_member': Department.KEY_BOARD,
+            'legal_officer': 'legal',
+            'engineer': 'engineering',
+            'engineering_head': 'engineering',
         }
         # Finance assistant sits in Finance dept (same sphere as finance manager)
         if users.get('fin_asst'):
@@ -1761,6 +1764,7 @@ class Command(BaseCommand):
             profile.has_adequate_mis = True
             profile.capital = Decimal('120000000')
             profile.npl_pct = Decimal('4.20')
+            profile.par30_pct = Decimal('8.00')
             profile.par90_pct = Decimal('6.10')
             profile.audited_year = timezone.now().year - 1
             profile.credit_policy_on_file = True
@@ -1770,6 +1774,8 @@ class Command(BaseCommand):
             profile.facility_amount = amount
             profile.tenor_months = 36
             profile.facility_purpose = PfiInstitutionProfile.PURPOSE_WC
+            profile.end_user_rate_ceiling_pct = Decimal('11.00')
+            profile.dbe_to_pfi_rate_pct = Decimal('4.50')
             profile.target_women_pct = Decimal('30')
             profile.target_youth_pct = Decimal('20')
             profile.updated_by = officer
@@ -1825,6 +1831,7 @@ class Command(BaseCommand):
             profile.residual_value = (amount * Decimal('0.10')).quantize(Decimal('0.01'))
             profile.bank_holds_title = True
             profile.asset_status = LeaseAssetProfile.STATUS_ON_LEASE
+            profile.rent_term_months = 36
             profile.updated_by = officer
             if family == FAMILY_IFB_IJARAH:
                 profile.monthly_rent = (amount / Decimal('36')).quantize(Decimal('0.01'))
@@ -1897,6 +1904,119 @@ class Command(BaseCommand):
             tag.sector = 'Climate-smart agriculture'
             tag.updated_by = officer
             tag.save()
+
+        self._stamp_modality_appraisal(loan, family, officer, amount)
+
+    def _stamp_modality_appraisal(self, loan, family, officer, amount):
+        """Persist officer recommendation + scorecard on product-desk demo files."""
+        if officer is None:
+            return
+        from loans.product_family import (
+            FAMILY_CONSUMER,
+            FAMILY_IDEA_EQUITY,
+            FAMILY_IFB_IJARAH,
+            FAMILY_IFB_MURABAHA,
+            FAMILY_LEASE,
+            FAMILY_PROJECT,
+            FAMILY_WHOLESALE,
+        )
+
+        try:
+            if family == FAMILY_PROJECT:
+                from loans.project_appraisal import sync_project_decision_to_appraisal
+                profile = loan.project_profile
+                sync_project_decision_to_appraisal(
+                    loan, profile, officer,
+                    recommendation='approve',
+                    amount_approved=profile.requested_debt or amount,
+                    rate_approved=Decimal('14.50'),
+                    term_approved_months=(profile.implementation_months or 24) + (profile.grace_months or 0),
+                    recommendation_comment='NPV positive, DSCR above 1.25, plant desks ready for demo.',
+                    strengths='Strong NPV/IRR; equity plan on file; current account opened.',
+                    weaknesses='Monitor construction draw schedule and cost overruns.',
+                )
+            elif family == FAMILY_WHOLESALE:
+                from loans.wholesale_appraisal import sync_wholesale_decision_to_appraisal
+                profile = loan.pfi_profile
+                if profile.par30_pct is None:
+                    profile.par30_pct = Decimal('8.00')
+                if profile.end_user_rate_ceiling_pct is None:
+                    profile.end_user_rate_ceiling_pct = Decimal('11.00')
+                if profile.dbe_to_pfi_rate_pct is None:
+                    profile.dbe_to_pfi_rate_pct = Decimal('4.50')
+                profile.save()
+                sync_wholesale_decision_to_appraisal(
+                    loan, profile, officer,
+                    recommendation='approve',
+                    amount_approved=profile.facility_amount or amount,
+                    rate_approved=profile.dbe_to_pfi_rate_pct or Decimal('4.50'),
+                    term_approved_months=profile.tenor_months or 36,
+                    recommendation_comment='PAR and controls within wholesale band; facility sized to envelope.',
+                    strengths='Adequate MIS/ESMS; PAR>90 under 10%; policies on pack.',
+                    weaknesses='Watch sub-portfolio PAR on utilization reports.',
+                )
+            elif family == FAMILY_IDEA_EQUITY:
+                from loans.idea_appraisal import sync_idea_decision_to_appraisal
+                profile = loan.idea_profile
+                sync_idea_decision_to_appraisal(
+                    loan, profile, officer,
+                    recommendation='approve',
+                    amount_approved=amount,
+                    rate_approved=profile.proposed_dbe_share_pct or Decimal('15'),
+                    term_approved_months=60,
+                    recommendation_comment='Start-up within age gate; Ethiopia + label; share sized for DBE.',
+                    strengths='Young venture, Ethiopia implementation, start-up label.',
+                    weaknesses='Cap table must match proposed share before investment release.',
+                )
+            elif family in (FAMILY_LEASE, FAMILY_IFB_IJARAH):
+                from loans.lease_appraisal import sync_lease_decision_to_appraisal
+                profile = loan.lease_asset
+                financed = (profile.asset_price or amount) - (profile.lessee_contribution or 0)
+                if profile.ancillary_amount:
+                    financed += profile.ancillary_amount
+                sync_lease_decision_to_appraisal(
+                    loan, profile, officer,
+                    recommendation='approve',
+                    amount_approved=financed if financed > 0 else amount,
+                    rate_approved=Decimal('0') if family == FAMILY_IFB_IJARAH else Decimal('12.00'),
+                    term_approved_months=profile.rent_term_months or 36,
+                    recommendation_comment=(
+                        'Ijarah rent and title support approval.'
+                        if family == FAMILY_IFB_IJARAH else
+                        'New goods, ≥20% contribution, bank holds title.'
+                    ),
+                    strengths='New capital goods; contribution and insurance on file.',
+                    weaknesses='Confirm serial / delivery before first release.',
+                )
+            elif family == FAMILY_IFB_MURABAHA:
+                from loans.murabaha_appraisal import sync_murabaha_decision_to_appraisal
+                contract = loan.murabaha
+                sync_murabaha_decision_to_appraisal(
+                    loan, contract, officer,
+                    recommendation='approve',
+                    amount_approved=contract.selling_price or amount,
+                    rate_approved=contract.markup_pct or Decimal('12.50'),
+                    term_approved_months=contract.tenor_months or 12,
+                    recommendation_comment='Cost-plus disclosed; goods received; Sharia trail cleared.',
+                    strengths='Supplier offer, markup, and delivery status on file.',
+                    weaknesses='Keep Sharia trail current for confirm.',
+                )
+            elif family == FAMILY_CONSUMER:
+                from loans.consumer_appraisal import sync_consumer_decision_to_appraisal
+                profile = loan.consumer_profile
+                sync_consumer_decision_to_appraisal(
+                    loan, profile, officer,
+                    recommendation='approve',
+                    amount_approved=amount,
+                    rate_approved=Decimal('12.00'),
+                    recommendation_comment='DTI and housing LTV within HRM band for demo salary profile.',
+                    strengths='Stable public employer; LTV under housing cap.',
+                    weaknesses='Monitor payment burden vs salary.',
+                )
+        except Exception as exc:
+            self.stdout.write(self.style.WARNING(
+                f'  Could not stamp {family} appraisal on {loan.loan_request_id}: {exc}'
+            ))
 
     def _attach_demo_document(self, loan, doc_type, officer, now, *, png=None, label=''):
         from django.core.files.base import ContentFile

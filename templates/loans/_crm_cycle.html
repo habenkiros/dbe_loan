@@ -4,7 +4,37 @@
   <p class="help">
     After KYC, Appraisal sends a pack. CRM comments, then clears it for committee.
     Each send is a new version.
+    {% if crm_cycle.modality_pack %}
+    This file uses the <strong>{{ crm_cycle.modality_pack.title }}</strong> — not MSME Sheets 1–7.
+    {% endif %}
   </p>
+
+  {% if crm_cycle.modality_pack %}
+  <div style="background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;padding:0.75rem 1rem;margin:0.5rem 0;">
+    <p style="margin:0 0 0.35rem;">
+      <strong>{{ crm_cycle.modality_pack.title }}</strong>
+      {% if crm_cycle.modality_pack.total != None %}
+      · Score {{ crm_cycle.modality_pack.total|floatformat:1 }}/100
+      ({{ crm_cycle.modality_pack.band_label }})
+      {% endif %}
+      · {{ crm_cycle.modality_pack.recommendation }}
+    </p>
+    <ul class="help" style="margin:0;">
+      {% for row in crm_cycle.modality_pack.rows %}
+      <li>{{ row.label }}: {{ row.value }}</li>
+      {% endfor %}
+    </ul>
+    <p class="list-actions" style="margin:0.5rem 0 0;">
+      {% url 'committee_appraisal_pack' loan_request.id as pack_url %}
+      {% include "includes/list_action.html" with href=pack_url icon="appraisal" label="Open full pack" tone="blue" only %}
+      {% if crm_cycle.modality_pack.desk_url_name %}
+      {% url crm_cycle.modality_pack.desk_url_name loan_request.id as desk_url %}
+      {% include "includes/list_action.html" with href=desk_url icon="open" label="Product desk" tone="gray" only %}
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
   {% if crm_cycle.latest %}
   <p>
     Version {{ crm_cycle.latest.version }} ·
@@ -22,7 +52,7 @@
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.path }}">
     <label for="crm-send-note">Note for CRM</label>
-    <textarea id="crm-send-note" name="note" rows="2" class="form-control" required></textarea>
+    <textarea id="crm-send-note" name="note" rows="3" class="form-control" required>{{ crm_cycle.default_send_note }}</textarea>
     <p><button type="submit" name="action" value="send" class="btn btn-green">Send pack to CRM</button></p>
   </form>
   {% endif %}

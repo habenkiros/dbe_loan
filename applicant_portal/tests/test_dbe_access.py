@@ -39,7 +39,12 @@ class DbePortalAccessTests(TestCase):
         )
         self.district = District.objects.create(name='DBE Dist')
         self.branch = Branch.objects.create(name='DBE Branch', district=self.district)
-        self.collateral = CollateralType.objects.create(name='DBE Coll')
+        self.collateral = CollateralType.objects.create(
+            name='DBE Coll', kind=CollateralType.KIND_BUILDING,
+        )
+        self.financed = CollateralType.objects.create(
+            name='Financed plant', kind=CollateralType.KIND_FINANCED,
+        )
         self.general = LoanCategory.objects.create(
             name='MSME General', appraisal_mode='msme', product_family=FAMILY_GENERAL,
         )
@@ -50,6 +55,68 @@ class DbePortalAccessTests(TestCase):
             name='Project Financing', appraisal_mode='corporate', product_family=FAMILY_PROJECT,
         )
         self.password = 'SecurePass1!'
+
+    def test_person_details_form_renders_category_options(self):
+        person = ApplicantAccount.objects.create(
+            full_name='Sara Customer',
+            phone_number='0911000100',
+            customer_number='1002003',
+            actor_kind=ApplicantAccount.ACTOR_PERSON,
+        )
+        person.set_password(self.password)
+        person.save()
+        self.client.post(reverse('applicant_portal:login'), {
+            'login': '0911000100',
+            'password': self.password,
+        })
+        # session may use phone or customer — ensure portal session
+        from django.test import Client
+        client = Client()
+        session = client.session
+        session['applicant_portal_account_id'] = person.id
+        session.save()
+        start = client.post(reverse('applicant_portal:apply_start'))
+        self.assertEqual(start.status_code, 302)
+        app = OnlineApplication.objects.get(applicant=person)
+        page = client.get(reverse('applicant_portal:apply_details', args=[app.public_id]))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'MSME General')
+        self.assertContains(page, f'value="{self.general.id}"')
+        self.assertNotContains(page, 'PFI Facility')
+
+    def test_details_rejects_mismatched_collateral(self):
+        person = ApplicantAccount.objects.create(
+            full_name='Sara Customer',
+            phone_number='0911000199',
+            customer_number='1002099',
+            actor_kind=ApplicantAccount.ACTOR_PERSON,
+        )
+        app = OnlineApplication.objects.create(
+            applicant=person,
+            applicant_name=person.full_name,
+            phone_number=person.phone_number,
+            customer_number=person.customer_number,
+            status=OnlineApplication.STATUS_DRAFT,
+            processing_fee_amount=Decimal('0'),
+        )
+        lease = LoanCategory.objects.create(
+            name='Lease Test', appraisal_mode='corporate', product_family='lease',
+        )
+        from applicant_portal.forms import ApplicationDetailsForm
+        form = ApplicationDetailsForm({
+            'applicant_name': 'Sara Customer',
+            'phone_number': person.phone_number,
+            'customer_number': person.customer_number,
+            'customer_history': 'new',
+            'category': str(lease.id),
+            'collateral': str(self.collateral.id),
+            'district': str(self.district.id),
+            'branch': str(self.branch.id),
+            'amount_requested': '100000',
+            'reason': 'Lease asset.',
+        }, instance=app)
+        self.assertFalse(form.is_valid())
+        self.assertIn('collateral', form.errors)
 
     def test_person_does_not_see_wholesale_or_project(self):
         person = ApplicantAccount.objects.create(

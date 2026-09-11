@@ -148,13 +148,29 @@ def _routing_amount_source(loan_request) -> str:
     return 'requested'
 
 
+def get_committee_routing_mode() -> str:
+    """Org policy: tier (exclusive bands) or cumulative (min floor chain)."""
+    from loans.appraisal_policy import get_loan_analysis_policy
+    from loans.models import LoanAnalysisPolicyConfig
+
+    policy = get_loan_analysis_policy()
+    mode = getattr(policy, 'committee_routing_mode', None) or LoanAnalysisPolicyConfig.ROUTING_TIER
+    if mode not in (
+        LoanAnalysisPolicyConfig.ROUTING_TIER,
+        LoanAnalysisPolicyConfig.ROUTING_CUMULATIVE,
+    ):
+        return LoanAnalysisPolicyConfig.ROUTING_TIER
+    return mode
+
+
 def get_levels_for_loan(loan_request) -> List:
-    """Active levels that apply to this loan (amount thresholds + is_active)."""
+    """Active levels that apply to this loan (amount thresholds + routing mode)."""
     from loans.models import ApprovalCommitteeLevel
 
     amount = _loan_amount_for_routing(loan_request)
+    mode = get_committee_routing_mode()
     levels = ApprovalCommitteeLevel.objects.filter(is_active=True).order_by('sequence_order', 'id')
-    return [level for level in levels if level.applies_to_amount(amount)]
+    return [level for level in levels if level.applies_to_amount(amount, routing_mode=mode)]
 
 
 def reconcile_approval_routing(loan_request) -> bool:
@@ -241,9 +257,10 @@ def reconcile_approval_routing(loan_request) -> bool:
 
 def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
     """Levels that will run vs skipped, with amount-based reasons (for UI before/after submit)."""
-    from loans.models import ApprovalCommitteeLevel
+    from loans.models import ApprovalCommitteeLevel, LoanAnalysisPolicyConfig
 
     amount = _loan_amount_for_routing(loan_request)
+    mode = get_committee_routing_mode()
     all_levels = list(
         ApprovalCommitteeLevel.objects.filter(is_active=True).order_by('sequence_order', 'id')
     )
@@ -255,7 +272,7 @@ def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
             continue
         skipped.append({
             'level': level,
-            'reason': level.skip_reason_for_amount(amount),
+            'reason': level.skip_reason_for_amount(amount, routing_mode=mode),
         })
     branch_override = None
     if loan_request.branch_id:
@@ -267,9 +284,12 @@ def get_approval_routing_summary(loan_request) -> Dict[str, Any]:
         )
         if branch_level:
             branch_override = get_branch_override(loan_request, branch_level)
+    mode_label = dict(LoanAnalysisPolicyConfig.ROUTING_MODE_CHOICES).get(mode, mode)
     return {
         'amount': amount,
         'amount_source': _routing_amount_source(loan_request),
+        'routing_mode': mode,
+        'routing_mode_label': mode_label,
         'applied_levels': applied,
         'skipped_levels': skipped,
         'branch_override': branch_override,
@@ -598,6 +618,71 @@ def committee_queue_queryset(user):
     return LoanRequest.objects.filter(pk__in=ids)
 
 
+def record_committee_vote(
+    *,
+    loan_request,
+    level,
+    member,
+    vote: str,
+    amount_supported=None,
+    comments: str = '',
+    cast_by=None,
+    request=None,
+):
+    """Upsert current vote for tally + append-only event with IP/UA."""
+    from loans.models import LoanCommitteeVote, LoanCommitteeVoteEvent
+    from loans.security import client_ip, client_user_agent, log_security_event
+    from loans.models import SecurityAuditLog
+
+    existing = LoanCommitteeVote.objects.filter(
+        loan_request=loan_request,
+        approval_level=level,
+        member=member,
+    ).first()
+    previous_vote = existing.vote if existing else ''
+
+    vote_obj, _created = LoanCommitteeVote.objects.update_or_create(
+        loan_request=loan_request,
+        approval_level=level,
+        member=member,
+        defaults={
+            'cast_by': cast_by,
+            'vote': vote,
+            'amount_supported': amount_supported,
+            'comments': comments or '',
+            'voted_at': timezone.now(),
+        },
+    )
+    event = LoanCommitteeVoteEvent.objects.create(
+        loan_request=loan_request,
+        approval_level=level,
+        member=member,
+        cast_by=cast_by,
+        vote=vote,
+        previous_vote=previous_vote or '',
+        amount_supported=amount_supported,
+        comments=comments or '',
+        ip_address=client_ip(request) if request is not None else None,
+        user_agent=client_user_agent(request) if request is not None else '',
+    )
+    actor = cast_by or member
+    log_security_event(
+        SecurityAuditLog.EVT_COMMITTEE_VOTE,
+        request=request,
+        user=actor,
+        detail={
+            'loan_request_id': loan_request.loan_request_id,
+            'level': level.key,
+            'vote': vote,
+            'previous_vote': previous_vote or '',
+            'member': member.username,
+            'delegated': bool(cast_by),
+            'event_id': event.pk,
+        },
+    )
+    return vote_obj, event
+
+
 def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
     from loans.models import LoanCommitteeVote
 
@@ -620,12 +705,20 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
     tb_roles = get_tiebreaker_roles_for_level(level)
     tb_vote = find_tiebreaker_vote(loan_request, level, votes)
     is_tied = approve_count > 0 and approve_count == decline_count
+    eligible_count = len(eligible)
+    quorum_ok = eligible_count >= min_approvals
+    quorum_warning = (
+        ''
+        if quorum_ok
+        else f'{eligible_count} eligible voter{"s" if eligible_count != 1 else ""} '
+             f'< {min_approvals} approvals required — quorum cannot be met.'
+    )
 
-    return {
+    tally = {
         'level': level,
         'votes': votes,
         'eligible_voters': eligible,
-        'eligible_count': len(eligible),
+        'eligible_count': eligible_count,
         'approve_count': approve_count,
         'decline_count': decline_count,
         'pend_count': pend_count,
@@ -639,7 +732,14 @@ def get_level_tally(loan_request, level, current_user=None) -> Dict[str, Any]:
         'is_tied': is_tied,
         'tiebreaker_roles': tb_roles,
         'tiebreaker_vote': tb_vote,
+        'quorum_ok': quorum_ok,
+        'quorum_warning': quorum_warning,
     }
+    decision, decision_reason = resolve_level_vote_decision(loan_request, level, tally)
+    tally['decision'] = decision
+    tally['decision_reason'] = decision_reason
+    tally['tiebreaker_waiting'] = bool(is_tied and decision is None)
+    return tally
 
 
 def get_approval_pipeline(loan_request, current_user=None) -> List[Dict[str, Any]]:
@@ -1075,10 +1175,132 @@ def try_finalize_level_decision(loan_request, level) -> bool:
     decision, _reason = resolve_level_vote_decision(loan_request, level, tally)
     if decision in ('approve', 'decline'):
         return _advance_after_level_decision(loan_request, level, decision)
-    if tally.get('pend_count') and loan_request.committee_status != loan_request.COMMITTEE_PENDED:
-        loan_request.committee_status = loan_request.COMMITTEE_PENDED
+    if tally.get('pend_count'):
+        if loan_request.committee_status != loan_request.COMMITTEE_PENDED:
+            loan_request.committee_status = loan_request.COMMITTEE_PENDED
+            loan_request.save(update_fields=['committee_status'])
+    elif loan_request.committee_status == loan_request.COMMITTEE_PENDED:
+        # All pend votes lifted — reopen for voting without requiring LO clear.
+        loan_request.committee_status = loan_request.COMMITTEE_PENDING
         loan_request.save(update_fields=['committee_status'])
     return False
+
+
+def open_committee_info_request(
+    loan_request,
+    *,
+    level,
+    requested_by,
+    reason: str,
+    due_date=None,
+):
+    """Create/refresh an open info request and notify the assigned officer."""
+    from datetime import timedelta
+
+    from django.conf import settings
+
+    from loans.models import CommitteeInfoRequest, LoanNotification
+    from loans.services.notifications import notify_assigned_officer
+
+    reason = (reason or '').strip()
+    if not reason:
+        reason = 'Committee requested additional information.'
+    if due_date is None:
+        days = int(getattr(settings, 'COMMITTEE_PEND_DUE_DAYS', 5) or 5)
+        due_date = timezone.now().date() + timedelta(days=max(1, days))
+
+    open_req = (
+        CommitteeInfoRequest.objects.filter(
+            loan_request=loan_request,
+            status=CommitteeInfoRequest.STATUS_OPEN,
+        )
+        .order_by('-created_at')
+        .first()
+    )
+    if open_req:
+        open_req.reason = reason
+        open_req.due_date = due_date
+        open_req.approval_level = level
+        open_req.requested_by = requested_by
+        open_req.save(update_fields=[
+            'reason', 'due_date', 'approval_level', 'requested_by',
+        ])
+        info = open_req
+    else:
+        info = CommitteeInfoRequest.objects.create(
+            loan_request=loan_request,
+            approval_level=level,
+            requested_by=requested_by,
+            reason=reason,
+            due_date=due_date,
+        )
+
+    if loan_request.committee_status != loan_request.COMMITTEE_PENDED:
+        loan_request.committee_status = loan_request.COMMITTEE_PENDED
+        loan_request.save(update_fields=['committee_status'])
+
+    due_txt = due_date.isoformat() if due_date else 'not set'
+    level_name = level.name if level else 'committee'
+    notify_assigned_officer(
+        loan_request,
+        kind=LoanNotification.KIND_COMMITTEE_INFO_REQUESTED,
+        title=f'Info requested: {loan_request.loan_request_id}',
+        message=(
+            f'{level_name} pended this file and asked for more information.\n'
+            f'Due: {due_txt}\n\n{reason}'
+        ),
+    )
+    return info
+
+
+def clear_committee_info_requests(
+    loan_request,
+    *,
+    cleared_by,
+    notes: str = '',
+    notify_voters: bool = True,
+):
+    """Mark open info requests cleared and reopen committee pending."""
+    from loans.models import CommitteeInfoRequest, LoanNotification
+    from loans.services.notifications import notify_assigned_officer, notify_eligible_voters
+
+    now = timezone.now()
+    open_qs = CommitteeInfoRequest.objects.filter(
+        loan_request=loan_request,
+        status=CommitteeInfoRequest.STATUS_OPEN,
+    )
+    count = open_qs.count()
+    open_qs.update(
+        status=CommitteeInfoRequest.STATUS_CLEARED,
+        cleared_at=now,
+        cleared_by=cleared_by,
+        clear_notes=(notes or '').strip(),
+    )
+
+    if loan_request.committee_status == loan_request.COMMITTEE_PENDED:
+        loan_request.committee_status = loan_request.COMMITTEE_PENDING
+        loan_request.save(update_fields=['committee_status'])
+
+    level = loan_request.current_approval_level
+    lr_id = loan_request.loan_request_id
+    if notify_voters and level:
+        notify_eligible_voters(
+            loan_request,
+            level,
+            kind=LoanNotification.KIND_COMMITTEE_INFO_CLEARED,
+            title=f'Info ready: {lr_id} — {level.name}',
+            message=(
+                f'The loan officer cleared the committee information request for {lr_id}. '
+                f'Review updates and cast or update your vote at {level.name}.'
+            ),
+        )
+    notify_assigned_officer(
+        loan_request,
+        kind=LoanNotification.KIND_COMMITTEE_INFO_CLEARED,
+        title=f'Committee info cleared for {lr_id}',
+        message='File is back in committee pending. Voters have been notified.',
+    )
+    return count
 
 
 def try_finalize_committee_decision(loan_request) -> bool:

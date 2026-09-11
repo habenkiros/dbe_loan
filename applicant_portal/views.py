@@ -592,6 +592,7 @@ def apply_payment(request, public_id):
     from applicant_portal.chapa import (
         apply_verified_payment,
         chapa_live_enabled,
+        chapa_using_mock_checkout,
         initialize_checkout,
         inline_checkout_config,
         verify_transaction,
@@ -630,9 +631,12 @@ def apply_payment(request, public_id):
                 messages.error(request, msg)
                 return redirect('applicant_portal:apply_payment', public_id=app.public_id)
             if checkout:
-                if chapa_live_enabled():
+                using_mock = chapa_using_mock_checkout(request=request)
+                if chapa_live_enabled() and not using_mock:
                     messages.success(request, 'Enter your payment details below. You will stay on this page.')
                     return redirect('applicant_portal:apply_payment', public_id=app.public_id)
+                if using_mock and msg:
+                    messages.info(request, msg)
                 return redirect(checkout)
             messages.info(request, msg)
             return redirect('applicant_portal:apply_payment', public_id=app.public_id)
@@ -655,12 +659,15 @@ def apply_payment(request, public_id):
             return redirect('applicant_portal:apply_submit', public_id=app.public_id)
 
     app.refresh_from_db()
+    using_mock = chapa_using_mock_checkout(request=request)
     return render(request, 'applicant_portal/apply_payment.html', {
         'application': app,
         'fee': fee,
         'paid': app.payment_satisfied(),
         'pending': app.payment_status == OnlineApplication.PAY_PENDING,
-        'chapa_live': chapa_live_enabled(),
+        'chapa_live': chapa_live_enabled() and not using_mock,
+        'chapa_keys_present': chapa_live_enabled(),
+        'chapa_localhost_mock': using_mock and chapa_live_enabled(),
         'chapa_inline': inline_checkout_config(app, request=request) if not app.payment_satisfied() else None,
         'step': 4 if needs_applicant_product(app) else 3,
         'has_product': needs_applicant_product(app),

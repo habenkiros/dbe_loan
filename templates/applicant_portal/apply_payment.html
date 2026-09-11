@@ -15,7 +15,11 @@
   <h1 class="ap-hero-title">Processing fee</h1>
   <p class="ap-sub">
     Pay the application fee via <strong>Chapa</strong> to continue.
-    {% if not chapa_live %}
+    {% if chapa_localhost_mock %}
+    <span class="ap-badge ap-badge-warn">Localhost mock</span> — keys are set, but Chapa cannot reach
+    <code>http://localhost</code>. Fee is simulated here. For real Chapa use a public HTTPS
+    <code>SITE_URL</code> (ngrok / cloudflared) and open Digital Apply on that host.
+    {% elif not chapa_live %}
     <span class="ap-badge ap-badge-warn">Dev / mock mode</span> — Chapa secret key not set; checkout is simulated.
     {% endif %}
   </p>

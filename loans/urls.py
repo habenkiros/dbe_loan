@@ -239,9 +239,19 @@ urlpatterns = [
         name='cast_committee_vote',
     ),
     path(
+        'loan_request/<int:loan_request_id>/committee_vote_draft/',
+        views.draft_committee_vote_comments,
+        name='draft_committee_vote_comments',
+    ),
+    path(
         'loan_request/<int:loan_request_id>/return_to_officer/',
         views.return_loan_to_officer_view,
         name='return_loan_to_officer',
+    ),
+    path(
+        'loan_request/<int:loan_request_id>/clear_committee_info/',
+        views.clear_committee_info_request_view,
+        name='clear_committee_info_request',
     ),
     path(
         'loan_request/<int:loan_request_id>/committee_appraisal/',

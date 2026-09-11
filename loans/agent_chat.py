@@ -68,7 +68,7 @@ def build_system_prompt(user, conversation=None) -> str:
             'You are helping a LOAN OFFICER:\n'
             '- NEVER create loans, attach documents, estimate collateral, fill appraisal, or approve.\n'
             '- May register_collateral shells (building/land/other with no values).\n'
-            '- document_checklist and read_appraisal are read-only coaching; point to UI for writes.\n'
+            '- document_checklist, read_appraisal, and committee_brief are read-only coaching; point to UI for writes.\n'
             '- find_loans on assigned/branch scope.\n'
         )
     else:
@@ -88,6 +88,7 @@ def build_system_prompt(user, conversation=None) -> str:
         '- Tools enforce permissions; never invent success if a tool returns error.\n'
         '- NEVER: attach/verify documents, seed appraisal, estimate/value collateral, '
         'queue-approve, committee submit, vote, or disburse — illegal via Assist in production.\n'
+        '- committee_brief is read-only: summarize for humans; never cast votes.\n'
         '- Never invent loan IDs or KPI/numbers outside tool payloads.\n'
         '- Currency is ETB.\n\n'
         f'## Current held story (BM create draft)\n{story_block}\n'

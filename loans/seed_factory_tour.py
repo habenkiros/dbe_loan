@@ -64,47 +64,55 @@ def _print_tour_map(stdout, style, by_cn):
 
 
 def _committee_votes(by_cn, users, now):
-    from loans.models import ApprovalCommitteeLevel, LoanCommitteeVote
+    from loans.committee import get_levels_for_loan, record_committee_vote
+    from loans.models import LoanCommitteeVote
 
     bm = users.get('bm1')
     acct = users.get('acct1')
-    branch = ApprovalCommitteeLevel.objects.filter(
-        key=ApprovalCommitteeLevel.LEVEL_BRANCH,
-    ).first()
-    if not branch:
-        return
 
     pending = by_cn.get('1009')
     if pending and bm:
-        LoanCommitteeVote.objects.get_or_create(
-            loan_request=pending,
-            member=bm,
-            approval_level=branch,
-            defaults={
-                'vote': LoanCommitteeVote.VOTE_APPROVE,
-                'amount_supported': pending.amount_requested,
-                'comments': 'Clinic file is complete. Second vote still needed.',
-                'voted_at': now - timedelta(hours=6),
-            },
-        )
+        levels = get_levels_for_loan(pending)
+        level = levels[0] if levels else None
+        if level and pending.current_approval_level_id != level.id:
+            pending.current_approval_level = level
+            pending.save(update_fields=['current_approval_level'])
+        if level:
+            record_committee_vote(
+                loan_request=pending,
+                level=level,
+                member=bm,
+                vote=LoanCommitteeVote.VOTE_APPROVE,
+                amount_supported=pending.amount_requested,
+                comments='Clinic file is complete. Second vote still needed.',
+                cast_by=None,
+                request=None,
+            )
+            # Keep demo timestamp in the past for SLA displays.
+            from loans.models import LoanCommitteeVote as V
+            V.objects.filter(loan_request=pending, member=bm, approval_level=level).update(
+                voted_at=now - timedelta(hours=6),
+            )
 
     approved = by_cn.get('1010')
     if approved and bm and acct:
-        for member, comment in (
-            (bm, 'CNC acquisition approved at branch committee.'),
-            (acct, 'Capacity and collateral coverage acceptable.'),
-        ):
-            LoanCommitteeVote.objects.get_or_create(
-                loan_request=approved,
-                member=member,
-                approval_level=branch,
-                defaults={
-                    'vote': LoanCommitteeVote.VOTE_APPROVE,
-                    'amount_supported': approved.amount_requested,
-                    'comments': comment,
-                    'voted_at': now - timedelta(days=4),
-                },
-            )
+        levels = get_levels_for_loan(approved)
+        level = levels[0] if levels else None
+        if level:
+            for member, comment in (
+                (bm, 'CNC acquisition approved at branch committee.'),
+                (acct, 'Capacity and collateral coverage acceptable.'),
+            ):
+                record_committee_vote(
+                    loan_request=approved,
+                    level=level,
+                    member=member,
+                    vote=LoanCommitteeVote.VOTE_APPROVE,
+                    amount_supported=approved.amount_requested,
+                    comments=comment,
+                    cast_by=None,
+                    request=None,
+                )
 
 
 def _risk_and_crm(by_cn, users, now):

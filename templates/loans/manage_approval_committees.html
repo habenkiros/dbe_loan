@@ -9,8 +9,8 @@
     <div class="da-hero-main">
       <h1>Approval committees</h1>
       <p>
-        Configure credit-approval levels in sequence. Loans pass through
-        active levels; voters are scoped by branch, district, or organization.
+      Configure credit-approval levels in sequence. Routing mode (tier vs cumulative)
+      controls how amount bands select levels; voters are scoped by branch, district, or organization.
       </p>
     </div>
     <div class="da-stat-grid">
@@ -28,13 +28,37 @@
       </div>
       <div class="da-stat">
         <span class="label">Workflow</span>
-        <span class="value" style="font-size:0.95rem;">Sequential</span>
+        <span class="value" style="font-size:0.85rem;">{{ routing_mode_label|default:"Tier" }}</span>
       </div>
     </div>
   </div>
 
+  <section class="da-panel" style="margin-bottom:1rem;">
+    <div class="da-panel-head">
+      <h2><span>0</span> Routing mode</h2>
+    </div>
+    <p class="da-note" style="margin-top:0;">
+      <strong>Tier</strong> (default): exclusive min/max bands — one level per amount (matches seed).
+      <strong>Cumulative</strong>: ignore max; every level whose min ≤ amount runs in sequence (true chain).
+    </p>
+    <form method="post" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:end;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="set_routing_mode">
+      <div>
+        <label for="id_committee_routing_mode"><strong>Mode</strong></label><br>
+        <select id="id_committee_routing_mode" name="committee_routing_mode" class="form-control">
+          {% for val, label in routing_mode_choices %}
+          <option value="{{ val }}" {% if routing_mode == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="da-btn-primary">Save routing mode</button>
+    </form>
+  </section>
+
   <p class="da-note">
-    Order is controlled by each level’s sequence number. Use amount filters to skip levels for small or large loans.
+    Order is controlled by each level’s sequence number.
+    In <em>tier</em> mode, amount min/max pick a single band; in <em>cumulative</em> mode, min is a floor and max is ignored for inclusion.
     <a href="{% url 'add_approval_committee_level' %}">Add a level</a> to extend the chain.
   </p>
 

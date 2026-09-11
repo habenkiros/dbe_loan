@@ -211,6 +211,10 @@ PRODUCT_NAME = os.getenv('PRODUCT_NAME', 'Credit Intelligence').strip() or 'Cred
 LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv('LOGIN_MAX_FAILED_ATTEMPTS', '5') or '5')
 LOGIN_LOCKOUT_MINUTES = int(os.getenv('LOGIN_LOCKOUT_MINUTES', '15') or '15')
 MFA_REQUIRED = os.getenv('MFA_REQUIRED', 'False').strip().lower() in ('1', 'true', 'yes', 'on')
+# Re-auth (password, + TOTP if enrolled) before committee vote / return
+COMMITTEE_STEPUP_REQUIRED = os.getenv('COMMITTEE_STEPUP_REQUIRED', 'True').strip().lower() in (
+    '1', 'true', 'yes', 'on',
+)
 _mfa_issuer = os.getenv('MFA_TOTP_ISSUER', '').strip()
 MFA_TOTP_ISSUER = _mfa_issuer or f'{INSTITUTION_SHORT} {PRODUCT_NAME}'
 SESSION_IDLE_TIMEOUT = int(os.getenv('SESSION_IDLE_TIMEOUT', '1800') or '1800')
@@ -249,6 +253,15 @@ DECSI_AUTO_QUEUE_ON_PAID = os.getenv('DECSI_AUTO_QUEUE_ON_PAID', 'True').lower()
 
 # Document OCR (Tesseract language packs: eng, amh, or eng+amh)
 DOCUMENT_OCR_LANG = os.getenv('DOCUMENT_OCR_LANG', 'eng+amh')
+DOCUMENT_OCR_MATCH_MIN_SCORE = int(os.getenv('DOCUMENT_OCR_MATCH_MIN_SCORE', '60') or '60')
+DOCUMENT_NEAR_DUP_SCAN_LIMIT = int(os.getenv('DOCUMENT_NEAR_DUP_SCAN_LIMIT', '800') or '800')
+# Optional LLM assist for bank-statement plausibility (per-type enable_llm_check)
+DOCUMENT_LLM_PROVIDER = os.getenv('DOCUMENT_LLM_PROVIDER', 'openai').strip().lower() or 'openai'
+OPENAI_DOCUMENT_MODEL = os.getenv('OPENAI_DOCUMENT_MODEL', 'gpt-4o-mini').strip() or 'gpt-4o-mini'
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
+GEMINI_DOCUMENT_MODEL = os.getenv('GEMINI_DOCUMENT_MODEL', 'gemini-1.5-flash').strip() or 'gemini-1.5-flash'
+# Optional HTTP webhook for document identity verify (else DECSI party / mock)
+EXTERNAL_ID_VERIFY_URL = os.getenv('EXTERNAL_ID_VERIFY_URL', '').strip()
 
 # Applicant KYC identity rails (Fayda FAN / TIN). off | mock | http
 IDENTITY_VERIFY_PROVIDER = os.getenv('IDENTITY_VERIFY_PROVIDER', 'mock').strip().lower()
@@ -388,4 +401,5 @@ AGENT_LLM_TIMEOUT = int(os.getenv('AGENT_LLM_TIMEOUT', '60') or '60')
 
 # Credit Intelligence operational alert thresholds (days)
 CI_AGING_APPRAISAL_DAYS = int(os.getenv('CI_AGING_APPRAISAL_DAYS', '7') or '7')
+COMMITTEE_PEND_DUE_DAYS = int(os.getenv('COMMITTEE_PEND_DUE_DAYS', '5') or '5')
 CI_COMMITTEE_SLA_DAYS = int(os.getenv('CI_COMMITTEE_SLA_DAYS', '5') or '5')

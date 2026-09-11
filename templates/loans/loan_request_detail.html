@@ -449,6 +449,8 @@
     <div class="lw-chip-row" style="margin-bottom:0.5rem;">
       {% if loan_request.committee_status == 'pending_committee' %}
         <span class="lw-badge lw-warn">Pending committee</span>
+      {% elif loan_request.committee_status == 'committee_pended' %}
+        <span class="lw-badge lw-warn">Committee pended — info</span>
       {% elif loan_request.committee_status == 'committee_approved' %}
         <span class="lw-badge lw-ok">Approved</span>
       {% elif loan_request.committee_status == 'committee_declined' %}
@@ -462,7 +464,28 @@
     {% if appraisal and appraisal.amount_approved %}
     <p><strong>Recommended amount (Sheet 6):</strong> {{ appraisal.amount_approved|floatformat:2 }}</p>
     {% endif %}
-    {% if loan_request.committee_status == 'pending_committee' %}
+    {% if loan_request.committee_status == 'pending_committee' or loan_request.committee_status == 'committee_pended' %}
+    {% if loan_request.committee_status == 'committee_pended' %}
+    <div class="lw-panel lw-panel-warn" style="margin:0.5rem 0;">
+      <p style="margin:0 0 0.5rem;"><strong>Committee pended — information requested</strong></p>
+      {% if open_info_request %}
+      <p style="margin:0 0 0.5rem;">{{ open_info_request.reason|linebreaksbr }}</p>
+      <p class="help" style="margin:0 0 0.75rem;">
+        Due {% if open_info_request.due_date %}{{ open_info_request.due_date|date:"Y-m-d" }}{% else %}—{% endif %}
+        {% if open_info_request.requested_by %} · {{ open_info_request.requested_by.username }}{% endif %}
+      </p>
+      {% endif %}
+      <form method="post" action="{% url 'clear_committee_info_request' loan_request.id %}">
+        {% csrf_token %}
+        <label for="id_clear_notes"><strong>What did you provide?</strong></label><br>
+        <textarea id="id_clear_notes" name="clear_notes" rows="3" class="form-control" style="max-width:480px;" required minlength="8"
+                  placeholder="e.g. Uploaded updated bank statements and refreshed Sheet 3 cashflow."></textarea>
+        <p style="margin:0.5rem 0 0;">
+          <button type="submit" class="btn btn-green">Mark info ready for committee</button>
+        </p>
+      </form>
+    </div>
+    {% endif %}
     {% if committee_tally.current_level %}
     <p class="help">Waiting at <strong>{{ committee_tally.current_level.name }}</strong>.</p>
     {% endif %}

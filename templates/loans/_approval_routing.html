@@ -6,6 +6,9 @@
     Amount used for routing:
     <strong>{{ routing.amount|floatformat:2 }}</strong>
     ({% if routing.amount_source == 'recommended' %}Sheet 6 recommended{% else %}requested amount{% endif %})
+    {% if routing.routing_mode_label %}
+    · Mode: <strong>{{ routing.routing_mode_label }}</strong>
+    {% endif %}
   </p>
   {% if routing.applied_levels %}
   <p style="margin:0.35rem 0 0.15rem;"><strong>Levels this loan will follow:</strong></p>

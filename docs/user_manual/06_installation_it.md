@@ -395,6 +395,16 @@ docker compose exec web python manage.py recompute_market_bands
 
 Schedule this periodically (cron) after go-live. Manage actors / trust in Django Admin.
 
+Committee vote SLA digest (emails / in-app notices for files past `CI_COMMITTEE_SLA_DAYS`):
+
+```bash
+docker compose exec web python manage.py send_committee_sla_digest
+# dry-run first:
+docker compose exec web python manage.py send_committee_sla_digest --dry-run
+```
+
+Schedule daily (e.g. morning). Dedupes per loan within 24 hours.
+
 ---
 
 ## 10. Security baseline for DECSI IT

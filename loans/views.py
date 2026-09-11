@@ -18,7 +18,7 @@ from .forms import (
     CollateralEstimationConfigForm,
     AppraisalSheet2Form, AppraisalSheet3Form,
     AppraisalESForm, AppraisalCollateralForm, AppraisalSummaryForm,
-    CommitteeVoteForm,
+    CommitteeVoteForm, CommitteeReturnForm,
     ApprovalCommitteeLevelForm, ApprovalCommitteeLevelCreateForm,
     get_approval_committee_member_rule_formset,
     ACTIVE_USER_ROLE_CHOICES,
@@ -51,12 +51,15 @@ from .models import (
     ApprovalCommitteeLevel,
 )
 from .committee import (
+    clear_committee_info_requests,
     committee_filter_branches,
     committee_filter_districts,
     committee_loan_requests_queryset,
     committee_queue_queryset,
     get_committee_tally,
     officer_can_submit_to_committee,
+    open_committee_info_request,
+    record_committee_vote,
     return_loan_to_officer,
     start_approval_workflow,
     try_finalize_committee_decision,
@@ -933,6 +936,15 @@ def loan_request_detail(request, loan_request_id):
     document_types_missing = [dt for dt in document_types if dt.id not in uploaded_type_ids] if document_types else []
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
     lock_state = get_appraisal_lock_state(loan_request)
+    from loans.models import CommitteeInfoRequest
+    open_info_request = (
+        CommitteeInfoRequest.objects.filter(
+            loan_request=loan_request,
+            status=CommitteeInfoRequest.STATUS_OPEN,
+        )
+        .select_related('requested_by', 'approval_level')
+        .first()
+    )
     committee_submit = officer_can_submit_to_committee(loan_request) if (
         user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id
     ) else None
@@ -1048,6 +1060,7 @@ def loan_request_detail(request, loan_request_id):
         'desk_intel': desk_intel,
         'project_overlay': _project_overlay_for(loan_request),
         'postbook': _postbook_for(loan_request),
+        'open_info_request': open_info_request,
     })
 
 
@@ -2145,6 +2158,7 @@ def loan_request_detail_finance(request, loan_request_id):
 #manager
 @login_required
 def loan_request_detail_manager(request, loan_request_id):
+    from .committee_brief import build_committee_brief
     from .committee_evidence import build_committee_vote_evidence
 
     loan_request = get_object_or_404(
@@ -2154,7 +2168,7 @@ def loan_request_detail_manager(request, loan_request_id):
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).select_related('created_by').first()
     basic_info = LoanRequestBasicInfo.objects.filter(loan_request=loan_request).first()
     committee_tally = get_committee_tally(loan_request, current_user=request.user)
-    vote_form = CommitteeVoteForm()
+    vote_form = CommitteeVoteForm(user=request.user)
     if appraisal and appraisal.amount_approved:
         vote_form.fields['amount_supported'].initial = appraisal.amount_approved
     can_access = (
@@ -2167,21 +2181,61 @@ def loan_request_detail_manager(request, loan_request_id):
         messages.warning(request, 'You do not have access to this approval review.')
         return redirect('view_loan_requests_manager')
     can_return = user_can_return_to_officer(request.user, loan_request)
+    brief = build_committee_brief(loan_request, user=request.user)
     evidence = build_committee_vote_evidence(loan_request)
     scorecard = evidence.get('scorecard')
     if appraisal and not scorecard:
         scorecard = appraisal.scorecard_detail or build_credit_scorecard(appraisal)
+    from loans.models import CommitteeInfoRequest
+    open_info = (
+        CommitteeInfoRequest.objects.filter(
+            loan_request=loan_request,
+            status=CommitteeInfoRequest.STATUS_OPEN,
+        )
+        .select_related('requested_by', 'approval_level')
+        .first()
+    )
+    from loans.security import committee_stepup_required, user_has_mfa_enrolled
     return render(request, 'loans/loan_request_detail_manager.html', {
         'loan_request': loan_request,
         'appraisal': appraisal,
         'basic_info': basic_info,
         'committee_tally': committee_tally,
         'vote_form': vote_form,
+        'return_form': CommitteeReturnForm(user=request.user) if can_return else None,
+        'committee_stepup_required': committee_stepup_required(),
+        'committee_stepup_needs_mfa': user_has_mfa_enrolled(request.user),
         'can_return_to_officer': can_return,
         'scorecard': scorecard,
         'evidence': evidence,
+        'committee_brief': brief,
+        'decision_card': brief.get('decision_card'),
+        'desk_intel': brief.get('desk_intel'),
+        'open_info_request': open_info,
     })
 
+
+@login_required
+def draft_committee_vote_comments(request, loan_request_id):
+    """JSON: suggest vote comments for the human to edit (never submits)."""
+    from loans.committee_brief import draft_vote_comments
+
+    loan_request = get_object_or_404(LoanRequest, pk=loan_request_id)
+    committee_tally = get_committee_tally(loan_request, current_user=request.user)
+    can_access = (
+        getattr(request.user, 'is_superuser', False)
+        or request.user.role in ('superadmin', 'admin')
+        or user_can_view_committee_loan(request.user, loan_request)
+        or committee_tally.get('can_vote')
+    )
+    if not can_access:
+        return JsonResponse({'ok': False, 'error': 'Access denied.'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required.'}, status=405)
+    intent = (request.POST.get('vote') or request.GET.get('vote') or 'approve').strip().lower()
+    use_llm = (request.POST.get('use_llm') or '1') not in ('0', 'false', 'False')
+    result = draft_vote_comments(loan_request, vote_intent=intent, use_llm=use_llm)
+    return JsonResponse(result)
 
 @login_required
 @user_passes_test(_user_can_work_appraisal)
@@ -2221,9 +2275,21 @@ def cast_committee_vote(request, loan_request_id):
         messages.warning(request, 'You cannot vote on this loan at the current approval level.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
-    form = CommitteeVoteForm(request.POST)
+    form = CommitteeVoteForm(request.POST, user=request.user)
     if not form.is_valid():
-        messages.error(request, 'Invalid vote — check your entries.')
+        for err in form.errors.get('confirm_password', []) + form.errors.get('mfa_code', []):
+            messages.error(request, err)
+        if not form.errors.get('confirm_password') and not form.errors.get('mfa_code'):
+            messages.error(request, 'Invalid vote — check your entries.')
+        from loans.models import SecurityAuditLog
+        from loans.security import log_security_event
+        if form.errors.get('confirm_password') or form.errors.get('mfa_code'):
+            log_security_event(
+                SecurityAuditLog.EVT_COMMITTEE_STEPUP_FAILED,
+                request=request,
+                user=request.user,
+                detail={'loan_request_id': loan_request.loan_request_id, 'action': 'vote'},
+            )
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
@@ -2237,25 +2303,30 @@ def cast_committee_vote(request, loan_request_id):
         resolve_vote_principal,
         SCOPE_COMMITTEE,
     )
-    from .models import LoanCommitteeVote
 
     member, cast_by = resolve_vote_principal(request.user, loan_request, level)
     if not member:
         messages.warning(request, 'You cannot vote on this loan at the current approval level.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
-    LoanCommitteeVote.objects.update_or_create(
+    record_committee_vote(
         loan_request=loan_request,
-        approval_level=level,
+        level=level,
         member=member,
-        defaults={
-            'cast_by': cast_by,
-            'vote': form.cleaned_data['vote'],
-            'amount_supported': amount,
-            'comments': form.cleaned_data.get('comments') or '',
-            'voted_at': timezone.now(),
-        },
+        vote=form.cleaned_data['vote'],
+        amount_supported=amount,
+        comments=form.cleaned_data.get('comments') or '',
+        cast_by=cast_by,
+        request=request,
     )
+    if form.cleaned_data['vote'] == 'pend':
+        open_committee_info_request(
+            loan_request,
+            level=level,
+            requested_by=request.user,
+            reason=form.cleaned_data.get('comments') or '',
+            due_date=form.cleaned_data.get('info_due_date'),
+        )
     if cast_by:
         log_delegation_action(
             actor=cast_by,
@@ -2279,17 +2350,22 @@ def cast_committee_vote(request, loan_request_id):
             messages.success(request, 'Required approvals reached — loan fully approved by all committee levels.')
         elif loan_request.committee_status == LoanRequest.COMMITTEE_DECLINED:
             messages.warning(request, 'Required declines reached — loan rejected at this committee level.')
-        elif loan_request.committee_status == LoanRequest.COMMITTEE_PENDED:
-            messages.info(request, 'File pended — waiting for more information before a deciding vote.')
         else:
             messages.success(request, f'Level “{level.name}” complete. Advanced to the next approval committee.')
     else:
-        tally = get_level_tally(loan_request, level)
-        _decision, reason = resolve_level_vote_decision(loan_request, level, tally)
-        if tally.get('is_tied'):
-            messages.info(request, f'Your vote at {level.name} has been recorded. {reason}')
+        loan_request.refresh_from_db()
+        if form.cleaned_data['vote'] == 'pend' or loan_request.committee_status == LoanRequest.COMMITTEE_PENDED:
+            messages.info(
+                request,
+                'File pended — loan officer notified to provide more information.',
+            )
         else:
-            messages.success(request, f'Your vote at {level.name} has been recorded.')
+            tally = get_level_tally(loan_request, level)
+            _decision, reason = resolve_level_vote_decision(loan_request, level, tally)
+            if tally.get('is_tied'):
+                messages.info(request, f'Your vote at {level.name} has been recorded. {reason}')
+            else:
+                messages.success(request, f'Your vote at {level.name} has been recorded.')
     return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
 
 
@@ -2304,13 +2380,60 @@ def return_loan_to_officer_view(request, loan_request_id):
     if not user_can_return_to_officer(request.user, loan_request):
         messages.warning(request, 'You cannot return this loan at the current stage.')
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
-    notes = request.POST.get('return_notes', '').strip()
-    if len(notes) < 10:
-        messages.error(request, 'Please provide return notes (at least 10 characters) for the loan officer.')
+    form = CommitteeReturnForm(request.POST, user=request.user)
+    if not form.is_valid():
+        for field_errs in form.errors.values():
+            for err in field_errs:
+                messages.error(request, err)
+        from loans.models import SecurityAuditLog
+        from loans.security import log_security_event
+        if form.errors.get('confirm_password') or form.errors.get('mfa_code'):
+            log_security_event(
+                SecurityAuditLog.EVT_COMMITTEE_STEPUP_FAILED,
+                request=request,
+                user=request.user,
+                detail={'loan_request_id': loan_request.loan_request_id, 'action': 'return'},
+            )
         return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
+    notes = form.cleaned_data['return_notes']
     return_loan_to_officer(loan_request, request.user, notes)
+    from loans.models import SecurityAuditLog
+    from loans.security import log_security_event
+    log_security_event(
+        SecurityAuditLog.EVT_COMMITTEE_RETURNED,
+        request=request,
+        user=request.user,
+        detail={'loan_request_id': loan_request.loan_request_id, 'notes': notes[:200]},
+    )
     messages.success(request, 'Loan returned to the loan officer for corrections.')
     return redirect('loan_request_detail_manager', loan_request_id=loan_request_id)
+
+
+@login_required
+@user_passes_test(_user_can_work_appraisal)
+def clear_committee_info_request_view(request, loan_request_id):
+    """Loan officer: mark committee info request cleared and reopen voting."""
+    if request.method != 'POST':
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    loan_request = _get_loan_for_officer(request.user, loan_request_id)
+    notes = (request.POST.get('clear_notes') or '').strip()
+    if len(notes) < 8:
+        messages.error(request, 'Add a short note on what you provided (at least 8 characters).')
+        return redirect('loan_request_detail', loan_request_id=loan_request_id)
+    cleared = clear_committee_info_requests(
+        loan_request, cleared_by=request.user, notes=notes, notify_voters=True,
+    )
+    if cleared:
+        messages.success(
+            request,
+            'Information request cleared — committee voters notified that the file is ready.',
+        )
+    else:
+        messages.info(request, 'No open information request; committee status refreshed if needed.')
+        if loan_request.committee_status == LoanRequest.COMMITTEE_PENDED:
+            loan_request.committee_status = LoanRequest.COMMITTEE_PENDING
+            loan_request.save(update_fields=['committee_status'])
+    return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
 
 @login_required
@@ -3570,6 +3693,9 @@ def view_loan_requests_manager(request):
     paginator = Paginator(loan_requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    from loans.committee_brief import queue_chips_for_loan
+    for lr in page_obj.object_list:
+        lr.queue_meta = queue_chips_for_loan(lr)
     districts = committee_filter_districts(request.user)
     branches = committee_filter_branches(request.user, district_id)
     scope_limited = not (
@@ -3963,6 +4089,23 @@ def edit_collateral_type(request, collateral_type_id):
 @user_passes_test(_user_can_configure_committees)
 def manage_approval_committees(request):
     """Settings: list approval committee levels and who may vote at each."""
+    from loans.models import LoanAnalysisPolicyConfig
+    from loans.process_policy import get_or_create_analysis_policy
+
+    policy = get_or_create_analysis_policy()
+    if request.method == 'POST' and request.POST.get('action') == 'set_routing_mode':
+        mode = (request.POST.get('committee_routing_mode') or '').strip()
+        if mode in dict(LoanAnalysisPolicyConfig.ROUTING_MODE_CHOICES):
+            policy.committee_routing_mode = mode
+            policy.save(update_fields=['committee_routing_mode'])
+            messages.success(
+                request,
+                f'Committee routing mode set to {policy.get_committee_routing_mode_display()}.',
+            )
+        else:
+            messages.error(request, 'Invalid routing mode.')
+        return redirect('manage_approval_committees')
+
     levels = list(
         ApprovalCommitteeLevel.objects.prefetch_related('member_rules')
         .order_by('sequence_order', 'id')
@@ -3974,6 +4117,9 @@ def manage_approval_committees(request):
         'level_count': level_count,
         'active_count': active_count,
         'inactive_count': level_count - active_count,
+        'routing_mode': policy.committee_routing_mode,
+        'routing_mode_choices': LoanAnalysisPolicyConfig.ROUTING_MODE_CHOICES,
+        'routing_mode_label': policy.get_committee_routing_mode_display(),
     })
 
 

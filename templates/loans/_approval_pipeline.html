@@ -22,15 +22,29 @@
           {{ t.min_declines }} decline{{ t.min_declines|pluralize }}
           · Votes: {{ t.approve_count }}✓ / {{ t.decline_count }}✗
           ({{ t.eligible_count }} eligible)
+          {% if not t.quorum_ok %}
+            · <strong style="color:#721c24;">{{ t.quorum_warning }}</strong>
+          {% endif %}
           {% if t.tiebreaker_roles %}
             · Tie weight:
             {% for r in t.tiebreaker_roles %}<code>{{ r }}</code>{% if not forloop.last %} → {% endif %}{% endfor %}
           {% endif %}
           {% if t.is_tied and step.is_current %}
-            · <strong style="color:#856404;">Tied — chair vote decides</strong>
-            {% if t.tiebreaker_vote %}
-              ({{ t.tiebreaker_vote.member.username }}: {{ t.tiebreaker_vote.get_vote_display }})
-            {% endif %}
+            <div style="margin-top:0.4rem; padding:0.55rem 0.7rem; border-radius:8px; border:2px solid #c0392b; background:#fdf2f2;">
+              <strong style="color:#922b21;">
+                {% if t.tiebreaker_waiting %}Tied — waiting for chair{% else %}Tied — chair vote decides{% endif %}
+              </strong>
+              <br>
+              <small>{{ t.decision_reason|default:"" }}</small>
+              {% if t.tiebreaker_roles %}
+              <br><small>Chair:
+                {% for r in t.tiebreaker_roles %}<code>{{ r }}</code>{% if not forloop.last %} → {% endif %}{% endfor %}
+              </small>
+              {% endif %}
+              {% if t.tiebreaker_vote %}
+              <br><small>{{ t.tiebreaker_vote.member.username }}: {{ t.tiebreaker_vote.get_vote_display }}</small>
+              {% endif %}
+            </div>
           {% elif t.approvals_needed and step.is_current %}
             · <strong>{{ t.approvals_needed }} more approval{{ t.approvals_needed|pluralize }} needed</strong>
           {% endif %}

@@ -68,6 +68,15 @@
             <span class="help">{{ defaults_form.require_verified_documents_for_collateral.help_text }}</span>
           </div>
         </div>
+        <div class="da-check">
+          {{ defaults_form.require_verified_documents_for_committee }}
+          <div>
+            <label for="{{ defaults_form.require_verified_documents_for_committee.id_for_label }}">
+              Committee gate
+            </label>
+            <span class="help">{{ defaults_form.require_verified_documents_for_committee.help_text }}</span>
+          </div>
+        </div>
       </div>
       <div class="da-actions" style="margin-top:1rem;">
         <button type="submit" class="btn-primary">Save bank-wide defaults</button>

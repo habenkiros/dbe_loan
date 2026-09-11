@@ -1188,6 +1188,12 @@ class DocumentAuthenticationDefaultsForm(forms.Form):
             widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             help_text='Required document types must pass authentication before collateral.',
         )
+        self.fields['require_verified_documents_for_committee'] = forms.BooleanField(
+            required=False,
+            initial=getattr(self.policy, 'require_verified_documents_for_committee', True),
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            help_text='Required document types must pass authentication before committee (all families).',
+        )
 
     def save(self):
         from .models import DocumentAuthenticationPolicy
@@ -1196,11 +1202,13 @@ class DocumentAuthenticationDefaultsForm(forms.Form):
                 allowed_extensions=self.cleaned_data['allowed_extensions'],
                 max_file_size_mb=self.cleaned_data['max_file_size_mb'],
                 require_verified_documents_for_collateral=self.cleaned_data['require_verified_documents_for_collateral'],
+                require_verified_documents_for_committee=self.cleaned_data['require_verified_documents_for_committee'],
             )
         else:
             self.policy.allowed_extensions = self.cleaned_data['allowed_extensions']
             self.policy.max_file_size_mb = self.cleaned_data['max_file_size_mb']
             self.policy.require_verified_documents_for_collateral = self.cleaned_data['require_verified_documents_for_collateral']
+            self.policy.require_verified_documents_for_committee = self.cleaned_data['require_verified_documents_for_committee']
             self.policy.save()
         return self.policy
 
@@ -2055,11 +2063,113 @@ class CommitteeVoteForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
     )
+    info_due_date = forms.DateField(
+        required=False,
+        label='Info due date',
+        help_text='When vote is Pend — deadline for the loan officer (defaults to policy days).',
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+    )
+    confirm_password = forms.CharField(
+        required=False,
+        label='Confirm password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'current-password',
+            'placeholder': 'Your staff password',
+        }),
+        help_text='Required to cast an approval committee vote.',
+    )
+    mfa_code = forms.CharField(
+        required=False,
+        label='Authenticator code',
+        max_length=8,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'inputmode': 'numeric',
+            'autocomplete': 'one-time-code',
+            'placeholder': '6-digit code',
+        }),
+        help_text='Required when MFA is enrolled on your account.',
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        from loans.security import committee_stepup_required, user_has_mfa_enrolled
+        if not committee_stepup_required():
+            self.fields.pop('confirm_password', None)
+            self.fields.pop('mfa_code', None)
+        elif user is not None and not user_has_mfa_enrolled(user):
+            self.fields['mfa_code'].widget = forms.HiddenInput()
+            self.fields['mfa_code'].help_text = ''
 
     def clean(self):
+        from loans.security import committee_stepup_required, verify_committee_stepup
+
         cleaned = super().clean()
         if cleaned.get('vote') == 'pend' and len((cleaned.get('comments') or '').strip()) < 8:
             self.add_error('comments', 'Explain why this file is pended (at least 8 characters).')
+        if committee_stepup_required() and self.user is not None:
+            ok, err = verify_committee_stepup(
+                self.user,
+                password=cleaned.get('confirm_password') or '',
+                mfa_code=cleaned.get('mfa_code') or '',
+            )
+            if not ok:
+                field = 'mfa_code' if 'authenticator' in (err or '').lower() else 'confirm_password'
+                self.add_error(field, err)
+        return cleaned
+
+
+class CommitteeReturnForm(forms.Form):
+    return_notes = forms.CharField(
+        min_length=10,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        label='Return notes',
+        help_text='At least 10 characters for the loan officer.',
+    )
+    confirm_password = forms.CharField(
+        required=False,
+        label='Confirm password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'current-password',
+        }),
+    )
+    mfa_code = forms.CharField(
+        required=False,
+        label='Authenticator code',
+        max_length=8,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'inputmode': 'numeric',
+            'autocomplete': 'one-time-code',
+        }),
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        from loans.security import committee_stepup_required, user_has_mfa_enrolled
+        if not committee_stepup_required():
+            self.fields.pop('confirm_password', None)
+            self.fields.pop('mfa_code', None)
+        elif user is not None and not user_has_mfa_enrolled(user):
+            self.fields['mfa_code'].widget = forms.HiddenInput()
+
+    def clean(self):
+        from loans.security import committee_stepup_required, verify_committee_stepup
+
+        cleaned = super().clean()
+        if committee_stepup_required() and self.user is not None:
+            ok, err = verify_committee_stepup(
+                self.user,
+                password=cleaned.get('confirm_password') or '',
+                mfa_code=cleaned.get('mfa_code') or '',
+            )
+            if not ok:
+                field = 'mfa_code' if 'authenticator' in (err or '').lower() else 'confirm_password'
+                self.add_error(field, err)
         return cleaned
 
 

@@ -9,6 +9,13 @@
 .committee-info { background: #e7f1ff; color: #004085; }
 .committee-muted { background: #eee; color: #555; }
 .vote-pill { background:#064420; color:#fff; font-size:0.75rem; padding:0.12rem 0.4rem; border-radius:999px; margin-left:0.35rem; }
+.queue-chip-row { display:flex; flex-wrap:wrap; gap:0.25rem; margin-top:0.3rem; }
+.queue-chip { display:inline-block; padding:0.1rem 0.4rem; border-radius:3px; font-size:0.72rem; font-weight:600; }
+.queue-chip-ok { background:#d4edda; color:#155724; }
+.queue-chip-warn { background:#fff3cd; color:#856404; }
+.queue-chip-bad { background:#f8d7da; color:#721c24; }
+.queue-chip-info { background:#e7f1ff; color:#004085; }
+.queue-chip-muted { background:#eee; color:#555; }
 </style>
 <div class="table-container">
     <h2>Approval committee — loan requests</h2>
@@ -90,6 +97,16 @@
                             <td>
                               {{ loan_request.applicant_name }}<br><small>{{ loan_request.branch.name }}</small>
                               {% include "loans/_loan_cbs_highlights.html" %}
+                              {% if loan_request.queue_meta %}
+                              <div class="queue-chip-row">
+                                {% if loan_request.queue_meta.sla %}
+                                <span class="queue-chip queue-chip-{{ loan_request.queue_meta.sla.tone }}">{{ loan_request.queue_meta.sla.label }}</span>
+                                {% endif %}
+                                {% for chip in loan_request.queue_meta.chips %}
+                                <span class="queue-chip queue-chip-{{ chip.tone }}">{{ chip.label }}</span>
+                                {% endfor %}
+                              </div>
+                              {% endif %}
                             </td>
                             <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
                             <td>{% if loan_request.amount_approved_display != None %}<strong>{{ loan_request.amount_approved_display|floatformat:2 }}</strong>{% else %}—{% endif %}</td>
@@ -97,6 +114,8 @@
                             <td>
                               {% if loan_request.committee_status == 'pending_committee' %}
                                 <span class="committee-badge committee-pending">Pending</span>
+                              {% elif loan_request.committee_status == 'committee_pended' %}
+                                <span class="committee-badge committee-pending">Pended — info</span>
                               {% elif loan_request.committee_status == 'committee_approved' %}
                                 <span class="committee-badge committee-ok">Approved</span>
                               {% elif loan_request.committee_status == 'committee_declined' %}
@@ -112,7 +131,7 @@
                             <td>
                               <div class="list-actions">
                               {% url 'loan_request_detail_manager' loan_request.id as review_url %}
-                              {% if loan_request.committee_status == 'pending_committee' %}
+                              {% if loan_request.committee_status == 'pending_committee' or loan_request.committee_status == 'committee_pended' %}
                               {% include "includes/list_action.html" with href=review_url icon="vote" label="Review and vote" tone="green" only %}
                               {% else %}
                               {% include "includes/list_action.html" with href=review_url icon="open" label="Open details" tone="blue" only %}

@@ -103,14 +103,56 @@ def _demo_png(seed: str) -> bytes:
     return buf.getvalue()
 
 
-def _demo_pdf(label: str) -> bytes:
-    text = (label or 'demo document').replace('\\', ' ')[:80]
-    return (
-        b'%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
-        b'2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n'
-        b'3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\n'
-        b'trailer<</Root 1 0 R>>\n%%EOF\n%' + text.encode('ascii', 'ignore') + b'\n'
+def _demo_pdf(label: str, *, identity_lines=None) -> bytes:
+    """Minimal PDF with extractable text (pypdf) for live document-auth demos."""
+    lines = list(identity_lines or [])
+    title = (label or 'demo document').replace('\\', ' ')[:80]
+    if title not in lines:
+        lines.insert(0, title)
+    # Escape PDF string literals
+    safe_lines = []
+    for line in lines[:12]:
+        s = ''.join(c if 32 <= ord(c) < 127 and c not in '()\\' else ' ' for c in str(line))[:90]
+        if s.strip():
+            safe_lines.append(s)
+    if not safe_lines:
+        safe_lines = ['demo document']
+    content_ops = ['BT', '/F1 11 Tf']
+    y = 720
+    for i, s in enumerate(safe_lines):
+        if i == 0:
+            content_ops.append(f'50 {y} Td ({s}) Tj')
+        else:
+            content_ops.append(f'0 -16 Td ({s}) Tj')
+    content_ops.append('ET')
+    stream = '\n'.join(content_ops).encode('latin-1', 'replace')
+    objects = []
+    objects.append(b'1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n')
+    objects.append(b'2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n')
+    objects.append(
+        b'3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
+        b'/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n'
     )
+    objects.append(
+        f'4 0 obj<< /Length {len(stream)} >>stream\n'.encode('ascii')
+        + stream
+        + b'\nendstream\nendobj\n'
+    )
+    objects.append(b'5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n')
+    out = bytearray(b'%PDF-1.4\n')
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(out))
+        out.extend(obj)
+    xref_pos = len(out)
+    out.extend(f'xref\n0 {len(offsets)}\n'.encode('ascii'))
+    out.extend(b'0000000000 65535 f \n')
+    for off in offsets[1:]:
+        out.extend(f'{off:010d} 00000 n \n'.encode('ascii'))
+    out.extend(
+        f'trailer<< /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF\n'.encode('ascii')
+    )
+    return bytes(out)
 
 
 class Command(BaseCommand):
@@ -122,9 +164,18 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete existing LoanRequest rows before seeding loans (keeps users/master data).',
         )
+        parser.add_argument(
+            '--live-doc-auth',
+            action='store_true',
+            help=(
+                'Attach identity-bearing PDFs and run run_automated_document_checks '
+                'instead of force-marking documents verified.'
+            ),
+        )
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING('Seeding sample data…'))
+        self.live_doc_auth = bool(options.get('live_doc_auth'))
 
         self._ensure_dbe_catalog()
         geo = self._seed_geography()
@@ -156,6 +207,8 @@ class Command(BaseCommand):
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Sample data ready.'))
         self.stdout.write(f'  Login password for demo users: {DEFAULT_PASSWORD}')
+        if self.live_doc_auth:
+            self.stdout.write('  Document packs used live automated checks (--live-doc-auth).')
         self.stdout.write('  Examples: bm.mekele / lo.mekele1 / eng.head / coop.manager / ceo / admin.sys')
         self.stdout.write('  Delegation demo: acct.mekele acts for bm.mekele (Alem locked out until cover ends)')
         self.stdout.write('  Digital Apply (same password):')
@@ -590,7 +643,9 @@ class Command(BaseCommand):
         ]
         level_objs = {}
         for key, name, order, min_appr, min_amt, max_amt in levels:
-            lvl, _ = ApprovalCommitteeLevel.objects.get_or_create(
+            # update_or_create so re-seed applies amount bands even when migration
+            # already created levels without min/max (otherwise every level matches).
+            lvl, _ = ApprovalCommitteeLevel.objects.update_or_create(
                 key=key,
                 defaults={
                     'name': name,
@@ -732,7 +787,7 @@ class Command(BaseCommand):
             dict(
                 key='committee1', applicant='Hiwot Gebrehiwot', phone='0912111009',
                 customer_number='1009', category='MSME Services', collateral='Building / House',
-                amount='950000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
+                amount='450000', branch=b['Mekelle Main Branch'], district=d['Mekelle District'],
                 reason='Clinic renovation and equipment',
                 op=True, fin=True, status_hint='Approved', days_ago=18,
                 officer=users['lo1'], history='existing',
@@ -743,7 +798,7 @@ class Command(BaseCommand):
             dict(
                 key='committee2', applicant='Yared Manufacturing', phone='0912111010',
                 customer_number='1010', category='MSME Manufacturing', collateral='Machinery / Equipment',
-                amount='1250000', branch=b['Mekelle Industrial Branch'], district=d['Mekelle District'],
+                amount='480000', branch=b['Mekelle Industrial Branch'], district=d['Mekelle District'],
                 reason='CNC machine acquisition',
                 op=True, fin=True, status_hint='Approved', days_ago=30,
                 officer=users['lo2'], history='existing',
@@ -1493,10 +1548,22 @@ class Command(BaseCommand):
             loan.submitted_to_committee_at = now - timedelta(hours=12)
             loan.submitted_to_committee_by = officer
             loan.committee_submission_notes = 'Submitted for sample committee review.'
-            branch_level = ApprovalCommitteeLevel.objects.filter(
+            from loans.committee import get_levels_for_loan
+            levels = get_levels_for_loan(loan)
+            loan.current_approval_level = levels[0] if levels else ApprovalCommitteeLevel.objects.filter(
                 key=ApprovalCommitteeLevel.LEVEL_BRANCH
             ).first()
-            loan.current_approval_level = branch_level
+            # Seed progress row for the current level so the manager UI matches a live submit.
+            from loans.models import LoanApprovalLevelProgress
+            if loan.current_approval_level_id:
+                LoanApprovalLevelProgress.objects.update_or_create(
+                    loan_request=loan,
+                    level=loan.current_approval_level,
+                    defaults={
+                        'status': LoanApprovalLevelProgress.STATUS_PENDING,
+                        'started_at': loan.submitted_to_committee_at,
+                    },
+                )
         elif spec.get('committee') == 'approved':
             loan.committee_status = LoanRequest.COMMITTEE_APPROVED
             loan.committee_final_decision = 'approve'
@@ -2020,16 +2087,38 @@ class Command(BaseCommand):
 
     def _attach_demo_document(self, loan, doc_type, officer, now, *, png=None, label=''):
         from django.core.files.base import ContentFile
+        from loans.services.document_auth import run_automated_document_checks
 
         existing = loan.application_documents.filter(document_type=doc_type).first()
         if existing and existing.file:
             return existing
         name = (getattr(doc_type, 'name', '') or 'document').lower()
-        use_png = png is not None and any(
+        live = bool(getattr(self, 'live_doc_auth', False))
+        tin = ''
+        try:
+            tin = (loan.basic_info.tin_number or '').strip()
+        except Exception:
+            tin = ''
+        identity_lines = [
+            f'FEDERAL DEMOCRATIC REPUBLIC OF ETHIOPIA',
+            f'IDENTITY CARD / {doc_type.name}',
+            f'Name: {loan.applicant_name}',
+            f'Phone: {loan.phone_number or ""}',
+        ]
+        if tin:
+            identity_lines.append(f'TIN: {tin}')
+        identity_lines.append(f'Ref: {loan.loan_request_id}')
+
+        use_png = (not live) and png is not None and any(
             k in name for k in ('national id', 'kebele', 'identity', 'director', 'guarantor', 'passport')
         )
-        raw = png if use_png else _demo_pdf(label or doc_type.name)
-        filename = f'{loan.loan_request_id}_{doc_type.id}.{"png" if use_png else "pdf"}'
+        if live or not use_png:
+            raw = _demo_pdf(label or doc_type.name, identity_lines=identity_lines)
+            filename = f'{loan.loan_request_id}_{doc_type.id}.pdf'
+        else:
+            raw = png
+            filename = f'{loan.loan_request_id}_{doc_type.id}.png'
+
         doc = existing or LoanRequestDocument(
             loan_request=loan,
             document_type=doc_type,
@@ -2037,6 +2126,42 @@ class Command(BaseCommand):
         )
         doc.original_filename = filename
         doc.file_size = len(raw)
+        doc.file.save(filename, ContentFile(raw), save=False)
+
+        if live:
+            doc.auth_status = LoanRequestDocument.AUTH_PENDING
+            doc.auth_notes = 'Demo seed — live automated checks.'
+            doc.save()
+            try:
+                run_automated_document_checks(doc, prefetched_raw=raw)
+                doc.refresh_from_db()
+                # Tour continuity: if automated checks need review but file is structurally ok,
+                # officer-verify so collateral/committee demos still flow.
+                if doc.auth_status in (
+                    LoanRequestDocument.AUTH_NEEDS_REVIEW,
+                    LoanRequestDocument.AUTH_PENDING,
+                ):
+                    doc.auth_status = LoanRequestDocument.AUTH_VERIFIED
+                    doc.auth_verdict = LoanRequestDocument.VERDICT_AUTHENTIC
+                    doc.authenticated_by = officer
+                    doc.authenticated_at = now
+                    doc.auth_notes = 'Demo seed — officer verified after live automated checks.'
+                    doc.save(update_fields=[
+                        'auth_status', 'auth_verdict', 'authenticated_by',
+                        'authenticated_at', 'auth_notes',
+                    ])
+            except Exception as exc:
+                self.stdout.write(self.style.WARNING(
+                    f'  Live doc-auth failed for {loan.loan_request_id}/{doc_type.name}: {exc}'
+                ))
+                doc.auth_status = LoanRequestDocument.AUTH_VERIFIED
+                doc.auth_verdict = LoanRequestDocument.VERDICT_AUTHENTIC
+                doc.authenticated_by = officer
+                doc.authenticated_at = now
+                doc.auth_notes = f'Demo seed — verified after live-check error: {exc}'
+                doc.save()
+            return doc
+
         doc.auth_status = LoanRequestDocument.AUTH_VERIFIED
         doc.auth_verdict = LoanRequestDocument.VERDICT_AUTHENTIC
         doc.authenticated_by = officer
@@ -2050,7 +2175,6 @@ class Command(BaseCommand):
             'forensics': {'authenticity_score': 88, 'quality': {'score': 90}},
             'identity_match': {'passed': True} if use_png else {},
         }
-        doc.file.save(filename, ContentFile(raw), save=False)
         doc.save()
         return doc
 

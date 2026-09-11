@@ -97,7 +97,7 @@ def build_loan_summary(loan_request) -> Dict[str, Any]:
 
 
 def build_votes_payload(loan_request) -> Dict[str, Any]:
-    from loans.models import LoanApprovalLevelProgress, LoanCommitteeVote
+    from loans.models import LoanApprovalLevelProgress, LoanCommitteeVote, LoanCommitteeVoteEvent
 
     votes = []
     for v in LoanCommitteeVote.objects.filter(loan_request=loan_request).select_related(
@@ -115,6 +115,23 @@ def build_votes_payload(loan_request) -> Dict[str, Any]:
             'comments': v.comments or '',
             'voted_at': v.voted_at,
         })
+    events = []
+    for e in LoanCommitteeVoteEvent.objects.filter(loan_request=loan_request).select_related(
+        'approval_level', 'member', 'cast_by',
+    ).order_by('created_at', 'id'):
+        events.append({
+            'id': e.pk,
+            'level': e.approval_level.name if e.approval_level_id else '',
+            'level_key': getattr(e.approval_level, 'key', '') if e.approval_level_id else '',
+            'member': _user_ref(e.member),
+            'cast_by': _user_ref(e.cast_by),
+            'vote': e.vote,
+            'previous_vote': e.previous_vote or '',
+            'amount_supported': e.amount_supported,
+            'comments': e.comments or '',
+            'ip_address': e.ip_address,
+            'created_at': e.created_at,
+        })
     progress = []
     for p in LoanApprovalLevelProgress.objects.filter(loan_request=loan_request).select_related(
         'level',
@@ -129,6 +146,7 @@ def build_votes_payload(loan_request) -> Dict[str, Any]:
         'committee_status': loan_request.committee_status,
         'committee_final_amount': getattr(loan_request, 'committee_final_amount', None),
         'votes': votes,
+        'vote_events': events,
         'level_progress': progress,
     }
 

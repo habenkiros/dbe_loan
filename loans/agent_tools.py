@@ -275,6 +275,26 @@ TOOL_SPECS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'committee_brief',
+            'description': (
+                'Read-only committee voter brief for a loan: amount band / current level, '
+                'decision-card summary, docs/KYC/CRM/SLA chips, peer vote counts, open compliance cases. '
+                'Use when a branch manager or officer asks what voters should know before voting. '
+                'Never casts, changes, or submits committee votes — humans vote only in the UI.'
+            ),
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'loan_code': {'type': 'string'},
+                    'loan_id': {'type': 'integer'},
+                },
+                'additionalProperties': False,
+            },
+        },
+    },
 ]
 
 
@@ -817,6 +837,37 @@ def _tool_read_appraisal(user, args: Dict[str, Any], conversation) -> Dict[str, 
     }
 
 
+def _tool_committee_brief(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
+    from loans.agent_permissions import user_may_read_appraisal
+    from loans.committee import user_can_view_committee_loan
+    from loans.committee_brief import brief_for_agent
+
+    loan, err = resolve_loan_for_agent(
+        user,
+        loan_code=args.get('loan_code') or '',
+        loan_pk=args.get('loan_id'),
+        conversation=conversation,
+    )
+    if err:
+        return {'ok': False, 'error': err}
+
+    allowed = (
+        getattr(user, 'is_superuser', False)
+        or getattr(user, 'role', None) in ('superadmin', 'admin')
+        or user_can_view_committee_loan(user, loan)
+        or user_may_read_appraisal(user, loan)
+    )
+    if not allowed:
+        return {'ok': False, 'error': 'No committee brief access for this loan.'}
+
+    if conversation:
+        conversation.last_loan_request_id = loan.pk
+
+    payload = brief_for_agent(loan, user=user)
+    payload['ok'] = True
+    return payload
+
+
 def _report_params(args: Dict[str, Any]) -> Dict[str, str]:
     params: Dict[str, str] = {}
     for key in ('status', 'committee_status', 'disbursement_status', 'date_from', 'date_to', 'branch_id', 'district_id'):
@@ -969,6 +1020,8 @@ def dispatch_tool(user, name: str, arguments: Dict[str, Any], conversation=None)
         return {'ok': False, 'error': f'Tool {name} is illegal for Assist in production.'}
     if name == 'read_appraisal':
         return _tool_read_appraisal(user, args, conversation)
+    if name == 'committee_brief':
+        return _tool_committee_brief(user, args, conversation)
     if name == 'pipeline_report':
         return _tool_pipeline_report(user, args)
     if name == 'find_loans':

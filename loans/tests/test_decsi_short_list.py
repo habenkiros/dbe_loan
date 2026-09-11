@@ -35,6 +35,35 @@ class ChapaHttpsGateTests(TestCase):
         self.assertFalse(callback_url_is_public_https('https://127.0.0.1/x'))
         self.assertTrue(callback_url_is_public_https('https://apply.decsi.et/payments/chapa/webhook/'))
 
+    @override_settings(
+        DEBUG=True,
+        CHAPA_FORCE_MOCK=False,
+        CHAPA_SECRET_KEY='test-secret',
+        CHAPA_PUBLIC_KEY='test-public',
+        CHAPA_LOCALHOST_MOCK=True,
+        SITE_URL='http://localhost:8000',
+    )
+    def test_localhost_falls_back_to_mock_when_keys_live(self):
+        from applicant_portal.chapa import chapa_using_mock_checkout, initialize_checkout
+        from applicant_portal.models import ApplicantAccount, OnlineApplication
+
+        self.assertTrue(chapa_using_mock_checkout())
+        acct = ApplicantAccount.objects.create(
+            full_name='Fee Test', phone_number='0911222333', customer_number='9911222333',
+        )
+        app = OnlineApplication.objects.create(
+            applicant=acct,
+            applicant_name='Fee Test',
+            phone_number='0911222333',
+            processing_fee_amount=Decimal('50.00'),
+            status=OnlineApplication.STATUS_PAYMENT,
+            payment_status=OnlineApplication.PAY_UNPAID,
+        )
+        ok, msg, url = initialize_checkout(app)
+        self.assertTrue(ok)
+        self.assertIn('mock', (url or '').lower())
+        self.assertIn('localhost', msg.lower())
+
     def test_email_health_reports_console(self):
         status = email_delivery_status()
         self.assertIn('backend', status)

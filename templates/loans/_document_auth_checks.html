@@ -2,6 +2,16 @@
 {% if doc.automated_checks %}
 <details style="margin-top:0.35rem; font-size:0.85rem;">
   <summary>Automated checks</summary>
+  {% if doc.automated_checks.providers %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>Providers:</strong>
+    OCR {{ doc.automated_checks.providers.ocr.data_source|default:"local" }}
+    · LLM {{ doc.automated_checks.providers.llm.data_source|default:"off" }}
+    · Fayda/TIN {{ doc.automated_checks.providers.fayda_tin.data_source|default:"mock" }}
+    · External ID {{ doc.automated_checks.providers.external_id.data_source|default:"mock" }}
+    · Biometric {{ doc.automated_checks.providers.biometric.data_source|default:"mock" }}
+  </p>
+  {% endif %}
   <ul style="margin:0.35rem 0 0 1rem;">
     {% for msg in doc.automated_checks.messages %}
     <li>{{ msg }}</li>
@@ -46,7 +56,10 @@
     — {{ doc.automated_checks.forensics.reasons|join:", " }}
     {% endif %}
     {% if doc.automated_checks.forensics.near_duplicates %}
-    · near-duplicate on another file
+    · near-duplicate
+    {% for nd in doc.automated_checks.forensics.near_duplicates %}
+      {% if not nd.same_loan %}on {{ nd.loan_request_id }} (d={{ nd.distance }}){% if not forloop.last %}, {% endif %}{% endif %}
+    {% endfor %}
     {% endif %}
   </p>
   {% endif %}
@@ -56,6 +69,9 @@
     <strong>Identity match (loan vs document):</strong>
     {% if identity.passed %}✓ passed{% else %}✗ failed{% endif %}
     — {{ identity.summary }}
+    {% if identity.match_score is not None %}
+    · score {{ identity.match_score }}/{{ identity.min_score }}
+    {% endif %}
     {% if identity.checks %}
     <br>
     {% for field, check in identity.checks.items %}
@@ -89,11 +105,32 @@
   {% endwith %}
   {% endif %}
   {% if doc.automated_checks.llm_bank_statement %}
-  {% if doc.automated_checks.llm_bank_statement.plausible is not None %}
-  <p><strong>LLM (bank statement):</strong> plausible={{ doc.automated_checks.llm_bank_statement.plausible }}
+  <p style="margin:0.35rem 0 0;">
+    <strong>LLM (bank statement):</strong>
+    {% if doc.automated_checks.llm_bank_statement.data_source %}
+    <span>[{{ doc.automated_checks.llm_bank_statement.data_source }}]</span>
+    {% endif %}
+    {% if doc.automated_checks.llm_bank_statement.enabled == False %}
+    off — {{ doc.automated_checks.llm_bank_statement.error|default:"not configured" }}
+    {% elif doc.automated_checks.llm_bank_statement.plausible is not None %}
+    plausible={{ doc.automated_checks.llm_bank_statement.plausible }}
     {% if doc.automated_checks.llm_bank_statement.summary %} — {{ doc.automated_checks.llm_bank_statement.summary|truncatewords:25 }}{% endif %}
+    {% elif doc.automated_checks.llm_bank_statement.error %}
+    error — {{ doc.automated_checks.llm_bank_statement.error|truncatechars:80 }}
+    {% endif %}
   </p>
   {% endif %}
+  {% if doc.automated_checks.external_id %}
+  <p style="margin:0.35rem 0 0;">
+    <strong>External ID:</strong>
+    {% if doc.automated_checks.external_id.data_source %}
+    <span>[{{ doc.automated_checks.external_id.data_source }}]</span>
+    {% endif %}
+    {{ doc.automated_checks.external_id.provider|default:"—" }}
+    {% if doc.automated_checks.external_id.found is not None %} · found={{ doc.automated_checks.external_id.found }}{% endif %}
+    {% if doc.automated_checks.external_id.verified is not None %} · verified={{ doc.automated_checks.external_id.verified }}{% endif %}
+    {% if doc.automated_checks.external_id.skipped %} · skipped{% endif %}
+  </p>
   {% endif %}
 </details>
 {% endif %}

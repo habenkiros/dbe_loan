@@ -146,6 +146,7 @@ def validate_upload_bytes(
                 loan_request,
                 extracted_text,
                 doc_type.get_identity_match_field_list(),
+                require_all_fields=bool(doc_type.identity_match_strict),
             )
             if not identity.get('passed') and doc_type.identity_match_strict:
                 failed = [
@@ -493,6 +494,104 @@ def _match_name_tokens(name: str, text_norm: str) -> Tuple[bool, str]:
     return matched, 'Full-name substring match.' if matched else 'Name not found in document.'
 
 
+_IDENTITY_FIELD_WEIGHTS = {
+    'applicant_name': 60,
+    'tin_number': 40,
+    'fan': 40,
+    'id_number': 40,
+    'business_name': 35,
+    'phone_number': 25,
+    'legal_name_am': 25,
+}
+_IDENTITY_ANCHORS = frozenset({'applicant_name', 'tin_number', 'fan', 'id_number'})
+
+
+def extract_structured_id_cues(text: str) -> Dict[str, Any]:
+    """Rule-based cues from OCR (TIN / FAN / labeled ID) — no third-party API."""
+    raw = text or ''
+    digits = _digits_only(raw)
+    cues: Dict[str, Any] = {'tins': [], 'fans': [], 'id_numbers': [], 'labeled': {}}
+    for m in re.finditer(r'(?i)\b(?:TIN|Tax\s*Id(?:entification)?\s*No\.?)\s*[:#]?\s*(\d{9,12})\b', raw):
+        cues['tins'].append(m.group(1))
+        cues['labeled']['tin'] = m.group(1)
+    for m in re.finditer(r'(?i)\b(?:FAN|Fayda)\s*[:#]?\s*(\d{9,16})\b', raw):
+        cues['fans'].append(m.group(1))
+        cues['labeled']['fan'] = m.group(1)
+    for m in re.finditer(r'(?i)\b(?:ID|Identity|Kebele)\s*(?:No\.?|Number|#)?\s*[:#]?\s*([A-Z0-9\-/]{5,24})\b', raw):
+        cues['id_numbers'].append(m.group(1))
+        cues['labeled'].setdefault('id_number', m.group(1))
+    # Bare 10-digit Ethiopian TIN-looking runs
+    for m in re.finditer(r'(?<!\d)(\d{10})(?!\d)', digits):
+        if m.group(1) not in cues['tins']:
+            cues['tins'].append(m.group(1))
+    cues['tins'] = list(dict.fromkeys(cues['tins']))[:5]
+    cues['fans'] = list(dict.fromkeys(cues['fans']))[:5]
+    cues['id_numbers'] = list(dict.fromkeys(cues['id_numbers']))[:5]
+    return cues
+
+
+def get_document_intel_providers() -> Dict[str, Any]:
+    """Live / mock / off labels for officer UI and automated_checks.providers."""
+    openai_key = bool(
+        (getattr(settings, 'OPENAI_API_KEY', None) or os.getenv('OPENAI_API_KEY', '') or '').strip()
+    )
+    gemini_key = bool(
+        (getattr(settings, 'GEMINI_API_KEY', None) or os.getenv('GEMINI_API_KEY', '') or '').strip()
+    )
+    llm_provider = (getattr(settings, 'DOCUMENT_LLM_PROVIDER', '') or 'openai').lower()
+    if llm_provider == 'gemini':
+        llm_live = gemini_key
+    else:
+        llm_live = openai_key
+        llm_provider = 'openai'
+    external_url = bool(
+        (getattr(settings, 'EXTERNAL_ID_VERIFY_URL', None) or os.getenv('EXTERNAL_ID_VERIFY_URL', '') or '').strip()
+    )
+    try:
+        from loans.services.identity_verify import biometric_provider_mode, provider_mode as identity_mode
+        fayda_mode = identity_mode()
+        bio_mode = biometric_provider_mode()
+    except Exception:
+        fayda_mode = (getattr(settings, 'IDENTITY_VERIFY_PROVIDER', 'mock') or 'mock').lower()
+        bio_mode = (getattr(settings, 'BIOMETRIC_PROVIDER', 'mock') or 'mock').lower()
+
+    def _src(mode: str) -> str:
+        if mode in ('http', 'live'):
+            return 'live'
+        if mode in ('mock',):
+            return 'mock'
+        return 'off'
+
+    return {
+        'ocr': {
+            'mode': 'local',
+            'provider': 'tesseract',
+            'data_source': 'local',
+            'lang': _ocr_lang(),
+        },
+        'llm': {
+            'mode': 'live' if llm_live else 'off',
+            'provider': llm_provider,
+            'data_source': 'live' if llm_live else 'unconfigured',
+        },
+        'external_id': {
+            'mode': 'live' if external_url else 'fallback',
+            'provider': 'external_id_service' if external_url else 'decsi_party_api',
+            'data_source': 'live' if external_url else 'mock_or_cbs',
+        },
+        'fayda_tin': {
+            'mode': fayda_mode,
+            'provider': 'identity_verify',
+            'data_source': _src(fayda_mode),
+        },
+        'biometric': {
+            'mode': bio_mode,
+            'provider': 'biometric',
+            'data_source': _src(bio_mode),
+        },
+    }
+
+
 def _applicant_party(loan_request):
     if loan_request is None:
         return None
@@ -507,8 +606,20 @@ def _applicant_party(loan_request):
         return None
 
 
-def _loan_identity_match(loan_request, extracted_text: str, field_names: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Compare loan registration / KYC party data against OCR text from an upload."""
+def _loan_identity_match(
+    loan_request,
+    extracted_text: str,
+    field_names: Optional[List[str]] = None,
+    *,
+    require_all_fields: bool = False,
+) -> Dict[str, Any]:
+    """Compare loan registration / KYC party data against OCR text from an upload.
+
+    Score is 0–100 as a share of weight among active (non-skipped) fields.
+    Soft pass: score >= DOCUMENT_OCR_MATCH_MIN_SCORE and at least one anchor
+    (name/TIN/FAN/ID) when any anchor is configured. Strict types require every
+    active field to match as well.
+    """
     party = _applicant_party(loan_request)
     fields = field_names or ['applicant_name', 'phone_number', 'tin_number']
     if party is not None:
@@ -522,6 +633,7 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
         fields = list(fields) + extra
     text_norm = _normalize(extracted_text)
     text_digits = _digits_only(extracted_text)
+    structured = extract_structured_id_cues(extracted_text)
     basic_info = _get_loan_basic_info(loan_request) if loan_request is not None else None
 
     checks: Dict[str, Any] = {}
@@ -559,11 +671,15 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
             if not digits:
                 checks[field] = {'matched': None, 'skipped': True, 'detail': 'No TIN on loan request.', 'value': None}
             else:
-                matched = digits in text_digits
+                labeled = structured.get('labeled', {}).get('tin') or ''
+                matched = digits in text_digits or (bool(labeled) and digits == _digits_only(labeled))
+                detail = 'TIN found in document.' if matched else 'TIN not found in document.'
+                if matched and labeled:
+                    detail = 'TIN matched labeled OCR field.'
                 checks[field] = {
                     'matched': matched,
                     'skipped': False,
-                    'detail': 'TIN found in document.' if matched else 'TIN not found in document.',
+                    'detail': detail,
                     'value': value,
                 }
         elif field == 'fan':
@@ -572,7 +688,12 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
             if not digits:
                 checks[field] = {'matched': None, 'skipped': True, 'detail': 'No FAN on KYC party.', 'value': None}
             else:
-                matched = digits in text_digits or _normalize(value) in text_norm
+                labeled = structured.get('labeled', {}).get('fan') or ''
+                matched = (
+                    digits in text_digits
+                    or _normalize(value) in text_norm
+                    or (bool(labeled) and digits == _digits_only(labeled))
+                )
                 checks[field] = {
                     'matched': matched,
                     'skipped': False,
@@ -614,33 +735,40 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
             checks[field] = {'matched': None, 'skipped': True, 'detail': f'Unknown field "{field}".', 'value': None}
 
     active = [f for f in fields if f in checks and not checks[f].get('skipped')]
+    min_score = int(getattr(settings, 'DOCUMENT_OCR_MATCH_MIN_SCORE', 60) or 60)
+    max_weight = sum(_IDENTITY_FIELD_WEIGHTS.get(f, 20) for f in active) or 0
+    earned_weight = sum(
+        _IDENTITY_FIELD_WEIGHTS.get(f, 20) for f in active if checks[f].get('matched')
+    )
+    score = int(round(100.0 * earned_weight / max_weight)) if max_weight else 100
+    all_matched = bool(active) and all(checks[f].get('matched') for f in active)
+    anchors = [f for f in active if f in _IDENTITY_ANCHORS]
+    anchor_ok = (not anchors) or any(checks[f].get('matched') for f in anchors)
+    score_ok = score >= min_score
+
     if not active:
         passed = True
         summary = 'No identity data on loan request to compare.'
-    else:
-        passed = all(checks[f].get('matched') for f in active)
+    elif require_all_fields:
+        passed = all_matched and score_ok
         failed = [f for f in active if not checks[f].get('matched')]
         matched = [f for f in active if checks[f].get('matched')]
-        summary = f'Matched {len(matched)}/{len(active)} fields'
+        summary = f'Matched {len(matched)}/{len(active)} fields · score {score}/{min_score}'
         if failed:
             summary += f' — failed: {", ".join(failed)}'
-
-    score = 0
-    if checks.get('applicant_name', {}).get('matched'):
-        score += 60
-    if checks.get('tin_number', {}).get('matched'):
-        score += 40
-    if checks.get('phone_number', {}).get('matched'):
-        score += 25
-    if checks.get('business_name', {}).get('matched'):
-        score += 35
-    if checks.get('fan', {}).get('matched'):
-        score += 40
-    if checks.get('id_number', {}).get('matched'):
-        score += 40
-    if checks.get('legal_name_am', {}).get('matched'):
-        score += 25
-    min_score = int(getattr(settings, 'DOCUMENT_OCR_MATCH_MIN_SCORE', 60) or 60)
+        elif not score_ok:
+            summary += ' — below minimum score.'
+    else:
+        passed = score_ok and anchor_ok
+        matched = [f for f in active if checks[f].get('matched')]
+        failed = [f for f in active if not checks[f].get('matched')]
+        summary = f'Score {score}/{min_score} · matched {len(matched)}/{len(active)} fields'
+        if not anchor_ok:
+            summary += ' — no anchor field (name/TIN/FAN/ID) matched.'
+        elif not score_ok:
+            summary += ' — below minimum score.'
+        elif failed:
+            summary += f' — soft-pass; unchecked: {", ".join(failed)}'
 
     return {
         'fields': fields,
@@ -649,6 +777,9 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
         'summary': summary,
         'match_score': score,
         'min_score': min_score,
+        'all_fields_matched': all_matched if active else True,
+        'require_all_fields': require_all_fields,
+        'structured_cues': structured,
         'applicant_name': getattr(loan_request, 'applicant_name', '') or None,
         'tin_number': (getattr(basic_info, 'tin_number', '') if basic_info else '') or None,
         'name_match': checks.get('applicant_name', {}).get('matched'),
@@ -660,7 +791,10 @@ def _loan_identity_match(loan_request, extracted_text: str, field_names: Optiona
 def _sheet1_identity_match(document, extracted_text: str) -> Dict[str, Any]:
     doc_type = document.document_type
     fields = doc_type.get_identity_match_field_list() if hasattr(doc_type, 'get_identity_match_field_list') else None
-    return _loan_identity_match(document.loan_request, extracted_text, fields)
+    strict = bool(getattr(doc_type, 'identity_match_strict', False))
+    return _loan_identity_match(
+        document.loan_request, extracted_text, fields, require_all_fields=strict,
+    )
 
 
 def _llm_bank_statement_plausibility(document, ocr_text_preview: str) -> Dict[str, Any]:
@@ -669,9 +803,21 @@ def _llm_bank_statement_plausibility(document, ocr_text_preview: str) -> Dict[st
     gemini_key = getattr(settings, "GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
 
     if provider == "openai" and not openai_key:
-        return {"enabled": False, "error": "OPENAI_API_KEY not configured.", "provider": "openai"}
+        return {
+            "enabled": False,
+            "error": "OPENAI_API_KEY not configured.",
+            "provider": "openai",
+            "mode": "off",
+            "data_source": "unconfigured",
+        }
     if provider == "gemini" and not gemini_key:
-        return {"enabled": False, "error": "GEMINI_API_KEY not configured.", "provider": "gemini"}
+        return {
+            "enabled": False,
+            "error": "GEMINI_API_KEY not configured.",
+            "provider": "gemini",
+            "mode": "off",
+            "data_source": "unconfigured",
+        }
 
     lr = document.loan_request
     prompt = f"""You are a bank document reviewer.
@@ -728,10 +874,23 @@ JSON format:
             content = re.sub(r"^```(?:json)?\s*", "", content)
             content = re.sub(r"\s*```$", "", content)
         parsed = json.loads(content)
-        parsed.update({"enabled": True, "provider": provider, "checked_at": timezone.now().isoformat()})
+        parsed.update({
+            "enabled": True,
+            "provider": provider,
+            "mode": "live",
+            "data_source": "live",
+            "checked_at": timezone.now().isoformat(),
+        })
         return parsed
     except Exception as exc:
-        return {"enabled": True, "provider": provider, "error": str(exc), "checked_at": timezone.now().isoformat()}
+        return {
+            "enabled": True,
+            "provider": provider,
+            "mode": "live",
+            "data_source": "live",
+            "error": str(exc),
+            "checked_at": timezone.now().isoformat(),
+        }
 
 
 def _external_id_verification(document) -> Dict[str, Any]:
@@ -760,6 +919,8 @@ def _external_id_verification(document) -> Dict[str, Any]:
                 return {
                     "enabled": True,
                     "provider": "external_id_service",
+                    "mode": "live",
+                    "data_source": "live",
                     "status": "error",
                     "http_status": resp.status_code,
                     "error": resp.text[:300],
@@ -771,29 +932,57 @@ def _external_id_verification(document) -> Dict[str, Any]:
             return {
                 "enabled": True,
                 "provider": "external_id_service",
+                "mode": "live",
+                "data_source": "live",
                 "status": body.get("status", "ok"),
                 "verified": body.get("verified"),
                 "detail": body,
                 "checked_at": timezone.now().isoformat(),
             }
         except Exception as exc:
-            return {"enabled": True, "provider": "external_id_service", "status": "error", "error": str(exc)}
+            return {
+                "enabled": True,
+                "provider": "external_id_service",
+                "mode": "live",
+                "data_source": "live",
+                "status": "error",
+                "error": str(exc),
+            }
 
     try:
-        from .customer import fetch_customer_by_number
+        from .customer import fetch_customer_by_number, profile_data_source
         lookup_id = _digits_only(tin) or str(getattr(lr, "customer_number", "") or "")
         if not lookup_id:
-            return {"enabled": True, "provider": "decsi_party_api", "skipped": True, "reason": "No TIN/customer number."}
+            return {
+                "enabled": True,
+                "provider": "decsi_party_api",
+                "mode": "fallback",
+                "data_source": "unconfigured",
+                "skipped": True,
+                "reason": "No TIN/customer number.",
+            }
         customer = fetch_customer_by_number(lookup_id)
+        badge = profile_data_source(customer)
+        code = (badge or {}).get('code') or 'mock'
         return {
             "enabled": True,
             "provider": "decsi_party_api",
+            "mode": "live" if code == "live" else "fallback",
+            "data_source": code,
+            "data_source_label": (badge or {}).get('label') or code,
             "found": bool(customer),
             "customer": customer,
             "checked_at": timezone.now().isoformat(),
         }
     except Exception as exc:
-        return {"enabled": True, "provider": "decsi_party_api", "status": "error", "error": str(exc)}
+        return {
+            "enabled": True,
+            "provider": "decsi_party_api",
+            "mode": "fallback",
+            "data_source": "mock",
+            "status": "error",
+            "error": str(exc),
+        }
 
 
 def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] = None) -> Dict[str, Any]:
@@ -934,7 +1123,12 @@ def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] =
 
         if rules['enable_ocr_match']:
             identity_fields = document.document_type.get_identity_match_field_list()
-            identity = _loan_identity_match(document.loan_request, text, identity_fields)
+            identity = _loan_identity_match(
+                document.loan_request,
+                text,
+                identity_fields,
+                require_all_fields=bool(getattr(document.document_type, 'identity_match_strict', False)),
+            )
             report['identity_match'] = identity
             report['ocr_match_sheet1'] = identity
             if extraction.get('error'):
@@ -945,8 +1139,12 @@ def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] =
                     for k, v in (identity.get('checks') or {}).items()
                     if v.get('matched') is False
                 ]
+                score_bit = ''
+                if identity.get('match_score') is not None and identity.get('min_score') is not None:
+                    score_bit = f' (score {identity["match_score"]}/{identity["min_score"]})'
                 report['messages'].append(
                     'Identity match failed — document does not match loan data'
+                    + score_bit
                     + (f': {"; ".join(failed)}' if failed else '.')
                     + ' — verify manually.'
                 )
@@ -978,6 +1176,7 @@ def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] =
                 document.loan_request,
                 doc_text or extracted_text_preview,
                 document.document_type.get_identity_match_field_list(),
+                require_all_fields=True,
             )
             report['identity_match'] = identity
             if identity.get('passed') is False:
@@ -985,6 +1184,8 @@ def run_automated_document_checks(document, *, prefetched_raw: Optional[bytes] =
                 report['messages'].append(
                     'Identity match failed — document does not match applicant KYC data.'
                 )
+
+    report['providers'] = get_document_intel_providers()
 
     if not document.original_filename:
         document.original_filename = name
@@ -1305,14 +1506,19 @@ def document_identity_findings(loan_request) -> List[Dict[str, Any]]:
 
 
 def document_committee_blockers(loan_request) -> List[str]:
-    """Gate committee on authenticated KYC packs for DBE product files."""
+    """Gate committee on authenticated document packs (all families when policy on)."""
     from loans.kyc_desk import kyc_applies
     from loans.kyc_identity import identity_committee_blockers
 
-    msgs: List[str] = list(identity_committee_blockers(loan_request))
+    msgs: List[str] = []
+    if kyc_applies(loan_request):
+        msgs.extend(identity_committee_blockers(loan_request))
 
-    if not kyc_applies(loan_request):
+    policy = get_document_auth_policy()
+    require_docs = getattr(policy, 'require_verified_documents_for_committee', True)
+    if not require_docs:
         return msgs
+
     ready = loan_documents_committee_readiness(loan_request)
     if not ready.get('checklist_count'):
         return msgs

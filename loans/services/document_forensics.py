@@ -129,27 +129,56 @@ def quality_report(raw: bytes, ext: str, extracted_text: str = '') -> Dict[str, 
 
 
 def find_near_duplicates(phash: str, *, exclude_loan_id=None, exclude_pk=None) -> List[Dict[str, Any]]:
-    """Other loans whose perceptual hash is close (Hamming ≤ 10). Cap at 5."""
+    """Other loans whose perceptual hash is close (Hamming ≤ 10). Cap at 5.
+
+    Strategy: exact hash (indexed) → same 8-hex prefix bucket → recent scan.
+    """
     if not phash:
         return []
+    from django.conf import settings
     from loans.models import LoanRequestDocument
 
+    scan_limit = int(getattr(settings, 'DOCUMENT_NEAR_DUP_SCAN_LIMIT', 800) or 800)
     qs = LoanRequestDocument.objects.exclude(perceptual_hash='').select_related('loan_request')
     if exclude_pk:
         qs = qs.exclude(pk=exclude_pk)
+
     hits: List[Dict[str, Any]] = []
-    for row in qs[:400]:
-        dist = hamming_hex(phash, row.perceptual_hash)
+    seen_pks = set()
+
+    def _consider(row, dist: int):
+        if row.pk in seen_pks:
+            return
         if dist > 10:
-            continue
+            return
         if exclude_loan_id and row.loan_request_id == exclude_loan_id and dist == 0:
-            continue
+            return
+        seen_pks.add(row.pk)
         hits.append({
             'document_id': row.pk,
             'loan_request_id': getattr(row.loan_request, 'loan_request_id', ''),
             'distance': dist,
             'same_loan': row.loan_request_id == exclude_loan_id,
         })
+
+    for row in qs.filter(perceptual_hash=phash)[:10]:
+        _consider(row, 0)
+        if len(hits) >= 5:
+            return hits
+
+    prefix = phash[:8]
+    if len(prefix) >= 4:
+        for row in qs.filter(perceptual_hash__startswith=prefix).exclude(perceptual_hash=phash)[:200]:
+            dist = hamming_hex(phash, row.perceptual_hash)
+            _consider(row, dist)
+            if len(hits) >= 5:
+                return hits
+
+    for row in qs.order_by('-id')[:scan_limit]:
+        if row.pk in seen_pks:
+            continue
+        dist = hamming_hex(phash, row.perceptual_hash)
+        _consider(row, dist)
         if len(hits) >= 5:
             break
     return hits

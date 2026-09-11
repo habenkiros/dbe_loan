@@ -629,29 +629,36 @@ class ApplicationDetailsForm(forms.ModelForm):
         else:
             self.fields['category'].queryset = LoanCategory.objects.order_by('product_family', 'name')
         cat_qs = self.fields['category'].queryset
-        self.fields['category'].widget = ProductFamilySelect(attrs={'class': 'ap-input', 'id': 'id_category'})
-        self.fields['category'].widget.family_by_pk = {c.id: c.product_family for c in cat_qs}
+        # Replacing the widget after queryset assignment drops choices — re-sync.
+        cat_widget = ProductFamilySelect(attrs={'class': 'ap-input', 'id': 'id_category'})
+        cat_widget.family_by_pk = {c.id: c.product_family for c in cat_qs}
+        self.fields['category'].widget = cat_widget
+        self.fields['category'].widget.choices = self.fields['category'].choices
         self.fields['category'].label_from_instance = (
             lambda obj: obj.name if obj.product_family == FAMILY_GENERAL
             else f'{obj.name} — {obj.get_product_family_display()}'
         )
+        # label_from_instance changed — refresh widget choices again
+        self.fields['category'].widget.choices = self.fields['category'].choices
         posted_cat = None
         if self.data.get('category'):
             posted_cat = LoanCategory.objects.filter(pk=self.data.get('category')).first()
         elif self.instance and self.instance.category_id:
             posted_cat = self.instance.category
-        from loans.registration import collateral_for_category
-        self.fields['collateral'].queryset = collateral_for_category(posted_cat).exclude(
+        # Same as staff registration: full collateral list; JS filters by product family.
+        self.fields['collateral'].queryset = CollateralType.objects.exclude(
             name__icontains='to be determined',
-        )
+        ).order_by('name')
+        self.fields['collateral'].widget.attrs['id'] = 'id_collateral'
         kind = actor_kind_of(acct) if acct is not None else ACTOR_PERSON
         wholesale_door = kind == ACTOR_INSTITUTION
-        self.fields['collateral'].required = not wholesale_door
+        # Requiredness enforced in clean() via family policy (matches hub LoanRequestForm).
+        self.fields['collateral'].required = False
         self.fields['collateral'].empty_label = '— Select collateral type —'
         self.fields['collateral'].help_text = (
             'Optional for a PFI facility — staff may add security later.'
             if wholesale_door else
-            'Required — branch may refine during appraisal.'
+            'Options update when you pick a product (same rules as branch registration).'
         )
         self.fields['customer_number'].required = kind == ACTOR_PERSON
         self.fields['customer_number'].help_text = (
@@ -778,11 +785,26 @@ class ApplicationDetailsForm(forms.ModelForm):
         return amount
 
     def clean(self):
+        from applicant_portal.access import ACTOR_INSTITUTION, actor_kind_of
+        from loans.registration import collateral_for_category, collateral_required
+
         cleaned = super().clean()
         district = cleaned.get('district')
         branch = cleaned.get('branch')
         if district and branch and branch.district_id != district.pk:
             self.add_error('branch', 'Select a branch that belongs to the chosen district.')
+
+        category = cleaned.get('category')
+        collateral = cleaned.get('collateral')
+        acct = getattr(self.instance, 'applicant', None) if self.instance else None
+        wholesale_door = actor_kind_of(acct) == ACTOR_INSTITUTION if acct is not None else False
+        if collateral_required(category) and not collateral and not wholesale_door:
+            self.add_error('collateral', 'Select a security type for this product.')
+        if collateral and category and not collateral_for_category(category).filter(pk=collateral.pk).exists():
+            self.add_error(
+                'collateral',
+                'This security type is not used for the selected product.',
+            )
         return cleaned
 
     def save(self, commit=True):

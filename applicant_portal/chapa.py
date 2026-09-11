@@ -46,6 +46,24 @@ def chapa_public_key() -> str:
     return (getattr(settings, 'CHAPA_PUBLIC_KEY', '') or '').strip()
 
 
+def chapa_localhost_mock_allowed() -> bool:
+    """When live keys exist but SITE_URL is not public HTTPS, fall back to mock locally."""
+    raw = getattr(settings, 'CHAPA_LOCALHOST_MOCK', None)
+    if raw is None:
+        return bool(getattr(settings, 'DEBUG', False))
+    return bool(raw)
+
+
+def chapa_using_mock_checkout(*, request=None) -> bool:
+    """True when checkout will be simulated (no live Chapa API call)."""
+    if not chapa_live_enabled():
+        return True
+    callback = payment_callback_url(request=request)
+    if callback_url_is_public_https(callback):
+        return False
+    return chapa_localhost_mock_allowed()
+
+
 def _site_url() -> str:
     return (getattr(settings, 'SITE_URL', '') or 'http://localhost:8000').rstrip('/')
 
@@ -186,13 +204,21 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
     application.payment_status = OnlineApplication.PAY_PENDING
     application.payment_reference = tx_ref[:64]
 
-    if not chapa_live_enabled():
+    use_mock = chapa_using_mock_checkout(request=request)
+    if use_mock:
         mock_url = f'{return_url}&status=success&mock=1'
         application.chapa_checkout_url = mock_url
+        application.payment_method = 'chapa_mock'
         application.save(update_fields=[
             'chapa_tx_ref', 'chapa_checkout_url', 'payment_method',
             'payment_status', 'payment_reference', 'updated_at',
         ])
+        if chapa_live_enabled():
+            return True, (
+                'Mock checkout on localhost — Chapa cannot call http://localhost. '
+                'For live Chapa: tunnel HTTPS (ngrok/cloudflared), set SITE_URL=https://…, '
+                'CHAPA_FORCE_MOCK=False, and open Digital Apply on that HTTPS host.'
+            ), mock_url
         return True, 'Mock checkout ready (Chapa not configured).', mock_url
 
     if not callback_url_is_public_https(callback_url):
@@ -254,7 +280,7 @@ def initialize_checkout(application, *, request=None) -> Tuple[bool, str, Option
 
 def inline_checkout_config(application, *, request=None) -> Optional[dict]:
     """Config for Chapa Inline.js so the applicant stays on Digital Apply."""
-    if not chapa_live_enabled() or not chapa_public_key():
+    if chapa_using_mock_checkout(request=request) or not chapa_public_key():
         return None
     if not application.chapa_tx_ref:
         return None

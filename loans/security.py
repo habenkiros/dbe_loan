@@ -198,3 +198,28 @@ def lockout_message() -> str:
         f'Too many failed login attempts. Try again in about '
         f'{lockout_minutes()} minutes, or contact an administrator.'
     )
+
+
+def user_has_mfa_enrolled(user) -> bool:
+    return bool(getattr(user, 'mfa_enabled', False) and (getattr(user, 'mfa_secret_encrypted', '') or ''))
+
+
+def committee_stepup_required() -> bool:
+    return bool(getattr(settings, 'COMMITTEE_STEPUP_REQUIRED', True))
+
+
+def verify_committee_stepup(user, *, password: str, mfa_code: str = '') -> tuple:
+    """
+    Re-auth before irreversible committee actions.
+    Always requires password; TOTP also required when MFA is enrolled.
+    Returns (ok, error_message).
+    """
+    if not committee_stepup_required():
+        return True, ''
+    if not user or not user.check_password(password or ''):
+        return False, 'Confirm your password to continue.'
+    if user_has_mfa_enrolled(user):
+        secret = user_mfa_secret(user)
+        if not verify_totp(secret, mfa_code or ''):
+            return False, 'Enter a valid authenticator code to continue.'
+    return True, ''

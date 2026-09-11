@@ -128,7 +128,12 @@ def append_committee_sla_alerts(qs, alerts: List[Dict[str, Any]], *, limit: int 
     days = committee_sla_days()
     cutoff = timezone.now() - timedelta(days=days)
     rows = (
-        qs.filter(committee_status=LoanRequest.COMMITTEE_PENDING)
+        qs.filter(
+            committee_status__in=(
+                LoanRequest.COMMITTEE_PENDING,
+                LoanRequest.COMMITTEE_PENDED,
+            ),
+        )
         .filter(
             Q(submitted_to_committee_at__lte=cutoff)
             | Q(submitted_to_committee_at__isnull=True, date_requested__lte=cutoff)
@@ -157,6 +162,108 @@ def append_committee_sla_alerts(qs, alerts: List[Dict[str, Any]], *, limit: int 
             'action_url_args': [lr.id],
         })
 
+
+def committee_sla_breach_loans(*, limit: int = 200):
+    """
+    Loans past committee SLA for digest emails.
+
+    Returns list of (loan, age_days, severity) ordered by oldest first.
+    """
+    from loans.models import LoanRequest
+
+    days = committee_sla_days()
+    cutoff = timezone.now() - timedelta(days=days)
+    qs = (
+        LoanRequest.objects.filter(
+            committee_status__in=(
+                LoanRequest.COMMITTEE_PENDING,
+                LoanRequest.COMMITTEE_PENDED,
+            ),
+        )
+        .filter(
+            Q(submitted_to_committee_at__lte=cutoff)
+            | Q(submitted_to_committee_at__isnull=True, date_requested__lte=cutoff)
+        )
+        .select_related(
+            'branch', 'current_approval_level', 'assigned_loan_officer',
+        )
+        .order_by('submitted_to_committee_at', 'date_requested')[:limit]
+    )
+
+    rows = []
+    for lr in qs:
+        anchor = lr.submitted_to_committee_at or lr.date_requested
+        age = _days_since(anchor) or 0
+        severity = 'high' if age >= days * 2 else 'medium'
+        rows.append((lr, age, severity))
+    return rows
+
+
+def send_committee_sla_digest(*, dry_run: bool = False, dedupe_hours: int = 24) -> Dict[str, Any]:
+    """Notify eligible voters (and officer) for each SLA-breached committee file."""
+    from loans.models import LoanNotification
+    from loans.services.notifications import (
+        notify_assigned_officer,
+        notify_eligible_voters,
+    )
+
+    days = committee_sla_days()
+    notified_loans = 0
+    notifications = 0
+    skipped = 0
+    details = []
+
+    for lr, age, severity in committee_sla_breach_loans():
+        level = lr.current_approval_level
+        if not level:
+            skipped += 1
+            continue
+        recent = LoanNotification.objects.filter(
+            loan_request=lr,
+            kind=LoanNotification.KIND_COMMITTEE_SLA,
+            created_at__gte=timezone.now() - timedelta(hours=max(1, dedupe_hours)),
+        ).exists()
+        if recent:
+            skipped += 1
+            details.append({'loan': lr.loan_request_id, 'status': 'deduped'})
+            continue
+
+        title = f'Committee SLA: {lr.loan_request_id} ({age}d / {days}d)'
+        message = (
+            f'{lr.applicant_name} is still at {level.name} after {age} day(s) '
+            f'(SLA {days} days). Severity: {severity}. '
+            'Please review and cast or update your vote.'
+        )
+        if dry_run:
+            notified_loans += 1
+            details.append({'loan': lr.loan_request_id, 'status': 'dry_run', 'age': age})
+            continue
+
+        n = notify_eligible_voters(
+            lr,
+            level,
+            kind=LoanNotification.KIND_COMMITTEE_SLA,
+            title=title,
+            message=message,
+        )
+        n += notify_assigned_officer(
+            lr,
+            kind=LoanNotification.KIND_COMMITTEE_SLA,
+            title=title,
+            message=message,
+        )
+        notifications += n
+        notified_loans += 1
+        details.append({'loan': lr.loan_request_id, 'status': 'sent', 'notifications': n, 'age': age})
+
+    return {
+        'sla_days': days,
+        'notified_loans': notified_loans,
+        'notifications': notifications,
+        'skipped': skipped,
+        'details': details,
+        'dry_run': dry_run,
+    }
 
 def append_coverage_alerts(qs, alerts: List[Dict[str, Any]], *, limit: int = 5) -> None:
     """Collateral coverage below bank policy minimum."""

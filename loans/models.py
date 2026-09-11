@@ -717,6 +717,9 @@ class SecurityAuditLog(models.Model):
     EVT_AUDIT_EXPORTED = 'audit_exported'
     EVT_SESSION_TIMEOUT = 'session_timeout'
     EVT_LOAN_AUDIT_PACK = 'loan_audit_pack'
+    EVT_COMMITTEE_VOTE = 'committee_vote'
+    EVT_COMMITTEE_STEPUP_FAILED = 'committee_stepup_failed'
+    EVT_COMMITTEE_RETURNED = 'committee_returned'
     EVT_CHOICES = [
         (EVT_LOGIN_SUCCESS, 'Login success'),
         (EVT_LOGIN_FAILED, 'Login failed'),
@@ -736,6 +739,9 @@ class SecurityAuditLog(models.Model):
         (EVT_AUDIT_EXPORTED, 'Security audit exported'),
         (EVT_SESSION_TIMEOUT, 'Session idle timeout'),
         (EVT_LOAN_AUDIT_PACK, 'Loan audit pack exported'),
+        (EVT_COMMITTEE_VOTE, 'Committee vote cast'),
+        (EVT_COMMITTEE_STEPUP_FAILED, 'Committee step-up auth failed'),
+        (EVT_COMMITTEE_RETURNED, 'Committee returned loan to officer'),
     ]
 
     event_type = models.CharField(max_length=32, choices=EVT_CHOICES, db_index=True)
@@ -2316,6 +2322,22 @@ class LoanAnalysisPolicyConfig(models.Model):
         default=True,
         help_text='Loan officer cannot submit to committee until Risk & Compliance has signed off.',
     )
+    ROUTING_TIER = 'tier'
+    ROUTING_CUMULATIVE = 'cumulative'
+    ROUTING_MODE_CHOICES = [
+        (ROUTING_TIER, 'Tier (exclusive amount bands)'),
+        (ROUTING_CUMULATIVE, 'Cumulative chain (min floor only)'),
+    ]
+    committee_routing_mode = models.CharField(
+        max_length=20,
+        choices=ROUTING_MODE_CHOICES,
+        default=ROUTING_TIER,
+        help_text=(
+            'Tier: each level’s min/max band (seed default — one band per amount). '
+            'Cumulative: include every active level whose min ≤ amount (ignore max), '
+            'so larger loans walk Branch → District → HO → Management in sequence.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Loan analysis policy'
@@ -2387,6 +2409,13 @@ class DocumentAuthenticationPolicy(models.Model):
     allowed_extensions = models.CharField(max_length=255, default='pdf,jpg,jpeg,png,doc,docx')
     max_file_size_mb = models.PositiveIntegerField(default=15)
     require_verified_documents_for_collateral = models.BooleanField(default=True)
+    require_verified_documents_for_committee = models.BooleanField(
+        default=True,
+        help_text=(
+            'Required document types must be uploaded and authenticated before committee '
+            'submission (all product families with a checklist).'
+        ),
+    )
     block_fee_on_strict_identity_fail = models.BooleanField(
         default=True,
         help_text=(
@@ -2506,23 +2535,26 @@ class ApprovalCommitteeLevel(models.Model):
         }
         return labels.get(self.key, self.key.replace('_', ' ').title())
 
-    def applies_to_amount(self, amount: 'Decimal') -> bool:
+    def applies_to_amount(self, amount: 'Decimal', routing_mode: str = 'tier') -> bool:
         from decimal import Decimal
 
         amt = amount if amount is not None else Decimal('0')
         if self.min_loan_amount is not None and amt < self.min_loan_amount:
             return False
+        # Cumulative chain: min floor only — larger loans still pass lower levels.
+        if routing_mode == 'cumulative':
+            return True
         if self.max_loan_amount is not None and amt > self.max_loan_amount:
             return False
         return True
 
-    def skip_reason_for_amount(self, amount) -> str:
+    def skip_reason_for_amount(self, amount, routing_mode: str = 'tier') -> str:
         from decimal import Decimal
 
         amt = amount if amount is not None else Decimal('0')
         if self.min_loan_amount is not None and amt < self.min_loan_amount:
             return f'Recommended/requested amount ({amt:,.2f}) is below minimum {self.min_loan_amount:,.2f} for this level.'
-        if self.max_loan_amount is not None and amt > self.max_loan_amount:
+        if routing_mode != 'cumulative' and self.max_loan_amount is not None and amt > self.max_loan_amount:
             return f'Recommended/requested amount ({amt:,.2f}) exceeds maximum {self.max_loan_amount:,.2f} for this level.'
         return 'Level is inactive.'
 
@@ -2773,6 +2805,110 @@ class LoanCommitteeVote(models.Model):
         return f'{self.member.username} – {self.vote} @ {self.approval_level.key}'
 
 
+class LoanCommitteeVoteEvent(models.Model):
+    """Append-only committee vote history (IP/UA). Current tally stays on LoanCommitteeVote."""
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='committee_vote_events',
+    )
+    approval_level = models.ForeignKey(
+        ApprovalCommitteeLevel,
+        on_delete=models.CASCADE,
+        related_name='vote_events',
+    )
+    member = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='committee_vote_events',
+    )
+    cast_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='committee_vote_events_cast_for_others',
+    )
+    vote = models.CharField(max_length=20, choices=LoanCommitteeVote.VOTE_CHOICES)
+    previous_vote = models.CharField(max_length=20, blank=True, default='')
+    amount_supported = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True,
+    )
+    comments = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.CharField(max_length=512, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        verbose_name = 'Committee vote event'
+        verbose_name_plural = 'Committee vote events'
+        indexes = [
+            models.Index(fields=['loan_request', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.member.username} {self.vote} @ {self.approval_level.key} ({self.created_at})'
+
+
+class CommitteeInfoRequest(models.Model):
+    """Committee pend → request more information from the loan officer."""
+
+    STATUS_OPEN = 'open'
+    STATUS_CLEARED = 'cleared'
+    STATUS_CHOICES = [
+        (STATUS_OPEN, 'Open'),
+        (STATUS_CLEARED, 'Cleared'),
+    ]
+
+    loan_request = models.ForeignKey(
+        LoanRequest,
+        on_delete=models.CASCADE,
+        related_name='committee_info_requests',
+    )
+    approval_level = models.ForeignKey(
+        ApprovalCommitteeLevel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='info_requests',
+    )
+    requested_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='committee_info_requests_made',
+    )
+    reason = models.TextField()
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True,
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+    cleared_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='committee_info_requests_cleared',
+    )
+    clear_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        verbose_name = 'Committee info request'
+        verbose_name_plural = 'Committee info requests'
+        indexes = [
+            models.Index(fields=['loan_request', 'status']),
+        ]
+
+    def __str__(self):
+        return f'Info request {self.pk} on {self.loan_request_id} ({self.status})'
+
+
 class LoanNotification(models.Model):
     """In-app notification for committee workflow and related events."""
     KIND_VOTE_NEEDED = 'vote_needed'
@@ -2780,6 +2916,9 @@ class LoanNotification(models.Model):
     KIND_COMMITTEE_APPROVED = 'committee_approved'
     KIND_COMMITTEE_DECLINED = 'committee_declined'
     KIND_RETURNED_TO_OFFICER = 'returned_to_officer'
+    KIND_COMMITTEE_INFO_REQUESTED = 'committee_info_requested'
+    KIND_COMMITTEE_INFO_CLEARED = 'committee_info_cleared'
+    KIND_COMMITTEE_SLA = 'committee_sla'
     KIND_DOCUMENT_UPLOADED = 'document_uploaded'
     KIND_DOCUMENT_NEEDS_REVIEW = 'document_needs_review'
     KIND_DOCUMENT_VERIFIED = 'document_verified'
@@ -2798,6 +2937,9 @@ class LoanNotification(models.Model):
         (KIND_COMMITTEE_APPROVED, 'Committee approved'),
         (KIND_COMMITTEE_DECLINED, 'Committee declined'),
         (KIND_RETURNED_TO_OFFICER, 'Returned to loan officer'),
+        (KIND_COMMITTEE_INFO_REQUESTED, 'Committee requested information'),
+        (KIND_COMMITTEE_INFO_CLEARED, 'Committee info request cleared'),
+        (KIND_COMMITTEE_SLA, 'Committee SLA breach'),
         (KIND_DOCUMENT_UPLOADED, 'Document uploaded'),
         (KIND_DOCUMENT_NEEDS_REVIEW, 'Document needs review'),
         (KIND_DOCUMENT_VERIFIED, 'Document verified'),

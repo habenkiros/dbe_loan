@@ -1,6 +1,8 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Committee review – {{ loan_request.loan_request_id }}{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/credit_intelligence.css' %}">
 <style>
 .committee-wrap { max-width: 1120px; }
 .committee-panel { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
@@ -23,6 +25,96 @@
 .vote-form-grid label { font-weight:600; padding-top:0.4rem; }
 .return-box { border:1px dashed #999; background:#fafafa; }
 details.committee-details > summary { cursor:pointer; font-weight:600; color:#064420; }
+.committee-chip-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.65rem 0 0; }
+.committee-chip {
+  display:inline-block; padding:0.2rem 0.55rem; border-radius:4px;
+  font-size:0.8rem; font-weight:600; border:1px solid transparent;
+}
+.committee-chip-ok { background:#d4edda; color:#155724; }
+.committee-chip-warn { background:#fff3cd; color:#856404; }
+.committee-chip-bad { background:#f8d7da; color:#721c24; }
+.committee-chip-info { background:#e7f1ff; color:#004085; }
+.committee-chip-muted { background:#eee; color:#555; }
+.committee-ai-note { font-size:0.85rem; color:#555; margin:0.35rem 0 0; }
+.draft-status { font-size:0.85rem; color:#555; margin-left:0.5rem; }
+.tie-waiting-banner {
+  border: 2px solid #c0392b;
+  background: linear-gradient(180deg, #fff5f5 0%, #fde8e8 100%);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  margin: 1rem 0;
+}
+.tie-waiting-banner h2 {
+  margin: 0 0 0.35rem;
+  color: #922b21;
+  font-size: 1.15rem;
+}
+.tie-waiting-banner .tie-score {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #641e16;
+  margin: 0.25rem 0 0.5rem;
+}
+.committee-chip-tie { background:#f5b7b1; color:#641e16; }
+.mobile-vote-bar {
+  display: none;
+}
+@media (max-width: 720px) {
+  .committee-wrap { max-width: 100%; padding: 0 0.15rem; }
+  .committee-action-strip {
+    position: sticky;
+    top: 0;
+    padding: 0.75rem 0.85rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  }
+  .committee-action-strip .row { flex-direction: column; align-items: stretch; }
+  .committee-action-strip .ctas { width: 100%; }
+  .committee-action-strip .ctas .list-actions,
+  .committee-action-strip .ctas { justify-content: stretch; }
+  .vote-form-grid {
+    grid-template-columns: 1fr;
+    max-width: none;
+    gap: 0.35rem 0;
+  }
+  .vote-form-grid label { padding-top: 0.65rem; }
+  .vote-form-grid select,
+  .vote-form-grid input,
+  .vote-form-grid textarea,
+  .vote-form-grid .form-control {
+    width: 100%;
+    min-height: 2.75rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+  .vote-form-grid textarea { min-height: 6rem; }
+  #committee-vote-form .btn-green,
+  #committee-vote-form .btn-gray {
+    width: 100%;
+    min-height: 2.85rem;
+    font-size: 1.05rem;
+  }
+  .mobile-vote-bar {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    z-index: 25;
+    margin: 1rem -0.15rem 0;
+    padding: 0.65rem 0.85rem;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 2px solid #064420;
+    box-shadow: 0 -4px 14px rgba(0,0,0,0.08);
+  }
+  .mobile-vote-bar .btn {
+    width: 100%;
+    min-height: 2.85rem;
+    font-size: 1.05rem;
+  }
+}
+@media (max-width: 400px) {
+  .committee-panel { padding: 0.85rem 0.9rem; }
+  h1 { font-size: 1.35rem; }
+}
 </style>
 
 <div class="committee-wrap">
@@ -62,15 +154,31 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
         {% endif %}
         {% if committee_tally.current_tally %}
           &nbsp;· Votes {{ committee_tally.current_tally.approve_count }}✓ / {{ committee_tally.current_tally.decline_count }}✗{% if committee_tally.current_tally.pend_count %} / {{ committee_tally.current_tally.pend_count }} pend{% endif %}
-          {% if committee_tally.current_tally.approvals_needed %}
+          {% if committee_tally.current_tally.tiebreaker_waiting %}
+            · <span class="committee-badge" style="background:#f5b7b1;color:#641e16;">Tied — chair needed</span>
+          {% elif committee_tally.current_tally.approvals_needed %}
             · Need {{ committee_tally.current_tally.approvals_needed }} more approval{{ committee_tally.current_tally.approvals_needed|pluralize }}
           {% endif %}
         {% endif %}
         {% if scorecard %}
           <br><small>Credit score: <strong>{{ scorecard.total|floatformat:1 }}/100</strong> ({{ scorecard.band_label }})</small>
         {% endif %}
+        {% if committee_brief.chips or committee_brief.sla or committee_tally.current_tally and committee_tally.current_tally.tiebreaker_waiting %}
+        <div class="committee-chip-row">
+          {% if committee_tally.current_tally and committee_tally.current_tally.tiebreaker_waiting %}
+          <span class="committee-chip committee-chip-tie">Tied — waiting for chair</span>
+          {% endif %}
+          {% if committee_brief.sla %}
+          <span class="committee-chip committee-chip-{{ committee_brief.sla.tone }}">{{ committee_brief.sla.label }}</span>
+          {% endif %}
+          {% for chip in committee_brief.chips %}
+          <span class="committee-chip committee-chip-{{ chip.tone }}">{{ chip.label }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
       <div class="ctas list-actions list-actions-lg">
+        {% include "includes/list_action.html" with href="#ai-brief" icon="list" label="AI brief" tone="blue" only %}
         {% include "includes/list_action.html" with href="#evidence" icon="list" label="Review evidence" tone="blue" only %}
         {% if committee_tally.can_vote %}
           {% include "includes/list_action.html" with href="#cast-vote" icon="vote" label="Cast your vote" tone="green" only %}
@@ -106,6 +214,71 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
   </div>
   {% endif %}
 
+  <div id="ai-brief">
+    {% if open_info_request %}
+    <div class="committee-panel" style="border-color:#e0b84a; background:#fff8e5;">
+      <strong>Information requested from loan officer</strong>
+      <p style="margin:0.4rem 0 0;">{{ open_info_request.reason|linebreaksbr }}</p>
+      <p style="margin:0.4rem 0 0;" class="help">
+        Due {% if open_info_request.due_date %}{{ open_info_request.due_date|date:"Y-m-d" }}{% else %}—{% endif %}
+        {% if open_info_request.requested_by %} · by {{ open_info_request.requested_by.username }}{% endif %}
+      </p>
+    </div>
+    {% endif %}
+    {% if committee_tally.current_tally and committee_tally.current_tally.tiebreaker_waiting %}
+    <div id="tie-waiting" class="tie-waiting-banner">
+      <h2>Tied — waiting for chair</h2>
+      <p class="tie-score">
+        {{ committee_tally.current_tally.approve_count }} approve
+        · {{ committee_tally.current_tally.decline_count }} decline
+      </p>
+      <p style="margin:0 0 0.4rem;">
+        {{ committee_tally.current_tally.decision_reason|default:"A tiebreaker vote is required to decide this level." }}
+      </p>
+      {% if committee_tally.current_tally.tiebreaker_roles %}
+      <p class="help" style="margin:0;">
+        Chair roles:
+        {% for r in committee_tally.current_tally.tiebreaker_roles %}<code>{{ r }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
+      </p>
+      {% endif %}
+      {% if committee_tally.current_tally.tiebreaker_vote %}
+      <p class="help" style="margin:0.4rem 0 0;">
+        Chair vote on file:
+        {{ committee_tally.current_tally.tiebreaker_vote.member.username }} —
+        {{ committee_tally.current_tally.tiebreaker_vote.get_vote_display }}
+        (needs a deciding approve/decline, not pend).
+      </p>
+      {% else %}
+      <p class="help" style="margin:0.4rem 0 0;"><strong>No chair vote yet</strong> — eligible chair should cast now.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if committee_tally.current_tally and not committee_tally.current_tally.quorum_ok %}
+    <div class="committee-panel" style="border-color:#c0392b; background:#fdf2f2;">
+      <strong>Quorum warning</strong>
+      <p style="margin:0.35rem 0 0;">{{ committee_tally.current_tally.quorum_warning }}</p>
+    </div>
+    {% endif %}
+    {% if committee_brief.open_compliance_cases %}
+    <div class="committee-panel" style="border-color:#c0392b; background:#fdf2f2;">
+      <strong>Open compliance / AML cases</strong>
+      <ul style="margin:0.4rem 0 0; padding-left:1.2rem;">
+        {% for c in committee_brief.open_compliance_cases %}
+        <li>{{ c.title|default:c.kind }} ({{ c.status }})</li>
+        {% endfor %}
+      </ul>
+      <p class="committee-ai-note">Opened after submit still requires human judgment — Assist does not clear cases.</p>
+    </div>
+    {% endif %}
+    {% include "loans/_product_intel_panel.html" %}
+    {% include "loans/_ci_decision_card.html" %}
+    {% if committee_brief and not decision_card and not desk_intel %}
+    <div class="committee-panel">
+      <p style="margin:0;"><em>AI decision assist unavailable for this file yet — review evidence below.</em></p>
+    </div>
+    {% endif %}
+  </div>
+
   {% include "loans/_committee_evidence_panel.html" %}
 
   {% if committee_tally.can_vote %}
@@ -115,11 +288,11 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
       Still need <strong>{{ committee_tally.current_tally.approvals_needed }}</strong> approval{{ committee_tally.current_tally.approvals_needed|pluralize }}
       ({{ committee_tally.current_tally.approve_count }} of {{ committee_tally.current_tally.min_approvals }} so far).
     {% endif %}
-    Review the evidence above, then cast your vote.
+    Review the AI brief and evidence above, then cast your vote.
   </div>
   <div class="committee-panel" style="border-color:#064420;">
     <h2 style="margin-top:0; color:#064420; font-size:1.15rem;">Cast your vote — {{ committee_tally.current_level.name }}</h2>
-    <form method="post" action="{% url 'cast_committee_vote' loan_request.id %}">
+    <form method="post" action="{% url 'cast_committee_vote' loan_request.id %}" id="committee-vote-form">
       {% csrf_token %}
       <div class="vote-form-grid">
         <label for="{{ vote_form.vote.id_for_label }}">{{ vote_form.vote.label }}</label>
@@ -129,13 +302,44 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
           {% if vote_form.amount_supported.help_text %}<br><small>{{ vote_form.amount_supported.help_text }}</small>{% endif %}
         </div>
         <label for="{{ vote_form.comments.id_for_label }}">{{ vote_form.comments.label }}</label>
-        <div>{{ vote_form.comments }}</div>
+        <div>
+          {{ vote_form.comments }}
+          <p style="margin:0.4rem 0 0;">
+            <button type="button" class="btn btn-gray" id="btn-draft-comments"
+                    data-url="{% url 'draft_committee_vote_comments' loan_request.id %}">
+              Suggest comments
+            </button>
+            <span class="draft-status" id="draft-status"></span>
+          </p>
+          <small>Drafts are assistive — edit before submit. Assist never casts your vote.</small>
+        </div>
+        <label for="{{ vote_form.info_due_date.id_for_label }}">{{ vote_form.info_due_date.label }}</label>
+        <div>{{ vote_form.info_due_date }}
+          {% if vote_form.info_due_date.help_text %}<br><small>{{ vote_form.info_due_date.help_text }}</small>{% endif %}
+        </div>
+        {% if committee_stepup_required and vote_form.confirm_password %}
+        <label for="{{ vote_form.confirm_password.id_for_label }}">{{ vote_form.confirm_password.label }}</label>
+        <div>{{ vote_form.confirm_password }}
+          {% if vote_form.confirm_password.help_text %}<br><small>{{ vote_form.confirm_password.help_text }}</small>{% endif %}
+        </div>
+        {% if committee_stepup_needs_mfa and vote_form.mfa_code %}
+        <label for="{{ vote_form.mfa_code.id_for_label }}">{{ vote_form.mfa_code.label }}</label>
+        <div>{{ vote_form.mfa_code }}
+          {% if vote_form.mfa_code.help_text %}<br><small>{{ vote_form.mfa_code.help_text }}</small>{% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
       </div>
       <p style="margin-top:1rem;">
         <button type="submit" class="btn btn-green">Submit vote</button>
       </p>
     </form>
   </div>
+  {% if committee_tally.can_vote %}
+  <div class="mobile-vote-bar">
+    <a href="#cast-vote" class="btn btn-green">Cast your vote</a>
+  </div>
+  {% endif %}
   {% elif committee_tally.user_vote %}
   <div class="committee-panel">
     <p style="margin:0;">You already voted <strong>{{ committee_tally.user_vote.get_vote_display }}</strong>
@@ -176,14 +380,26 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
   </details>
   {% endif %}
 
-  {% if can_return_to_officer %}
+  {% if can_return_to_officer and return_form %}
   <div id="return-officer" class="committee-panel return-box">
     <h3 style="margin-top:0;">Return to loan officer</h3>
     <p class="help">Send back for corrections without declining. The officer is notified and can resubmit after fixes.</p>
     <form method="post" action="{% url 'return_loan_to_officer' loan_request.id %}" onsubmit="return confirm('Return this loan to the loan officer for corrections?');">
       {% csrf_token %}
-      <label for="id_return_notes"><strong>Feedback for loan officer (required)</strong></label><br>
-      <textarea id="id_return_notes" name="return_notes" rows="3" style="width:100%; max-width:560px;" required minlength="10" placeholder="Describe what must be corrected in the appraisal or documents…"></textarea>
+      <label for="{{ return_form.return_notes.id_for_label }}"><strong>{{ return_form.return_notes.label }}</strong></label><br>
+      {{ return_form.return_notes }}
+      {% if committee_stepup_required and return_form.confirm_password %}
+      <p style="margin-top:0.65rem;">
+        <label for="{{ return_form.confirm_password.id_for_label }}"><strong>{{ return_form.confirm_password.label }}</strong></label><br>
+        {{ return_form.confirm_password }}
+      </p>
+      {% if committee_stepup_needs_mfa and return_form.mfa_code %}
+      <p style="margin-top:0.5rem;">
+        <label for="{{ return_form.mfa_code.id_for_label }}"><strong>{{ return_form.mfa_code.label }}</strong></label><br>
+        {{ return_form.mfa_code }}
+      </p>
+      {% endif %}
+      {% endif %}
       <p style="margin-top:0.5rem;"><button type="submit" class="btn btn-gray">Return to loan officer</button></p>
     </form>
   </div>
@@ -193,4 +409,41 @@ details.committee-details > summary { cursor:pointer; font-weight:600; color:#06
   <p class="help" style="margin-top:1.25rem;">Committee membership is configured in <a href="{% url 'manage_approval_committees' %}"><strong>Settings → Approval committees</strong></a>.</p>
   {% endif %}
 </div>
+{% if committee_tally.can_vote %}
+<script>
+(function () {
+  var btn = document.getElementById('btn-draft-comments');
+  if (!btn) return;
+  var statusEl = document.getElementById('draft-status');
+  var form = document.getElementById('committee-vote-form');
+  var comments = form && form.querySelector('[name="comments"]');
+  var voteSel = form && form.querySelector('[name="vote"]');
+  var csrf = form && form.querySelector('[name="csrfmiddlewaretoken"]');
+  btn.addEventListener('click', function () {
+    statusEl.textContent = 'Drafting…';
+    var body = new FormData();
+    body.append('csrfmiddlewaretoken', csrf ? csrf.value : '');
+    body.append('vote', voteSel ? voteSel.value : 'approve');
+    body.append('use_llm', '1');
+    fetch(btn.getAttribute('data-url'), {
+      method: 'POST',
+      body: body,
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data.ok) {
+        statusEl.textContent = data.error || 'Draft failed';
+        return;
+      }
+      if (comments && data.comments) {
+        comments.value = data.comments;
+      }
+      statusEl.textContent = data.source === 'llm' ? 'LLM draft — edit before submit' : 'Rule draft — edit before submit';
+    }).catch(function () {
+      statusEl.textContent = 'Draft failed';
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

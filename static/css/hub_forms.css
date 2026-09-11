@@ -1,0 +1,450 @@
+/* Shared staff-hub form system — inputs, filters, Django as_p, approval cards */
+
+:root {
+  --hub-field-h: 2.55rem;
+  --hub-field-radius: 10px;
+}
+
+/* ── Controls ── */
+body > .container form input[type="text"],
+body > .container form input[type="password"],
+body > .container form input[type="email"],
+body > .container form input[type="number"],
+body > .container form input[type="tel"],
+body > .container form input[type="url"],
+body > .container form input[type="search"],
+body > .container form input[type="date"],
+body > .container form input[type="time"],
+body > .container form input[type="datetime-local"],
+body > .container form input[type="month"],
+body > .container form input[type="week"],
+body > .container form input:not([type]),
+body > .container form select,
+body > .container form textarea,
+.form-control,
+input.form-control,
+select.form-control,
+textarea.form-control {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--hub-field-h);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: var(--hub-field-radius);
+  background: #fff;
+  color: var(--hub-ink, #0e2418);
+  font: inherit;
+  line-height: 1.35;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+body > .container form select,
+select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.15rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a7263' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  background-color: #fff;
+}
+
+body > .container form textarea,
+textarea.form-control {
+  min-height: 5.75rem;
+  resize: vertical;
+  line-height: 1.45;
+  padding-top: 0.65rem;
+}
+
+body > .container form input[type="file"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--hub-field-h);
+  padding: 0.4rem 0.55rem;
+  border: 1px dashed var(--hub-line, #d7e3db);
+  border-radius: var(--hub-field-radius);
+  background: var(--hub-soft, #f3f8f5);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+body > .container form input[type="checkbox"],
+body > .container form input[type="radio"] {
+  display: inline-block;
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: #0a6b2e;
+  vertical-align: middle;
+}
+
+body > .container form input:focus,
+body > .container form select:focus,
+body > .container form textarea:focus,
+.form-control:focus {
+  outline: none;
+  border-color: #8fbfa0;
+  box-shadow: 0 0 0 3px rgba(10, 107, 46, 0.14);
+}
+
+body > .container form input[aria-invalid="true"],
+body > .container form .errorlist + input,
+body > .container form .errorlist + select,
+body > .container form .errorlist + textarea,
+body > .container form input.error,
+body > .container form select.error {
+  border-color: #d7a3a3;
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.12);
+}
+
+/* Labels inside forms */
+body > .container form > p > label,
+body > .container form .hub-field > label,
+.hub-field > label,
+.form-group > label,
+.legal-form > label,
+.vote-form-grid > label {
+  display: block;
+  margin: 0 0 0.28rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--hub-muted, #5a7263);
+}
+
+body > .container form label:has(> input[type="checkbox"]),
+body > .container form label:has(> input[type="radio"]) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--hub-ink, #0e2418);
+  cursor: pointer;
+}
+
+/* ── Django as_p / dedicated create-edit pages ── */
+body > .container > form.hub-form,
+body > .container > form:has(> p > input),
+body > .container > form:has(> p > select),
+body > .container > form:has(> p > textarea) {
+  background: var(--hub-card, #fff);
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem 1.25rem;
+  margin: 0 0 1.35rem;
+  box-shadow: var(--hub-shadow, 0 8px 24px rgba(6, 68, 32, 0.05));
+  max-width: 44rem;
+}
+
+.hub-form:has(> p:nth-of-type(5)) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+  max-width: 52rem;
+  align-items: start;
+}
+.hub-form:has(> p:nth-of-type(5)) > p:has(textarea),
+.hub-form:has(> p:nth-of-type(5)) > p:has(input[type="checkbox"]),
+.hub-form:has(> p:nth-of-type(5)) > button,
+.hub-form:has(> p:nth-of-type(5)) > .hub-form-actions,
+.hub-form:has(> p:nth-of-type(5)) > .errorlist,
+.hub-form:has(> p:nth-of-type(5)) > .help,
+.hub-form:has(> p:nth-of-type(5)) > h2,
+.hub-form:has(> p:nth-of-type(5)) > p:has(> button) {
+  grid-column: 1 / -1;
+}
+
+body > .container form > p {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin: 0 0 0.9rem;
+}
+
+body > .container form > p > input,
+body > .container form > p > select,
+body > .container form > p > textarea {
+  margin: 0;
+}
+
+body > .container form .helptext,
+body > .container form span.helptext {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--hub-muted, #5a7263);
+  font-weight: 400;
+}
+
+.errorlist {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: #fdf0f0;
+  border: 1px solid #f0c4c4;
+  border-radius: 10px;
+  color: #721c24;
+  font-size: 0.9rem;
+}
+.errorlist li { margin: 0 0 0.2rem; }
+.errorlist li:last-child { margin: 0; }
+form p .errorlist { margin: 0.3rem 0 0; padding: 0.4rem 0.55rem; }
+
+.hub-form-actions,
+body > .container > form > button[type="submit"],
+body > .container > form > p:last-of-type:has(> button) {
+  margin-top: 0.35rem;
+}
+
+.hub-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ── Filter bars ── */
+.form-inline,
+.hub-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  background: var(--hub-card, #fff);
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: 14px;
+  padding: 0.9rem 1.05rem;
+  margin: 0 0 1.25rem;
+  max-width: none !important;
+  box-shadow: var(--hub-shadow, 0 8px 24px rgba(6, 68, 32, 0.05));
+}
+
+.form-inline .form-group,
+.hub-filters .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin: 0;
+  min-width: 9.5rem;
+}
+
+.form-inline .form-group br,
+.hub-filters .form-group br {
+  display: none;
+}
+
+.form-inline .form-control,
+.hub-filters .form-control,
+.form-inline select,
+.form-inline input[type="text"],
+.form-inline input[type="date"],
+.form-inline input[type="search"] {
+  width: 100%;
+  min-width: 9.5rem;
+  max-width: 18rem;
+}
+
+.form-inline > label,
+.hub-filters > label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hub-muted, #5a7263);
+  margin: 0;
+}
+.form-inline > select,
+.form-inline > input[type="text"],
+.hub-filters > select,
+.hub-filters > input[type="text"] {
+  width: auto;
+  min-width: 12rem;
+  max-width: 22rem;
+}
+
+/* ── Field + fact cards (approval / assign) ── */
+.hub-form {
+  background: var(--hub-card, #fff);
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem 1.25rem;
+  margin: 0 0 1.35rem;
+  box-shadow: var(--hub-shadow, 0 8px 24px rgba(6, 68, 32, 0.05));
+  max-width: 44rem;
+}
+
+.hub-form.hub-form-wide { max-width: 52rem; }
+
+.hub-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+
+@media (min-width: 720px) {
+  .hub-fields.hub-fields-2 { grid-template-columns: 1fr 1fr; }
+  .hub-fields.hub-fields-2 .hub-field-wide { grid-column: 1 / -1; }
+}
+
+.hub-field { min-width: 0; }
+.hub-field input,
+.hub-field select,
+.hub-field textarea {
+  width: 100%;
+}
+
+.hub-facts {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) 1fr;
+  gap: 0.45rem 1.1rem;
+  margin: 0 0 1.15rem;
+  padding: 0;
+}
+.hub-facts div {
+  display: contents;
+}
+.hub-facts dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--hub-muted, #5a7263);
+  padding-top: 0.15rem;
+}
+.hub-facts dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--hub-ink, #0e2418);
+}
+
+.hub-callout {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #c9dbd1;
+  background: #f3f8f5;
+  color: #2c4a34;
+  line-height: 1.45;
+}
+
+/* ── Appraisal / form-table ── */
+.form-table td input,
+.form-table td select,
+.form-table td textarea,
+.sheet1-grid .field input,
+.sheet1-grid .field select,
+.sheet1-grid .field textarea,
+.appraisal-card input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.appraisal-card select,
+.appraisal-card textarea {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+table.form-table {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+table.form-table th[colspan] {
+  background: var(--hub-soft, #f3f8f5);
+  color: var(--hub-green, #064420);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+table.form-table td:first-child {
+  width: 38%;
+  font-weight: 600;
+  color: var(--hub-muted, #5a7263);
+  vertical-align: middle;
+}
+
+/* ── Committee vote + legal / post-approval ── */
+.vote-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+  max-width: 36rem;
+  align-items: start;
+}
+.vote-form-grid > label { padding-top: 0; }
+.vote-form-grid select,
+.vote-form-grid input,
+.vote-form-grid textarea,
+.vote-form-grid .form-control {
+  width: 100%;
+}
+
+.legal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: 12px;
+  background: var(--hub-soft, #f3f8f5);
+}
+.legal-form > label { margin-top: 0.2rem; }
+.legal-form > p { margin: 0.45rem 0 0; }
+
+.doc-row form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+.doc-row form .form-control {
+  width: auto;
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: 22rem;
+  display: inline-block;
+}
+
+/* Don't let table chrome swallow compact row actions */
+body > .container table input[type="text"],
+body > .container table input[type="number"],
+body > .container table input[type="date"],
+body > .container table select,
+body > .container table textarea {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .hub-form:has(> p:nth-of-type(5)),
+  body > .container > form.hub-form:has(> p:nth-of-type(5)),
+  body > .container > form:has(> p > input):has(> p:nth-of-type(5)) {
+    grid-template-columns: 1fr;
+  }
+  .hub-facts {
+    grid-template-columns: 1fr;
+    gap: 0.1rem 0;
+  }
+  .hub-facts dt { padding-top: 0.55rem; }
+  .form-inline .form-control,
+  .hub-filters .form-control,
+  .form-inline select,
+  .form-inline input[type="text"],
+  .form-inline input[type="date"] {
+    max-width: none;
+  }
+  .form-inline .form-group,
+  .hub-filters .form-group {
+    flex: 1 1 100%;
+  }
+}

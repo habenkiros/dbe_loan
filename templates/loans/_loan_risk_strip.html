@@ -1,23 +1,33 @@
-{# Risk strip on loan detail — appraisal + optional Risk & Compliance note #}
+{# Compact risk line on loan detail — appraisal + optional Risk & Compliance note #}
 {% if risk_summary %}
-<section class="lw-panel" style="margin:0.75rem 0;border-left:4px solid {% if risk_summary.has_flags %}#b45309{% else %}#1a5c3a{% endif %};">
-  <h3 style="margin-top:0;">Risk snapshot</h3>
-  <div class="lw-facts">
-    <span class="lbl">Credit band</span>
-    <span>{{ risk_summary.band|default:"—" }}{% if risk_summary.score != None %} ({{ risk_summary.score }}){% endif %}</span>
-    <span class="lbl">E&amp;S</span>
-    <span>{{ risk_summary.es_risk_category|default:"—" }} / {{ risk_summary.es_eligibility|default:"—" }}</span>
-    <span class="lbl">Coverage</span>
-    <span>{% if risk_summary.coverage_ratio != None %}{{ risk_summary.coverage_ratio }}×{% else %}—{% endif %}</span>
-    <span class="lbl">DSCR (annual)</span>
-    <span>{% if risk_summary.dscr_annual != None %}{{ risk_summary.dscr_annual }}{% else %}—{% endif %}</span>
-  </div>
-  {% if risk_summary.flags %}
-  <p class="help" style="margin:0.5rem 0 0;">
-    Flags:
-    {% for f in risk_summary.flags %}<span class="lw-badge lw-warn">{{ f }}</span> {% endfor %}
-  </p>
+{% if risk_summary.band or risk_summary.score != None or risk_summary.es_risk_category or risk_summary.es_eligibility or risk_summary.coverage_ratio != None or risk_summary.dscr_annual != None or risk_summary.flags %}
+<div class="lw-risk-line{% if risk_summary.has_flags %} lw-risk-line-warn{% endif %}">
+  {% if risk_summary.band or risk_summary.score != None %}
+  <span><em>Band</em> {{ risk_summary.band }}{% if risk_summary.score != None %} ({{ risk_summary.score }}){% endif %}</span>
   {% endif %}
+  {% if risk_summary.es_risk_category or risk_summary.es_eligibility %}
+  <span><em>E&amp;S</em>
+    {% if risk_summary.es_risk_category %}{{ risk_summary.es_risk_category }}{% endif %}
+    {% if risk_summary.es_risk_category and risk_summary.es_eligibility %} / {% endif %}
+    {% if risk_summary.es_eligibility %}{{ risk_summary.es_eligibility }}{% endif %}
+  </span>
+  {% endif %}
+  {% if risk_summary.coverage_ratio != None %}
+  <span><em>Coverage</em> {{ risk_summary.coverage_ratio }}×</span>
+  {% endif %}
+  {% if risk_summary.dscr_annual != None %}
+  <span><em>DSCR</em> {{ risk_summary.dscr_annual }}</span>
+  {% endif %}
+  {% if risk_summary.flags %}
+    {% for f in risk_summary.flags %}<span class="lw-badge lw-warn">{{ f }}</span>{% endfor %}
+  {% endif %}
+</div>
+{% else %}
+<div class="lw-risk-line lw-risk-empty">No score, E&amp;S, or coverage yet.</div>
+{% endif %}
+{% if user.role == 'risk_compliance' or user.is_superuser %}
+<details class="lw-section-collapse lw-panel" id="lw-risk-review">
+  <summary>Risk review</summary>
   {% if risk_summary.reviewed_at %}
   <p class="help" style="margin:0.5rem 0 0;">
     Risk reviewed {{ risk_summary.reviewed_at|date:"Y-m-d H:i" }}
@@ -27,7 +37,6 @@
     {% if risk_summary.review_note %}— {{ risk_summary.review_note }}{% endif %}
   </p>
   {% endif %}
-  {% if user.role == 'risk_compliance' or user.is_superuser %}
   <form method="post" action="{% url 'save_risk_review' loan_request.id %}" style="margin-top:0.75rem;">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.path }}">
@@ -39,6 +48,6 @@
       <button type="submit" name="action" value="return" class="btn btn-gray" style="font-size:0.85rem;">Return to officer</button>
     </div>
   </form>
-  {% endif %}
-</section>
+</details>
+{% endif %}
 {% endif %}

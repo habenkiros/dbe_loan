@@ -2,10 +2,10 @@
 {% block title %}Manage Zones (Region → Zone){% endblock %}
 {% block content %}
 <h1>Manage Zones (under Region)</h1>
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add Zone</button>
+    <button type="submit" class="btn btn-green">Add Zone</button>
 </form>
 <div class="table-container">
     <table>

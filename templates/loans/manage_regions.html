@@ -2,10 +2,10 @@
 {% block title %}Manage Regions{% endblock %}
 {% block content %}
 <h1>Manage Regions (Geography)</h1>
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add Region</button>
+    <button type="submit" class="btn btn-green">Add Region</button>
 </form>
 <div class="table-container">
     <table>

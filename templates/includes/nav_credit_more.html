@@ -1,0 +1,38 @@
+{# Secondary desks for credit / officer / branch roles — keeps the top bar short. #}
+<div class="dropdown">
+  <button type="button" class="dropbtn">
+    {% include "includes/nav_icon.html" with icon="list" only %}
+    More
+    <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+  </button>
+  <div class="dropdown-content">
+    {% url 'appraisal_desk' as more_appraisal_url %}
+    {% include "includes/dropdown_link.html" with href=more_appraisal_url icon="book" label="Appraisal" only %}
+    {% url 'collateral:dashboard' as more_collateral_url %}
+    {% include "includes/dropdown_link.html" with href=more_collateral_url icon="building" label="Collateral" only %}
+    {% if nav_show_unlock_queue %}
+    {% url 'collateral:unlock_queue' as more_unlock_url %}
+    {% include "includes/dropdown_link.html" with href=more_unlock_url icon="unlock" label="Unlock queue" only %}
+    {% endif %}
+    {% if nav_show_approval_votes %}
+    {% url 'view_loan_requests_manager' as more_votes_url %}
+    {% include "includes/dropdown_link.html" with href=more_votes_url|add:'?queue=my_votes' icon="approval" label="My votes" only %}
+    {% endif %}
+    {% if nav_show_post_approval %}
+    {% url 'post_approval_queue' as more_pa_url %}
+    {% include "includes/dropdown_link.html" with href=more_pa_url icon="money" label="Post-approval" only %}
+    {% endif %}
+    {% if user.role == 'credit_head' %}
+    {% url 'manage_approval_committees' as more_cmte_url %}
+    {% include "includes/dropdown_link.html" with href=more_cmte_url icon="users" label="Approval committees" only %}
+    {% endif %}
+    {% if nav_show_reports %}
+    {% url 'view_report_options' as more_reports_url %}
+    {% include "includes/dropdown_link.html" with href=more_reports_url icon="report" label="Reports" only %}
+    {% endif %}
+    {% if can_manage_delegations %}
+    {% url 'manage_delegations' as more_del_url %}
+    {% include "includes/dropdown_link.html" with href=more_del_url icon="users" label="Delegations" only %}
+    {% endif %}
+  </div>
+</div>

@@ -56,7 +56,7 @@
 {% endif %}
 
 {% if can_edit %}
-<form method="post">
+<form method="post" class="hub-form hub-form-wide">
   {% csrf_token %}
   <h2>Institution &amp; facility</h2>
   {{ form.as_p }}

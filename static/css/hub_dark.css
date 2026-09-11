@@ -98,16 +98,72 @@ html[data-theme="dark"] body > .container form input[type="email"],
 html[data-theme="dark"] body > .container form input[type="number"],
 html[data-theme="dark"] body > .container form input[type="date"],
 html[data-theme="dark"] body > .container form input[type="search"],
+html[data-theme="dark"] body > .container form input[type="tel"],
+html[data-theme="dark"] body > .container form input[type="url"],
+html[data-theme="dark"] body > .container form input[type="time"],
+html[data-theme="dark"] body > .container form input[type="datetime-local"],
 html[data-theme="dark"] body > .container form input:not([type]),
-html[data-theme="dark"] body > .container form select,
 html[data-theme="dark"] body > .container form textarea,
 html[data-theme="dark"] .form-control,
 html[data-theme="dark"] input.form-control,
-html[data-theme="dark"] select.form-control,
 html[data-theme="dark"] textarea.form-control {
   background: #111;
   color: var(--hub-ink);
   border-color: var(--hub-line);
+}
+
+html[data-theme="dark"] body > .container form select,
+html[data-theme="dark"] select.form-control {
+  background-color: #111;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c8c8c8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  color: var(--hub-ink);
+  border-color: var(--hub-line);
+}
+
+html[data-theme="dark"] body > .container form input[type="file"] {
+  background: var(--hub-soft);
+  border-color: var(--hub-line);
+  color: var(--hub-ink);
+}
+
+html[data-theme="dark"] .hub-form,
+html[data-theme="dark"] .form-inline,
+html[data-theme="dark"] .hub-filters,
+html[data-theme="dark"] .legal-form,
+html[data-theme="dark"] body > .container > form.hub-form,
+html[data-theme="dark"] body > .container > form:has(> p > input),
+html[data-theme="dark"] body > .container > form:has(> p > select),
+html[data-theme="dark"] body > .container > form:has(> p > textarea) {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+  box-shadow: var(--hub-shadow);
+}
+
+html[data-theme="dark"] .hub-callout {
+  background: var(--hub-soft);
+  border-color: var(--hub-line);
+  color: var(--hub-ink);
+}
+
+html[data-theme="dark"] .hub-facts dt,
+html[data-theme="dark"] .hub-field > label,
+html[data-theme="dark"] .form-group > label,
+html[data-theme="dark"] .legal-form > label,
+html[data-theme="dark"] .vote-form-grid > label {
+  color: var(--hub-muted);
+}
+
+html[data-theme="dark"] .hub-facts dd {
+  color: var(--hub-ink);
+}
+
+html[data-theme="dark"] .errorlist {
+  background: #2a1414;
+  border-color: #5a2a2a;
+  color: #f0c4c4;
 }
 
 html[data-theme="dark"] body > .container table {
@@ -254,6 +310,18 @@ html[data-theme="dark"] .dash-hero {
   box-shadow: none;
 }
 
+html[data-theme="dark"] .dash-quicklinks {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+  box-shadow: none;
+}
+html[data-theme="dark"] .dash-quicklinks h3 {
+  color: var(--hub-ink);
+}
+html[data-theme="dark"] .dash-quicklinks p {
+  color: var(--hub-muted);
+}
+
 html[data-theme="dark"] .dash-kpi,
 html[data-theme="dark"] .ci-card,
 html[data-theme="dark"] .ci-insights {
@@ -283,6 +351,135 @@ html[data-theme="dark"] .lw-milestone {
   background: var(--hub-soft);
   border-color: var(--hub-line);
   color: var(--hub-ink);
+}
+html[data-theme="dark"] .lw-milestone-request {
+  background: #241c10;
+  border-color: #5a4a28;
+}
+html[data-theme="dark"] .lw-milestone-approved {
+  background: #132016;
+  border-color: #2a4a32;
+  box-shadow: none;
+}
+html[data-theme="dark"] .lw-milestone-declined {
+  background: #2a1414;
+  border-color: #5a2a2a;
+}
+html[data-theme="dark"] .lw-milestone-amt,
+html[data-theme="dark"] .lw-milestone-kicker,
+html[data-theme="dark"] .lw-milestone-meta,
+html[data-theme="dark"] .lw-milestone-approved .lw-milestone-kicker,
+html[data-theme="dark"] .lw-milestone-request .lw-milestone-kicker {
+  color: var(--hub-ink);
+}
+html[data-theme="dark"] .lw-milestone-meta {
+  color: var(--hub-muted);
+}
+
+html[data-theme="dark"] .lw-panel,
+html[data-theme="dark"] .lw-strip,
+html[data-theme="dark"] .lw-section-collapse.lw-panel {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+  color: var(--hub-ink);
+  box-shadow: none;
+}
+html[data-theme="dark"] .lw-panel h3,
+html[data-theme="dark"] .lw-section-collapse > summary,
+html[data-theme="dark"] .pa-section-collapse > summary {
+  color: var(--hub-ink);
+  border-color: var(--hub-line);
+}
+html[data-theme="dark"] .lw-panel.lw-panel-warn,
+html[data-theme="dark"] .lw-risk-line-warn {
+  background: #2a2414;
+  border-color: #5a4a28;
+}
+html[data-theme="dark"] .lw-panel.lw-panel-bad {
+  background: #2a1414;
+  border-color: #5a2a2a;
+}
+html[data-theme="dark"] .lw-panel.lw-panel-info {
+  background: #141c22;
+  border-color: #2a4048;
+}
+html[data-theme="dark"] .lw-facts .lbl,
+html[data-theme="dark"] .lw-identity-sub,
+html[data-theme="dark"] .lw-strip .lw-meta,
+html[data-theme="dark"] .lw-strip .lw-meta small,
+html[data-theme="dark"] .lw-risk-line em,
+html[data-theme="dark"] .help {
+  color: var(--hub-muted);
+}
+html[data-theme="dark"] .lw-risk-line {
+  background: var(--hub-soft);
+  border-color: var(--hub-line);
+  color: var(--hub-ink);
+}
+html[data-theme="dark"] .lw-risk-empty {
+  color: var(--hub-muted);
+}
+html[data-theme="dark"] .lw-check-form,
+html[data-theme="dark"] .lw-check-list {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+}
+html[data-theme="dark"] .lw-check-list li {
+  border-bottom-color: var(--hub-line);
+}
+html[data-theme="dark"] .lw-check-list label:hover {
+  background: var(--hub-soft);
+}
+html[data-theme="dark"] .lw-check-done {
+  color: var(--hub-muted);
+}
+html[data-theme="dark"] .lw-check-group {
+  background: var(--hub-soft);
+  color: var(--hub-muted);
+}
+html[data-theme="dark"] .page-toc {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+  box-shadow: none;
+}
+@media (max-width: 720px) {
+  html[data-theme="dark"] .page-toc {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+}
+html[data-theme="dark"] .page-toc-label {
+  color: var(--hub-muted);
+}
+html[data-theme="dark"] .page-toc-links a {
+  color: var(--hub-ink);
+  background: #1a1a1a;
+  border-color: #2e2e2e;
+}
+html[data-theme="dark"] .page-toc-links a:hover {
+  background: #2a2a2a;
+  border-color: #444;
+}
+html[data-theme="dark"] .dash-panel {
+  background: var(--dash-surface, var(--hub-card));
+  border-color: var(--dash-line, var(--hub-line));
+  color: var(--dash-ink, var(--hub-ink));
+}
+html[data-theme="dark"] .dash-panel h2,
+html[data-theme="dark"] .dash-kpi-value,
+html[data-theme="dark"] .dash-kpi-label {
+  color: var(--dash-ink, var(--hub-ink));
+}
+html[data-theme="dark"] .dash-chart-caption,
+html[data-theme="dark"] .dash-kpi-hint,
+html[data-theme="dark"] .ci-kpi-note {
+  color: var(--dash-muted, var(--hub-muted));
+}
+html[data-theme="dark"] .dash-table th,
+html[data-theme="dark"] .dash-table td {
+  color: var(--hub-ink);
+  border-color: var(--hub-line);
 }
 
 html[data-theme="dark"] .lw-ok { background: #1a1a1a; color: #c8c8c8; }

@@ -51,7 +51,7 @@
 {% endif %}
 
 {% if can_edit %}
-<form method="post">
+<form method="post" class="hub-form hub-form-wide">
   {% csrf_token %}
   {{ form.as_p }}
   <p class="help">

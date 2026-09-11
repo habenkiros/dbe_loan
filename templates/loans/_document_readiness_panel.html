@@ -6,10 +6,12 @@
   All required documents are uploaded and authenticated — you may proceed to collateral when ready.
   {% else %}
   Not ready for collateral yet.
-  {% if doc_readiness.missing_required %}<br><span class="help">Missing: {{ doc_readiness.missing_required|join:", " }}</span>{% endif %}
-  {% if doc_readiness.not_authenticated %}<br><span class="help">Not verified: {{ doc_readiness.not_authenticated|join:", " }}</span>{% endif %}
-  {% if doc_readiness.pending_review %}<br><span class="help">Pending review: {{ doc_readiness.pending_review|join:", " }}</span>{% endif %}
-  {% if doc_readiness.rejected %}<br><span class="help">Rejected: {{ doc_readiness.rejected|join:", " }}</span>{% endif %}
+  <span class="help">
+    {% if doc_readiness.missing_required %}{{ doc_readiness.missing_required|length }} required missing{% endif %}
+    {% if doc_readiness.not_authenticated %}{% if doc_readiness.missing_required %} · {% endif %}{{ doc_readiness.not_authenticated|length }} not verified{% endif %}
+    {% if doc_readiness.pending_review %} · {{ doc_readiness.pending_review|length }} pending review{% endif %}
+    {% if doc_readiness.rejected %} · {{ doc_readiness.rejected|length }} rejected{% endif %}
+  </span>
   {% endif %}
 </div>
 {% endif %}

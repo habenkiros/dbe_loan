@@ -4,10 +4,12 @@
 
 {% block content %}
 <h1>Edit User</h1>
-<form method="post" action="{% url 'edit_user' user.id %}">
+<form method="post" class="hub-form" action="{% url 'edit_user' user.id %}">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Save Changes</button>
+    <div class="hub-form-actions">
+      <button type="submit" class="btn btn-green">Save Changes</button>
+    </div>
 </form>
 
 {% if user.lockout_until %}
@@ -16,7 +18,7 @@
 </p>
 <form method="post" action="{% url 'unlock_user' user.id %}" style="margin-top:0.5rem;">
   {% csrf_token %}
-  <button type="submit">Unlock account</button>
+  <button type="submit" class="btn btn-gray">Unlock account</button>
 </form>
 {% endif %}
 

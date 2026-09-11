@@ -2,9 +2,9 @@
 {% block title %}Edit Zone{% endblock %}
 {% block content %}
 <h1>Edit Zone</h1>
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Save Changes</button>
+    <button type="submit" class="btn btn-green">Save Changes</button>
 </form>
 {% endblock %}

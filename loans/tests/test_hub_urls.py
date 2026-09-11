@@ -102,3 +102,25 @@ class HubEngineeringNavTests(TestCase):
         self.assertEqual(home.status_code, 200)
         self.assertContains(home, 'Unlock queue')
         self.assertContains(home, reverse('collateral:unlock_queue'))
+
+
+class HubOfficerNavTests(TestCase):
+    def test_loan_officer_primary_nav_is_short(self):
+        User.objects.create_user(
+            username='lo.nav',
+            password='Demo@12345',
+            phone_number='0911000777',
+            role='loan_officer',
+        )
+        client = Client()
+        client.login(username='lo.nav', password='Demo@12345')
+        home = client.get(reverse('home'))
+        self.assertEqual(home.status_code, 200)
+        self.assertContains(home, 'Scan / KYC')
+        self.assertContains(home, 'More')
+        self.assertContains(home, 'dropdown-label">Appraisal')
+        self.assertContains(home, 'dropdown-label">Collateral')
+        self.assertContains(home, reverse('appraisal_desk'))
+        self.assertContains(home, 'hub-nav-mobile-account')
+        self.assertContains(home, 'hub-user-notify')
+        self.assertContains(home, reverse('loan_notifications_list'))

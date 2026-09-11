@@ -7,8 +7,7 @@
       var stored = localStorage.getItem(KEY);
       if (stored === 'dark' || stored === 'light') return stored;
     } catch (e) { /* ignore */ }
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark' : 'light';
+    return 'light';
   }
 
   function apply(theme) {
@@ -34,6 +33,11 @@
       var next = preferred() === 'dark' ? 'light' : 'dark';
       save(next);
       apply(next);
+      try {
+        document.documentElement.dispatchEvent(new CustomEvent('hub-theme-change', {
+          detail: { theme: next }
+        }));
+      } catch (err) { /* ignore */ }
       return next;
     }
   };

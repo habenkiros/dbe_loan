@@ -222,3 +222,6 @@
 @media (max-width: 720px) {
   .ci-kpis { grid-template-columns: 1fr 1fr; }
 }
+@media (max-width: 560px) {
+  .ci-kpis { grid-template-columns: 1fr; }
+}

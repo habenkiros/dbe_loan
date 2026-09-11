@@ -7,10 +7,10 @@
   (for example KfW/EU MSME recovery, RUFIP, or DBE own book). Leave files untagged if unused.
   <a href="{% url 'financing_fund_dashboard' %}">Open envelope / covenant MIS →</a>
 </p>
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add funding window</button>
+    <button type="submit" class="btn btn-green">Add funding window</button>
 </form>
 <div class="table-container">
     <table>

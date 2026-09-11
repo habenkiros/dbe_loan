@@ -934,6 +934,11 @@ def loan_request_detail(request, loan_request_id):
     can_request_documents = _user_covers_loan_documents(user, loan_request)
     can_upload_documents = _user_can_upload_loan_documents(user, loan_request)
     document_types_missing = [dt for dt in document_types if dt.id not in uploaded_type_ids] if document_types else []
+    document_types_missing_required = [dt for dt in document_types_missing if dt.is_required]
+    document_types_missing_optional = [dt for dt in document_types_missing if not dt.is_required]
+    document_types_requestable = [
+        dt for dt in document_types_missing if dt.id not in requested_type_ids
+    ]
     appraisal = LoanAppraisal.objects.filter(loan_request=loan_request).first()
     lock_state = get_appraisal_lock_state(loan_request)
     from loans.models import CommitteeInfoRequest
@@ -1035,6 +1040,9 @@ def loan_request_detail(request, loan_request_id):
         'can_authenticate_documents': can_authenticate_documents,
         'can_upload_documents': can_upload_documents,
         'document_types_missing': document_types_missing,
+        'document_types_missing_required': document_types_missing_required,
+        'document_types_missing_optional': document_types_missing_optional,
+        'document_types_requestable': document_types_requestable,
         'requested_type_ids': requested_type_ids,
         'doc_readiness': doc_readiness,
         'collateral_readiness': collateral_readiness,
@@ -1067,40 +1075,70 @@ def loan_request_detail(request, loan_request_id):
 @login_required
 @user_passes_test(_user_can_work_loan_documents)
 def request_loan_document(request, loan_request_id):
-    """Assigned LO/engineer or appraisal delegate requests a document type."""
+    """Assigned LO/engineer or appraisal delegate requests one or more document types."""
     if request.method != 'POST':
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     loan_request = _get_loan_for_document_worker(request.user, loan_request_id)
-    doc_type_id = request.POST.get('document_type_id')
-    if not doc_type_id:
-        messages.warning(request, 'Please select a document type.')
+    raw_ids = request.POST.getlist('document_type_id')
+    type_ids = []
+    for raw in raw_ids:
+        try:
+            tid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if tid not in type_ids:
+            type_ids.append(tid)
+    if not type_ids:
+        messages.warning(request, 'Tick at least one document type to request.')
         return redirect('loan_request_detail', loan_request_id=loan_request_id)
     from .document_checklist import checklist_for_loan, checklist_type_ids
 
-    try:
-        doc_type = LoanApplicationDocumentType.objects.get(pk=doc_type_id)
-    except LoanApplicationDocumentType.DoesNotExist:
-        messages.warning(request, 'Invalid document type.')
-        return redirect('loan_request_detail', loan_request_id=loan_request_id)
     allowed = checklist_type_ids(checklist_for_loan(loan_request))
-    if doc_type.id not in allowed:
-        messages.warning(
-            request,
-            'That document type is not on this loan type’s checklist.',
+    types = list(LoanApplicationDocumentType.objects.filter(pk__in=type_ids))
+    by_id = {dt.id: dt for dt in types}
+    recorded = []
+    skipped = []
+    for tid in type_ids:
+        doc_type = by_id.get(tid)
+        if doc_type is None:
+            skipped.append('unknown type')
+            continue
+        if doc_type.id not in allowed:
+            skipped.append(doc_type.name)
+            continue
+        LoanDocumentRequest.objects.update_or_create(
+            loan_request=loan_request,
+            document_type=doc_type,
+            defaults={'requested_by': request.user, 'requested_at': timezone.now()},
         )
-        return redirect('loan_request_detail', loan_request_id=loan_request_id)
-    LoanDocumentRequest.objects.update_or_create(
-        loan_request=loan_request,
-        document_type=doc_type,
-        defaults={'requested_by': request.user, 'requested_at': timezone.now()},
-    )
+        recorded.append(doc_type)
     from .services.document_notifications import notify_document_requested
 
-    notify_document_requested(loan_request, doc_type, request.user)
-    messages.success(
-        request,
-        f'Request for "{doc_type.name}" recorded. Branch manager or covering officer can upload it.',
-    )
+    if recorded:
+        notify_document_requested(loan_request, recorded, request.user)
+        names = ', '.join(dt.name for dt in recorded)
+        if len(recorded) == 1:
+            messages.success(
+                request,
+                f'Request for "{names}" recorded. Branch manager or covering officer can upload it.',
+            )
+        else:
+            messages.success(
+                request,
+                f'Requested {len(recorded)} documents: {names}. Branch manager or covering officer can upload them.',
+            )
+    if skipped and not recorded:
+        messages.warning(
+            request,
+            'Those document types are not on this loan type’s checklist.',
+        )
+    elif skipped:
+        messages.warning(
+            request,
+            'Not requested (not on this checklist): ' + ', '.join(skipped),
+        )
+    if not recorded and not skipped:
+        messages.warning(request, 'Please select a document type.')
     return redirect('loan_request_detail', loan_request_id=loan_request_id)
 
 

@@ -134,6 +134,8 @@ class KycDeskTests(TestCase):
         self.assertContains(resp, 'Identity documents present')
         self.assertContains(resp, 'Project financing appraisal')
         self.assertContains(resp, 'Sections stay folded')
+        self.assertContains(resp, 'No score, E&amp;S, or coverage yet.')
+        self.assertNotContains(resp, 'Band —')
 
     def test_legal_officer_opens_detail_and_sees_legal_clear_form(self):
         loan = self._loan(self.project_cat, 'LR-KYC-LEGAL-UI')

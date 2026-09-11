@@ -6,10 +6,10 @@
 {% block content %}
 <h1>Manage Branches</h1>
 
-<form method="post" action="{% url 'manage_branches' %}">
+<form method="post" class="hub-form" action="{% url 'manage_branches' %}">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add Branch</button>
+    <button type="submit" class="btn btn-green">Add Branch</button>
 </form>
 
 <div class="table-container">

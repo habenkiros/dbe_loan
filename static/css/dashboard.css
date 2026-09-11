@@ -106,6 +106,7 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--dash-muted);
+  overflow-wrap: anywhere;
 }
 
 .dash-kpi-value {
@@ -279,5 +280,11 @@
 
   .dash-kpi-value {
     font-size: 1.45rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .dash-kpis {
+    grid-template-columns: 1fr;
   }
 }

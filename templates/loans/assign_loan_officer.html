@@ -5,7 +5,9 @@
 {% block content %}
 <h1>Assign Loan Officer</h1>
 
-<p><strong>Loan request:</strong> {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}</p>
+<p class="help" style="margin-top:0;">
+  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+</p>
 <p>
   Choose which <strong>loan officer</strong> will analyze this file.
   {% if user.role != 'loan_officer' and user.role != 'credit_loan_officer' %}
@@ -13,15 +15,15 @@
   {% endif %}
 </p>
 
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
-    <table>
-        <tr>
-            <th><label for="id_assigned_loan_officer">Loan officer</label></th>
-            <td>{{ form.assigned_loan_officer }}</td>
-        </tr>
-    </table>
-    <button type="submit">Save</button>
+    <div class="hub-field">
+      <label for="id_assigned_loan_officer">Loan officer</label>
+      {{ form.assigned_loan_officer }}
+    </div>
+    <div class="hub-form-actions">
+      <button type="submit" class="btn btn-green">Save assignment</button>
+    </div>
 </form>
 
 <p><a href="{% url 'loan_request_detail' loan_request.id %}">Back to loan request</a></p>

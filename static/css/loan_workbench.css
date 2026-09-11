@@ -149,7 +149,7 @@
 
 .lw-strip {
   position: sticky;
-  top: 0;
+  top: var(--hub-sticky-offset, 7.35rem);
   z-index: 18;
   background: #fff;
   border: 2px solid #064420;
@@ -174,6 +174,56 @@
   align-items: center;
 }
 .lw-strip .lw-ctas .btn-primary-cta { font-weight: 600; }
+.lw-primary-cta {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 8px;
+}
+.lw-ctas-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.lw-ctas-secondary .btn {
+  font-size: 0.82rem;
+  padding: 0.38rem 0.7rem;
+  text-decoration: none;
+}
+
+.lw-risk-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+  align-items: center;
+  margin: 0.55rem 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--hub-line, #d7e3db);
+  background: var(--hub-soft, #f3f8f5);
+  font-size: 0.86rem;
+  color: var(--hub-ink, #0e2418);
+}
+.lw-risk-line-warn {
+  border-color: #e0b84a;
+  background: #fff8e5;
+}
+.lw-risk-empty {
+  color: var(--hub-muted, #4f6558);
+}
+.lw-risk-line em {
+  font-style: normal;
+  font-weight: 700;
+  color: #5a7263;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  margin-right: 0.28rem;
+}
 
 .lw-panel {
   background: #f8faf8;
@@ -204,7 +254,13 @@
 .lw-panel.lw-panel-info h3 { color: #1e4a6e; border-color: #1e4a6e; }
 
 .lw-wrap { max-width: 960px; }
-.lw-identity { margin: 0 0 0.35rem; }
+.lw-identity {
+  margin: 0 0 0.35rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15;
+  font-size: clamp(1.15rem, 4.5vw, 1.75rem);
+}
 .lw-identity-sub { margin: 0 0 1rem; color: #444; }
 .lw-facts {
   display: grid;
@@ -244,14 +300,105 @@
 }
 .lw-score-hero .total span { font-size: 1rem; font-weight: 500; }
 .lw-alert-list { margin: 0.5rem 0 0 1.25rem; }
-.lw-footer-actions {
+.lw-check-form {
+  margin: 0.85rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hub-line, #d7e3db);
+  border-radius: 8px;
+  background: var(--hub-card, #fff);
+}
+.lw-check-form > p:first-child {
+  margin: 0;
+}
+.lw-check-list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--hub-line, #e0e8e0);
+  border-radius: 6px;
+}
+.lw-check-list li {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--hub-line, #eef2ef);
+}
+.lw-check-list li:last-child { border-bottom: none; }
+.lw-check-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+.lw-check-list label:hover {
+  background: var(--hub-soft, #f3f8f5);
+}
+.lw-check-list input[type="checkbox"] {
+  margin: 0.2rem 0 0;
+  flex: 0 0 auto;
+}
+.lw-check-done {
+  display: block;
+  padding: 0.5rem 0.7rem;
+  color: var(--hub-muted, #5a7263);
+  font-size: 0.9rem;
+}
+.lw-check-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e0e8e0;
+  margin: 0 0 0.65rem;
+}
+.lw-check-actions .help { margin: 0; }
+.lw-check-group {
+  padding: 0.4rem 0.7rem 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hub-muted, #5a7263);
+  background: var(--hub-soft, #f3f8f5);
+}
+.lw-party-form {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) minmax(10rem, 1fr) minmax(8rem, 12rem) 6.5rem minmax(7rem, 10rem) auto;
+  gap: 0.45rem 0.55rem;
+  align-items: end;
+  margin-top: 0.5rem;
+}
+.lw-party-form .help {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.lw-party-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--hub-muted, #5a7263);
+}
+.lw-party-form input,
+.lw-party-form select {
+  font-weight: 500;
+  min-height: 2.15rem;
+}
+.lw-party-form .lw-party-submit {
+  justify-self: start;
+}
+@media (max-width: 900px) {
+  .lw-party-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lw-party-form .lw-party-submit {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Compact icon actions for list / table rows */

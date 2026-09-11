@@ -73,20 +73,30 @@
   </p>
   {% endif %}
   {% if kyc_identity.loan_id %}
-  <form method="post" action="{% url 'kyc_party_action' kyc_identity.loan_id %}" style="margin-top:0.5rem;">
+  <form method="post" action="{% url 'kyc_party_action' kyc_identity.loan_id %}" class="lw-party-form">
     {% csrf_token %}
     <input type="hidden" name="action" value="add">
-    <p class="help" style="margin:0 0 0.35rem;">Add director / UBO / guarantor</p>
-    <select name="role">
-      {% for value, label in kyc_identity.related_roles %}
-      <option value="{{ value }}">{{ label }}</option>
-      {% endfor %}
-    </select>
-    <input type="text" name="legal_name_en" placeholder="Full name" required>
-    <input type="text" name="id_number" placeholder="ID number">
-    <input type="text" name="share_percent" placeholder="Share %" size="6">
-    <input type="text" name="capacity" placeholder="Capacity">
-    <button type="submit">Add party</button>
+    <p class="help">Add director / UBO / guarantor</p>
+    <label>Role
+      <select name="role">
+        {% for value, label in kyc_identity.related_roles %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Full name
+      <input type="text" name="legal_name_en" required>
+    </label>
+    <label>ID number
+      <input type="text" name="id_number">
+    </label>
+    <label>Share %
+      <input type="text" name="share_percent" inputmode="decimal">
+    </label>
+    <label>Capacity
+      <input type="text" name="capacity">
+    </label>
+    <button type="submit" class="btn btn-green lw-party-submit">Add party</button>
   </form>
   {% endif %}
   {% if kyc_identity.scan_override %}

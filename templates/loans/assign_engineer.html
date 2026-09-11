@@ -5,18 +5,20 @@
 {% block content %}
 <h1>Assign engineer</h1>
 
-<p><strong>Loan request:</strong> {{ loan_request.loan_request_id }} — {{ loan_request.applicant_name }}</p>
+<p class="help" style="margin-top:0;">
+  <strong>{{ loan_request.loan_request_id }}</strong> — {{ loan_request.applicant_name }}
+</p>
 <p>Assign an engineer to perform collateral estimation for this loan.</p>
 
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
-    <table>
-        <tr>
-            <th><label for="id_assigned_engineer">Engineer</label></th>
-            <td>{{ form.assigned_engineer }}</td>
-        </tr>
-    </table>
-    <button type="submit">Save</button>
+    <div class="hub-field">
+      <label for="id_assigned_engineer">Engineer</label>
+      {{ form.assigned_engineer }}
+    </div>
+    <div class="hub-form-actions">
+      <button type="submit" class="btn btn-green">Save assignment</button>
+    </div>
 </form>
 
 <p><a href="{% url 'loan_request_detail' loan_request.id %}">Back to loan request</a> | <a href="{% url 'loans_sent_for_collateral' %}">Loans sent for collateral</a></p>

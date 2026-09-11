@@ -1,4 +1,3 @@
-<!-- templates/loans/update_loan_request_status.html -->
 {% extends "base.html" %}
 
 {% block title %}Update Loan Request Status{% endblock %}
@@ -6,83 +5,44 @@
 {% block content %}
 <h1>Update Loan Request Status</h1>
 
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
-    <table>
-        <tr>
-            <th>ID</th>
-            <td>{{ loan_request.loan_request_id }}</td>
-        </tr>
-        <tr>
-            <th>Applicant Name</th>
-            <td>{{ loan_request.applicant_name }}</td>
-        </tr>
-        <tr>
-            <th>Phone Number</th>
-            <td>{{ loan_request.phone_number }}</td>
-        </tr>
-        <tr>
-            <th>Customer number</th>
-            <td>{{ loan_request.customer_number|default:"—" }}</td>
-        </tr>
-        <tr>
-            <th>Category</th>
-            <td>{{ loan_request.category.name }}</td>
-        </tr>
-        <tr>
-            <th>Collateral</th>
-            <td>{{ loan_request.collateral.name }}</td>
-        </tr>
-        <tr>
-            <th>Amount Requested</th>
-            <td>{{ loan_request.amount_requested|floatformat:2 }}</td>
-        </tr>
-        <tr>
-            <th>Amount Approved</th>
-            <td>{% if loan_request.amount_approved_display != None %}{{ loan_request.amount_approved_display|floatformat:2 }}{% else %}—{% endif %}</td>
-        </tr>
-        <tr>
-            <th>Reason</th>
-            <td>{{ loan_request.reason }}</td>
-        </tr>
-        <tr>
-            <th>Status</th>
-            <td>{{ loan_request.status }}</td>
-        </tr>
-        <tr>
-            <th>Operation Manager Approval</th>
-            <td>
-                {% if user.role == 'operation_manager' %}
-                <select name="operation_manager_approval">
-                    <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approved</option>
-                    <option value="False" {% if not loan_request.operation_manager_approval %}selected{% endif %}>Reject</option>
-                </select>
-                {% else %}
-                {{ loan_request.operation_manager_approval }}
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Finance Approval</th>
-            <td>
-                {% if user.role == 'finance_manager' %}
-                <select name="finance_approval">
-                    <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approved</option>
-                    <option value="False" {% if not loan_request.finance_approval %}selected{% endif %}>Reject</option>
-                </select>
-                {% else %}
-                {{ loan_request.finance_approval }}
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Cutomer History</th>
-            <td>{{ loan_request.customer_history }}</td>
-        </tr>
-    </table>
-    <button type="submit">Save Changes</button>
+    <dl class="hub-facts">
+      <div><dt>ID</dt><dd>{{ loan_request.loan_request_id }}</dd></div>
+      <div><dt>Applicant</dt><dd>{{ loan_request.applicant_name }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ loan_request.phone_number }}</dd></div>
+      <div><dt>Customer number</dt><dd>{{ loan_request.customer_number|default:"—" }}</dd></div>
+      <div><dt>Category</dt><dd>{{ loan_request.category.name }}</dd></div>
+      <div><dt>Collateral</dt><dd>{{ loan_request.collateral.name }}</dd></div>
+      <div><dt>Requested</dt><dd>{{ loan_request.amount_requested|floatformat:2 }}</dd></div>
+      <div><dt>Approved</dt><dd>{% if loan_request.amount_approved_display != None %}{{ loan_request.amount_approved_display|floatformat:2 }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Reason</dt><dd>{{ loan_request.reason }}</dd></div>
+      <div><dt>Status</dt><dd>{{ loan_request.status }}</dd></div>
+      <div><dt>History</dt><dd>{{ loan_request.customer_history }}</dd></div>
+    </dl>
+    {% if user.role == 'operation_manager' %}
+    <div class="hub-field">
+      <label for="id_operation_manager_approval">Branch Cooperative approval</label>
+      <select name="operation_manager_approval" id="id_operation_manager_approval">
+        <option value="True" {% if loan_request.operation_manager_approval %}selected{% endif %}>Approved</option>
+        <option value="False" {% if not loan_request.operation_manager_approval %}selected{% endif %}>Reject</option>
+      </select>
+    </div>
+    {% endif %}
+    {% if user.role == 'finance_manager' %}
+    <div class="hub-field">
+      <label for="id_finance_approval">Finance approval</label>
+      <select name="finance_approval" id="id_finance_approval">
+        <option value="True" {% if loan_request.finance_approval %}selected{% endif %}>Approved</option>
+        <option value="False" {% if not loan_request.finance_approval %}selected{% endif %}>Reject</option>
+      </select>
+    </div>
+    {% endif %}
+    <div class="hub-form-actions">
+      <button type="submit" class="btn btn-green">Save Changes</button>
+    </div>
 </form>
 
-<a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a>
+<p><a href="{% url 'view_loan_requests' %}">Back to Loan Requests</a></p>
 
 {% endblock %}

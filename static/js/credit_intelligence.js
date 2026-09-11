@@ -8,21 +8,60 @@
   ready(function () {
     if (typeof Chart === 'undefined') return;
 
-    var chartDefaults = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { boxWidth: 12, usePointStyle: true, padding: 14 }
+    var ciCharts = [];
+    function isDarkTheme() {
+      return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+    function themePalette() {
+      var dark = isDarkTheme();
+      return {
+        legend: dark ? '#ececec' : '#0f2418',
+        tick: dark ? '#c8c8c8' : '#5c6f63',
+        grid: dark ? 'rgba(255,255,255,0.1)' : 'rgba(6, 68, 32, 0.08)'
+      };
+    }
+    function chartDefaults() {
+      var p = themePalette();
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 12, usePointStyle: true, padding: 14, color: p.legend }
+          }
         }
-      }
-    };
+      };
+    }
+    function makeChart(el, cfg) {
+      var chart = new Chart(el, cfg);
+      ciCharts.push(chart);
+      return chart;
+    }
+    function restyleCharts() {
+      var p = themePalette();
+      Chart.defaults.color = p.legend;
+      ciCharts.forEach(function (chart) {
+        if (!chart || !chart.options) return;
+        if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+          chart.options.plugins.legend.labels.color = p.legend;
+        }
+        var scales = chart.options.scales || {};
+        Object.keys(scales).forEach(function (axis) {
+          var s = scales[axis];
+          if (s.ticks) s.ticks.color = p.tick;
+          if (s.grid && s.grid.display !== false) s.grid.color = p.grid;
+        });
+        chart.update('none');
+      });
+    }
+    Chart.defaults.color = themePalette().legend;
+    document.documentElement.addEventListener('hub-theme-change', restyleCharts);
 
     var pipeline = window.CI_PIPELINE || {};
     var statusEl = document.getElementById('ciStatusDonut');
     if (statusEl) {
-      new Chart(statusEl, {
+      makeChart(statusEl, {
         type: 'doughnut',
         data: {
           labels: ['Approved', 'Pending', 'Rejected'],
@@ -37,14 +76,14 @@
             hoverOffset: 4
           }]
         },
-        options: Object.assign({}, chartDefaults, { cutout: '62%' })
+        options: Object.assign({}, chartDefaults(), { cutout: '62%' })
       });
     }
 
     var bands = window.CI_SCORE_BANDS || [];
     var bandEl = document.getElementById('ciScoreBands');
     if (bandEl) {
-      new Chart(bandEl, {
+      makeChart(bandEl, {
         type: 'bar',
         data: {
           labels: bands.map(function (b) { return b.label || b.band; }),
@@ -56,7 +95,7 @@
             maxBarThickness: 40
           }]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { display: false } },
@@ -80,7 +119,7 @@
     var funnel = window.CI_FUNNEL || [];
     var funnelEl = document.getElementById('ciFunnelChart');
     if (funnelEl && funnel.length) {
-      new Chart(funnelEl, {
+      makeChart(funnelEl, {
         type: 'bar',
         data: {
           labels: funnel.map(function (s) { return s.label; }),
@@ -92,7 +131,7 @@
             maxBarThickness: 28
           }]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           indexAxis: 'y',
           plugins: { legend: { display: false } },
           scales: {
@@ -110,7 +149,7 @@
     var trend = window.CI_TREND || {};
     var trendEl = document.getElementById('ciTrendChart');
     if (trendEl && (trend.labels || []).length) {
-      new Chart(trendEl, {
+      makeChart(trendEl, {
         type: 'bar',
         data: {
           labels: trend.labels,
@@ -133,7 +172,7 @@
             }
           ]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           scales: {
             x: { grid: { display: false } },
             y: {
@@ -155,7 +194,7 @@
     var book = window.CI_BOOK || {};
     var bookEl = document.getElementById('ciBookChart');
     if (bookEl && (book.labels || []).length) {
-      new Chart(bookEl, {
+      makeChart(bookEl, {
         type: 'bar',
         data: {
           labels: book.labels,
@@ -167,7 +206,7 @@
             maxBarThickness: 48
           }]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { display: false } },
@@ -184,7 +223,7 @@
     var branches = window.CI_BRANCHES || [];
     var branchEl = document.getElementById('ciBranchChart');
     if (branchEl) {
-      new Chart(branchEl, {
+      makeChart(branchEl, {
         type: 'bar',
         data: {
           labels: branches.map(function (b) { return b.name; }),
@@ -207,7 +246,7 @@
             }
           ]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           scales: {
             x: {
               grid: { display: false },
@@ -231,7 +270,7 @@
     var collateralTypes = window.CI_COLLATERAL_TYPES || [];
     var collEl = document.getElementById('ciCollateralTypes');
     if (collEl && collateralTypes.length) {
-      new Chart(collEl, {
+      makeChart(collEl, {
         type: 'bar',
         data: {
           labels: collateralTypes.map(function (b) { return b.name; }),
@@ -243,7 +282,7 @@
             maxBarThickness: 42
           }]
         },
-        options: Object.assign({}, chartDefaults, {
+        options: Object.assign({}, chartDefaults(), {
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { display: false }, ticks: { maxRotation: 45 } },
@@ -252,5 +291,6 @@
         })
       });
     }
+    restyleCharts();
   });
 })();

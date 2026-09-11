@@ -2,10 +2,10 @@
 {% block title %}Manage Districts{% endblock %}
 {% block content %}
 <h1>Manage Districts</h1>
-<form method="post">
+<form method="post" class="hub-form">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Add District</button>
+    <button type="submit" class="btn btn-green">Add District</button>
 </form>
 <div class="table-container">
     <table>

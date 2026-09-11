@@ -125,14 +125,25 @@ def notify_document_rejected(document, by_user) -> int:
     return count
 
 
-def notify_document_requested(loan_request, doc_type, requested_by) -> int:
+def notify_document_requested(loan_request, doc_type, requested_by=None) -> int:
     from loans.models import LoanNotification
 
+    types = doc_type if isinstance(doc_type, (list, tuple)) else [doc_type]
+    types = [dt for dt in types if dt is not None]
+    if not types:
+        return 0
+    actor = requested_by
+    who = getattr(actor, 'username', None) or 'Staff'
+    if len(types) == 1:
+        message = f'{who} requested "{types[0].name}". Please upload when available.'
+    else:
+        names = ', '.join(dt.name for dt in types)
+        message = f'{who} requested {len(types)} documents: {names}. Please upload when available.'
     return notify_users(
         _branch_managers(loan_request),
         loan_request=loan_request,
         kind=LoanNotification.KIND_DOCUMENT_REQUESTED,
         title=f'Document requested: {loan_request.loan_request_id}',
-        message=f'{requested_by.username} requested "{doc_type.name}". Please upload when available.',
+        message=message,
         url=reverse('upload_loan_request_documents', args=[loan_request.pk]),
     )

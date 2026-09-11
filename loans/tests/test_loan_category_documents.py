@@ -2,7 +2,9 @@
 
 from decimal import Decimal
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
 
 from loans.document_checklist import checklist_for_category, required_items
 from loans.models import (
@@ -12,9 +14,12 @@ from loans.models import (
     LoanApplicationDocumentType,
     LoanCategory,
     LoanCategoryDocumentRequirement,
+    LoanDocumentRequest,
     LoanRequest,
 )
 from loans.services.document_auth import loan_documents_collateral_readiness
+
+User = get_user_model()
 
 
 class LoanCategoryDocumentChecklistTests(TestCase):
@@ -91,3 +96,64 @@ class LoanCategoryDocumentChecklistTests(TestCase):
         self.assertIn('National ID Pack Test', readiness['missing_required'])
         self.assertIn('Payslip Pack Test', readiness['missing_required'])
         self.assertNotIn('TIN Pack Test', readiness['missing_required'])
+
+
+class RequestLoanDocumentFormTests(TestCase):
+    def setUp(self):
+        district = District.objects.create(name='Req Dist')
+        self.branch = Branch.objects.create(name='Req Branch', district=district)
+        coll = CollateralType.objects.create(name='Req Coll')
+        self.cat = LoanCategory.objects.create(name='Req Cat')
+        self.dt_a = LoanApplicationDocumentType.objects.create(
+            name='Req ID', order=1, is_required=True,
+        )
+        self.dt_b = LoanApplicationDocumentType.objects.create(
+            name='Req TIN', order=2, is_required=True,
+        )
+        LoanCategoryDocumentRequirement.objects.create(
+            category=self.cat, document_type=self.dt_a, is_required=True, order=1,
+        )
+        LoanCategoryDocumentRequirement.objects.create(
+            category=self.cat, document_type=self.dt_b, is_required=True, order=2,
+        )
+        self.officer = User.objects.create_user(
+            username='req_lo', password='pass', phone_number='0911888008',
+            role='loan_officer', branch=self.branch,
+        )
+        self.loan = LoanRequest.objects.create(
+            loan_request_id='LR-REQ-DOC',
+            applicant_name='Req Applicant',
+            phone_number='0911222444',
+            category=self.cat,
+            collateral=coll,
+            amount_requested=Decimal('10000'),
+            reason='test',
+            branch=self.branch,
+            assigned_loan_officer=self.officer,
+        )
+
+    def test_detail_uses_one_checklist_form(self):
+        client = Client()
+        client.force_login(self.officer)
+        resp = client.get(reverse('loan_request_detail', args=[self.loan.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Request documents')
+        self.assertContains(resp, 'Request selected')
+        self.assertContains(resp, 'lw-check-form')
+        self.assertContains(resp, 'Required only')
+        self.assertEqual(resp.content.decode().count('name="document_type_id"'), 2)
+        self.assertNotIn('>Request</button>', resp.content.decode())
+
+    def test_post_requests_multiple_types(self):
+        client = Client()
+        client.force_login(self.officer)
+        resp = client.post(
+            reverse('request_loan_document', args=[self.loan.id]),
+            {'document_type_id': [str(self.dt_a.id), str(self.dt_b.id)]},
+        )
+        self.assertEqual(resp.status_code, 302)
+        names = set(
+            LoanDocumentRequest.objects.filter(loan_request=self.loan)
+            .values_list('document_type__name', flat=True)
+        )
+        self.assertEqual(names, {'Req ID', 'Req TIN'})

@@ -16,7 +16,7 @@
   <a href="{% url 'collateral:dashboard' %}" class="btn btn-gray">Collateral dashboard</a>
 </p>
 
-<form method="get" style="margin-bottom: 1em; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+<form method="get" class="form-inline hub-filters">
     <input type="text" name="q" placeholder="Search ID, name, phone" value="{{ query }}" style="width: 220px;">
     <button type="submit" class="btn btn-blue">Search</button>
 </form>

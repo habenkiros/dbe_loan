@@ -11,7 +11,6 @@
     (function () {
       try {
         var t = localStorage.getItem('decsi-hub-theme');
-        if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
         if (t === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0a0a');
       } catch (e) {}
@@ -23,6 +22,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/loan_workbench.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/hub_shell.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/hub_forms.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/hub_dark.css' %}">
     {% block extra_head %}{% endblock %}
     <script src="{% static 'vendor/jquery/jquery-3.6.0.min.js' %}"></script>
@@ -45,7 +45,7 @@
                     {% if user.role %}
                     <span class="hub-user-role">{{ user.get_role_display|default:user.role }}</span>
                     {% endif %}
-                    <a href="{% url 'loan_notifications_list' %}">
+                    <a class="hub-user-notify" href="{% url 'loan_notifications_list' %}">
                         Notifications
                         {% if unread_notification_count %}<span class="hub-badge">{{ unread_notification_count }}</span>{% endif %}
                     </a>
@@ -116,45 +116,8 @@
                     {% include "includes/nav_icon.html" with icon="loan" only %}
                     Scan / KYC
                 </a>
-                <a href="{% url 'appraisal_desk' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="book" only %}
-                    Appraisal
-                </a>
-                <a href="{% url 'collateral:dashboard' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="building" only %}
-                    Collateral
-                </a>
-                {% if nav_show_unlock_queue %}
-                <a href="{% url 'collateral:unlock_queue' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="unlock" only %}
-                    Unlock queue
-                </a>
-                {% endif %}
-                {% if nav_show_approval_votes %}
-                <a href="{% url 'view_loan_requests_manager' %}?queue=my_votes" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="approval" only %}
-                    My votes
-                </a>
-                {% endif %}
-                {% if nav_show_post_approval %}
-                <a href="{% url 'post_approval_queue' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="money" only %}
-                    Post-approval
-                </a>
-                {% endif %}
                 {% include "includes/nav_book_ops.html" %}
-                {% if user.role == 'credit_head' %}
-                <a href="{% url 'manage_approval_committees' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="users" only %}
-                    Approval committees
-                </a>
-                {% endif %}
-                {% if nav_show_reports %}
-                <a href="{% url 'view_report_options' %}" class="nav-link">
-                    {% include "includes/nav_icon.html" with icon="report" only %}
-                    Reports
-                </a>
-                {% endif %}
+                {% include "includes/nav_credit_more.html" %}
 
             {% elif user.role == 'cooperative_manager' or user.role == 'operation_manager' %}
                 <a href="{% url 'view_loan_requests_operation_manager' %}" class="nav-link">
@@ -402,10 +365,12 @@
             {% endif %}
 
             {% if can_manage_delegations %}
+                {% if user.role != 'loan_officer' and user.role != 'credit_loan_officer' and user.role != 'credit_head' and user.role != 'branch_manager' %}
                 <a href="{% url 'manage_delegations' %}" class="nav-link">
                     {% include "includes/nav_icon.html" with icon="users" only %}
                     Delegations{% if pending_delegation_count %} ({{ pending_delegation_count }}){% endif %}
                 </a>
+                {% endif %}
             {% endif %}
 
             {% if user.is_superuser or user.role == 'admin' or user.role == 'superadmin' %}
@@ -480,6 +445,10 @@
         {% endif %}
         <div class="hub-nav-mobile-account">
             {% if user.is_authenticated %}
+            <a href="{% url 'loan_notifications_list' %}" class="nav-link">
+                Notifications
+                {% if unread_notification_count %}<span class="hub-badge">{{ unread_notification_count }}</span>{% endif %}
+            </a>
             <a href="{% url 'help_index' %}" class="nav-link">Help</a>
             <a href="{% url 'logout' %}" class="nav-link">Logout</a>
             {% else %}

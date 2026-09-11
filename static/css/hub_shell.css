@@ -15,6 +15,7 @@
   --hub-shadow: 0 12px 32px rgba(6, 68, 32, 0.08);
   --hub-radius: 12px;
   --hub-font: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --hub-sticky-offset: 7.35rem;
 }
 
 html {
@@ -433,7 +434,7 @@ nav .dropdown-content a:hover {
 /* Sticky in-page jump nav for long loan / post-approval pages */
 .page-toc {
   position: sticky;
-  top: 0;
+  top: var(--hub-sticky-offset);
   z-index: 15;
   display: flex;
   flex-wrap: wrap;
@@ -441,7 +442,7 @@ nav .dropdown-content a:hover {
   gap: 0.45rem 0.75rem;
   margin: 0 0 1rem;
   padding: 0.55rem 0.75rem;
-  background: #fff;
+  background: var(--hub-card, #fff);
   border: 1px solid var(--hub-line, #d7e3db);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(6, 68, 32, 0.06);
@@ -478,7 +479,7 @@ nav .dropdown-content a:hover {
 [id^="pa-"],
 [id^="ci-"],
 #closing-pack {
-  scroll-margin-top: 4.75rem;
+  scroll-margin-top: calc(var(--hub-sticky-offset) + 0.75rem);
 }
 .lw-section-collapse,
 .pa-section-collapse {
@@ -505,13 +506,29 @@ nav .dropdown-content a:hover {
   font-size: 1.05rem;
 }
 @media (max-width: 720px) {
+  :root {
+    --hub-sticky-offset: 4.6rem;
+  }
   .page-toc {
-    top: env(safe-area-inset-top, 0);
+    position: static;
+    top: auto;
+    padding: 0.35rem 0;
+    margin-bottom: 0.75rem;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .page-toc-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.15rem;
   }
   .page-toc-links a {
     min-height: 2.2rem;
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;
   }
 
   .hub-nav-toggle { display: inline-flex; }
@@ -523,14 +540,23 @@ nav .dropdown-content a:hover {
 
   .hub-top-end { flex-wrap: nowrap; }
 
+  .hub-user,
   .hub-user-label,
   .hub-user-role,
-  .hub-user-aux {
+  .hub-user-aux,
+  .hub-user-notify {
     display: none !important;
   }
 
-  .hub-user {
-    flex-wrap: nowrap;
+  .hub-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .hub-brand-product,
+  .hub-brand-line {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .hub-brand-logo { display: none; }
@@ -596,6 +622,17 @@ nav .dropdown-content a:hover {
     padding-top: 0.45rem;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
+
+  .table-container {
+    padding-right: 3.25rem;
+  }
+  .table-container table {
+    min-width: 36rem;
+  }
+
+  body > .container {
+    padding-bottom: 6.5rem !important;
+  }
 }
 
 /* ── Page canvas ── */
@@ -604,7 +641,7 @@ body > .container {
   width: 100% !important;
   max-width: 1280px !important;
   margin: 0 auto !important;
-  padding: 1.35rem 1.35rem 2.5rem !important;
+  padding: 1.35rem 1.35rem 5.75rem !important;
   overflow: auto;
   box-sizing: border-box;
 }
@@ -853,9 +890,12 @@ small.help {
   vertical-align: middle;
 }
 
-/* Table container legacy */
+/* Table container — scroll sideways on phones instead of clipping columns */
 .table-container {
   margin-top: 1.25rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 /* Page intro panels (when content uses them) */

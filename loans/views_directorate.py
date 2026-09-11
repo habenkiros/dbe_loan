@@ -28,8 +28,8 @@ def _can_mis(user):
 
 def _desk(request, desk: str):
     queue = (request.GET.get('queue') or default_queue(desk)).strip()
-    rows, label, row_kind, choices = directorate_queue(desk, queue)
-    counts = counts_for(desk)
+    rows, label, row_kind, choices = directorate_queue(desk, queue, request.user)
+    counts = counts_for(desk, request.user)
     tabs = [(key, qlabel, counts.get(key, 0)) for key, qlabel in choices]
     page_obj = Paginator(rows, 20).get_page(request.GET.get('page'))
     return render(request, 'loans/directorate_desk.html', {

@@ -65,7 +65,18 @@ class HubAdminRoleTests(TestCase):
         self.assertEqual(home.status_code, 200)
         self.assertContains(home, 'System workbench')
         self.assertContains(home, 'Users')
+        self.assertContains(home, 'Organization')
+        self.assertContains(home, 'Districts')
+        self.assertContains(home, 'Branches')
+        self.assertContains(home, 'Departments')
         self.assertContains(home, 'Settings')
+        self.assertContains(home, 'hub-nav-toggle')
+        self.assertContains(home, 'id="hub-main-nav"')
+        self.assertContains(home, 'dropdown-label">Districts')
+        self.assertContains(home, 'dropdown-label">Branches')
+        self.assertContains(home, 'dropdown-label">Departments')
+        self.assertNotContains(home, 'unlock-queue')
+        self.assertNotContains(home, 'Unlock queue')
 
         users = self.client.get(reverse('manage_users'))
         self.assertEqual(users.status_code, 200)
@@ -75,3 +86,19 @@ class HubAdminRoleTests(TestCase):
 
         districts = self.client.get(reverse('manage_districts'))
         self.assertEqual(districts.status_code, 200)
+
+
+class HubEngineeringNavTests(TestCase):
+    def test_engineering_head_sees_unlock_queue(self):
+        User.objects.create_user(
+            username='eng.head',
+            password='Demo@12345',
+            phone_number='0911000099',
+            role='engineering_head',
+        )
+        client = Client()
+        client.login(username='eng.head', password='Demo@12345')
+        home = client.get(reverse('home'))
+        self.assertEqual(home.status_code, 200)
+        self.assertContains(home, 'Unlock queue')
+        self.assertContains(home, reverse('collateral:unlock_queue'))

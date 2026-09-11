@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from loans.dbe_desks import (
@@ -214,6 +214,68 @@ def user_can_work_desk(user, desk: str) -> bool:
     return mine == desk
 
 
+def _kyc_org_wide_role(user) -> bool:
+    if not user:
+        return True
+    if getattr(user, 'is_superuser', False):
+        return True
+    role = getattr(user, 'role', None)
+    return role in (
+        'admin', 'superadmin', 'credit_head', 'vp',
+        'engineer', 'engineering_head', 'legal_officer',
+    )
+
+
+def scope_kyc_queryset(user, qs: QuerySet) -> QuerySet:
+    """Hide other branches from loan officers / branch managers on KYC lists."""
+    if _kyc_org_wide_role(user):
+        return qs
+    role = getattr(user, 'role', None)
+    try:
+        from loans.delegation import officer_loan_filter_q
+        delegated = officer_loan_filter_q(user)
+    except Exception:
+        delegated = Q(pk__in=[])
+
+    if role == 'loan_officer':
+        q = Q(assigned_loan_officer=user) | delegated
+        if getattr(user, 'branch_id', None):
+            q |= Q(branch_id=user.branch_id)
+        elif getattr(user, 'district_id', None):
+            q |= Q(branch__district_id=user.district_id) | Q(district_id=user.district_id)
+        return qs.filter(q)
+
+    if role == 'branch_manager':
+        if getattr(user, 'branch_id', None):
+            return qs.filter(branch_id=user.branch_id)
+        if getattr(user, 'district_id', None):
+            return qs.filter(
+                Q(branch__district_id=user.district_id) | Q(district_id=user.district_id)
+            )
+        return qs.none()
+
+    if role == 'credit_loan_officer':
+        # HO CRM (no branch) keeps the national desk. Branch CLO matches the LO book.
+        if not getattr(user, 'branch_id', None):
+            return qs
+        q = Q(assigned_loan_officer=user) | Q(branch_id=user.branch_id) | delegated
+        return qs.filter(q)
+
+    if getattr(user, 'branch_id', None):
+        return qs.filter(branch_id=user.branch_id)
+    return qs
+
+
+def user_can_see_kyc_loan(user, loan) -> bool:
+    if loan is None:
+        return False
+    if _kyc_org_wide_role(user):
+        return True
+    from loans.models import LoanRequest
+
+    return scope_kyc_queryset(user, LoanRequest.objects.filter(pk=loan.pk)).exists()
+
+
 def _is_online(loan_request) -> bool:
     return getattr(loan_request, 'source_channel', '') == getattr(
         loan_request, 'SOURCE_ONLINE', 'online',
@@ -401,6 +463,11 @@ def kyc_is_complete(loan_request) -> bool:
 
 
 def kyc_queue_queryset(user, queue: str) -> Tuple[QuerySet, str]:
+    qs, label = _kyc_queue_unscoped(user, queue)
+    return scope_kyc_queryset(user, qs), label
+
+
+def _kyc_queue_unscoped(user, queue: str) -> Tuple[QuerySet, str]:
     from loans.models import CreditDeskScreening, LoanRequest
 
     label = dict(QUEUE_CHOICES).get(queue, 'KYC')
@@ -429,15 +496,17 @@ def kyc_queue_queryset(user, queue: str) -> Tuple[QuerySet, str]:
         ).distinct()
         return qs, label
     if queue == 'cleared':
-        dbe = list(base.exclude(category__product_family=FAMILY_GENERAL)[:400])
-        done_ids = [loan.pk for loan in dbe if kyc_is_complete(loan)]
+        dbe_qs = scope_kyc_queryset(
+            user, base.exclude(category__product_family=FAMILY_GENERAL),
+        )
+        done_ids = [loan.pk for loan in dbe_qs[:400] if kyc_is_complete(loan)]
         return base.filter(pk__in=done_ids), label
     # mine
     desk = user_desk_for_kyc(user) or DESK_CRM
     if desk == DESK_SCAN_ADMIN:
-        return kyc_queue_queryset(user, 'scan')
+        return _kyc_queue_unscoped(user, 'scan')
     if desk == DESK_CRM:
-        kyc_qs, _ = kyc_queue_queryset(user, DESK_CRM)
-        app_qs, _ = kyc_queue_queryset(user, 'appraisal')
+        kyc_qs, _ = _kyc_queue_unscoped(user, DESK_CRM)
+        app_qs, _ = _kyc_queue_unscoped(user, 'appraisal')
         return (kyc_qs | app_qs).distinct(), 'My desk — pending'
-    return kyc_queue_queryset(user, desk)
+    return _kyc_queue_unscoped(user, desk)

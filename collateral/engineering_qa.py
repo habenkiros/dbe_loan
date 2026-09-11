@@ -11,6 +11,16 @@ def engineering_review_required() -> bool:
     return allows_engineering_team()
 
 
+def user_can_see_unlock_queue(user) -> bool:
+    """Unlock queue is an engineering desk, not admin Settings."""
+    role = getattr(user, 'role', None)
+    if role == 'engineering_head':
+        return True
+    if role == 'branch_manager' and not engineering_review_required():
+        return True
+    return False
+
+
 def initial_engineering_status(submitter) -> str:
     """Status set on collateral submit when engineering mode is enabled."""
     from loans.models import LoanRequest

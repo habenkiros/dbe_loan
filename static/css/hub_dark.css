@@ -27,7 +27,7 @@ html[data-theme="dark"] .hub-top {
   box-shadow: 0 1px 0 #1f1f1f;
 }
 
-html[data-theme="dark"] body > nav {
+html[data-theme="dark"] .hub-chrome nav {
   background: #0d0d0d !important;
   box-shadow: inset 0 1px 0 #1a1a1a, 0 1px 0 #1a1a1a;
 }
@@ -381,3 +381,8 @@ html[data-theme="dark"] code {
 .hub-theme-icon-sun { display: none; }
 html[data-theme="dark"] .hub-theme-icon-moon { display: none; }
 html[data-theme="dark"] .hub-theme-icon-sun { display: inline-flex; }
+
+html[data-theme="dark"] .hub-nav-toggle {
+  background: #1a1a1a;
+  border-color: #2e2e2e;
+}

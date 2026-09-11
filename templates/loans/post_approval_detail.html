@@ -86,7 +86,22 @@
     </div>
   </div>
 
-  <div class="pa-panel">
+  <nav class="page-toc" aria-label="On this page">
+    <span class="page-toc-label">On this page</span>
+    <div class="page-toc-links">
+      <a href="#pa-conditions">Conditions</a>
+      <a href="#closing-pack">Closing pack</a>
+      <a href="#pa-schedule">Schedule</a>
+      {% if project_overlay.is_wholesale %}<a href="#pa-pfi">PFI</a>{% endif %}
+      {% if project_overlay.is_murabaha %}<a href="#pa-murabaha">Murabaha</a>{% endif %}
+      {% if project_overlay.is_idea %}<a href="#pa-idea">Cap table</a>{% endif %}
+      {% if project_overlay.is_lease %}<a href="#pa-lease">Lease</a>{% endif %}
+      {% if project_overlay.is_project %}<a href="#pa-project">Project</a>{% endif %}
+      <a href="#pa-disbursement">Disbursement</a>
+    </div>
+  </nav>
+
+  <div class="pa-panel" id="pa-conditions">
     <h2 style="margin-top:0; font-size:1.15rem;">1. Conditions precedent &amp; covenants</h2>
     {% if conditions %}
     <table style="width:100%; border-collapse:collapse;">
@@ -485,7 +500,7 @@
     </div>
   </div>
 
-  <div class="pa-panel">
+  <div class="pa-panel" id="pa-schedule">
     <h2 style="margin-top:0; font-size:1.15rem;">2. Repayment schedule</h2>
     <p>
       Amount <strong>{{ readiness.schedule.amount|floatformat:2 }}</strong>
@@ -538,7 +553,7 @@
   </div>
 
   {% if project_overlay.is_wholesale %}
-  <div class="pa-panel" style="border-color:#c4a035;">
+  <div class="pa-panel" id="pa-pfi" style="border-color:#c4a035;">
     <h2 style="margin-top:0; font-size:1.15rem;">PFI utilization</h2>
     <p class="help" style="margin-top:0;">
       After approval, track on-lending vs the facility, repayment to DBE, and sub-portfolio PAR.
@@ -576,7 +591,7 @@
   {% endif %}
 
   {% if project_overlay.is_murabaha %}
-  <div class="pa-panel" style="border-color:#c4a035;">
+  <div class="pa-panel" id="pa-murabaha" style="border-color:#c4a035;">
     <h2 style="margin-top:0; font-size:1.15rem;">Murabaha confirm</h2>
     <p class="help" style="margin-top:0;">Cost-plus contract + cleared Sharia review. No interest Sheet 7.</p>
     {% if project_overlay.disbursement_blockers %}
@@ -598,7 +613,7 @@
   {% endif %}
 
   {% if project_overlay.is_idea %}
-  <div class="pa-panel" style="border-color:#c4a035;">
+  <div class="pa-panel" id="pa-idea" style="border-color:#c4a035;">
     <h2 style="margin-top:0; font-size:1.15rem;">Investment / cap table</h2>
     <p class="help" style="margin-top:0;">
       Quasi-equity. Release the investment only when the cap table shows DBE’s share.
@@ -630,7 +645,7 @@
   {% endif %}
 
   {% if project_overlay.is_lease %}
-  <div class="pa-panel" style="border-color:#c4a035;">
+  <div class="pa-panel" id="pa-lease" style="border-color:#c4a035;">
     <h2 style="margin-top:0; font-size:1.15rem;">{% if project_overlay.is_ijarah %}Ijarah{% else %}Lease{% endif %} release</h2>
     <p class="help" style="margin-top:0;">
       First release needs asset identity, ≥20% contribution verified, insurance, and delivery / commencement.
@@ -655,7 +670,7 @@
   {% endif %}
 
   {% if project_overlay.is_project %}
-  <div class="pa-panel" style="border-color:#c4a035;">
+  <div class="pa-panel" id="pa-project" style="border-color:#c4a035;">
     <h2 style="margin-top:0; font-size:1.15rem;">Project implementation</h2>
     <p class="help" style="margin-top:0;">
       First release needs a complete project file and verified promoter equity.
@@ -730,7 +745,7 @@
   </div>
   {% endif %}
 
-  <div class="pa-panel" style="border-color:#064420;">
+  <div class="pa-panel" id="pa-disbursement" style="border-color:#064420;">
     <h2 style="margin-top:0; font-size:1.15rem;">3. Disbursement</h2>
     {% if own_contribution_required %}
     <p>

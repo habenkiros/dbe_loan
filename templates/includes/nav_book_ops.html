@@ -1,0 +1,17 @@
+{% if nav_show_book_ops %}
+<div class="dropdown">
+  <button type="button" class="dropbtn">
+    {% include "includes/nav_icon.html" with icon="report" only %}
+    Book ops
+    <span class="dropbtn-chevron" aria-hidden="true">▾</span>
+  </button>
+  <div class="dropdown-content">
+    {% url 'monitoring_desk' as book_mon_url %}
+    {% include "includes/dropdown_link.html" with href=book_mon_url icon="report" label="Monitoring" only %}
+    {% url 'collections_desk' as book_col_url %}
+    {% include "includes/dropdown_link.html" with href=book_col_url icon="money" label="Collections" only %}
+    {% url 'rehab_desk' as book_rehab_url %}
+    {% include "includes/dropdown_link.html" with href=book_rehab_url icon="report" label="Rehab" only %}
+  </div>
+</div>
+{% endif %}

@@ -16,7 +16,7 @@
     <div>
       <p class="ci-eyebrow">AI Credit Intelligence</p>
       <h1>Executive overview</h1>
-      <p>Origination portfolio risk and pipeline — explainable KPIs from appraisals and committee, not a CBS ledger.</p>
+      <p>Pipeline, score bands, and book in your scope — charts first, then the watchlist.</p>
     </div>
     <div class="dash-hero-meta">
       <span class="dash-pill">Scope: {{ scope_label }}</span>
@@ -28,9 +28,20 @@
 
   <p class="ci-disclaimer">{{ disclaimer }}</p>
 
+  <nav class="page-toc dash-jump" aria-label="On this page">
+    <span class="page-toc-label">Jump to</span>
+    <div class="page-toc-links">
+      <a href="#ci-kpis">KPIs</a>
+      <a href="#ci-charts">Charts</a>
+      <a href="#ci-insights">Insights</a>
+      <a href="#ci-watchlist">Watchlist</a>
+    </div>
+  </nav>
+
   {% if user.is_superuser or user.role == 'admin' or user.role == 'superadmin' %}
   <div class="dash-quicklinks">
     <h3>System workbench</h3>
+    <p>Admin shortcuts for intake, users, and product setup.</p>
     <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
       {% url 'view_loan_requests' as loans_url %}
       {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
@@ -47,6 +58,7 @@
   {% elif user.role == 'loan_officer' or user.role == 'branch_manager' %}
   <div class="dash-quicklinks">
     <h3>{% if user.role == 'loan_officer' %}Your workbench{% else %}Branch workbench{% endif %}</h3>
+    <p>Day-to-day queues for this role.</p>
     <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
       {% url 'view_loan_requests' as loans_url %}
       {% include "includes/list_action.html" with href=loans_url icon="list" label="Loan requests" tone="green" only %}
@@ -66,7 +78,22 @@
   </div>
   {% endif %}
 
-  <section class="dash-kpis ci-kpis">
+  {% if nav_show_book_ops %}
+  <div class="dash-quicklinks">
+    <h3>Book ops</h3>
+    <p>Monitoring, collections, and rehab in one place.</p>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'monitoring_desk' as mon_url %}
+      {% include "includes/list_action.html" with href=mon_url icon="report" label="Monitoring" tone="blue" only %}
+      {% url 'collections_desk' as col_url %}
+      {% include "includes/list_action.html" with href=col_url icon="money" label="Collections" tone="orange" only %}
+      {% url 'rehab_desk' as rehab_url %}
+      {% include "includes/list_action.html" with href=rehab_url icon="report" label="Rehab" tone="green" only %}
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="dash-kpis ci-kpis" id="ci-kpis">
     {% for kpi in kpis %}
     <article class="dash-kpi ci-kpi risk-{{ kpi.risk }}">
       <p class="dash-kpi-label">{{ kpi.label }}</p>
@@ -87,9 +114,54 @@
     {% endfor %}
   </section>
 
-  <section class="ci-grid">
+  <section class="dash-grid ci-charts" id="ci-charts">
     <div class="dash-panel">
-      <h2>AI insights</h2>
+      <h2>Pipeline status</h2>
+      <p class="dash-chart-caption">Approved / pending / rejected in this scope.</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciStatusDonut"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Credit funnel</h2>
+      <p class="dash-chart-caption">Where live files sit after assignment.</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciFunnelChart"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Score band distribution</h2>
+      <p class="dash-chart-caption">Sheet 6 / scorecard bands on scored files.</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciScoreBands"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Approvals this month</h2>
+      <p class="dash-chart-caption">Count and approved book versus last month.</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciTrendChart"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Requested vs approved book</h2>
+      <p class="dash-chart-caption">Origination amounts in ETB — not CBS outstanding.</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciBookChart"></canvas>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <h2>Loans by branch</h2>
+      <p class="dash-chart-caption">File count and requested amount (top 10).</p>
+      <div class="dash-chart-wrap">
+        <canvas id="ciBranchChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="ci-grid">
+    <div class="dash-panel" id="ci-insights">
+      <h2>Portfolio insights</h2>
       <div class="ci-insights">
         {% for insight in insights %}
         <article class="ci-insight sev-{{ insight.severity }}">
@@ -108,7 +180,7 @@
       </div>
     </div>
 
-    <div class="dash-panel">
+    <div class="dash-panel" id="ci-watchlist">
       <h2>Risk watchlist</h2>
       <div class="dash-table-wrap">
         <table class="dash-table">
@@ -146,27 +218,6 @@
     </div>
   </section>
 
-  <section class="dash-grid">
-    <div class="dash-panel">
-      <h2>Pipeline status</h2>
-      <div class="dash-chart-wrap">
-        <canvas id="ciStatusDonut"></canvas>
-      </div>
-    </div>
-    <div class="dash-panel">
-      <h2>Score band distribution</h2>
-      <div class="dash-chart-wrap">
-        <canvas id="ciScoreBands"></canvas>
-      </div>
-    </div>
-    <div class="dash-panel">
-      <h2>Loans by branch</h2>
-      <div class="dash-chart-wrap">
-        <canvas id="ciBranchChart"></canvas>
-      </div>
-    </div>
-  </section>
-
   <section class="dash-actions list-actions list-actions-lg">
     {% url 'ci_officer' as off_url %}
     {% include "includes/list_action.html" with href=off_url icon="list" label="Officer workspace" tone="green" only %}
@@ -187,6 +238,9 @@
   window.CI_PIPELINE = {{ pipeline_json|safe }};
   window.CI_SCORE_BANDS = {{ score_bands_json|safe }};
   window.CI_BRANCHES = {{ branches_json|safe }};
+  window.CI_FUNNEL = {{ funnel_json|safe }};
+  window.CI_TREND = {{ trend_json|safe }};
+  window.CI_BOOK = {{ book_compare_json|safe }};
 </script>
 <script src="{% static 'js/credit_intelligence.js' %}"></script>
 {% endblock %}

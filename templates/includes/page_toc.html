@@ -1,0 +1,12 @@
+{% comment %}
+Sticky in-page jump nav for long staff pages.
+Pass: toc_items as list of {id, label} via inclusion or hardcode links in caller.
+{% endcomment %}
+<nav class="page-toc" aria-label="On this page">
+  <span class="page-toc-label">On this page</span>
+  <div class="page-toc-links">
+    {% for item in toc_items %}
+    <a href="#{{ item.id }}">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+</nav>

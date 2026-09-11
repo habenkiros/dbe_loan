@@ -149,6 +149,12 @@
   height: 260px;
 }
 
+.dash-chart-caption {
+  margin: -0.45rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--dash-muted);
+}
+
 .dash-actions {
   display: flex;
   flex-wrap: wrap;
@@ -256,6 +262,10 @@
 .dash-quicklinks p {
   margin: 0 0 0.75rem;
   color: var(--dash-muted);
+}
+
+.dash-jump {
+  margin-bottom: 1rem;
 }
 
 @media (max-width: 860px) {

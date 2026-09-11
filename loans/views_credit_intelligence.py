@@ -70,6 +70,9 @@ def credit_intelligence_overview(request):
         'ledger_connected': data.get('ledger_connected'),
         'score_bands_json': json.dumps(data.get('score_bands') or []),
         'branches_json': json.dumps(data.get('branches') or []),
+        'funnel_json': json.dumps(data.get('funnel') or []),
+        'trend_json': json.dumps(data.get('trend') or {}),
+        'book_compare_json': json.dumps(data.get('book_compare') or {}),
         'pipeline_json': json.dumps({
             'approved': pipeline.get('approved', 0),
             'pending': pipeline.get('pending', 0),

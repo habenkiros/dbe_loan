@@ -9,7 +9,7 @@ from django.db.models import Count, Max, Q, QuerySet
 from django.utils import timezone
 
 from loans.dbe_desks import DESK_APPRAISAL, DESK_ITS, DESK_MIS, user_desk_key
-from loans.kyc_desk import KYC_DESKS, kyc_queue_queryset
+from loans.kyc_desk import KYC_DESKS, kyc_queue_queryset, scope_kyc_queryset
 from loans.product_family import FAMILY_GENERAL, FAMILY_WHOLESALE
 from loans.rehab import TARGET_DAYS
 
@@ -126,12 +126,12 @@ def _split_by_engine_blockers(qs: QuerySet, want_blockers: bool) -> List:
     return matched
 
 
-def appraisal_queryset(queue: str) -> Tuple[Sequence, str, str]:
+def appraisal_queryset(queue: str, user=None) -> Tuple[Sequence, str, str]:
     label = dict(APPRAISAL_QUEUES).get(queue, 'Appraisal')
     if queue == 'with_crm':
-        qs, _ = kyc_queue_queryset(None, 'appraisal')
+        qs, _ = kyc_queue_queryset(user, 'appraisal')
         return qs, label, ROW_LOAN
-    base = _with_kyc_cleared_count(_dbe_files())
+    base = _with_kyc_cleared_count(scope_kyc_queryset(user, _dbe_files()))
     if queue == 'kyc_open':
         return base.filter(kyc_cleared__lt=3), label, ROW_LOAN
     open_files = base.filter(kyc_cleared__gte=3).filter(_open_committee_q())
@@ -139,7 +139,9 @@ def appraisal_queryset(queue: str) -> Tuple[Sequence, str, str]:
         return _split_by_engine_blockers(open_files, True), label, ROW_LOAN
     if queue == 'ready':
         from loans.models import LoanRequest
-        pending = _dbe_files().filter(committee_status=LoanRequest.COMMITTEE_PENDING)
+        pending = scope_kyc_queryset(user, _dbe_files()).filter(
+            committee_status=LoanRequest.COMMITTEE_PENDING,
+        )
         ready = _split_by_engine_blockers(open_files, False)
         pending_ids = {loan.pk for loan in pending[:_ENGINE_SCAN_CAP]}
         merged = [loan for loan in ready if loan.pk not in pending_ids] + list(pending[:50])
@@ -211,7 +213,7 @@ def mis_queryset(queue: str) -> Tuple[Sequence, str, str]:
     return qs, label, ROW_LOAN
 
 
-def directorate_queue(desk: str, queue: str) -> Tuple[Sequence, str, str, Sequence]:
+def directorate_queue(desk: str, queue: str, user=None) -> Tuple[Sequence, str, str, Sequence]:
     choices = QUEUES.get(desk) or APPRAISAL_QUEUES
     valid = {key for key, _ in choices}
     if queue not in valid:
@@ -221,7 +223,7 @@ def directorate_queue(desk: str, queue: str) -> Tuple[Sequence, str, str, Sequen
     elif desk == DESK_MIS:
         rows, label, kind = mis_queryset(queue)
     else:
-        rows, label, kind = appraisal_queryset(queue)
+        rows, label, kind = appraisal_queryset(queue, user)
     return rows, label, kind, choices
 
 
@@ -229,10 +231,10 @@ def default_queue(desk: str) -> str:
     return (QUEUES.get(desk) or APPRAISAL_QUEUES)[0][0]
 
 
-def counts_for(desk: str) -> dict:
+def counts_for(desk: str, user=None) -> dict:
     out = {}
     for key, _ in QUEUES.get(desk) or ():
-        rows, _label, _kind, _ = directorate_queue(desk, key)
+        rows, _label, _kind, _ = directorate_queue(desk, key, user)
         if hasattr(rows, 'count') and not isinstance(rows, list):
             out[key] = rows.count()
         else:

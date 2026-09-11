@@ -334,6 +334,22 @@ def build_overview(user) -> Dict[str, Any]:
 
     watchlist = _watchlist(qs)
 
+    funnel = [
+        {'label': 'In appraisal', 'count': in_appraisal},
+        {'label': 'Committee', 'count': pending_committee},
+        {'label': 'Awaiting disbursement', 'count': awaiting_disburse},
+        {'label': 'Disbursed', 'count': disbursed},
+    ]
+    trend = {
+        'labels': [prev_start.strftime('%b %Y'), cur_start.strftime('%b %Y')],
+        'approved_count': [prev_approved.count(), cur_approved.count()],
+        'approved_book': [round(prev_amt, 2), round(cur_amt, 2)],
+    }
+    book_compare = {
+        'labels': ['Requested', 'Approved'],
+        'values': [round(requested_book, 2), round(approved_book, 2)],
+    }
+
     return {
         'scope_label': scope_label,
         'generated_at': timezone.now().isoformat(),
@@ -353,6 +369,9 @@ def build_overview(user) -> Dict[str, Any]:
             'requested_book': requested_book,
             'approved_book': approved_book,
         },
+        'funnel': funnel,
+        'trend': trend,
+        'book_compare': book_compare,
         'score_bands': score_bands,
         'branches': branches,
         'insights': insights,

@@ -114,6 +114,7 @@ def nav_flags_for(user) -> Dict[str, Any]:
         'nav_show_book_ops': False,
         'nav_show_reports': False,
         'nav_show_portfolio_dashboard': False,
+        'nav_show_unlock_queue': False,
         'nav_role': '',
     }
     if user is None or not getattr(user, 'is_authenticated', False):
@@ -126,11 +127,19 @@ def nav_flags_for(user) -> Dict[str, Any]:
     # Portfolio MIS dashboard: admins only in checkup — everyone else uses Home/CI/Risk/Coop product.
     show_portfolio_dash = is_admin
 
+    show_unlock_queue = False
+    try:
+        from collateral.engineering_qa import user_can_see_unlock_queue
+        show_unlock_queue = user_can_see_unlock_queue(user)
+    except Exception:
+        show_unlock_queue = role == 'engineering_head'
+
     return {
         'nav_show_approval_votes': show_votes,
         'nav_show_post_approval': is_admin or role in POST_APPROVAL_ROLES,
         'nav_show_book_ops': user_can_access_book_ops(user),
         'nav_show_reports': is_admin or role in REPORTS_ROLES,
         'nav_show_portfolio_dashboard': show_portfolio_dash,
+        'nav_show_unlock_queue': show_unlock_queue,
         'nav_role': role,
     }

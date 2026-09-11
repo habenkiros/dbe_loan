@@ -14,6 +14,7 @@ from loans.kyc_desk import (
     kyc_queue_queryset,
     set_screening_status,
     user_can_access_kyc_desk,
+    user_can_see_kyc_loan,
     user_can_work_desk,
     user_desk_for_kyc,
 )
@@ -53,6 +54,9 @@ def kyc_desk(request):
 @require_POST
 def kyc_screening_action(request, loan_request_id):
     loan = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not user_can_see_kyc_loan(request.user, loan):
+        messages.error(request, 'You do not have access to this KYC file.')
+        return redirect('kyc_desk')
     desk = (request.POST.get('desk') or '').strip()
     action = (request.POST.get('action') or 'clear').strip()
     note = (request.POST.get('note') or '').strip()
@@ -93,6 +97,9 @@ def kyc_screening_action(request, loan_request_id):
 @require_POST
 def kyc_party_action(request, loan_request_id):
     loan = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not user_can_see_kyc_loan(request.user, loan):
+        messages.error(request, 'You do not have access to this KYC file.')
+        return redirect('kyc_desk')
     action = (request.POST.get('action') or 'add').strip()
     nxt = request.POST.get('next') or request.GET.get('next')
     if action == 'delete':
@@ -133,6 +140,9 @@ def kyc_party_action(request, loan_request_id):
 @require_POST
 def crm_cycle_action(request, loan_request_id):
     loan = get_object_or_404(LoanRequest, pk=loan_request_id)
+    if not user_can_see_kyc_loan(request.user, loan):
+        messages.error(request, 'You do not have access to this KYC file.')
+        return redirect('kyc_desk')
     action = (request.POST.get('action') or '').strip()
     note = (request.POST.get('note') or '').strip()
     nxt = request.POST.get('next') or request.GET.get('next')

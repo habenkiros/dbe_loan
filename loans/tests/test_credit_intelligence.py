@@ -107,6 +107,9 @@ class CreditIntelligencePhase1Tests(TestCase):
         self.assertIn('LR-CI-A', wl_ids)
         self.assertTrue(data['insights'])
         self.assertIn('Origination', data['disclaimer'])
+        self.assertEqual(len(data['funnel']), 4)
+        self.assertIn('labels', data['trend'])
+        self.assertEqual(data['book_compare']['labels'], ['Requested', 'Approved'])
 
     def test_officer_sees_assigned_only(self):
         data = build_overview(self.officer)
@@ -120,6 +123,8 @@ class CreditIntelligencePhase1Tests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'Executive overview')
         self.assertContains(page, 'AI Credit Intelligence')
+        self.assertContains(page, 'Credit funnel')
+        self.assertContains(page, 'Requested vs approved book')
 
         ci = client.get(reverse('credit_intelligence_overview'))
         self.assertEqual(ci.status_code, 200)

@@ -19,11 +19,14 @@
   </p>
   {% include "loans/_loan_amount_milestones.html" %}
   {% include "loans/_loan_risk_strip.html" %}
-  {% include "loans/_compliance_cases_strip.html" %}
-  {% include "loans/_kyc_identity_case.html" %}
-  {% include "loans/_kyc_packs.html" %}
-  {% include "loans/_crm_cycle.html" %}
-  {% include "loans/_product_intel_panel.html" %}
+  <details class="lw-section-collapse" id="lw-compliance">
+    <summary>Compliance, KYC &amp; product intel</summary>
+    {% include "loans/_compliance_cases_strip.html" %}
+    {% include "loans/_kyc_identity_case.html" %}
+    {% include "loans/_kyc_packs.html" %}
+    {% include "loans/_crm_cycle.html" %}
+    {% include "loans/_product_intel_panel.html" %}
+  </details>
 
   <div class="lw-strip">
     <div class="lw-row">
@@ -94,8 +97,27 @@
     </div>
   </div>
 
-  <div class="lw-panel">
-    <h3>Applicant &amp; request</h3>
+  <nav class="page-toc" aria-label="On this page">
+    <span class="page-toc-label">On this page</span>
+    <div class="page-toc-links">
+      <a href="#lw-applicant">Applicant</a>
+      <a href="#lw-compliance">KYC</a>
+      {% if project_overlay.is_project or project_overlay.is_wholesale or project_overlay.is_lease or project_overlay.is_murabaha or project_overlay.is_idea or project_overlay.is_consumer %}
+      <a href="#lw-product">Product</a>
+      {% endif %}
+      <a href="#lw-documents">Documents</a>
+      {% if collateral_readiness %}<a href="#lw-collateral">Collateral</a>{% endif %}
+      {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
+      <a href="#lw-officer">Officer</a>
+      <a href="#lw-committee">Committee</a>
+      {% endif %}
+      {% if postbook %}<a href="#lw-rehab">Rehab</a>{% endif %}
+    </div>
+  </nav>
+  <p class="help" style="margin:0 0 0.75rem;">Sections stay folded. Use the links above to open one.</p>
+
+  <details class="lw-section-collapse lw-panel" id="lw-applicant">
+    <summary>Applicant &amp; request</summary>
     <div class="lw-facts">
       <span class="lbl">Phone</span><span>{{ loan_request.phone_number|default:"—" }}</span>
       <span class="lbl">Customer no.</span><span>{{ loan_request.customer_number|default:"—" }}</span>
@@ -135,12 +157,14 @@
     </div>
     {% endif %}
     {% endwith %}
-  </div>
+  </details>
 
   {% if postbook %}
+  <details class="lw-section-collapse lw-panel" id="lw-rehab">
+    <summary>Rehab / SLA</summary>
   {% include "loans/_sla_panel.html" with sla=postbook.sla %}
   {% if postbook.has_rehab or postbook.sla.breached or postbook.open_appeals %}
-  <div class="lw-panel">
+  <div class="lw-panel" style="box-shadow:none; margin:0.75rem 0;">
     <h3>Rehab / recovery</h3>
     <div class="lw-facts">
       <span class="lbl">Stage</span>
@@ -152,10 +176,17 @@
     <p><a href="{% url 'rehab_loan' loan_request.id %}">Open rehab / recovery →</a></p>
   </div>
   {% endif %}
+  </details>
+  {% endif %}
+
+  {% if project_overlay.is_project or project_overlay.is_wholesale or project_overlay.is_lease or project_overlay.is_murabaha or project_overlay.is_idea or project_overlay.is_consumer %}
+  <details class="lw-section-collapse lw-panel" id="lw-product">
+    <summary>Product-specific desks</summary>
+    <p class="help" style="margin-top:0.35rem;">Expand for project, wholesale, lease, Sharia, idea, or consumer summary panels.</p>
   {% endif %}
 
   {% if project_overlay.is_project %}
-  <div class="lw-panel">
+  <div class="lw-panel" style="box-shadow:none; margin:0.75rem 0;">
     <h3>Project desk</h3>
     <p class="help" style="margin-top:0;">
       Identity, debt–equity, sources &amp; uses, plant desks, then implementation visits that unlock the next draw.
@@ -284,9 +315,13 @@
   </div>
   {% endif %}
 
+  {% if project_overlay.is_project or project_overlay.is_wholesale or project_overlay.is_lease or project_overlay.is_murabaha or project_overlay.is_idea or project_overlay.is_consumer %}
+  </details>
+  {% endif %}
+
   {% if loan_request.financing_fund %}
-  <div class="lw-panel">
-    <h3>Funding window · {{ loan_request.financing_fund.code }}</h3>
+  <details class="lw-section-collapse lw-panel" id="lw-fund">
+    <summary>Funding window · {{ loan_request.financing_fund.code }}</summary>
     <p class="help" style="margin-top:0;">
       {{ loan_request.financing_fund.name }}
       {% if loan_request.financing_fund.women_min_pct %} · women ≥ {{ loan_request.financing_fund.women_min_pct }}%{% endif %}
@@ -307,11 +342,11 @@
       <input type="text" name="sector" class="form-control" style="max-width:16rem;" value="{{ loan_request.fund_tag.sector|default:'' }}">
       <p><button type="submit" class="btn btn-gray" style="font-size:0.85rem;">Save fund tags</button></p>
     </form>
-  </div>
+  </details>
   {% endif %}
 
-  <div class="lw-panel">
-    <h3>Application documents</h3>
+  <details class="lw-section-collapse lw-panel" id="lw-documents">
+    <summary>Application documents</summary>
 {% if document_types %}
 <p class="help" style="margin-top:0;">Required types:
   {% for dt in document_types %}{{ dt.name }}{% if dt.is_required %} (required){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}.
@@ -415,18 +450,18 @@
 {% else %}
 <p>No document types configured. Add them in <a href="{% url 'manage_loan_application_document_types' %}">Settings → Application document types</a>.</p>
 {% endif %}
-  </div>
+  </details>
 
 {% if collateral_readiness %}
-  <div class="lw-panel">
-    <h3>Collateral estimation</h3>
+  <details class="lw-section-collapse lw-panel" id="lw-collateral">
+    <summary>Collateral estimation</summary>
 {% include "loans/_collateral_estimation_panel.html" %}
-  </div>
+  </details>
 {% endif %}
 
 {% if user.role == 'loan_officer' and loan_request.assigned_loan_officer_id == user.id %}
-  <div class="lw-panel" style="border-color:#064420;">
-    <h3>Loan officer steps</h3>
+  <details class="lw-section-collapse lw-panel" id="lw-officer" style="border-color:#064420;">
+    <summary>Loan officer steps</summary>
     <p style="margin-bottom:0.5rem;">Complete Sheets 1–6, then <strong>finish &amp; submit to the approval committee</strong>. Sheet 7 is optional.</p>
     <div class="lw-actions-bar">
         <a href="{% url 'loan_appraisal_edit' loan_request.id %}" class="btn btn-green">{% if appraisal_locked %}View appraisal (read-only){% else %}Open loan appraisal{% endif %}</a>
@@ -440,12 +475,11 @@
     {% if loan_request.appraisal_completed_at %}
     <p class="help" style="margin:0.5rem 0 0;">Finished {{ loan_request.appraisal_completed_at|date:"SHORT_DATETIME_FORMAT" }}.</p>
     {% endif %}
-  </div>
-
     {% include "loans/_ci_decision_card.html" %}
+  </details>
 
-  <div class="lw-panel">
-    <h3>Approval committee</h3>
+  <details class="lw-section-collapse lw-panel" id="lw-committee">
+    <summary>Approval committee</summary>
     <div class="lw-chip-row" style="margin-bottom:0.5rem;">
       {% if loan_request.committee_status == 'pending_committee' %}
         <span class="lw-badge lw-warn">Pending committee</span>
@@ -539,7 +573,7 @@
         {% for err in committee_submit.errors %}<li>{{ err }}</li>{% endfor %}
     </ul>
     {% endif %}
-  </div>
+  </details>
 {% endif %}
 
   <div class="lw-footer-actions list-actions list-actions-lg">
@@ -587,4 +621,25 @@
 {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  function openTarget(id) {
+    if (!id) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'DETAILS') el.open = true;
+    var parent = el.closest && el.closest('details');
+    if (parent) parent.open = true;
+  }
+  openTarget((location.hash || '').replace(/^#/, ''));
+  document.querySelectorAll('.page-toc a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function () {
+      openTarget((this.getAttribute('href') || '').replace(/^#/, ''));
+    });
+  });
+})();
+</script>
 {% endblock %}

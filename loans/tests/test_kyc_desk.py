@@ -12,7 +12,9 @@ from loans.kyc_desk import (
     ensure_intake_screenings,
     kyc_applies,
     kyc_is_complete,
+    kyc_queue_queryset,
     set_screening_status,
+    user_can_see_kyc_loan,
 )
 from loans.models import (
     Branch,
@@ -131,6 +133,7 @@ class KycDeskTests(TestCase):
         self.assertContains(resp, 'KYC packs')
         self.assertContains(resp, 'Identity documents present')
         self.assertContains(resp, 'Project financing appraisal')
+        self.assertContains(resp, 'Sections stay folded')
 
     def test_legal_officer_opens_detail_and_sees_legal_clear_form(self):
         loan = self._loan(self.project_cat, 'LR-KYC-LEGAL-UI')
@@ -182,3 +185,43 @@ class KycDeskTests(TestCase):
         self.assertTrue(row.checklist.get('identity_docs'))
         self.assertTrue(row.checklist.get('pep_sanctions'))
         self.assertIn('sanctions', row.findings)
+
+    def test_loan_officer_kyc_hides_other_branch(self):
+        branch_b = Branch.objects.create(name='Kyc Branch B', district=self.district)
+        lo_a = User.objects.create_user(
+            username='kyc_lo_a', password='pass', phone_number='0911999101',
+            role='loan_officer', branch=self.branch,
+        )
+        lo_b = User.objects.create_user(
+            username='kyc_lo_b', password='pass', phone_number='0911999102',
+            role='loan_officer', branch=branch_b,
+        )
+        mine = self._loan(self.project_cat, 'LR-KYC-MINE', assigned_loan_officer=lo_a)
+        other = self._loan(
+            self.project_cat, 'LR-KYC-OTHER',
+            branch=branch_b, assigned_loan_officer=lo_b,
+        )
+        ensure_intake_screenings(mine)
+        ensure_intake_screenings(other)
+
+        qs, _ = kyc_queue_queryset(lo_a, 'crm')
+        ids = set(qs.values_list('loan_request_id', flat=True))
+        self.assertIn('LR-KYC-MINE', ids)
+        self.assertNotIn('LR-KYC-OTHER', ids)
+        self.assertTrue(user_can_see_kyc_loan(lo_a, mine))
+        self.assertFalse(user_can_see_kyc_loan(lo_a, other))
+
+        client = Client()
+        client.force_login(lo_a)
+        listed = client.get(reverse('kyc_desk') + '?queue=crm')
+        self.assertEqual(listed.status_code, 200)
+        self.assertContains(listed, 'LR-KYC-MINE')
+        self.assertNotContains(listed, 'LR-KYC-OTHER')
+
+        blocked = client.post(
+            reverse('kyc_screening_action', args=[other.id]),
+            {'desk': 'crm', 'action': 'return', 'note': 'should not touch other branch'},
+        )
+        self.assertEqual(blocked.status_code, 302)
+        row = other.desk_screenings.get(desk=CreditDeskScreening.DESK_CRM)
+        self.assertEqual(row.status, CreditDeskScreening.STATUS_PENDING)

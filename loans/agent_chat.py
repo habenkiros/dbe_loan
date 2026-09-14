@@ -62,14 +62,30 @@ def build_system_prompt(user, conversation=None) -> str:
             'Never documents, appraisal, estimation, queue flags, or approvals.\n'
             '- LO can later register collateral shells; estimation is UI/field only.\n'
             '- Pipeline report is allowed in scope.\n'
+            '- On an open file, prefer file_blockers / document_checklist / read_appraisal / committee_brief.\n'
         )
     elif role in ('loan_officer', 'credit_loan_officer'):
         role_block = (
             'You are helping a LOAN OFFICER:\n'
             '- NEVER create loans, attach documents, estimate collateral, fill appraisal, or approve.\n'
             '- May register_collateral shells (building/land/other with no values).\n'
-            '- document_checklist, read_appraisal, and committee_brief are read-only coaching; point to UI for writes.\n'
+            '- document_checklist, read_appraisal, file_blockers, read_kyc, and committee_brief are read-only; point to UI for writes.\n'
+            '- request_documents: preview first, send only when the officer confirms.\n'
             '- find_loans on assigned/branch scope.\n'
+        )
+    elif role in ('engineer', 'engineering_head'):
+        role_block = (
+            'You are helping an ENGINEER / valuer:\n'
+            '- NEVER create loans, vote, disburse, or enter valuation numbers in chat.\n'
+            '- Assigned files: file_blockers, read_kyc, document_checklist, read_appraisal (read-only).\n'
+            '- Estimation, GPS, and BOQ stay in the collateral UI.\n'
+        )
+    elif caps.get('committee_focus'):
+        role_block = (
+            'You are helping a COMMITTEE voter:\n'
+            '- NEVER create loans, attach documents, estimate, write appraisal, or cast votes.\n'
+            '- committee_brief, file_blockers, read_kyc, document_checklist, read_appraisal are read-only.\n'
+            '- Humans vote only in the committee UI.\n'
         )
     else:
         role_block = (
@@ -78,8 +94,26 @@ def build_system_prompt(user, conversation=None) -> str:
             '- Reports / read tools only as returned by tools.\n'
         )
 
+    file_block = '(none — officer is not on a loan file)\n'
+    if conversation and getattr(conversation, 'last_loan_request_id', None):
+        try:
+            loan = conversation.last_loan_request
+        except Exception:
+            loan = None
+        if loan:
+            amt = loan.amount_requested
+            file_block = (
+                f'{loan.loan_request_id} (id={loan.pk}) · {loan.applicant_name} · '
+                f'ETB {amt}.\n'
+                'When the officer says "this file", "what\'s next", "what\'s blocking", '
+                'or omits a loan code, call file_blockers / document_checklist / '
+                'read_appraisal / read_kyc / committee_brief on this loan. '
+                'request_documents: preview first, confirm=true only after they confirm. '
+                'Do not ask them to retype the code.\n'
+            )
+
     return (
-        'You are DECSI Assist — a production banking ops copilot with role-aware tools.\n'
+        'You are Credit Intelligence Assist — a production banking ops copilot with role-aware tools.\n'
         f'Officer: {user.get_username()} · role: {role} · branch: {branch_name}.\n'
         f'Capabilities: create_loan={caps.get("can_create_loan")} · '
         f'documents={caps.get("can_manage_documents")} · appraisal={caps.get("can_work_appraisal")}.\n\n'
@@ -89,8 +123,9 @@ def build_system_prompt(user, conversation=None) -> str:
         '- NEVER: attach/verify documents, seed appraisal, estimate/value collateral, '
         'queue-approve, committee submit, vote, or disburse — illegal via Assist in production.\n'
         '- committee_brief is read-only: summarize for humans; never cast votes.\n'
-        '- Never invent loan IDs or KPI/numbers outside tool payloads.\n'
+        '- request_documents sends a branch notification only after confirm=true. Never attach files.\n'
         '- Currency is ETB.\n\n'
+        f'## Open file (page context)\n{file_block}\n'
         f'## Current held story (BM create draft)\n{story_block}\n'
     )
 
@@ -171,7 +206,8 @@ def _tool_audit_entry(name: str, out: Dict[str, Any]) -> Dict[str, Any]:
     data = {}
     for k in (
         'loan_request_id', 'loan_request_code', 'run_id', 'links', 'partial',
-        'ready_to_commit', 'missing', 'stats', 'scope',
+        'ready_to_commit', 'missing', 'stats', 'scope', 'needs_confirm', 'sent',
+        'document_names', 'band', 'band_label', 'next_action',
     ):
         if k in out:
             data[k] = out[k]
@@ -223,7 +259,7 @@ def run_chat_turn(user, conversation, user_text: str) -> Dict[str, Any]:
         return {
             'ok': False,
             'error': 'Permission denied',
-            'reply': 'You are not allowed to use DECSI Assist.',
+            'reply': 'You are not allowed to use Credit Intelligence Assist.',
             'conversation_id': conversation.pk,
             'story': story_for_api(conversation_story(conversation)),
         }
@@ -492,6 +528,170 @@ def _wants_story_show(tlow: str) -> bool:
     )
 
 
+def _wants_file_status(tlow: str) -> bool:
+    return any(
+        k in tlow
+        for k in (
+            'blocking', 'whats blocking', "what's blocking",
+            'next step', 'whats next', "what's next", 'what next',
+            'this file', 'this loan', 'file status', 'loan status',
+            'blockers', 'why is this stuck', 'what is stuck',
+        )
+    )
+
+
+def _wants_committee_brief(tlow: str) -> bool:
+    return any(
+        k in tlow
+        for k in (
+            'committee brief', 'voter brief', 'before voting',
+            'committee pack', 'what voters',
+        )
+    )
+
+
+def _wants_kyc(tlow: str) -> bool:
+    return any(
+        k in tlow
+        for k in (
+            'kyc', 'identity', 'fayda', 'face match', 'liveness',
+            'is verified', 'tin verify', 'beneficial owner', 'ubo',
+        )
+    )
+
+
+def _wants_doc_request(tlow: str) -> bool:
+    return any(
+        k in tlow
+        for k in (
+            'request missing docs', 'request the missing', 'send document request',
+            'send the document request', 'request documents', 'request the documents',
+            'confirm send document', 'yes send the document', 'send the doc request',
+        )
+    )
+
+
+def _doc_request_confirm(tlow: str) -> bool:
+    if not _wants_doc_request(tlow) and not (
+        _wants_confirm(tlow) and any(k in tlow for k in ('document', 'docs'))
+    ):
+        return False
+    return _wants_confirm(tlow) or tlow.startswith('yes ') or 'send now' in tlow
+
+
+def _format_kyc_reply(out: Dict[str, Any]) -> str:
+    if not out.get('ok'):
+        return out.get('error') or 'Could not read KYC.'
+    code = out.get('loan_request_code') or ''
+    if not out.get('present'):
+        return out.get('message') or f'No identity case on {code}.'
+    applicant = out.get('applicant') or {}
+    reply = (
+        f"KYC {code} {out.get('applicant_name') or ''} — "
+        f"band {out.get('band_label') or out.get('band') or '—'} · "
+        f"score {out.get('score') if out.get('score') is not None else '—'}.\n"
+    )
+    if applicant:
+        reply += (
+            f"Applicant verify: {applicant.get('verify') or applicant.get('verify_status') or '—'}"
+        )
+        if applicant.get('biometric'):
+            reply += f" · face: {applicant.get('biometric')}"
+        reply += '\n'
+    for party in (out.get('parties') or [])[:6]:
+        if party.get('role_key') == 'applicant':
+            continue
+        reply += f"· {party.get('role')}: {party.get('name') or '—'} · {party.get('verify')}\n"
+    for msg in (out.get('blockers') or [])[:4]:
+        reply += f'· Blocker: {msg}\n'
+    if out.get('needs_ubo'):
+        reply += 'UBO / beneficial owner still needed.\n'
+    links = out.get('links') or {}
+    if links.get('detail_url'):
+        reply += f"Open KYC band: {links['detail_url']}"
+    return reply.strip()
+
+
+def _format_doc_request_reply(out: Dict[str, Any]) -> str:
+    if not out.get('ok') and not out.get('needs_confirm'):
+        return out.get('error') or 'Could not request documents.'
+    names = out.get('document_names') or []
+    listed = ', '.join(names[:8]) if names else 'none'
+    if out.get('sent'):
+        return (
+            f"Requested {len(names)} document(s) on {out.get('loan_request_code')}: {listed}. "
+            'Branch notified. Upload remains on the Documents page — Assist did not attach files.'
+        )
+    if out.get('needs_confirm'):
+        return (
+            f"Preview (not sent) for {out.get('loan_request_code')}: {listed}.\n"
+            'Say **confirm send document request** to notify the branch. Assist will not attach files.'
+        )
+    return out.get('error') or 'No documents to request.'
+
+
+def _loan_args_from_text(text: str) -> Dict[str, Any]:
+    code_m = re.search(r'([A-Z]{1,4}-?\d{3,}|[A-Z]{2,}-\d+)', text, re.I)
+    if code_m:
+        return {'loan_code': code_m.group(1)}
+    return {}
+
+
+def _format_file_blockers_reply(out: Dict[str, Any]) -> str:
+    if not out.get('ok'):
+        return out.get('error') or 'Could not diagnose this file.'
+    code = out.get('loan_request_id') or out.get('loan_request_code') or 'this file'
+    name = out.get('applicant_name') or ''
+    stage = out.get('stage') or ''
+    nxt = out.get('next_action') or {}
+    steps = out.get('next_steps') or []
+    remaining = out.get('remaining_step_count') or 0
+    count = out.get('blocker_count')
+    if nxt:
+        reply = f"Do this now on {code} {name}: {nxt.get('title')}"
+        if nxt.get('detail'):
+            reply += f" ({nxt.get('detail')})"
+        reply += '.\n'
+        if nxt.get('action_url'):
+            reply += f"{nxt.get('action_label') or 'Open'}: {nxt['action_url']}\n"
+        if len(steps) > 1:
+            reply += 'Then:\n'
+            for step in steps[1:]:
+                reply += f"· {step.get('title')}"
+                if step.get('action_url'):
+                    reply += f" — {step['action_url']}"
+                reply += '\n'
+        if remaining:
+            reply += f'{remaining} more after that.\n'
+        reply += f'Stage {stage} · {count} raw blocker(s).\n'
+        reply += 'Say “request missing docs” to preview a branch request (send only after confirm).'
+        return reply.strip()
+    return f'{code} {name} — no blockers flagged. Continue in the UI.'
+
+
+def _format_committee_brief_reply(out: Dict[str, Any]) -> str:
+    if not out.get('ok'):
+        return out.get('error') or 'Could not load committee brief.'
+    code = out.get('loan_request_id') or ''
+    name = out.get('applicant_name') or ''
+    level = (out.get('current_level') or {}).get('name') or '—'
+    reply = (
+        f"Committee brief {code} {name} · level {level} · "
+        f"status {out.get('committee_status') or '—'}.\n"
+        'READ ONLY — do not vote here.\n'
+    )
+    for chip in (out.get('chips') or [])[:6]:
+        reply += f"· {chip.get('label')}\n"
+    for risk in (out.get('risks') or [])[:4]:
+        reply += f"· Risk: {risk}\n"
+    for action in (out.get('required_actions') or [])[:4]:
+        reply += f"· Action: {action}\n"
+    links = out.get('links') or {}
+    if links.get('committee_url'):
+        reply += f"\nVote in UI: {links['committee_url']}"
+    return reply.strip()
+
+
 def _correction_patch(text: str, tlow: str) -> Dict[str, Any]:
     """Parse simple correction phrases into a story patch."""
     patch: Dict[str, Any] = {}
@@ -577,17 +777,31 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
         caps = capabilities_for_user(user)
         if caps.get('can_create_loan'):
             reply = (
-                'I’m DECSI Assist for branch managers.\n'
+                'I’m Credit Intelligence Assist for branch managers.\n'
                 '• Create a bare loan application only (no docs/appraisal/approvals).\n'
                 '• Pipeline reports / Excel.\n'
+                'On an open file: what’s blocking, KYC, docs, appraisal coach, committee brief.\n'
                 'LO can register collateral shells later (no estimation).'
+            )
+        elif caps.get('engineer_focus'):
+            reply = (
+                'I’m Credit Intelligence Assist for engineers.\n'
+                '• Cannot create loans, vote, disburse, or enter valuation in chat.\n'
+                '• On an assigned file: what’s blocking, KYC, docs, appraisal coach.\n'
+                'Estimation stays in the collateral UI.'
+            )
+        elif caps.get('committee_focus'):
+            reply = (
+                'I’m Credit Intelligence Assist for committee voters.\n'
+                '• Read-only: committee brief, blockers, KYC, docs, appraisal coach.\n'
+                '• Never vote here — vote in the committee UI.'
             )
         else:
             reply = (
-                'I’m DECSI Assist for loan officers.\n'
+                'I’m Credit Intelligence Assist for loan officers.\n'
                 '• Cannot create loans, attach documents, estimate, appraisal write, or approve.\n'
                 '• Register collateral shells: building / land / other (no values).\n'
-                '• Document checklist + appraisal coach are read-only.\n'
+                '• On an open file: what’s blocking, KYC, document checklist, request missing docs (confirm to send), appraisal coach.\n'
             )
         return _stub_finish(conversation, text, reply, [], user)
 
@@ -656,11 +870,18 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
         )
         return _stub_finish(conversation, text, reply, tools_audit, user)
 
+    if _wants_doc_request(tlow) or (
+        _wants_confirm(tlow) and any(k in tlow for k in ('document', 'docs'))
+        and 'create' not in tlow
+    ):
+        args = _loan_args_from_text(text)
+        args['confirm'] = _doc_request_confirm(tlow)
+        out = dispatch_tool(user, 'request_documents', args, conversation)
+        tools_audit.append(_tool_audit_entry('request_documents', out))
+        return _stub_finish(conversation, text, _format_doc_request_reply(out), tools_audit, user)
+
     if any(k in tlow for k in ('document', 'checklist', 'upload doc', 'docs for')):
-        code_m = re.search(r'([A-Z]{1,4}-?\d{3,}|[A-Z]{2,}-\d+)', text, re.I)
-        args = {}
-        if code_m:
-            args['loan_code'] = code_m.group(1)
+        args = _loan_args_from_text(text)
         out = dispatch_tool(user, 'document_checklist', args, conversation)
         tools_audit.append(_tool_audit_entry('document_checklist', out))
         if not out.get('ok'):
@@ -693,9 +914,7 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
             kind = 'land'
         elif any(x in tlow for x in ('vehicle', 'machinery', 'equipment', 'other')):
             kind = 'other'
-        code_m = re.search(r'([A-Z]{1,4}-?\d{3,}|[A-Z]{2,}-\d+)', text, re.I)
-        args = {'kind': kind, 'label': 'Shell from chat'}
-        # extract "called X" or "named X"
+        args = {'kind': kind, 'label': 'Shell from chat', **_loan_args_from_text(text)}
         nm = re.search(
             r'(?:called|named|label)\s+([A-Za-z0-9 .,&\'-]{2,60}?)(?:\s+for\b|\s*$)',
             text,
@@ -703,18 +922,13 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
         )
         if nm:
             args['label'] = nm.group(1).strip(' .,')
-        if code_m:
-            args['loan_code'] = code_m.group(1)
         out = dispatch_tool(user, 'register_collateral', args, conversation)
         tools_audit.append(_tool_audit_entry('register_collateral', out))
         reply = out.get('detail') or out.get('error') or str(out)
         return _stub_finish(conversation, text, reply, tools_audit, user)
 
     if any(k in tlow for k in ('appraisal', 'read sheet', 'dscr', 'scorecard', 'missing field', 'coach')):
-        code_m = re.search(r'([A-Z]{1,4}-?\d{3,}|[A-Z]{2,}-\d+)', text, re.I)
-        args = {}
-        if code_m:
-            args['loan_code'] = code_m.group(1)
+        args = _loan_args_from_text(text)
         if 'sheet 1' in tlow or 'sheet1' in tlow:
             args['focus_sheet'] = 1
         elif 'sheet 2' in tlow:
@@ -744,6 +958,25 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
             if out.get('links', {}).get('appraisal_url'):
                 reply += f"\nOpen sheets: {out['links']['appraisal_url']}"
         return _stub_finish(conversation, text, reply, tools_audit, user)
+
+    if _wants_kyc(tlow):
+        out = dispatch_tool(user, 'read_kyc', _loan_args_from_text(text), conversation)
+        tools_audit.append(_tool_audit_entry('read_kyc', out))
+        return _stub_finish(conversation, text, _format_kyc_reply(out), tools_audit, user)
+
+    if _wants_committee_brief(tlow):
+        out = dispatch_tool(user, 'committee_brief', _loan_args_from_text(text), conversation)
+        tools_audit.append(_tool_audit_entry('committee_brief', out))
+        return _stub_finish(
+            conversation, text, _format_committee_brief_reply(out), tools_audit, user,
+        )
+
+    if _wants_file_status(tlow):
+        out = dispatch_tool(user, 'file_blockers', _loan_args_from_text(text), conversation)
+        tools_audit.append(_tool_audit_entry('file_blockers', out))
+        return _stub_finish(
+            conversation, text, _format_file_blockers_reply(out), tools_audit, user,
+        )
 
     if _wants_confirm(tlow):
         from loans.agent_permissions import user_can_create_loan_via_agent
@@ -865,9 +1098,18 @@ def _stub_turn(user, conversation, text: str) -> Dict[str, Any]:
 
         return _stub_finish(conversation, text, reply, tools_audit, user)
 
+    if getattr(conversation, 'last_loan_request_id', None):
+        out = dispatch_tool(user, 'file_blockers', {}, conversation)
+        tools_audit.append(_tool_audit_entry('file_blockers', out))
+        reply = _format_file_blockers_reply(out)
+        if out.get('ok'):
+            reply += '\n\nAsk for docs, appraisal coach, or a committee brief on this file.'
+        return _stub_finish(conversation, text, reply, tools_audit, user)
+
     reply = (
         'Try:\n'
         '• BM: “Loan for Acme PLC, 1.5m ETB” then “confirm”\n'
+        '• On a loan page: “what’s next” / “what’s blocking this file”\n'
         '• LO: “Document checklist for LOAN-CODE” / “Read appraisal for LOAN-CODE”\n'
         '• “Pipeline report” · “Find loan Acme”\n'
         'Or set OPENAI_API_KEY for full ChatGPT tool-calling.'

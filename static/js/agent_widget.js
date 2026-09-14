@@ -1,7 +1,6 @@
 /**
- * Floating DECSI Assist — multi-turn story + reports.
- * Restores conversation history from the server when reopening.
- * "Clear" wipes local conversation cache (sessionStorage / localStorage).
+ * Floating Credit Intelligence Assist — multi-turn story + file copilot.
+ * Desk inbox is server-side (all files). Page loan is context, not a separate cache.
  */
 (function () {
   'use strict';
@@ -22,14 +21,18 @@
     if (!root) return;
 
     var apiUrl = root.getAttribute('data-api-url') || '';
+    var inboxUrl = root.getAttribute('data-inbox-url') || '';
     var historyTpl = root.getAttribute('data-history-url-tpl') || '';
     var csrf = csrfToken(root.getAttribute('data-csrf') || '');
-    var storageKey = 'decsi_agent_convo_v2';
+    var pageLoanId = root.getAttribute('data-page-loan-id') || '';
+    var pageLoanCode = root.getAttribute('data-page-loan-code') || '';
 
     var launcher = root.querySelector('.decsi-agent-launcher');
     var closeBtn = root.querySelector('[data-agent-close]');
     var newBtn = root.querySelector('[data-agent-new]');
-    var clearBtn = root.querySelector('[data-agent-clear]');
+    var inboxBtn = root.querySelector('[data-agent-inbox]');
+    var inboxBox = root.querySelector('[data-agent-inbox-list]');
+    var inboxRows = root.querySelector('[data-agent-inbox-rows]');
     var log = root.querySelector('.decsi-agent-log');
     var form = root.querySelector('.decsi-agent-composer');
     var input = root.querySelector('.decsi-agent-composer textarea');
@@ -42,38 +45,23 @@
 
     var convoId = '';
     var historyLoaded = false;
-    try {
-      convoId = sessionStorage.getItem(storageKey) || '';
-    } catch (e) {}
+    var inboxLoaded = false;
+    var suppressPageBind = false;
+    var inboxItems = [];
 
-    function clearAgentCache() {
-      try {
-        var keys = [];
-        var i;
-        for (i = 0; i < sessionStorage.length; i++) {
-          var k = sessionStorage.key(i);
-          if (k && k.indexOf('decsi_agent') === 0) keys.push(k);
-        }
-        keys.forEach(function (k) {
-          sessionStorage.removeItem(k);
-        });
-        keys = [];
-        for (i = 0; i < localStorage.length; i++) {
-          var lk = localStorage.key(i);
-          if (lk && lk.indexOf('decsi_agent') === 0) keys.push(lk);
-        }
-        keys.forEach(function (k) {
-          localStorage.removeItem(k);
-        });
-      } catch (e) {}
+    function resetLocalThread() {
       convoId = '';
       historyLoaded = false;
+      suppressPageBind = false;
     }
 
     function openPanel() {
       root.classList.add('is-open');
+      if (inboxBox) inboxBox.hidden = false;
       if (input) input.focus();
-      if (convoId && !historyLoaded) {
+      if (!inboxLoaded) {
+        loadInbox(true);
+      } else if (convoId && !historyLoaded) {
         loadHistory();
       }
     }
@@ -155,14 +143,95 @@
     }
 
     function seedWelcome() {
+      if (pageLoanCode) {
+        appendMsg(
+          'assistant',
+          'Credit Intelligence Assist — this file is ' + pageLoanCode + '.\n' +
+            'Ask what’s blocking, the document checklist, appraisal coach, or a committee brief.\n' +
+            'Inbox keeps every file’s chat on this desk. I will not attach documents, write appraisal, vote, or disburse.'
+        );
+        return;
+      }
       appendMsg(
         'assistant',
-        'Hi — I’m DECSI Assist.\n' +
+        'Hi — I’m Credit Intelligence Assist.\n' +
+          '• Inbox lists every chat on this desk (not just this browser tab)\n' +
           '• Branch managers: hold a draft story → confirm to create loans\n' +
-          '• Loan officers: collateral shells (no estimation) · docs checklist read-only\n' +
-          '• Tap Clear (or type “clear cache”) to wipe local chat cache\n\n' +
+          '• Officers / engineers / committee: blockers, KYC, docs, brief — vote and valuation stay in the UI\n\n' +
           'Ask by role — e.g. BM “loan for Acme 1.5m”, LO “register building for LOAN-CODE”.'
       );
+    }
+
+    function renderInbox() {
+      if (!inboxRows) return;
+      inboxRows.innerHTML = '';
+      if (!inboxItems.length) {
+        var empty = document.createElement('div');
+        empty.className = 'decsi-agent-inbox-empty';
+        empty.textContent = 'No saved chats yet. Send a message to start one.';
+        inboxRows.appendChild(empty);
+        return;
+      }
+      inboxItems.forEach(function (item) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'decsi-agent-inbox-item' + (String(item.id) === String(convoId) ? ' is-active' : '');
+        var strong = document.createElement('strong');
+        strong.textContent = item.title || ('Chat #' + item.id);
+        var span = document.createElement('span');
+        span.textContent = item.preview || item.loan_request_code || 'Open thread';
+        btn.appendChild(strong);
+        btn.appendChild(span);
+        btn.addEventListener('click', function () {
+          openConversation(item);
+        });
+        inboxRows.appendChild(btn);
+      });
+    }
+
+    function pickInboxConversation(items) {
+      if (!items || !items.length) return null;
+      if (pageLoanId) {
+        var match = items.filter(function (row) {
+          return String(row.loan_request_id || '') === String(pageLoanId);
+        })[0];
+        if (match) return match;
+      }
+      return items[0];
+    }
+
+    function loadInbox(autoOpen) {
+      if (!inboxUrl) {
+        if (autoOpen) seedWelcome();
+        return;
+      }
+      fetch(inboxUrl, { credentials: 'same-origin' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          inboxLoaded = true;
+          inboxItems = (data && data.ok && data.conversations) ? data.conversations : [];
+          renderInbox();
+          if (!autoOpen) return;
+          var pick = pickInboxConversation(inboxItems);
+          if (pick) {
+            openConversation(pick);
+          } else if (!historyLoaded && log && !log.children.length) {
+            seedWelcome();
+          }
+        })
+        .catch(function () {
+          inboxLoaded = true;
+          if (autoOpen && !historyLoaded) seedWelcome();
+        });
+    }
+
+    function openConversation(item) {
+      if (!item || !item.id) return;
+      convoId = String(item.id);
+      historyLoaded = false;
+      suppressPageBind = !!(item.loan_request_id && String(item.loan_request_id) !== String(pageLoanId || ''));
+      renderInbox();
+      loadHistory();
     }
 
     function loadHistory() {
@@ -174,7 +243,8 @@
         })
         .then(function (data) {
           if (!data || !data.ok) {
-            clearAgentCache();
+            resetLocalThread();
+            seedWelcome();
             return;
           }
           historyLoaded = true;
@@ -188,8 +258,14 @@
             });
           }
           renderStory(data.story);
-          if (statusEl && data.loan_request_code) {
-            statusEl.textContent = 'Linked loan: ' + data.loan_request_code;
+          if (statusEl) {
+            if (data.loan_request_code) {
+              statusEl.textContent = 'Desk chat · ' + data.loan_request_code;
+            } else if (pageLoanCode && !suppressPageBind) {
+              statusEl.textContent = 'This file: ' + pageLoanCode;
+            } else {
+              statusEl.textContent = 'Desk inbox';
+            }
           }
         })
         .catch(function () {
@@ -199,14 +275,19 @@
 
     function resetChat(opts) {
       opts = opts || {};
-      clearAgentCache();
+      resetLocalThread();
       clearLog();
       seedWelcome();
       renderStory(null);
+      renderInbox();
       if (statusEl) {
-        statusEl.textContent = opts.fromClear
-          ? 'Chat cache cleared. Next message starts a new conversation.'
-          : '';
+        if (opts.fromClear) {
+          statusEl.textContent = 'New chat. Next message starts a desk thread.';
+        } else if (pageLoanCode) {
+          statusEl.textContent = 'This file: ' + pageLoanCode;
+        } else {
+          statusEl.textContent = '';
+        }
       }
       if (input) {
         input.value = '';
@@ -247,6 +328,7 @@
         body: JSON.stringify({
           message: text,
           conversation_id: convoId || null,
+          page_loan_id: suppressPageBind ? null : (pageLoanId || null),
         }),
       })
         .then(function (res) {
@@ -259,15 +341,15 @@
           if (data.conversation_id) {
             convoId = String(data.conversation_id);
             historyLoaded = true;
-            try {
-              sessionStorage.setItem(storageKey, convoId);
-            } catch (e) {}
+            loadInbox(false);
           }
           appendMsg('assistant', data.reply || data.error || 'No reply.', data.tools || []);
           renderStory(data.story);
           if (statusEl) {
             if (data.loan_request_code) {
               statusEl.textContent = 'Linked loan: ' + data.loan_request_code;
+            } else if (pageLoanCode) {
+              statusEl.textContent = 'This file: ' + pageLoanCode;
             } else if (data.story && data.story.status === 'ready') {
               statusEl.textContent = 'Draft ready — say confirm to create.';
             } else {
@@ -289,13 +371,14 @@
 
     if (launcher) launcher.addEventListener('click', openPanel);
     if (closeBtn) closeBtn.addEventListener('click', closePanel);
-    if (newBtn) {
-      newBtn.addEventListener('click', function () {
-        resetChat({ fromClear: true });
+    if (inboxBtn && inboxBox) {
+      inboxBtn.addEventListener('click', function () {
+        inboxBox.hidden = !inboxBox.hidden;
+        if (!inboxBox.hidden) loadInbox(false);
       });
     }
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
+    if (newBtn) {
+      newBtn.addEventListener('click', function () {
         resetChat({ fromClear: true });
       });
     }
@@ -323,6 +406,9 @@
 
     if (log && !log.children.length) {
       seedWelcome();
+    }
+    if (statusEl && pageLoanCode && !statusEl.textContent) {
+      statusEl.textContent = 'This file: ' + pageLoanCode;
     }
 
     try {

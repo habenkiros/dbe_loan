@@ -76,16 +76,28 @@ def agent_assistant(request):
     from django.urls import reverse
     from loans.agent import user_can_use_agent
     from loans.agent_chat import resolve_llm_provider
+    from loans.agent_permissions import page_loan_for_user
 
     if not user_can_use_agent(request.user):
         return {'agent_chat_enabled': False}
+    page_loan = None
+    try:
+        page_loan = page_loan_for_user(request.user, request.path)
+    except Exception:
+        page_loan = None
     return {
         'agent_chat_enabled': True,
         'agent_chat_api_url': reverse('agent_chat_api'),
+        'agent_chat_inbox_url': reverse('agent_conversations_list_api'),
         'agent_chat_history_url_tpl': reverse(
             'agent_conversation_api', args=[999999999]
         ).replace('999999999', '{id}'),
         'agent_chat_provider': resolve_llm_provider(),
+        'agent_page_loan_id': page_loan.pk if page_loan else '',
+        'agent_page_loan_code': page_loan.loan_request_id if page_loan else '',
+        'agent_show_request_docs': getattr(request.user, 'role', None) in (
+            'loan_officer', 'credit_loan_officer', 'engineer',
+        ),
     }
 
 

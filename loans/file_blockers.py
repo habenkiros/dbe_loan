@@ -253,6 +253,7 @@ def build_file_blockers(loan_request) -> Dict[str, Any]:
         pass
 
     high = sum(1 for b in resolved if b.get('severity') == 'high')
+    next_plan = rank_next_actions(resolved)
     return {
         'loan_request_id': loan_request.loan_request_id,
         'loan_id': loan_request.id,
@@ -261,10 +262,88 @@ def build_file_blockers(loan_request) -> Dict[str, Any]:
         'blocker_count': len(resolved),
         'high_severity_count': high,
         'blockers': resolved,
+        'next_action': next_plan.get('next_action'),
+        'next_steps': next_plan.get('next_steps') or [],
+        'remaining_step_count': next_plan.get('remaining_step_count') or 0,
         'draft_missing_doc_request': draft_request,
         'agreement_guidance': agreement_hint,
         'guidance': (
-            'Read-only diagnosis. Use the action links for real work. '
-            'Assist will not send document requests, generate agreements, approve, or disburse.'
+            'Lead with next_action. At most three next_steps. '
+            'Use action links for real work. Assist does not attach files, write appraisal, '
+            'vote, or disburse. Document requests send only after an explicit confirm.'
         ),
+    }
+
+
+_SEV_RANK = {'high': 0, 'medium': 1, 'info': 2, 'low': 3}
+_AREA_RANK = {
+    'documents': 0,
+    'kyc': 1,
+    'appraisal': 2,
+    'collateral': 3,
+    'compliance': 4,
+    'committee': 5,
+    'legal': 6,
+    'disbursement': 7,
+    'post_approval': 7,
+}
+
+
+def rank_next_actions(blockers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Collapse same-area blockers into at most three ranked steps."""
+    groups: Dict[tuple, List[Dict[str, Any]]] = {}
+    order: List[tuple] = []
+    for item in blockers or []:
+        area = (item.get('area') or 'other').strip() or 'other'
+        url = item.get('action_url') or ''
+        key = (area, url)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(item)
+
+    steps: List[Dict[str, Any]] = []
+    for key in order:
+        items = groups[key]
+        first = items[0]
+        area = key[0]
+        sev = first.get('severity') or 'medium'
+        for row in items:
+            if _SEV_RANK.get(row.get('severity'), 9) < _SEV_RANK.get(sev, 9):
+                sev = row.get('severity') or sev
+        if area == 'documents' and len(items) > 1:
+            details = []
+            for row in items:
+                msg = row.get('message') or ''
+                if ':' in msg:
+                    details.append(msg.split(':', 1)[1].strip())
+                else:
+                    details.append(msg)
+            title = f'Upload {len(items)} required documents'
+            detail = ', '.join(details[:5])
+            if len(details) > 5:
+                detail += f' (+{len(details) - 5} more)'
+        elif len(items) > 1:
+            title = first.get('message') or first.get('action_label') or area
+            extra = len(items) - 1
+            detail = f'{extra} more in {area}' if extra else ''
+        else:
+            title = first.get('message') or first.get('action_label') or area
+            detail = ''
+        steps.append({
+            'area': area,
+            'severity': sev,
+            'title': title,
+            'detail': detail,
+            'action_label': first.get('action_label') or 'Open',
+            'action_url': first.get('action_url') or '',
+            'item_count': len(items),
+        })
+
+    steps.sort(key=lambda s: (_AREA_RANK.get(s['area'], 9), _SEV_RANK.get(s['severity'], 9)))
+    top = steps[:3]
+    return {
+        'next_action': top[0] if top else None,
+        'next_steps': top,
+        'remaining_step_count': max(0, len(steps) - 3),
     }

@@ -331,10 +331,31 @@ html[data-theme="dark"] .ci-insights {
 }
 
 html[data-theme="dark"] .ci-disclaimer,
-html[data-theme="dark"] .ci-subnav {
+html[data-theme="dark"] .ci-subnav,
+html[data-theme="dark"] .rpt-subnav {
   background: var(--hub-soft);
   border-color: var(--hub-line);
   color: var(--hub-muted);
+}
+html[data-theme="dark"] .rpt-subnav-link:hover {
+  background: var(--hub-card);
+  color: #fff;
+}
+html[data-theme="dark"] .rpt-subnav-link.active {
+  background: #2a2a2a;
+  color: #fff;
+}
+html[data-theme="dark"] .rpt-card {
+  background: var(--hub-card);
+  border-color: var(--hub-line);
+  box-shadow: none;
+}
+html[data-theme="dark"] .rpt-card h3 { color: var(--hub-ink); }
+html[data-theme="dark"] .rpt-card p { color: var(--hub-muted); }
+html[data-theme="dark"] .rpt-note {
+  background: #141c22;
+  border-color: #2a4048;
+  color: #c5d4de;
 }
 
 html[data-theme="dark"] .ci-subnav-link:hover {

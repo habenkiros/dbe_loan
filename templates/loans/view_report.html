@@ -1,33 +1,35 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Pipeline report{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/reports.css' %}">
+{% endblock %}
 {% block content %}
 <div class="lw-wrap" style="max-width:1100px;">
-  <p class="help" style="margin:0 0 0.5rem;">
-    <a href="{% url 'view_report_options' %}">← Reports hub</a>
-    · <a href="{% url 'branch_report_dashboard' %}?{{ request.GET.urlencode }}">Branch dashboard</a>
-  </p>
+  {% include "includes/reports_subnav.html" %}
+
   <h1>Pipeline report</h1>
   <p class="help" style="margin-top:0;"><strong>Your scope:</strong> {{ scope_label|default:"—" }}</p>
 
-  <form method="get" class="lw-panel" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.65rem; align-items:end;">
-    <div>
-      <label for="status"><strong>Status</strong></label><br>
+  <form method="get" class="hub-filters">
+    <div class="form-group">
+      <label for="status">Status</label>
       <select name="status" id="status" class="form-control">
         {% for val, label in status_choices %}
         <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label for="committee_status"><strong>Committee</strong></label><br>
+    <div class="form-group">
+      <label for="committee_status">Committee</label>
       <select name="committee_status" id="committee_status" class="form-control">
         {% for val, label in committee_status_choices %}
         <option value="{{ val }}" {% if filters.committee_status == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label for="disbursement_status"><strong>Disbursement</strong></label><br>
+    <div class="form-group">
+      <label for="disbursement_status">Disbursement</label>
       <select name="disbursement_status" id="disbursement_status" class="form-control">
         {% for val, label in disbursement_status_choices %}
         <option value="{{ val }}" {% if filters.disbursement_status == val %}selected{% endif %}>{{ label }}</option>
@@ -35,8 +37,8 @@
       </select>
     </div>
     {% if can_pick_geo %}
-    <div>
-      <label for="district_id"><strong>District</strong></label><br>
+    <div class="form-group">
+      <label for="district_id">District</label>
       <select name="district_id" id="district_id" class="form-control">
         <option value="">All</option>
         {% for d in districts %}
@@ -44,8 +46,8 @@
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label for="branch_id"><strong>Branch</strong></label><br>
+    <div class="form-group">
+      <label for="branch_id">Branch</label>
       <select name="branch_id" id="branch_id" class="form-control">
         <option value="">All</option>
         {% for b in branches %}
@@ -54,12 +56,12 @@
       </select>
     </div>
     {% endif %}
-    <div>
-      <label for="date_from"><strong>From</strong></label><br>
+    <div class="form-group">
+      <label for="date_from">From</label>
       <input type="date" name="date_from" id="date_from" class="form-control" value="{{ filters.date_from }}">
     </div>
-    <div>
-      <label for="date_to"><strong>To</strong></label><br>
+    <div class="form-group">
+      <label for="date_to">To</label>
       <input type="date" name="date_to" id="date_to" class="form-control" value="{{ filters.date_to }}">
     </div>
     <div class="list-actions list-actions-lg">

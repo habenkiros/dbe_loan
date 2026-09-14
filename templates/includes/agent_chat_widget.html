@@ -5,9 +5,12 @@
   id="decsi-agent-widget"
   class="decsi-agent"
   data-api-url="{{ agent_chat_api_url }}"
+  data-inbox-url="{{ agent_chat_inbox_url }}"
   data-history-url-tpl="{{ agent_chat_history_url_tpl }}"
   data-csrf="{{ csrf_token }}"
   data-provider="{{ agent_chat_provider }}"
+  {% if agent_page_loan_id %}data-page-loan-id="{{ agent_page_loan_id }}"{% endif %}
+  {% if agent_page_loan_code %}data-page-loan-code="{{ agent_page_loan_code }}"{% endif %}
   {% if agent_chat_auto_open %}data-auto-open="1"{% endif %}
 >
   <div class="decsi-agent-panel" role="dialog" aria-label="{{ product_name|default:'Credit Intelligence' }} Assist chat">
@@ -16,17 +19,23 @@
       <div class="decsi-agent-header-text">
         <strong>{{ product_name|default:"Credit Intelligence" }} Assist</strong>
         <span>
-          {% if agent_chat_provider == 'openai' %}Online · story + reports
+          {% if agent_page_loan_code %}This file · {{ agent_page_loan_code }}
+          {% elif agent_chat_provider == 'openai' %}Online · story + reports
           {% else %}Offline · story + reports (add OPENAI_API_KEY for full AI)
           {% endif %}
         </span>
       </div>
       <div class="decsi-agent-header-actions">
-        <button type="button" class="decsi-agent-icon-btn" data-agent-clear title="Clear chat cache" aria-label="Clear chat cache">Clear</button>
+        <button type="button" class="decsi-agent-icon-btn" data-agent-inbox title="Desk inbox" aria-label="Desk inbox">Inbox</button>
         <button type="button" class="decsi-agent-icon-btn" data-agent-new title="New chat" aria-label="New chat">＋</button>
         <button type="button" class="decsi-agent-icon-btn" data-agent-close title="Minimize" aria-label="Minimize chat">×</button>
       </div>
     </header>
+
+    <div class="decsi-agent-inbox" data-agent-inbox-list hidden>
+      <div class="decsi-agent-inbox-head">Desk chats</div>
+      <div class="decsi-agent-inbox-rows" data-agent-inbox-rows></div>
+    </div>
 
     <div class="decsi-agent-story" id="decsi-agent-story" hidden>
       <div class="decsi-agent-story-head">
@@ -38,15 +47,26 @@
 
     <div class="decsi-agent-log" aria-live="polite"></div>
     <div class="decsi-agent-typing" aria-hidden="true"><i></i><i></i><i></i></div>
-    <div class="decsi-agent-chips">
+    <div class="decsi-agent-chips" data-agent-chips-home {% if agent_page_loan_id %}hidden{% endif %}>
       <button type="button" class="decsi-agent-chip" data-agent-chip="Draft a corporate loan for Demo Trade PLC, amount 2,000,000 ETB working capital — hold story only, do not create yet">Hold draft (BM)</button>
       <button type="button" class="decsi-agent-chip" data-agent-chip="Confirm create the loan file">Confirm create</button>
       <button type="button" class="decsi-agent-chip" data-agent-chip="Register building named Main site for the linked loan">Register building</button>
       <button type="button" class="decsi-agent-chip" data-agent-chip="Document checklist for the linked loan">Docs (read-only)</button>
       <button type="button" class="decsi-agent-chip" data-agent-chip="Pipeline report for my scope with Excel export link">Report</button>
     </div>
+    <div class="decsi-agent-chips" data-agent-chips-file {% if not agent_page_loan_id %}hidden{% endif %}>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="What's blocking this file?">What's blocking</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="KYC / identity for this file">KYC</button>
+      {% if agent_show_request_docs %}
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Request missing docs">Request docs</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Confirm send document request">Confirm send</button>
+      {% endif %}
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Document checklist for this file">Docs</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Appraisal coach for this file">Appraisal coach</button>
+      <button type="button" class="decsi-agent-chip" data-agent-chip="Committee brief for this file">Committee brief</button>
+    </div>
     <form class="decsi-agent-composer" autocomplete="off">
-      <textarea rows="1" placeholder="Chat: draft, correct, confirm, or ask for a report…" aria-label="Message"></textarea>
+      <textarea rows="1" placeholder="{% if agent_page_loan_code %}Ask about this file — blockers, docs, appraisal…{% else %}Chat: draft, correct, confirm, or ask for a report…{% endif %}" aria-label="Message"></textarea>
       <button type="submit" class="decsi-agent-send" aria-label="Send">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
       </button>

@@ -3,13 +3,11 @@
 {% block title %}Branch reporting dashboard{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/reports.css' %}">
 {% endblock %}
 {% block content %}
 <div class="dash">
-  <p class="help" style="margin:0 0 0.75rem;">
-    <a href="{% url 'view_report_options' %}">← Reports hub</a>
-    · <a href="{% url 'view_report' %}?{{ querystring }}">Pipeline table</a>
-  </p>
+  {% include "includes/reports_subnav.html" %}
 
   <section class="dash-hero">
     <div>
@@ -27,17 +25,17 @@
     </div>
   </section>
 
-  <form method="get" class="dash-quicklinks" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.65rem; align-items:end;">
-    <div>
-      <label for="status"><strong>Status</strong></label><br>
+  <form method="get" class="hub-filters">
+    <div class="form-group">
+      <label for="status">Status</label>
       <select name="status" id="status" class="form-control">
         {% for val, label in status_choices %}
         <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label for="committee_status"><strong>Committee</strong></label><br>
+    <div class="form-group">
+      <label for="committee_status">Committee</label>
       <select name="committee_status" id="committee_status" class="form-control">
         {% for val, label in committee_status_choices %}
         <option value="{{ val }}" {% if filters.committee_status == val %}selected{% endif %}>{{ label }}</option>
@@ -45,8 +43,8 @@
       </select>
     </div>
     {% if can_pick_geo %}
-    <div>
-      <label for="district_id"><strong>District</strong></label><br>
+    <div class="form-group">
+      <label for="district_id">District</label>
       <select name="district_id" id="district_id" class="form-control">
         <option value="">All in scope</option>
         {% for d in districts %}
@@ -54,8 +52,8 @@
         {% endfor %}
       </select>
     </div>
-    <div>
-      <label for="branch_id"><strong>Branch</strong></label><br>
+    <div class="form-group">
+      <label for="branch_id">Branch</label>
       <select name="branch_id" id="branch_id" class="form-control">
         <option value="">All in scope</option>
         {% for b in branches %}
@@ -64,12 +62,12 @@
       </select>
     </div>
     {% endif %}
-    <div>
-      <label for="date_from"><strong>From</strong></label><br>
+    <div class="form-group">
+      <label for="date_from">From</label>
       <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
     </div>
-    <div>
-      <label for="date_to"><strong>To</strong></label><br>
+    <div class="form-group">
+      <label for="date_to">To</label>
       <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
     </div>
     <div class="list-actions list-actions-lg">

@@ -124,3 +124,5 @@ class HubOfficerNavTests(TestCase):
         self.assertContains(home, 'hub-nav-mobile-account')
         self.assertContains(home, 'hub-user-notify')
         self.assertContains(home, reverse('loan_notifications_list'))
+        self.assertContains(home, 'Reports catalog')
+        self.assertContains(home, 'Open reports')

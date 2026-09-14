@@ -177,6 +177,7 @@ def agent_chat_api(request):
         body = {
             'message': request.POST.get('message', ''),
             'conversation_id': request.POST.get('conversation_id'),
+            'page_loan_id': request.POST.get('page_loan_id'),
         }
 
     message = (body.get('message') or '').strip()
@@ -195,6 +196,9 @@ def agent_chat_api(request):
             title=(message[:80] + ('…' if len(message) > 80 else '')),
             llm_provider=resolve_llm_provider(),
         )
+
+    from loans.agent_permissions import bind_page_loan
+    bind_page_loan(request.user, conversation, body.get('page_loan_id'))
 
     result = run_chat_turn(request.user, conversation, message)
     status = 200 if result.get('ok') or result.get('reply') else 400
@@ -221,6 +225,57 @@ def agent_chat_api(request):
 def story_for_api_safe(conversation):
     from loans.agent_story import conversation_story, story_for_api
     return story_for_api(conversation_story(conversation))
+
+
+def _conversation_preview(conversation, limit=140) -> str:
+    ui = conversation.ui_messages or []
+    for msg in reversed(ui):
+        text = (msg.get('content') or '').strip()
+        if text:
+            return text[:limit]
+    return (conversation.title or '').strip()[:limit]
+
+
+def _conversation_title(conversation) -> str:
+    title = (conversation.title or '').strip()
+    loan = conversation.last_loan_request
+    if loan:
+        code = loan.loan_request_id or f'Loan {loan.pk}'
+        if title and title.lower() not in code.lower():
+            return f'{code} · {title[:60]}'
+        return code
+    return title or 'Desk chat'
+
+
+@login_required
+@user_passes_test(_agent_access)
+@require_http_methods(['GET'])
+def agent_conversations_list_api(request):
+    """Desk inbox: this user's Assist threads (all files), newest first."""
+    qs = (
+        AgentConversation.objects.filter(user=request.user)
+        .select_related('last_loan_request')
+        [:40]
+    )
+    items = []
+    for convo in qs:
+        ui = convo.ui_messages or []
+        story = convo.story if isinstance(convo.story, dict) else {}
+        if not ui and not story.get('applicant_name') and not convo.last_loan_request_id:
+            continue
+        items.append({
+            'id': convo.pk,
+            'title': _conversation_title(convo),
+            'preview': _conversation_preview(convo),
+            'updated_at': convo.updated_at.isoformat() if convo.updated_at else '',
+            'loan_request_id': convo.last_loan_request_id,
+            'loan_request_code': (
+                convo.last_loan_request.loan_request_id
+                if convo.last_loan_request_id
+                else None
+            ),
+        })
+    return JsonResponse({'ok': True, 'conversations': items})
 
 
 @login_required

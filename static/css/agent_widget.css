@@ -104,6 +104,74 @@
   flex-shrink: 0;
 }
 
+.decsi-agent-inbox {
+  flex-shrink: 0;
+  max-height: 9.5rem;
+  overflow: auto;
+  background: #f4f8f5;
+  border-bottom: 1px solid var(--da-border);
+}
+
+.decsi-agent-inbox[hidden] {
+  display: none !important;
+}
+
+.decsi-agent-inbox-head {
+  padding: 0.4rem 0.75rem 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #4a6354;
+}
+
+.decsi-agent-inbox-rows {
+  padding: 0.15rem 0.5rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.decsi-agent-inbox-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.decsi-agent-inbox-item:hover,
+.decsi-agent-inbox-item.is-active {
+  border-color: var(--da-border);
+  background: var(--da-green-soft);
+}
+
+.decsi-agent-inbox-item strong {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--da-green);
+}
+
+.decsi-agent-inbox-item span {
+  display: block;
+  font-size: 0.7rem;
+  color: #5c6f64;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.decsi-agent-inbox-empty {
+  padding: 0.35rem 0.75rem 0.55rem;
+  font-size: 0.75rem;
+  color: #5c6f64;
+}
+
 .decsi-agent-header-avatar {
   width: 2.25rem;
   height: 2.25rem;
@@ -304,6 +372,10 @@
   background: #fff;
   border-top: 1px solid #e8efe9;
   flex-shrink: 0;
+}
+
+.decsi-agent-chips[hidden] {
+  display: none !important;
 }
 
 .decsi-agent-chip {

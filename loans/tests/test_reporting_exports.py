@@ -88,12 +88,49 @@ class ReportingExportTests(TestCase):
     def test_branch_dashboard_and_hub(self):
         client = Client()
         client.force_login(self.bm)
-        self.assertEqual(client.get(reverse('view_report_options')).status_code, 200)
+        hub = client.get(reverse('view_report_options'))
+        self.assertEqual(hub.status_code, 200)
+        self.assertContains(hub, 'Pipeline table')
+        self.assertContains(hub, 'Export Excel')
+        self.assertContains(hub, 'Portfolio dashboard')
+        self.assertContains(hub, 'Scope snapshot')
+        self.assertContains(hub, 'rpt-subnav')
         dash = client.get(reverse('branch_report_dashboard'))
         self.assertEqual(dash.status_code, 200)
         self.assertContains(dash, 'Portfolio reporting dashboard')
         self.assertContains(dash, 'LR-REP-1')
         self.assertContains(dash, 'Report Branch')  # scope label
+        self.assertContains(dash, 'rpt-subnav')
+        table = client.get(reverse('view_report'))
+        self.assertEqual(table.status_code, 200)
+        self.assertContains(table, 'Pipeline report')
+        self.assertContains(table, 'hub-filters')
+
+    def test_legal_officer_has_no_reports_nav(self):
+        from loans.nav import nav_flags_for
+
+        legal = User.objects.create_user(
+            username='rep_legal', password='pass', phone_number='0911999011',
+            role='legal_officer',
+        )
+        self.assertFalse(nav_flags_for(legal)['nav_show_reports'])
+        client = Client()
+        client.force_login(legal)
+        resp = client.get(reverse('view_report_options'))
+        self.assertNotEqual(resp.status_code, 200)
+
+    def test_catalog_helper_has_core_cards(self):
+        from loans.reporting import report_catalog_for
+
+        titles = [
+            card['title']
+            for section in report_catalog_for(self.bm)
+            for card in section['cards']
+        ]
+        self.assertIn('Pipeline table', titles)
+        self.assertIn('Export Excel', titles)
+        self.assertIn('Portfolio dashboard', titles)
+        self.assertIn('Credit Intelligence', titles)
 
     def test_appraisal_pack_excel(self):
         client = Client()

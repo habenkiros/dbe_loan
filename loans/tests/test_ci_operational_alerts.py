@@ -91,6 +91,8 @@ class DifferentiatorAlertsTests(TestCase):
         self.assertGreaterEqual(data['blocker_count'], 1)
         self.assertTrue(data['draft_missing_doc_request'])
         self.assertIn('National ID Diff', data['draft_missing_doc_request'])
+        self.assertTrue(data.get('next_action'))
+        self.assertLessEqual(len(data.get('next_steps') or []), 3)
 
         out = dispatch_tool(
             self.lo,

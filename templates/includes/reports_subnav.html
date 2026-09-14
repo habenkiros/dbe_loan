@@ -1,0 +1,5 @@
+<nav class="rpt-subnav" aria-label="Reports sections">
+  <a href="{% url 'view_report_options' %}" class="rpt-subnav-link{% if reports_nav_active == 'hub' %} active{% endif %}">Hub</a>
+  <a href="{% url 'view_report' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="rpt-subnav-link{% if reports_nav_active == 'table' %} active{% endif %}">Table</a>
+  <a href="{% url 'branch_report_dashboard' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="rpt-subnav-link{% if reports_nav_active == 'dashboard' %} active{% endif %}">Dashboard</a>
+</nav>

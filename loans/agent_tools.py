@@ -24,6 +24,7 @@ from loans.agent_permissions import (
     user_can_manage_documents_via_agent,
     user_can_work_appraisal_via_agent,
     user_may_read_appraisal,
+    user_may_request_docs_via_agent,
     user_may_write_loan_docs,
 )
 from loans.agent_story import (
@@ -295,6 +296,53 @@ TOOL_SPECS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'read_kyc',
+            'description': (
+                'Read-only KYC / identity case for a loan: band, score, parties, Fayda/TIN verify, '
+                'face/liveness, UBO gap. Use when the officer asks if the customer is verified. '
+                'Does not call Fayda, store biometrics, or freeze the file.'
+            ),
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'loan_code': {'type': 'string'},
+                    'loan_id': {'type': 'integer'},
+                },
+                'additionalProperties': False,
+            },
+        },
+    },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'request_documents',
+            'description': (
+                'Request missing checklist documents for a loan (same as the loan-detail Request button). '
+                'Does NOT attach or verify files. First call with confirm=false to preview names. '
+                'Send only when the officer explicitly confirms (confirm=true).'
+            ),
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'loan_code': {'type': 'string'},
+                    'loan_id': {'type': 'integer'},
+                    'confirm': {
+                        'type': 'boolean',
+                        'description': 'false = preview only; true = record requests and notify branch',
+                    },
+                    'document_type_ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'description': 'Optional type ids. Empty = all missing required types.',
+                    },
+                },
+                'additionalProperties': False,
+            },
+        },
+    },
 ]
 
 
@@ -550,8 +598,8 @@ def _tool_bootstrap_loan(user, args: Dict[str, Any], conversation) -> Dict[str, 
 
 
 def _tool_document_checklist(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
-    if not user_can_manage_documents_via_agent(user):
-        return {'ok': False, 'error': 'Not allowed to manage documents.'}
+    if not user_can_use_agent(user):
+        return {'ok': False, 'error': 'Not allowed to read documents.'}
     loan, err = resolve_loan_for_agent(
         user,
         loan_code=args.get('loan_code') or '',
@@ -586,6 +634,7 @@ def _tool_document_checklist(user, args: Dict[str, Any], conversation) -> Dict[s
         else:
             missing_real.append(dt.name)
         items.append({
+            'document_type_id': dt.id,
             'document_type': dt.name,
             'required': bool(item.is_required),
             'status': status,
@@ -837,6 +886,165 @@ def _tool_read_appraisal(user, args: Dict[str, Any], conversation) -> Dict[str, 
     }
 
 
+def _tool_read_kyc(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
+    loan, err = resolve_loan_for_agent(
+        user,
+        loan_code=args.get('loan_code') or '',
+        loan_pk=args.get('loan_id'),
+        conversation=conversation,
+    )
+    if err:
+        return {'ok': False, 'error': err}
+    from loans.kyc_identity import case_payload, get_identity_case, identity_committee_blockers
+
+    if conversation:
+        conversation.last_loan_request_id = loan.pk
+    try:
+        detail_url = reverse('loan_request_detail', args=[loan.pk])
+    except Exception:
+        detail_url = ''
+    case = get_identity_case(loan_request=loan)
+    if case is None:
+        return {
+            'ok': True,
+            'present': False,
+            'loan_request_code': loan.loan_request_id,
+            'loan_request_id': loan.pk,
+            'applicant_name': loan.applicant_name,
+            'message': 'No identity case on this file yet. Open the loan and complete the KYC band.',
+            'links': {'detail_url': detail_url},
+            'guidance': 'READ ONLY. Assist does not call Fayda or capture biometrics.',
+        }
+    payload = case_payload(loan) or {}
+    blockers = []
+    try:
+        blockers = identity_committee_blockers(loan) or []
+    except Exception:
+        blockers = payload.get('blockers') or []
+    applicant = next(
+        (p for p in (payload.get('parties') or []) if p.get('role_key') == 'applicant'),
+        None,
+    )
+    return {
+        'ok': True,
+        'present': True,
+        'loan_request_code': loan.loan_request_id,
+        'loan_request_id': loan.pk,
+        'applicant_name': loan.applicant_name,
+        'band': payload.get('band'),
+        'band_label': payload.get('band_label'),
+        'score': payload.get('score'),
+        'needs_ubo': payload.get('needs_ubo'),
+        'applicant': applicant,
+        'parties': payload.get('parties') or [],
+        'blockers': blockers,
+        'biometric': payload.get('biometric') or {},
+        'links': {'detail_url': detail_url},
+        'guidance': (
+            'READ ONLY identity snapshot. Do not invent Fayda/TIN results. '
+            'Officer verifies in the KYC band on the loan page.'
+        ),
+    }
+
+
+def _tool_request_documents(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
+    loan, err = resolve_loan_for_agent(
+        user,
+        loan_code=args.get('loan_code') or '',
+        loan_pk=args.get('loan_id'),
+        conversation=conversation,
+    )
+    if err:
+        return {'ok': False, 'error': err}
+    if not user_may_request_docs_via_agent(user, loan):
+        return {
+            'ok': False,
+            'error': (
+                'Only the assigned loan officer (or covering delegate) can send a document request. '
+                'Assist will not attach or verify files.'
+            ),
+        }
+    from django.utils import timezone
+    from loans.document_checklist import checklist_for_loan, checklist_type_ids
+    from loans.models import LoanApplicationDocumentType, LoanDocumentRequest, LoanRequestDocument
+    from loans.services.document_notifications import notify_document_requested
+
+    checklist = checklist_for_loan(loan)
+    allowed_ids = set(checklist_type_ids(checklist))
+    wanted_ids = args.get('document_type_ids') or []
+    parsed_ids: List[int] = []
+    for raw in wanted_ids:
+        try:
+            parsed_ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    if not parsed_ids:
+        for item in checklist:
+            if not item.is_required:
+                continue
+            dt = item.document_type
+            doc = loan.application_documents.filter(document_type=dt).order_by('-id').first()
+            if doc is None or doc.auth_status != LoanRequestDocument.AUTH_VERIFIED:
+                parsed_ids.append(dt.id)
+    parsed_ids = [i for i in parsed_ids if i in allowed_ids]
+    types = list(LoanApplicationDocumentType.objects.filter(pk__in=parsed_ids))
+    names = [dt.name for dt in types]
+    try:
+        upload_url = reverse('upload_loan_request_documents', args=[loan.pk])
+        detail_url = reverse('loan_request_detail', args=[loan.pk])
+    except Exception:
+        upload_url = detail_url = ''
+    preview = {
+        'ok': True,
+        'sent': False,
+        'needs_confirm': True,
+        'loan_request_code': loan.loan_request_id,
+        'loan_request_id': loan.pk,
+        'applicant_name': loan.applicant_name,
+        'document_type_ids': [dt.id for dt in types],
+        'document_names': names,
+        'links': {'upload_url': upload_url, 'detail_url': detail_url},
+        'guidance': (
+            'Preview only. Call again with confirm=true after the officer says to send. '
+            'Does not attach files.'
+        ),
+    }
+    if not types:
+        preview['ok'] = False
+        preview['error'] = 'No missing checklist documents to request.'
+        preview['needs_confirm'] = False
+        return preview
+    if not args.get('confirm'):
+        return preview
+
+    recorded = []
+    for dt in types:
+        LoanDocumentRequest.objects.update_or_create(
+            loan_request=loan,
+            document_type=dt,
+            defaults={'requested_by': user, 'requested_at': timezone.now()},
+        )
+        recorded.append(dt)
+    notify_document_requested(loan, recorded, user)
+    if conversation:
+        conversation.last_loan_request_id = loan.pk
+    return {
+        'ok': True,
+        'sent': True,
+        'needs_confirm': False,
+        'loan_request_code': loan.loan_request_id,
+        'loan_request_id': loan.pk,
+        'applicant_name': loan.applicant_name,
+        'document_names': [dt.name for dt in recorded],
+        'notified': True,
+        'links': {'upload_url': upload_url, 'detail_url': detail_url},
+        'guidance': (
+            'Request recorded and branch notified. Officers still upload real files on the Documents page. '
+            'Assist did not attach or verify anything.'
+        ),
+    }
+
+
 def _tool_committee_brief(user, args: Dict[str, Any], conversation) -> Dict[str, Any]:
     from loans.agent_permissions import user_may_read_appraisal
     from loans.committee import user_can_view_committee_loan
@@ -1020,6 +1228,10 @@ def dispatch_tool(user, name: str, arguments: Dict[str, Any], conversation=None)
         return {'ok': False, 'error': f'Tool {name} is illegal for Assist in production.'}
     if name == 'read_appraisal':
         return _tool_read_appraisal(user, args, conversation)
+    if name == 'read_kyc':
+        return _tool_read_kyc(user, args, conversation)
+    if name == 'request_documents':
+        return _tool_request_documents(user, args, conversation)
     if name == 'committee_brief':
         return _tool_committee_brief(user, args, conversation)
     if name == 'pipeline_report':

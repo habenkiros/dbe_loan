@@ -4389,6 +4389,7 @@ def view_report(request):
             'date_from': params.get('date_from', ''),
             'date_to': params.get('date_to', ''),
         },
+        'reports_nav_active': 'table',
         **choices,
     })
 
@@ -4436,7 +4437,7 @@ def generate_report(request):
 def view_report_options(request):
     from .reporting import (
         branch_dashboard_stats, engineering_workload_stats, filter_choices_for_user,
-        filtered_reporting_queryset, is_engineering_reporter,
+        filtered_reporting_queryset, is_engineering_reporter, report_catalog_for,
     )
 
     choices = filter_choices_for_user(request.user)
@@ -4449,6 +4450,8 @@ def view_report_options(request):
         **choices,
         'stats': stats,
         'eng_stats': eng_stats,
+        'catalog_sections': report_catalog_for(request.user),
+        'reports_nav_active': 'hub',
     })
 
 
@@ -4483,6 +4486,7 @@ def branch_report_dashboard(request):
             'date_to': params.get('date_to', ''),
         },
         'querystring': request.GET.urlencode(),
+        'reports_nav_active': 'dashboard',
         **choices,
     })
 

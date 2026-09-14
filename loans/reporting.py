@@ -124,6 +124,131 @@ def report_scope_label(user) -> str:
     return 'No scope assigned'
 
 
+def _catalog_card(
+    *,
+    title: str,
+    blurb: str,
+    href: Optional[str] = None,
+    download_href: Optional[str] = None,
+    open_label: str = 'Open',
+    download_label: str = 'Download',
+    icon: str = 'report',
+) -> Dict[str, Any]:
+    return {
+        'title': title,
+        'blurb': blurb,
+        'href': href,
+        'download_href': download_href,
+        'open_label': open_label if href else '',
+        'download_label': download_label if download_href else '',
+        'icon': icon,
+    }
+
+
+def report_catalog_for(user) -> List[Dict[str, Any]]:
+    """Role-gated catalog sections for the Reports hub (existing destinations only)."""
+    from django.urls import reverse
+
+    from loans.cooperative_performance import user_can_access_cooperative_performance
+    from loans.directorate import DESK_MIS, user_can_access_directorate
+    from loans.views_fund import can_view_fund_mis
+
+    table = reverse('view_report')
+    excel = reverse('generate_report')
+    csv_href = f'{excel}?format=csv'
+    dashboard = reverse('branch_report_dashboard')
+
+    sections: List[Dict[str, Any]] = [
+        {
+            'title': 'Pipeline',
+            'cards': [
+                _catalog_card(
+                    title='Pipeline table',
+                    blurb='Browse loans in your scope with status, committee, and disbursement filters.',
+                    href=table,
+                    download_href=excel,
+                    download_label='Excel',
+                    icon='list',
+                ),
+                _catalog_card(
+                    title='Export Excel',
+                    blurb='Workbook with Pipeline and By branch sheets for everything in your scope.',
+                    download_href=excel,
+                    download_label='Excel',
+                    icon='download',
+                ),
+                _catalog_card(
+                    title='Export CSV',
+                    blurb='Flat pipeline file for tools that cannot open Excel.',
+                    download_href=csv_href,
+                    download_label='CSV',
+                    icon='csv',
+                ),
+            ],
+        },
+        {
+            'title': 'Portfolio',
+            'cards': [
+                _catalog_card(
+                    title='Portfolio dashboard',
+                    blurb='KPIs, branch breakdown, and recent files — same filters as the table.',
+                    href=dashboard,
+                    download_href=excel,
+                    download_label='Excel',
+                    icon='dashboard',
+                ),
+            ],
+        },
+    ]
+
+    related: List[Dict[str, Any]] = [
+        _catalog_card(
+            title='Credit Intelligence',
+            blurb='Charts and watchlist for the same scope — analytics, not a spreadsheet.',
+            href=reverse('credit_intelligence_overview'),
+            icon='summary',
+        ),
+    ]
+    if is_engineering_reporter(user):
+        related.extend([
+            _catalog_card(
+                title='Engineering QA',
+                blurb='Collateral review queue for files sent to engineering.',
+                href=reverse('collateral:engineering_qa_queue'),
+                icon='building',
+            ),
+            _catalog_card(
+                title='Collateral dashboard',
+                blurb='Buildings, valuation, and field visits on loans in your queue.',
+                href=reverse('collateral:dashboard'),
+                icon='building',
+            ),
+        ])
+    if user_can_access_directorate(user, DESK_MIS):
+        related.append(_catalog_card(
+            title='PM & MIS',
+            blurb='Directorate queues: tagged funds, wholesale, utilization, origination SLA.',
+            href=reverse('mis_desk'),
+            icon='report',
+        ))
+    if can_view_fund_mis(user):
+        related.append(_catalog_card(
+            title='Funding-window MIS',
+            blurb='Donor envelopes, covenants, and fund-tagged files.',
+            href=reverse('financing_fund_dashboard'),
+            icon='money',
+        ))
+    if user_can_access_cooperative_performance(user):
+        related.append(_catalog_card(
+            title='Branch performance',
+            blurb='Cooperative intake aging and branch throughput.',
+            href=reverse('cooperative_performance'),
+            icon='report',
+        ))
+    sections.append({'title': 'Related desks', 'cards': related})
+    return sections
+
+
 def reporting_base_queryset(user) -> QuerySet:
     from loans.models import LoanRequest
 

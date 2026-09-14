@@ -20,6 +20,8 @@ AGENT_ROLES = (
     'branch_manager',
     'loan_officer',
     'credit_loan_officer',
+    'engineer',
+    'engineering_head',
     'admin',
     'superadmin',
 )

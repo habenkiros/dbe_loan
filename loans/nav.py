@@ -58,7 +58,6 @@ REPORTS_ROLES: Set[str] = {
     'operation_manager',
     'finance_manager',
     'risk_compliance',
-    'legal_officer',
     'accountant',
     'district_manager',
     'ceo',

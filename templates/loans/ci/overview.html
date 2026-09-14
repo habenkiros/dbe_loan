@@ -70,10 +70,6 @@
       {% url 'post_approval_queue' as pa_url %}
       {% include "includes/list_action.html" with href=pa_url icon="money" label="Post-approval" tone="orange" only %}
       {% endif %}
-      {% if nav_show_reports %}
-      {% url 'view_report_options' as br_url %}
-      {% include "includes/list_action.html" with href=br_url icon="summary" label="Reports" tone="blue" only %}
-      {% endif %}
     </div>
   </div>
   {% endif %}
@@ -89,6 +85,21 @@
       {% include "includes/list_action.html" with href=col_url icon="money" label="Collections" tone="orange" only %}
       {% url 'rehab_desk' as rehab_url %}
       {% include "includes/list_action.html" with href=rehab_url icon="report" label="Rehab" tone="green" only %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if nav_show_reports %}
+  <div class="dash-quicklinks">
+    <h3>Reports catalog</h3>
+    <p>Pipeline table, portfolio dashboard, and Excel for your scope — one click from Home.</p>
+    <div class="dash-actions list-actions list-actions-lg" style="margin:0;">
+      {% url 'view_report_options' as br_url %}
+      {% include "includes/list_action.html" with href=br_url icon="summary" label="Open reports" tone="green" only %}
+      {% url 'view_report' as table_url %}
+      {% include "includes/list_action.html" with href=table_url icon="list" label="Pipeline table" tone="blue" only %}
+      {% url 'generate_report' as xlsx_url %}
+      {% include "includes/list_action.html" with href=xlsx_url icon="download" label="Export Excel" tone="orange" only %}
     </div>
   </div>
   {% endif %}

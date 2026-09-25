@@ -1,0 +1,122 @@
+================================================================================
+  DBE Credit Intelligence — START HERE (easy install)
+  Development Bank of Ethiopia
+================================================================================
+
+You need: an Ubuntu server with Docker already installed, and internet
+(first time only, to download app images).
+
+License included: valid until 25 October 2026, then the app stops.
+
+
+--------------------------------------------------------------------------------
+STEP 1 — Open a terminal on the server
+--------------------------------------------------------------------------------
+
+Log in to the Ubuntu server, then open Terminal.
+
+
+--------------------------------------------------------------------------------
+STEP 2 — Download the project (pick ONE way)
+--------------------------------------------------------------------------------
+
+--- Option A: from GitHub (recommended) ---
+
+  sudo mkdir -p /opt
+  cd /opt
+  sudo git clone https://github.com/habenkiros/dbe_loan.git
+  sudo chown -R $USER:$USER /opt/dbe_loan
+  cd /opt/dbe_loan
+
+--- Option B: from USB ---
+
+  sudo mkdir -p /opt
+  sudo cp -a /media/*/dbe_loan /opt/dbe_loan
+  sudo chown -R $USER:$USER /opt/dbe_loan
+  cd /opt/dbe_loan
+
+  (If that path fails, type:  ls /media/   then copy from the folder you see.)
+
+
+--------------------------------------------------------------------------------
+STEP 3 — Start the application (one command)
+--------------------------------------------------------------------------------
+
+  cd /opt/dbe_loan
+  chmod +x INSTALL_ON_SERVER.sh
+  ./INSTALL_ON_SERVER.sh
+
+Wait until it says DONE.
+When it asks to create an admin user, type  Y  and follow the prompts
+(username, email, password). Remember that password.
+
+
+--------------------------------------------------------------------------------
+STEP 4 — Find the server address
+--------------------------------------------------------------------------------
+
+  hostname -I
+
+You will see something like:  10.47.137.168
+That number is SERVER_IP. Use it below.
+
+
+--------------------------------------------------------------------------------
+STEP 5 — Open in a web browser (on any PC on the same network)
+--------------------------------------------------------------------------------
+
+  Staff login:     http://SERVER_IP:8000/hub/login/
+  Public apply:    http://SERVER_IP:8000/
+  License check:   http://SERVER_IP:8000/license/
+
+Example:  http://10.47.137.168:8000/hub/login/
+
+
+--------------------------------------------------------------------------------
+IF THE BROWSER SAYS "DisallowedHost" OR WILL NOT OPEN
+--------------------------------------------------------------------------------
+
+  cd /opt/dbe_loan
+  nano .env
+
+Find these two lines and put your real SERVER_IP (from Step 4):
+
+  ALLOWED_HOSTS=localhost,127.0.0.1,SERVER_IP
+  SITE_URL=http://SERVER_IP:8000
+
+Save:  Ctrl+O  then Enter, then exit:  Ctrl+X
+
+Then:
+
+  docker compose restart web
+
+
+--------------------------------------------------------------------------------
+USEFUL COMMANDS LATER
+--------------------------------------------------------------------------------
+
+  cd /opt/dbe_loan
+
+  docker compose ps              # is it running?
+  docker compose logs -f web     # see messages (Ctrl+C to stop watching)
+  docker compose restart web     # restart the app
+  docker compose down            # stop everything
+  docker compose up -d           # start again
+
+
+--------------------------------------------------------------------------------
+LICENSE
+--------------------------------------------------------------------------------
+
+  Pilot license ends on:  25 October 2026
+  After that date the product locks until Seqela sends a new key.
+
+  Check status:  http://SERVER_IP:8000/license/
+
+
+--------------------------------------------------------------------------------
+NEED HELP?
+--------------------------------------------------------------------------------
+
+  Contact Seqela with: server hostname, and a screenshot of /license/
+================================================================================

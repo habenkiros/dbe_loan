@@ -1,0 +1,35 @@
+DBE Credit Intelligence — short command list
+============================================
+Full easy guide: open START_HERE.txt first.
+
+
+1) Get the project
+------------------
+sudo mkdir -p /opt && cd /opt
+sudo git clone https://github.com/habenkiros/dbe_loan.git
+sudo chown -R $USER:$USER /opt/dbe_loan
+cd /opt/dbe_loan
+
+
+2) Install / start (does .env, Docker start, migrate, admin)
+-----------------------------------------------------------
+chmod +x INSTALL_ON_SERVER.sh
+./INSTALL_ON_SERVER.sh
+
+
+3) Open in browser (replace SERVER_IP — run: hostname -I)
+---------------------------------------------------------
+http://SERVER_IP:8000/hub/login/
+http://SERVER_IP:8000/
+http://SERVER_IP:8000/license/
+
+
+4) If DisallowedHost — edit .env then restart
+---------------------------------------------
+nano .env
+# set ALLOWED_HOSTS and SITE_URL to your SERVER_IP
+docker compose restart web
+
+
+Docker already installed? Skip Docker install — the script detects it.
+License (1 month, until 2026-10-25) is already in the project.
